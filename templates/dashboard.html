@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Email Management Tool{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-speedometer2"></i> Dashboard</h1>
+    <button class="btn btn-modern btn-primary-modern" onclick="location.reload()">
+        <i class="bi bi-arrow-clockwise"></i> Refresh
+    </button>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-number">{{ stats.total }}</div>
+                    <div class="stat-label">Total Emails</div>
+                </div>
+                <i class="bi bi-envelope-fill" style="font-size: 2rem; color: #667eea;"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-number">{{ stats.pending }}</div>
+                    <div class="stat-label">Pending Review</div>
+                </div>
+                <i class="bi bi-clock-fill" style="font-size: 2rem; color: #ffc107;"></i>
+            </div>
+            {% if stats.pending > 0 %}
+            <div class="notification-dot"></div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-number">{{ stats.approved }}</div>
+                    <div class="stat-label">Approved</div>
+                </div>
+                <i class="bi bi-check-circle-fill" style="font-size: 2rem; color: #28a745;"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-number">{{ active_rules }}</div>
+                    <div class="stat-label">Active Rules</div>
+                </div>
+                <i class="bi bi-shield-check-fill" style="font-size: 2rem; color: #764ba2;"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Email Volume Chart -->
+    <div class="col-md-8 mb-4">
+        <div class="chart-container">
+            <h5 class="mb-3">Email Volume (Today)</h5>
+            <canvas id="volumeChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Quick Stats -->
+    <div class="col-md-4 mb-4">
+        <div class="chart-container">
+            <h5 class="mb-3">Status Distribution</h5>
+            <canvas id="statusChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Emails Table -->
+<div class="table-modern">
+    <div class="p-3 border-bottom">
+        <h5 class="mb-0"><i class="bi bi-inbox-fill"></i> Recent Emails</h5>
+    </div>
+    <table class="table table-hover mb-0">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>From</th>
+                <th>Subject</th>
+                <th>Risk</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for email in recent_emails %}
+            <tr>
+                <td>
+                    <small>{{ email.created_at|default('N/A') }}</small>
+                </td>
+                <td>{{ email.sender[:30] }}...</td>
+                <td>{{ email.subject[:40] }}...</td>
+                <td>
+                    <div class="risk-indicator">
+                        <div class="risk-fill {% if email.risk_score < 40 %}risk-low{% elif email.risk_score < 70 %}risk-medium{% else %}risk-high{% endif %}" 
+                             style="width: {{ email.risk_score }}%"></div>
+                    </div>
+                    <small class="text-muted">{{ email.risk_score }}%</small>
+                </td>
+                <td>
+                    <span class="badge badge-status badge-{{ email.status|lower }}">
+                        {{ email.status }}
+                    </span>
+                </td>
+                <td>
+                    <a href="/email/{{ email.id }}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-eye"></i> View
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Volume Chart
+const volumeCtx = document.getElementById('volumeChart').getContext('2d');
+const volumeChart = new Chart(volumeCtx, {
+    type: 'line',
+    data: {
+        labels: ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'],
+        datasets: [{
+            label: 'Emails',
+            data: [12, 19, 3, 5, 2, 3, 15, 8],
+            borderColor: '#667eea',
+            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// Status Chart
+const statusCtx = document.getElementById('statusChart').getContext('2d');
+const statusChart = new Chart(statusCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Pending', 'Approved', 'Rejected', 'Sent'],
+        datasets: [{
+            data: [{{ stats.pending }}, {{ stats.approved }}, {{ stats.rejected }}, {{ stats.sent }}],
+            backgroundColor: [
+                '#ffc107',
+                '#28a745',
+                '#dc3545',
+                '#007bff'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Auto-refresh every 30 seconds
+setInterval(() => {
+    fetch('/api/stats')
+        .then(response => response.json())
+        .then(data => {
+            // Update statistics
+            document.querySelectorAll('.stat-number')[0].textContent = data.stats.total;
+            document.querySelectorAll('.stat-number')[1].textContent = data.stats.pending;
+            document.querySelectorAll('.stat-number')[2].textContent = data.stats.approved;
+            
+            // Update charts if needed
+        });
+}, 30000);
+</script>
+{% endblock %}

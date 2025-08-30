@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Email Queue - Email Management Tool{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-inbox-fill"></i> Email Queue</h1>
+    <div>
+        <input type="text" class="search-box" placeholder="Search emails..." style="width: 300px; display: inline-block;">
+        <button class="btn btn-modern btn-primary-modern ms-2">
+            <i class="bi bi-funnel"></i> Filter
+        </button>
+    </div>
+</div>
+
+<!-- Filter Tabs -->
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+        <a class="nav-link {% if current_filter == 'PENDING' %}active{% endif %}" href="/emails?status=PENDING">
+            Pending <span class="badge bg-warning">{{ emails|selectattr('status', 'equalto', 'PENDING')|list|length }}</span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if current_filter == 'APPROVED' %}active{% endif %}" href="/emails?status=APPROVED">
+            Approved
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if current_filter == 'REJECTED' %}active{% endif %}" href="/emails?status=REJECTED">
+            Rejected
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if current_filter == 'ALL' %}active{% endif %}" href="/emails?status=ALL">
+            All Emails
+        </a>
+    </li>
+</ul>
+
+<!-- Emails Table -->
+<div class="table-modern">
+    <table class="table table-hover mb-0">
+        <thead>
+            <tr>
+                <th><input type="checkbox" class="form-check-input"></th>
+                <th>Time</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Subject</th>
+                <th>Risk Score</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for email in emails %}
+            <tr>
+                <td><input type="checkbox" class="form-check-input" value="{{ email.id }}"></td>
+                <td>
+                    <small>{{ email.created_at|default('N/A') }}</small>
+                </td>
+                <td>
+                    <div>{{ email.sender[:30] }}{% if email.sender|length > 30 %}...{% endif %}</div>
+                </td>
+                <td>
+                    <small>{{ email.recipients[:30] }}{% if email.recipients|length > 30 %}...{% endif %}</small>
+                </td>
+                <td>
+                    <strong>{{ email.subject[:40] }}{% if email.subject|length > 40 %}...{% endif %}</strong>
+                    {% if email.keywords_matched %}
+                    <div>
+                        <small class="text-danger">
+                            <i class="bi bi-exclamation-triangle"></i> 
+                            Keywords: {{ email.keywords_matched }}
+                        </small>
+                    </div>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="risk-indicator me-2">
+                            <div class="risk-fill {% if email.risk_score < 40 %}risk-low{% elif email.risk_score < 70 %}risk-medium{% else %}risk-high{% endif %}" 
+                                 style="width: {{ email.risk_score }}%"></div>
+                        </div>
+                        <small>{{ email.risk_score }}%</small>
+                    </div>
+                </td>
+                <td>
+                    <span class="badge badge-status badge-{{ email.status|lower }}">
+                        {{ email.status }}
+                    </span>
+                </td>
+                <td>
+                    <div class="btn-group" role="group">
+                        <a href="/email/{{ email.id }}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        {% if email.status == 'PENDING' %}
+                        <button class="btn btn-sm btn-outline-success" onclick="quickAction({{ email.id }}, 'APPROVE')">
+                            <i class="bi bi-check"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="quickAction({{ email.id }}, 'REJECT')">
+                            <i class="bi bi-x"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    {% if not emails %}
+    <div class="text-center py-5">
+        <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+        <p class="text-muted mt-2">No emails found</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Bulk Actions -->
+{% if emails %}
+<div class="mt-3">
+    <button class="btn btn-success" onclick="bulkAction('APPROVE')">
+        <i class="bi bi-check-all"></i> Approve Selected
+    </button>
+    <button class="btn btn-danger" onclick="bulkAction('REJECT')">
+        <i class="bi bi-x-circle"></i> Reject Selected
+    </button>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function quickAction(emailId, action) {
+    if (confirm(`Are you sure you want to ${action.toLowerCase()} this email?`)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/email/${emailId}/action`;
+        
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        actionInput.value = action;
+        
+        form.appendChild(actionInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function bulkAction(action) {
+    const selected = document.querySelectorAll('tbody input[type="checkbox"]:checked');
+    if (selected.length === 0) {
+        alert('Please select at least one email');
+        return;
+    }
+    
+    if (confirm(`Are you sure you want to ${action.toLowerCase()} ${selected.length} email(s)?`)) {
+        // Implement bulk action
+        selected.forEach(checkbox => {
+            quickAction(checkbox.value, action);
+        });
+    }
+}
+
+// Select all checkbox
+document.querySelector('thead input[type="checkbox"]').addEventListener('change', function() {
+    document.querySelectorAll('tbody input[type="checkbox"]').forEach(checkbox => {
+        checkbox.checked = this.checked;
+    });
+});
+</script>
+{% endblock %}

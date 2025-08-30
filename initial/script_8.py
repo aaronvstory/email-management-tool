@@ -1,0 +1,139 @@
+# Create queue management template
+queue_template = '''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Queue - Email Moderation System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('dashboard') }}">
+                <i class="fas fa-envelope-open-text"></i> Email Moderation System
+            </a>
+            <div class="navbar-nav">
+                <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+                <a class="nav-link active" href="{{ url_for('queue') }}">Queue</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Email Queue</h1>
+            
+            <!-- Status Filter -->
+            <div class="btn-group" role="group">
+                <a href="{{ url_for('queue', status='ALL') }}" 
+                   class="btn {{ 'btn-primary' if current_filter == 'ALL' else 'btn-outline-primary' }}">All</a>
+                <a href="{{ url_for('queue', status='PENDING') }}" 
+                   class="btn {{ 'btn-warning' if current_filter == 'PENDING' else 'btn-outline-warning' }}">Pending</a>
+                <a href="{{ url_for('queue', status='APPROVED') }}" 
+                   class="btn {{ 'btn-success' if current_filter == 'APPROVED' else 'btn-outline-success' }}">Approved</a>
+                <a href="{{ url_for('queue', status='REJECTED') }}" 
+                   class="btn {{ 'btn-danger' if current_filter == 'REJECTED' else 'btn-outline-danger' }}">Rejected</a>
+                <a href="{{ url_for('queue', status='SENT') }}" 
+                   class="btn {{ 'btn-info' if current_filter == 'SENT' else 'btn-outline-info' }}">Sent</a>
+            </div>
+        </div>
+
+        <!-- Messages Table -->
+        <div class="card">
+            <div class="card-body">
+                {% if messages %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Sender</th>
+                                    <th>Recipients</th>
+                                    <th>Subject</th>
+                                    <th>Status</th>
+                                    <th>Rules Matched</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for message in messages %}
+                                <tr class="{{ 'table-warning' if message.status == 'PENDING' else '' }}">
+                                    <td>
+                                        <small class="text-muted">{{ message.message_id[:8] }}...</small>
+                                    </td>
+                                    <td>{{ message.sender }}</td>
+                                    <td>
+                                        <small>
+                                            {% set recipients = message.recipients|from_json %}
+                                            {% if recipients %}
+                                                {{ recipients[0] }}
+                                                {% if recipients|length > 1 %}
+                                                    <span class="badge bg-secondary">+{{ recipients|length - 1 }}</span>
+                                                {% endif %}
+                                            {% endif %}
+                                        </small>
+                                    </td>
+                                    <td>{{ message.subject or 'No Subject' }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'warning' if message.status == 'PENDING' else 'success' if message.status == 'APPROVED' else 'danger' if message.status == 'REJECTED' else 'info' }}">
+                                            {{ message.status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% set keywords = message.keywords_matched|from_json %}
+                                        {% if keywords %}
+                                            {% for keyword in keywords %}
+                                                <span class="badge bg-light text-dark">{{ keyword }}</span>
+                                            {% endfor %}
+                                        {% else %}
+                                            <span class="text-muted">None</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small>{{ message.created_at }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('view_message', message_id=message.message_id) }}" 
+                                               class="btn btn-outline-primary" title="View">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if message.status == 'PENDING' %}
+                                            <a href="{{ url_for('edit_message', message_id=message.message_id) }}" 
+                                               class="btn btn-outline-warning" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No messages found</h5>
+                        <p class="text-muted">Try changing the filter or wait for new emails to arrive.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>'''
+
+with open("email_moderation_system/templates/queue.html", "w") as f:
+    f.write(queue_template)
+
+print("Created queue.html template")
+print("✓ Filterable message queue")
+print("✓ Status-based color coding")
+print("✓ Action buttons for view/edit")
+print("✓ Keywords matched display")

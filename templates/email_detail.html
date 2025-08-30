@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}Email Details - Email Management Tool{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="/emails" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Queue
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">{{ email.subject }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>From:</strong> {{ email.sender }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>To:</strong> 
+                        {% for recipient in email.recipients %}
+                            {{ recipient }}{% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Date:</strong> {{ email.created_at }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Message ID:</strong> {{ email.message_id }}
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="email-body">
+                    {% if email.body_html %}
+                        <div class="border p-3" style="background: #f8f9fa;">
+                            {{ email.body_html|safe }}
+                        </div>
+                    {% else %}
+                        <pre>{{ email.body_text }}</pre>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0">Email Status</h6>
+            </div>
+            <div class="card-body">
+                <p><strong>Status:</strong> 
+                    <span class="badge badge-status badge-{{ email.status|lower }}">
+                        {{ email.status }}
+                    </span>
+                </p>
+                <p><strong>Risk Score:</strong> 
+                    <div class="risk-indicator">
+                        <div class="risk-fill {% if email.risk_score < 40 %}risk-low{% elif email.risk_score < 70 %}risk-medium{% else %}risk-high{% endif %}" 
+                             style="width: {{ email.risk_score }}%"></div>
+                    </div>
+                    {{ email.risk_score }}%
+                </p>
+                
+                {% if email.keywords_matched %}
+                <p><strong>Keywords Matched:</strong>
+                    {% for keyword in email.keywords_matched %}
+                        <span class="badge bg-danger">{{ keyword }}</span>
+                    {% endfor %}
+                </p>
+                {% endif %}
+                
+                {% if email.reviewer_id %}
+                <p><strong>Reviewed by:</strong> User #{{ email.reviewer_id }}</p>
+                <p><strong>Reviewed at:</strong> {{ email.reviewed_at }}</p>
+                {% endif %}
+                
+                {% if email.review_notes %}
+                <p><strong>Review Notes:</strong><br>
+                    <small>{{ email.review_notes }}</small>
+                </p>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if email.status == 'PENDING' %}
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Actions</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="/email/{{ email.id }}/action">
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Review Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" name="action" value="APPROVE" class="btn btn-success">
+                            <i class="bi bi-check-circle"></i> Approve & Send
+                        </button>
+                        <button type="submit" name="action" value="REJECT" class="btn btn-danger">
+                            <i class="bi bi-x-circle"></i> Reject Email
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
