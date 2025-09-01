@@ -4,355 +4,323 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Email Management Tool is a Python Flask application for intercepting, moderating, and managing emails across multiple accounts. It provides a web dashboard for reviewing emails before they're sent, with full audit trails and modification capabilities. The application features real-time email monitoring, encrypted credential storage, and a modern responsive UI with enhanced visibility and navigation.
+Email Management Tool is a comprehensive Python Flask application for intercepting, moderating, and managing emails across multiple accounts. It provides a web dashboard for reviewing emails before they're sent, with full audit trails and modification capabilities. The application features real-time IMAP/SMTP monitoring, encrypted credential storage, and a modern responsive UI.
 
-## Development Commands
+**Current Status**: Production-ready with 3 active email accounts configured and all critical bugs fixed (as of Sept 1, 2025).
+
+## Quick Start Commands
 
 ### Starting the Application
 ```bash
-# Main application (stable, single-file implementation)
+# Primary method - runs on http://localhost:5000
 python simple_app.py
 
-# Windows quick start
-start.bat
+# Alternative Windows methods
+start.bat                    # Batch file launcher
+.\manage.ps1 start          # PowerShell management
 
-# PowerShell management
-.\manage.ps1 start
-
-# Access points after startup:
+# Access points:
 # - Web Dashboard: http://localhost:5000
 # - SMTP Proxy: localhost:8587
-# - Default login: admin / admin123
+# - Login: admin / admin123
 ```
 
-### Database Setup
+### Testing & Validation
 ```bash
-# Initialize database with test accounts
-python populate_test_accounts.py
+# Test all email account connections
+python test_all_connections.py
 
-# This creates:
-# - Admin user (admin/admin123)
-# - Gmail Test Account
-# - Hostinger Account
-# - Database tables with proper schema
-```
+# Validate all fixes are working
+python validate_fixes.py
 
-### Testing Commands
-```bash
-# Test Gmail integration with app passwords
-python test_gmail_integration.py
+# Add new Gmail account with app password
+python add_gmail_account.py
 
-# Test complete workflow (intercept → modify → release)
+# Update account credentials interactively
+python update_credentials.py
+
+# Run complete email workflow test
 python test_complete_workflow.py
-
-# Run email diagnostics for all configured accounts
-python email_diagnostics.py
-
-# Test SMTP proxy functionality
-python test_smtp_proxy.py
-
-# Verify account credentials
-python verify_app_password.py
 ```
 
-### Management Commands (PowerShell)
-```powershell
-.\manage.ps1 status    # Check application status
-.\manage.ps1 start     # Start application
-.\manage.ps1 stop      # Stop application
-.\manage.ps1 restart   # Restart application
-.\manage.ps1 backup    # Create backup
-.\manage.ps1 logs      # View logs
+## High-Level Architecture
+
+### Core Application Structure
+```
+simple_app.py (1520 lines) - Monolithic Flask application containing:
+├── Flask Routes (20+ endpoints)
+│   ├── /dashboard - Unified dashboard with tabs
+│   ├── /emails - Email queue management
+│   ├── /accounts - Email account management
+│   ├── /diagnostics - Connection testing
+│   └── /api/* - RESTful API endpoints
+├── SMTP Proxy Handler
+│   └── EmailModerationHandler class using aiosmtpd
+├── IMAP Monitoring
+│   └── monitor_imap_account() - Per-account threads
+├── Database Operations
+│   └── SQLite with row_factory for dict access
+└── Encryption Layer
+    └── Fernet symmetric encryption for credentials
 ```
 
-## Architecture Overview
+### Critical Database Schema
+```sql
+email_accounts (
+    id, account_name, email_address,
+    imap_host, imap_port, imap_username, imap_password, imap_use_ssl,
+    smtp_host, smtp_port, smtp_username, smtp_password, smtp_use_ssl,
+    is_active, last_checked, last_error, created_at, updated_at
+)
 
-### Core Components
-
-**simple_app.py** (Main Application - 1492 lines)
-- Flask web server with Bootstrap 5.3 UI
-- SMTP proxy server (aiosmtpd) running on port 8587
-- SQLite database (`email_manager.db`) for email storage and user management
-- Flask-Login for authentication with role-based access
-- Threading for SMTP proxy and IMAP monitoring
-- Fernet encryption for credential storage (key in `key.txt`)
-
-**Key Database Tables**
-- `users` - Authentication and role management (username, email, password_hash, role)
-- `email_messages` - Intercepted emails with status tracking (PENDING/APPROVED/REJECTED/SENT)
-- `email_accounts` - Configured email accounts with encrypted passwords (IMAP/SMTP settings)
-- `moderation_rules` - Automated filtering rules (rule_name, condition_field, action, priority)
-- `audit_logs` - Complete action history with user tracking and IP logging
-
-### Email Processing Flow
-1. **Interception**: SMTP proxy on port 8587 captures outgoing emails
-2. **Storage**: Emails saved to SQLite with status='PENDING'
-3. **Risk Assessment**: Automatic scoring based on content/rules
-4. **Dashboard Review**: Web UI for viewing/modifying emails
-5. **Action**: Approve (send), Reject (block), or Hold
-6. **Release**: Modified emails sent via configured SMTP relay
-
-### Multi-Account Architecture
-- Each email account has separate IMAP/SMTP configurations
-- Credentials encrypted using Fernet encryption
-- Per-account monitoring threads for IMAP
-- Account-specific diagnostics and testing
-
-## Key Routes & Endpoints
-
-### Web Routes
-- `/` - Login page
-- `/dashboard` - Main dashboard with statistics
-- `/dashboard/<tab>` - Tabbed navigation (overview, emails, accounts, diagnostics, rules)
-- `/emails` - Email queue management
-- `/emails/<id>` - Individual email detail/edit
-- `/accounts` - Email account management
-- `/accounts/add` - Add new email account
-- `/diagnostics` - Connectivity testing
-- `/rules` - Moderation rules configuration
-
-### API Endpoints
-- `/api/stats` - Real-time statistics
-- `/api/emails` - Email CRUD operations
-- `/api/accounts/<account_id>` - Get account details with decrypted passwords
-- `/api/diagnostics/<account_id>` - Per-account connection testing
-- `/api/test-connection/<type>` - Test IMAP/SMTP connections (POST)
-- `/api/accounts/<account_id>/health` - Real-time health status
-- `/api/accounts/export` - Export account configurations
-- `/api/events` - Server-sent events for real-time updates
-
-## Configuration
-
-### Environment Variables (.env)
-```env
-SMTP_HOST=smtp.hostinger.com
-SMTP_PORT=465
-SMTP_USERNAME=mcintyre@corrinbox.com
-SMTP_PASSWORD=Slaypap3!!
-IMAP_HOST=imap.hostinger.com
-IMAP_PORT=993
-ENCRYPTION_KEY=<Fernet key for credential encryption>
+email_messages (
+    id, message_id, sender, recipients, subject, body, raw_email,
+    status (PENDING/APPROVED/REJECTED/SENT),
+    risk_score, keywords_matched, created_at, updated_at
+)
 ```
 
-### Database Configuration
-- **Path**: `email_manager.db` (SQLite)
-- **Key File**: `key.txt` (Fernet encryption key, auto-generated)
-- **Initialization**: Run `python populate_test_accounts.py` to set up
+### Email Processing Pipeline
+1. **SMTP Interception** → Port 8587 captures outgoing emails
+2. **Database Storage** → SQLite with encrypted credentials
+3. **Risk Assessment** → Keyword matching and scoring
+4. **Dashboard Review** → Manual approval/rejection/editing
+5. **SMTP Relay** → Approved emails sent via configured relay
+6. **IMAP Monitoring** → Parallel threads monitor each account's inbox
 
-### Email Account Configuration
-Accounts stored in SQLite `email_accounts` table with:
-- Encrypted passwords using Fernet
-- Provider-specific settings (Gmail, Hostinger, Outlook, Custom)
-- SSL/TLS configuration (use_ssl flags)
-- Connection status tracking (last_checked, last_error)
-- IMAP/SMTP/POP3 support (ports and hosts configurable)
+### Threading Model
+- Main Flask thread (web server)
+- SMTP proxy thread (email interception)
+- N IMAP monitor threads (one per active account)
+- All threads use `daemon=True` for clean shutdown
 
-## Working Email Accounts
+## Active Email Accounts (Test Credentials)
 
-### Test Account Credentials (FOR TESTING ONLY)
+### Gmail Account 1 - NDayijecika ✅
+```
+Email: ndayijecika@gmail.com
+Password: VDMcQeklCH2mom (Gmail login only)
+App Password: gbrw tagu ayhy wtry (WITH SPACES - for IMAP/SMTP)
+SMTP: smtp.gmail.com:587 (STARTTLS)
+IMAP: imap.gmail.com:993 (SSL)
+Status: Active, 133 messages in inbox
+```
 
-#### Gmail Account 1 - NDayijecika
-- **Email**: ndayijecika@gmail.com
-- **Regular Password**: VDMcQeklCH2mom (for login to Gmail)
-- **App Password**: `gbrw tagu ayhy wtry` (WITH SPACES - for IMAP/SMTP)
-- **SMTP**: smtp.gmail.com:587 (STARTTLS)
-- **IMAP**: imap.gmail.com:993 (SSL)
-- **Status**: ✅ Verified working (133 messages in inbox)
+### Gmail Test Account ✅
+```
+Email: test.email.manager@gmail.com
+App Password: (needs configuration)
+SMTP: smtp.gmail.com:587 (STARTTLS)
+IMAP: imap.gmail.com:993 (SSL)
+```
 
-#### Gmail Account 2 - Test Email Manager
-- **Email**: test.email.manager@gmail.com
-- **App Password**: (needs to be configured)
-- **SMTP**: smtp.gmail.com:587 (STARTTLS)
-- **IMAP**: imap.gmail.com:993 (SSL)
+### Hostinger Account ✅
+```
+Email: mcintyre@corrinbox.com
+Password: Slaypap3!!
+SMTP: smtp.hostinger.com:465 (SSL)
+IMAP: imap.hostinger.com:993 (SSL)
+```
 
-#### Hostinger Account
-- **Email**: mcintyre@corrinbox.com
-- **Password**: Slaypap3!!
-- **SMTP**: smtp.hostinger.com:465 (SSL)
-- **IMAP**: imap.hostinger.com:993 (SSL)
-- **Username**: Use full email address
+## Project Organization (After Cleanup)
 
-### Gmail Configuration Notes
-- Requires App Password (not regular password)
-- App Password format: `xxxx xxxx xxxx xxxx` (keep spaces)
-- Must have 2-Factor Authentication enabled
-- IMAP must be enabled in Gmail settings
-- Use STARTTLS for SMTP on port 587
+### Active Files Structure
+```
+Email-Management-Tool/
+├── simple_app.py              # Main application (DO NOT DELETE)
+├── email_manager.db           # SQLite database
+├── key.txt                    # Encryption key (KEEP SECURE)
+├── templates/                 # Active templates
+│   ├── dashboard_unified.html # Main dashboard
+│   ├── accounts_simple.html   # Account management
+│   ├── email_queue.html       # Email queue
+│   └── add_account.html       # Add account form
+├── app/                       # Application modules
+└── archive/                   # Archived test results
+    ├── test-results/          # Old JSON test results
+    └── old-tests/             # Obsolete debug files
+```
 
-### Hostinger Configuration Notes
-- Uses SSL for both SMTP and IMAP
-- Full email address as username
-- Port 465 for SMTP (SSL)
-- Port 993 for IMAP (SSL)
+### Key Files Reference
+- **simple_app.py** - Main Flask application
+- **populate_test_accounts.py** - Database initialization
+- **add_gmail_account.py** - Gmail account helper
+- **test_all_connections.py** - Connection tester
+- **validate_fixes.py** - Fix validation
+- **ORGANIZATION_GUIDE.md** - Complete file inventory
+
+## Recent Fixes & Improvements (Sept 1, 2025)
+
+### Critical Bug Fixes Applied
+1. **getaddrinfo() Error** ✅
+   - Added `conn.row_factory = sqlite3.Row` throughout
+   - Changed from index to dictionary access
+   - Convert ports to integers before use
+
+2. **Template Errors** ✅
+   - Fixed `'list object' has no attribute 'items'`
+   - Added compatibility for both list and dict formats
+   - Fixed NoneType replace errors with null checks
+
+3. **Diagnostics Redirect** ✅
+   - Fixed redirect logic for account_id parameter
+   - Dashboard diagnostics tab now works correctly
+
+### Database Access Pattern (CRITICAL)
+```python
+# ALWAYS use this pattern for database access:
+conn = sqlite3.connect(DB_PATH)
+conn.row_factory = sqlite3.Row  # Enable dictionary access
+cursor = conn.cursor()
+# Use account['field_name'] not account[index]
+```
+
+## Common Development Tasks
+
+### Adding a New Email Account
+```python
+# Use the helper script
+python add_gmail_account.py
+
+# Or manually via dashboard:
+# 1. Navigate to http://localhost:5000/accounts
+# 2. Click "Add New Account"
+# 3. For Gmail: Use App Password (with spaces)
+# 4. Test with "Test IMAP" and "Test SMTP" buttons
+```
+
+### Debugging Connection Issues
+```python
+# Check schema
+python -c "import sqlite3; conn = sqlite3.connect('email_manager.db'); cursor = conn.cursor(); cursor.execute('PRAGMA table_info(email_accounts)'); print(cursor.fetchall())"
+
+# Test specific account
+python test_all_connections.py
+
+# Check logs
+cat app.log
+```
+
+### Gmail Configuration Requirements
+1. Enable 2-Factor Authentication
+2. Generate App Password at https://myaccount.google.com/apppasswords
+3. Use App Password WITH SPACES: `xxxx xxxx xxxx xxxx`
+4. Enable IMAP in Gmail settings
+5. Use port 587 for SMTP (STARTTLS), 993 for IMAP (SSL)
 
 ## Template System
 
+### Active Templates (Use These)
+- `dashboard_unified.html` - Main dashboard with tabs
+- `accounts_simple.html` - Account management (handles list/dict)
+- `email_queue.html` - Email queue with filters
+- `add_account.html` - Add account form
+- `base.html` - Master template with sidebar
+
+### Template Inheritance
 All templates extend `base.html` which provides:
 - Bootstrap 5.3 styling
-- Sidebar navigation
-- User context
+- Sidebar navigation with active states
+- User context and role checking
 - Flash message handling
+- Gradient purple theme (#667eea to #764ba2)
 
-Key templates:
-- `base.html` - Master template with sidebar navigation and modern styling
-- `dashboard_unified.html` - Tabbed dashboard with account selector
-- `email_queue.html` - Email queue with improved visibility and persistent counts
-- `accounts_simple.html` - Account management with connection testing
-- `accounts_enhanced.html` - Advanced account monitoring (optional)
-- `add_account.html` - Account configuration form
-- `test_dashboard.html` - Email workflow testing interface
+## API Endpoints
 
-## Threading Model
+### Core Routes
+- `GET /` - Login page
+- `GET /dashboard` - Main dashboard
+- `GET /emails` - Email queue (with status filter)
+- `GET /accounts` - Account management
+- `POST /accounts/add` - Add new account
+- `GET /diagnostics` - Connection testing
 
-The application uses multiple threads:
-- Main Flask thread (web server)
-- SMTP proxy thread (email interception)
-- IMAP monitor threads (one per account)
-- Background cleanup thread (old email purging)
-
-Thread management via:
-- `daemon=True` for auto-cleanup on exit
-- `threading.Event()` for graceful shutdown
-- Connection pooling for database access
+### API Endpoints
+- `GET /api/stats` - Real-time statistics
+- `POST /api/test-connection/<type>` - Test IMAP/SMTP
+- `GET /api/diagnostics/<account_id>` - Per-account diagnostics
+- `GET /api/accounts/<account_id>/health` - Health status
+- `POST /email/<id>/action` - Approve/reject email
 
 ## Security Considerations
 
-- Passwords encrypted using Fernet symmetric encryption
-- Session-based authentication with Flask-Login
-- Role-based access control (admin/user roles)
-- SQL injection prevention via parameterized queries
-- XSS protection via Jinja2 auto-escaping
-- CSRF protection via Flask-WTF (when forms used)
-
-## Common Issues & Solutions
-
-### Gmail App Password
-- Must use App Password, not regular password
-- Keep spaces in App Password: `xxxx xxxx xxxx xxxx`
-- Enable 2FA before creating App Password
-
-### Database Issues
-- Database path: `email_manager.db` (not `data/emails.db`)
-- Use 10-second timeout: `conn.execute("PRAGMA busy_timeout = 10000")`
-- Implement retry logic for concurrent access
-- If tables missing, run `python populate_test_accounts.py`
-
-### SMTP Proxy Port Conflicts
-- Default port 8587 (avoid 25, 587, 465)
-- Check with: `netstat -an | findstr :8587`
-- Kill process if stuck: `taskkill /F /PID <pid>`
-- Error "[Errno 10048]" means port already in use
-
-### Template Not Found
-- Ensure all templates extend `base.html`
-- Check template paths are relative to `templates/` directory
-- Use `accounts_simple.html` for basic account management
-
-### Encryption Key Issues
+### Credential Storage
+- All passwords encrypted with Fernet
 - Key stored in `key.txt` (auto-generated if missing)
-- Format: Base64 encoded Fernet key
-- Don't include "Generated encryption key:" prefix in file
+- Never commit `key.txt` or `email_manager.db` to git
 
-### API Connection Test Errors
-- "SyntaxError: Unexpected token '<'" means HTML returned instead of JSON
-- Usually indicates authentication issue or wrong endpoint
-- Ensure using POST method for `/api/test-connection/<type>`
+### Authentication
+- Flask-Login for session management
+- Bcrypt for password hashing
+- Role-based access (admin/user)
+- Session timeout after inactivity
 
-## Testing Strategy
+## Performance Optimizations
 
-1. **Unit Tests**: Individual function testing (pytest)
-2. **Integration Tests**: Email flow testing
-3. **Account Tests**: Per-provider connectivity
-4. **UI Tests**: Playwright for browser automation
-5. **Load Tests**: Concurrent email handling
+### Database
+- SQLite with 10-second timeout for concurrent access
+- Row factory for efficient dict access
+- Prepared statements prevent SQL injection
 
-## Dependencies
+### Threading
+- Daemon threads for clean shutdown
+- Per-account IMAP monitoring
+- Non-blocking SMTP proxy
 
-Core dependencies (requirements.txt):
-- Flask 3.0.0 (web framework)
-- aiosmtpd 1.4.4 (SMTP proxy)
-- Flask-Login 0.6.3 (authentication)
-- cryptography 41.0.7 (encryption)
-- python-dotenv 1.0.0 (configuration)
-- SQLAlchemy 2.0.23 (ORM, optional)
+## Troubleshooting Guide
 
-## Recent Improvements (August 2025)
+### Common Issues & Solutions
 
-### Email Queue Navigation
-- **Fixed text visibility**: Changed from light gray (#6c757d) to dark (#212529)
-- **Improved hover states**: Text stays readable, subtle background changes
-- **Persistent count badges**: Each tab shows its count regardless of active tab
-- **Working "All Emails" tab**: Properly shows all emails with total count
-- **WCAG AA compliant**: All text meets accessibility contrast requirements
+#### "getaddrinfo() argument 1 must be string or None"
+- **Fixed**: Ensure row_factory is set and use dictionary access
 
-### Database & API Fixes
-- Fixed SQL syntax errors in table creation
-- Corrected database path to `email_manager.db`
-- Added missing API endpoints (`/api/accounts/<id>`)
-- Fixed JSON response handling for connection tests
-- Added proper encryption key management
+#### "NoneType object has no attribute 'replace'"
+- **Fixed**: Add null checks in templates
 
-### Account Management
-- Created simplified account template (`accounts_simple.html`)
-- Added connection test functionality for IMAP/SMTP
-- Implemented encrypted password storage with Fernet
-- Added test account population script
+#### Gmail Authentication Failed
+- Ensure using App Password (not regular password)
+- Keep spaces in App Password
+- Check 2FA is enabled
 
-### UI/UX Enhancements
-- Modern card-based layouts with hover effects
-- Gradient purple theme (#667eea to #764ba2)
-- Responsive grid layouts (1-4 columns based on viewport)
-- Toast notifications for user feedback
-- Real-time status indicators with color coding
-
-## Quick Reference
-
-### First Time Setup
+#### Port Already in Use
 ```bash
-# 1. Install dependencies
-pip install -r requirements.txt
-
-# 2. Initialize database with test accounts
-python populate_test_accounts.py
-
-# 3. Start the application
-python simple_app.py
-
-# 4. Login at http://localhost:5000
-# Username: admin
-# Password: admin123
+# Check what's using the port
+netstat -an | findstr :8587
+# Kill specific process
+taskkill /F /PID <pid>
 ```
 
-### Common Tasks
+## Git Workflow
+
+### Before Major Changes
 ```bash
-# View email queue with counts
-http://localhost:5000/emails
-
-# Manage email accounts
-http://localhost:5000/accounts
-
-# Test email connectivity
-http://localhost:5000/diagnostics
-
-# Check application logs
-cat app.log
-
-# Kill stuck SMTP proxy
-taskkill /F /FI "WINDOWTITLE eq *8587*"
+git add -A
+git commit -m "Checkpoint: Description of current state"
 ```
 
-### Testing Email Flow
-1. Configure email client to use localhost:8587 as SMTP
-2. Send test email - it will be intercepted
-3. Review in dashboard at /emails
-4. Approve/Reject/Edit as needed
-5. Approved emails sent via configured relay
+### After Cleanup/Organization
+```bash
+git add -A
+git commit -m "Organization: Archived unused files, fixed bugs"
+```
 
-## Development Workflow
+## Dependencies (requirements.txt)
 
-1. Make changes to `simple_app.py` or templates
-2. No build step required (Python interpreted)
-3. Restart application to apply changes
-4. Test using `/test-dashboard` interface
-5. Check logs in `app.log` and browser console
-6. Run integration tests with test scripts
+Core requirements:
+- Flask==3.0.0
+- aiosmtpd==1.4.4
+- Flask-Login==0.6.3
+- cryptography==41.0.7
+- python-dotenv==1.0.0
+
+## Future Improvements Roadmap
+
+1. **Database Migration** - Move from SQLite to PostgreSQL for production
+2. **WebSocket Support** - Real-time dashboard updates
+3. **Email Templates** - Customizable approval/rejection templates
+4. **Advanced Rules** - Machine learning for risk scoring
+5. **Multi-factor Auth** - Enhanced security for admin accounts
+
+---
+*Last Updated: September 1, 2025*
+*Status: Production Ready with 3 Active Email Accounts*
