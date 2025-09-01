@@ -18,6 +18,7 @@ from datetime import datetime, timedelta
 from email import message_from_bytes, policy
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.utils import formatdate, make_msgid
 from cryptography.fernet import Fernet
 from dotenv import load_dotenv
 
@@ -91,7 +92,7 @@ def init_database():
         )
     ''')
     
-    # Email messages table
+    # Email messages table  
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS email_messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -107,9 +108,11 @@ def init_database():
             risk_score INTEGER DEFAULT 0,
             reviewer_id INTEGER,
             review_notes TEXT,
+            account_id INTEGER,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             reviewed_at TIMESTAMP,
-            sent_at TIMESTAMP
+            sent_at TIMESTAMP,
+            FOREIGN KEY (account_id) REFERENCES email_accounts(id)
         )
     ''')
     
@@ -231,6 +234,10 @@ def decrypt_credential(encrypted_text):
         return cipher_suite.decrypt(encrypted_text.encode()).decode()
     except:
         return None
+
+def decrypt_password(encrypted_text):
+    """Decrypt a password (alias for decrypt_credential)"""
+    return decrypt_credential(encrypted_text)
 
 # IMAP monitoring threads
 imap_threads = {}
@@ -1448,6 +1455,212 @@ def test_email_send():
         flash(f"Failed to send test email: {result.get('error', 'Unknown error')}", 'error')
     
     return redirect(url_for('diagnostics'))
+
+@app.route('/email/<int:email_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_email(email_id):
+    """Edit an email's subject and body"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    if request.method == 'GET':
+        # Get email details for editing
+        email = cursor.execute("""
+            SELECT id, subject, body_text, sender, recipients, status
+            FROM email_messages 
+            WHERE id = ?
+        """, (email_id,)).fetchone()
+        conn.close()
+        
+        if not email:
+            return jsonify({'error': 'Email not found'}), 404
+        
+        if email['status'] != 'PENDING':
+            return jsonify({'error': 'Only pending emails can be edited'}), 400
+            
+        return jsonify({
+            'id': email['id'],
+            'subject': email['subject'],
+            'body': email['body_text'],
+            'sender': email['sender'],
+            'recipients': email['recipients']
+        })
+    
+    elif request.method == 'POST':
+        # Update email with new content
+        data = request.get_json()
+        new_subject = data.get('subject', '').strip()
+        new_body = data.get('body', '').strip()
+        
+        if not new_subject or not new_body:
+            return jsonify({'error': 'Subject and body are required'}), 400
+        
+        # Update the email
+        cursor.execute("""
+            UPDATE email_messages 
+            SET subject = ?, 
+                body_text = ?, 
+                review_notes = COALESCE(review_notes, '') || '\n[Edited by ' || ? || ' at ' || datetime('now') || ']'
+            WHERE id = ? AND status = 'PENDING'
+        """, (new_subject, new_body, current_user.username, email_id))
+        
+        if cursor.rowcount == 0:
+            conn.close()
+            return jsonify({'error': 'Email not found or not in pending status'}), 400
+        
+        conn.commit()
+        
+        # Log the action
+        log_action('EMAIL_EDITED', current_user.id, email_id, f"Subject: {new_subject[:50]}")
+        
+        conn.close()
+        
+        flash('Email updated successfully', 'success')
+        return jsonify({'success': True, 'message': 'Email updated successfully'})
+
+@app.route('/inbox')
+@login_required
+def inbox():
+    """View inbox emails from all accounts"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    # Get all active email accounts
+    accounts = cursor.execute("""
+        SELECT id, account_name, email_address 
+        FROM email_accounts 
+        WHERE is_active = 1
+        ORDER BY account_name
+    """).fetchall()
+    
+    # Get selected account from query params
+    selected_account = request.args.get('account_id', type=int)
+    
+    # Get emails from inbox (stored messages)
+    if selected_account:
+        emails = cursor.execute("""
+            SELECT em.*, ea.account_name, ea.email_address
+            FROM email_messages em
+            LEFT JOIN email_accounts ea ON em.account_id = ea.id
+            WHERE em.account_id = ?
+            ORDER BY em.created_at DESC
+            LIMIT 100
+        """, (selected_account,)).fetchall()
+    else:
+        emails = cursor.execute("""
+            SELECT em.*, ea.account_name, ea.email_address
+            FROM email_messages em
+            LEFT JOIN email_accounts ea ON em.account_id = ea.id
+            ORDER BY em.created_at DESC
+            LIMIT 100
+        """).fetchall()
+    
+    conn.close()
+    
+    return render_template('inbox.html', 
+                         emails=emails, 
+                         accounts=accounts,
+                         selected_account=selected_account)
+
+@app.route('/compose', methods=['GET', 'POST'])
+@login_required
+def compose_email():
+    """Compose and send a new email"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    # Get all active email accounts for FROM dropdown
+    accounts = cursor.execute("""
+        SELECT id, account_name, email_address 
+        FROM email_accounts 
+        WHERE is_active = 1
+        ORDER BY account_name
+    """).fetchall()
+    
+    if request.method == 'POST':
+        # Get form data
+        from_account_id = request.form.get('from_account', type=int)
+        to_address = request.form.get('to', '').strip()
+        cc_address = request.form.get('cc', '').strip()
+        subject = request.form.get('subject', '').strip()
+        body = request.form.get('body', '').strip()
+        
+        # Validate inputs
+        if not from_account_id or not to_address or not subject or not body:
+            flash('Please fill in all required fields', 'error')
+            conn.close()
+            return render_template('compose.html', accounts=accounts)
+        
+        # Get account details
+        account = cursor.execute("""
+            SELECT * FROM email_accounts WHERE id = ?
+        """, (from_account_id,)).fetchone()
+        
+        if not account:
+            flash('Invalid sending account', 'error')
+            conn.close()
+            return render_template('compose.html', accounts=accounts)
+        
+        # Decrypt SMTP credentials
+        smtp_password = decrypt_password(account['smtp_password'])
+        
+        # Create email message
+        msg = MIMEMultipart()
+        msg['From'] = account['email_address']
+        msg['To'] = to_address
+        if cc_address:
+            msg['Cc'] = cc_address
+        msg['Subject'] = subject
+        msg['Date'] = formatdate(localtime=True)
+        msg['Message-ID'] = make_msgid()
+        
+        # Add body
+        msg.attach(MIMEText(body, 'plain'))
+        
+        # Send email
+        try:
+            if account['smtp_use_ssl']:
+                server = smtplib.SMTP_SSL(account['smtp_host'], int(account['smtp_port']))
+            else:
+                server = smtplib.SMTP(account['smtp_host'], int(account['smtp_port']))
+                server.starttls()
+            
+            server.login(account['smtp_username'], smtp_password)
+            
+            recipients = [to_address]
+            if cc_address:
+                recipients.extend([addr.strip() for addr in cc_address.split(',')])
+            
+            server.send_message(msg)
+            server.quit()
+            
+            # Store sent email in database
+            cursor.execute("""
+                INSERT INTO email_messages 
+                (message_id, sender, recipients, subject, body_text, status, account_id, sent_at)
+                VALUES (?, ?, ?, ?, ?, 'SENT', ?, CURRENT_TIMESTAMP)
+            """, (msg['Message-ID'], account['email_address'], 
+                  json.dumps(recipients), subject, body, from_account_id))
+            
+            conn.commit()
+            
+            # Log the action
+            log_action('EMAIL_SENT', current_user.id, cursor.lastrowid, f"To: {to_address}, Subject: {subject[:50]}")
+            
+            flash(f'Email sent successfully to {to_address}', 'success')
+            conn.close()
+            return redirect(url_for('inbox'))
+            
+        except Exception as e:
+            flash(f'Failed to send email: {str(e)}', 'error')
+            conn.close()
+            return render_template('compose.html', accounts=accounts)
+    
+    conn.close()
+    return render_template('compose.html', accounts=accounts)
 
 def log_action(action, user_id, email_id, details):
     """Log action to audit trail"""

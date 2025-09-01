@@ -247,6 +247,16 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'inbox' %}active{% endif %}" href="/inbox">
+                                <i class="bi bi-envelope"></i> Inbox
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'compose_email' %}active{% endif %}" href="/compose">
+                                <i class="bi bi-pencil-square"></i> Compose
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link {% if request.endpoint == 'rules' %}active{% endif %}" href="/rules">
                                 <i class="bi bi-shield-check"></i> Rules
                             </a>
