@@ -157,8 +157,14 @@ const volumeChart = new Chart(volumeCtx, {
         },
         scales: {
             y: {
-                beginAtZero: true
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 5
+                }
             }
+        },
+        layout: {
+            padding: 10
         }
     }
 });
@@ -184,8 +190,17 @@ const statusChart = new Chart(statusCtx, {
         maintainAspectRatio: false,
         plugins: {
             legend: {
-                position: 'bottom'
+                position: 'bottom',
+                labels: {
+                    padding: 15,
+                    font: {
+                        size: 12
+                    }
+                }
             }
+        },
+        layout: {
+            padding: 10
         }
     }
 });

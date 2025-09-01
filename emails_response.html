@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Email Management Tool{% endblock %}</title>
+    <title>Email Queue - Email Management Tool</title>
     
     <!-- Bootstrap 5.3 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -220,7 +220,84 @@
         }
     </style>
     
-    {% block extra_css %}{% endblock %}
+    
+<style>
+    /* Fix nav-tabs text visibility */
+    .nav-tabs {
+        border-bottom: 2px solid #e9ecef;
+        margin-bottom: 20px;
+    }
+    
+    .nav-tabs .nav-link {
+        color: #212529; /* Dark color for better contrast */
+        border: 2px solid transparent;
+        padding: 12px 25px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        background: white;
+        margin-right: 5px;
+        border-radius: 10px 10px 0 0;
+        position: relative;
+    }
+    
+    .nav-tabs .nav-link:hover {
+        color: #212529; /* Keep text dark on hover for readability */
+        background: #f8f9fa; /* Light gray background */
+        border-color: #667eea; /* Purple border accent */
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2);
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: white;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        font-weight: 600;
+        border-color: transparent;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+    
+    .nav-tabs .nav-link.active:hover {
+        color: white; /* Keep white text on active hover */
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+    }
+    
+    .nav-tabs .nav-link .badge {
+        margin-left: 8px;
+        font-size: 0.8rem;
+        padding: 0.3em 0.7em;
+        font-weight: 600;
+        vertical-align: middle;
+    }
+    
+    /* Ensure badges are visible in all states */
+    .nav-tabs .nav-link.active .badge {
+        background-color: rgba(255, 255, 255, 0.25) !important;
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+    
+    .nav-tabs .nav-link:not(.active) .badge.bg-warning {
+        background-color: #ffc107 !important;
+        color: #000 !important;
+    }
+    
+    .nav-tabs .nav-link:not(.active) .badge.bg-success {
+        background-color: #28a745 !important;
+        color: white !important;
+    }
+    
+    .nav-tabs .nav-link:not(.active) .badge.bg-danger {
+        background-color: #dc3545 !important;
+        color: white !important;
+    }
+    
+    .nav-tabs .nav-link:not(.active) .badge.bg-info {
+        background-color: #17a2b8 !important;
+        color: white !important;
+    }
+</style>
+
 </head>
 <body>
     <div class="container-fluid">
@@ -234,30 +311,28 @@
                     
                     <ul class="nav flex-column">
                         <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}" href="/dashboard">
+                            <a class="nav-link " href="/dashboard">
                                 <i class="bi bi-speedometer2"></i> Dashboard
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'email_queue' %}active{% endif %}" href="/emails">
+                            <a class="nav-link active" href="/emails">
                                 <i class="bi bi-inbox-fill"></i> Email Queue
-                                {% if pending_count > 0 %}
-                                <span class="badge bg-danger float-end">{{ pending_count }}</span>
-                                {% endif %}
+                                
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'rules' %}active{% endif %}" href="/rules">
+                            <a class="nav-link " href="/rules">
                                 <i class="bi bi-shield-check"></i> Rules
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'email_accounts' or request.endpoint == 'add_email_account' %}active{% endif %}" href="/accounts">
+                            <a class="nav-link " href="/accounts">
                                 <i class="bi bi-envelope-at"></i> Email Accounts
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'diagnostics' %}active{% endif %}" href="/diagnostics">
+                            <a class="nav-link " href="/diagnostics">
                                 <i class="bi bi-heart-pulse"></i> Diagnostics
                             </a>
                         </li>
@@ -278,11 +353,9 @@
                     <div class="px-3">
                         <p class="text-light small">
                             <i class="bi bi-person-circle"></i> 
-                            {% if current_user.is_authenticated %}
-                                {{ current_user.username }}
-                            {% else %}
-                                Guest
-                            {% endif %}
+                            
+                                admin
+                            
                         </p>
                         <a href="/logout" class="btn btn-sm btn-outline-light">
                             <i class="bi bi-box-arrow-right"></i> Logout
@@ -293,18 +366,80 @@
             
             <!-- Main Content -->
             <main class="col-md-10 ms-sm-auto col-lg-10 px-md-4 main-content">
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        {% for category, message in messages %}
-                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-modern alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                        {% endfor %}
-                    {% endif %}
-                {% endwith %}
                 
-                {% block content %}{% endblock %}
+                    
+                
+                
+                
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-inbox-fill"></i> Email Queue</h1>
+    <div>
+        <input type="text" class="search-box" placeholder="Search emails..." style="width: 300px; display: inline-block;">
+        <button class="btn btn-modern btn-primary-modern ms-2">
+            <i class="bi bi-funnel"></i> Filter
+        </button>
+    </div>
+</div>
+
+<!-- Filter Tabs -->
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+        <a class="nav-link active" href="/emails?status=PENDING">
+            Pending 
+            
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link " href="/emails?status=APPROVED">
+            Approved
+            
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link " href="/emails?status=REJECTED">
+            Rejected
+            
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link " href="/emails?status=ALL">
+            All Emails
+            
+        </a>
+    </li>
+</ul>
+
+<!-- Emails Table -->
+<div class="table-modern">
+    <table class="table table-hover mb-0">
+        <thead>
+            <tr>
+                <th><input type="checkbox" class="form-check-input"></th>
+                <th>Time</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Subject</th>
+                <th>Risk Score</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            
+        </tbody>
+    </table>
+    
+    
+    <div class="text-center py-5">
+        <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+        <p class="text-muted mt-2">No emails found</p>
+    </div>
+    
+</div>
+
+<!-- Bulk Actions -->
+
+
             </main>
         </div>
     </div>
@@ -312,6 +447,47 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     
-    {% block extra_js %}{% endblock %}
+    
+<script>
+function quickAction(emailId, action) {
+    if (confirm(`Are you sure you want to ${action.toLowerCase()} this email?`)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/email/${emailId}/action`;
+        
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        actionInput.value = action;
+        
+        form.appendChild(actionInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function bulkAction(action) {
+    const selected = document.querySelectorAll('tbody input[type="checkbox"]:checked');
+    if (selected.length === 0) {
+        alert('Please select at least one email');
+        return;
+    }
+    
+    if (confirm(`Are you sure you want to ${action.toLowerCase()} ${selected.length} email(s)?`)) {
+        // Implement bulk action
+        selected.forEach(checkbox => {
+            quickAction(checkbox.value, action);
+        });
+    }
+}
+
+// Select all checkbox
+document.querySelector('thead input[type="checkbox"]').addEventListener('change', function() {
+    document.querySelectorAll('tbody input[type="checkbox"]').forEach(checkbox => {
+        checkbox.checked = this.checked;
+    });
+});
+</script>
+
 </body>
 </html>

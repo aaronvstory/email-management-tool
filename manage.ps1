@@ -10,7 +10,7 @@ param(
 $ErrorActionPreference = "Stop"
 $AppName = "EmailManagementTool"
 $AppPath = $PSScriptRoot
-$VenvPath = Join-Path $AppPath "venv"
+$VenvPath = Join-Path $AppPath ".venv"
 $PythonExe = Join-Path $VenvPath "Scripts\python.exe"
 $ServiceName = "EmailManagementService"
 $ServiceDisplayName = "Email Management Tool Service"

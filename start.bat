@@ -7,22 +7,22 @@ echo ============================================================
 echo.
 
 :: Check if virtual environment exists
-if not exist "venv" (
+if not exist ".venv" (
     echo [ERROR] Virtual environment not found!
-    echo Please run setup.bat first.
+    echo Please run setup-uv.bat first.
     pause
     exit /b 1
 )
 
 :: Activate virtual environment
 echo Activating virtual environment...
-call venv\Scripts\activate.bat
+call .venv\Scripts\activate.bat
 
 :: Check if dependencies are installed
 python -c "import flask, sqlalchemy, aiosmtpd" >nul 2>&1
 if %errorlevel% neq 0 (
     echo [ERROR] Dependencies not installed!
-    echo Please run setup.bat first.
+    echo Please run setup-uv.bat first.
     pause
     exit /b 1
 )

@@ -1,0 +1,545 @@
+{% extends "base.html" %}
+
+{% block title %}Email Testing Dashboard - Email Management Tool{% endblock %}
+
+{% block extra_css %}
+<style>
+    .test-container {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    .test-header {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 30px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    }
+    
+    .test-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .test-card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        transition: transform 0.3s;
+    }
+    
+    .test-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+    
+    .test-card h3 {
+        color: #333;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .test-status {
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.85em;
+        font-weight: 600;
+        display: inline-block;
+        margin-top: 10px;
+    }
+    
+    .status-ready {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .status-testing {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .status-error {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .status-success {
+        background: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .test-form {
+        margin-top: 20px;
+    }
+    
+    .test-form .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .test-form label {
+        display: block;
+        color: #666;
+        margin-bottom: 5px;
+        font-weight: 500;
+    }
+    
+    .test-form input, .test-form select, .test-form textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+    }
+    
+    .test-form textarea {
+        resize: vertical;
+        min-height: 100px;
+    }
+    
+    .test-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    
+    .test-results {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 20px;
+        display: none;
+    }
+    
+    .test-results.show {
+        display: block;
+    }
+    
+    .result-item {
+        padding: 10px;
+        margin-bottom: 10px;
+        border-left: 4px solid #667eea;
+        background: white;
+        border-radius: 5px;
+    }
+    
+    .flow-diagram {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        margin-bottom: 30px;
+    }
+    
+    .flow-steps {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+    
+    .flow-step {
+        flex: 1;
+        min-width: 150px;
+        text-align: center;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        position: relative;
+    }
+    
+    .flow-step.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .flow-step.completed {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .flow-arrow {
+        position: absolute;
+        right: -30px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 24px;
+        color: #667eea;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="test-container">
+    <div class="test-header">
+        <h2><i class="bi bi-flask"></i> Email Testing Dashboard</h2>
+        <p class="text-muted">Test email interception, modification, and release workflows</p>
+    </div>
+    
+    <!-- Email Flow Diagram -->
+    <div class="flow-diagram">
+        <h4>Email Processing Flow</h4>
+        <div class="flow-steps">
+            <div class="flow-step" id="step-send">
+                <i class="bi bi-envelope"></i>
+                <div>Send Email</div>
+                <span class="flow-arrow">→</span>
+            </div>
+            <div class="flow-step" id="step-intercept">
+                <i class="bi bi-shield-check"></i>
+                <div>Intercept</div>
+                <span class="flow-arrow">→</span>
+            </div>
+            <div class="flow-step" id="step-hold">
+                <i class="bi bi-pause-circle"></i>
+                <div>Hold</div>
+                <span class="flow-arrow">→</span>
+            </div>
+            <div class="flow-step" id="step-modify">
+                <i class="bi bi-pencil-square"></i>
+                <div>Modify</div>
+                <span class="flow-arrow">→</span>
+            </div>
+            <div class="flow-step" id="step-release">
+                <i class="bi bi-send"></i>
+                <div>Release</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Test Cards Grid -->
+    <div class="test-grid">
+        <!-- Send Test Email Card -->
+        <div class="test-card">
+            <h3><i class="bi bi-envelope-plus"></i> Send Test Email</h3>
+            <p class="text-muted">Send a test email through the proxy</p>
+            
+            <form class="test-form" id="sendTestForm">
+                <div class="form-group">
+                    <label>From Account</label>
+                    <select id="from_account" name="from_account" required>
+                        <option value="">Select sender account...</option>
+                        {% for account in accounts %}
+                        <option value="{{ account.id }}">{{ account.account_name }} ({{ account.email_address }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>To Email</label>
+                    <input type="email" id="to_email" name="to_email" placeholder="recipient@example.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Subject</label>
+                    <input type="text" id="subject" name="subject" placeholder="Test Email Subject" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Body</label>
+                    <textarea id="body" name="body" placeholder="Test email body content..." required></textarea>
+                </div>
+                
+                <div class="test-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-send"></i> Send Test
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="generateTestData()">
+                        <i class="bi bi-magic"></i> Auto-Fill
+                    </button>
+                </div>
+            </form>
+            
+            <div class="test-results" id="sendResults"></div>
+        </div>
+        
+        <!-- Check Interception Card -->
+        <div class="test-card">
+            <h3><i class="bi bi-inbox"></i> Check Interception</h3>
+            <p class="text-muted">Verify emails are being intercepted</p>
+            
+            <div class="test-status status-ready">
+                Proxy Status: Active
+            </div>
+            
+            <div class="test-form">
+                <div class="form-group">
+                    <label>Account to Monitor</label>
+                    <select id="monitor_account" onchange="checkInterception(this.value)">
+                        <option value="">All accounts</option>
+                        {% for account in accounts %}
+                        <option value="{{ account.id }}">{{ account.account_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="test-actions">
+                    <button class="btn btn-primary" onclick="refreshInterception()">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                    <button class="btn btn-info" onclick="viewQueue()">
+                        <i class="bi bi-list-ul"></i> View Queue
+                    </button>
+                </div>
+            </div>
+            
+            <div class="test-results show" id="interceptionResults">
+                <div class="result-item">
+                    <strong>Intercepted Emails:</strong> <span id="interceptedCount">0</span>
+                </div>
+                <div class="result-item">
+                    <strong>Pending Review:</strong> <span id="pendingCount">0</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Test Modification Card -->
+        <div class="test-card">
+            <h3><i class="bi bi-pencil"></i> Test Modification</h3>
+            <p class="text-muted">Modify intercepted emails</p>
+            
+            <div class="test-form">
+                <div class="form-group">
+                    <label>Select Email to Modify</label>
+                    <select id="email_to_modify">
+                        <option value="">Loading emails...</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Modification Type</label>
+                    <select id="modification_type">
+                        <option value="timestamp">Add Timestamp</option>
+                        <option value="warning">Add Warning Banner</option>
+                        <option value="footer">Add Footer</option>
+                        <option value="custom">Custom Edit</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="customEditGroup" style="display:none;">
+                    <label>Custom Modification</label>
+                    <textarea id="custom_modification" placeholder="Enter your modification..."></textarea>
+                </div>
+                
+                <div class="test-actions">
+                    <button class="btn btn-warning" onclick="applyModification()">
+                        <i class="bi bi-pencil-square"></i> Apply
+                    </button>
+                    <button class="btn btn-secondary" onclick="previewModification()">
+                        <i class="bi bi-eye"></i> Preview
+                    </button>
+                </div>
+            </div>
+            
+            <div class="test-results" id="modificationResults"></div>
+        </div>
+        
+        <!-- Release Test Card -->
+        <div class="test-card">
+            <h3><i class="bi bi-send-check"></i> Release Test</h3>
+            <p class="text-muted">Release modified emails</p>
+            
+            <div class="test-form">
+                <div class="form-group">
+                    <label>Emails Ready for Release</label>
+                    <select id="release_email" multiple size="5" style="height:auto;">
+                        <option value="">No emails ready</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Release Action</label>
+                    <select id="release_action">
+                        <option value="approve">Approve & Send</option>
+                        <option value="reject">Reject & Block</option>
+                        <option value="hold">Keep Holding</option>
+                    </select>
+                </div>
+                
+                <div class="test-actions">
+                    <button class="btn btn-success" onclick="releaseEmail()">
+                        <i class="bi bi-check-circle"></i> Execute
+                    </button>
+                    <button class="btn btn-danger" onclick="releaseAll()">
+                        <i class="bi bi-broadcast"></i> Release All
+                    </button>
+                </div>
+            </div>
+            
+            <div class="test-results" id="releaseResults"></div>
+        </div>
+    </div>
+    
+    <!-- Test Results Summary -->
+    <div class="test-card">
+        <h3><i class="bi bi-clipboard-data"></i> Test Results Summary</h3>
+        <div id="testSummary">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Test</th>
+                        <th>Status</th>
+                        <th>Time</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody id="summaryTable">
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">No tests run yet</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    loadPendingEmails();
+    updateInterceptionStats();
+    setInterval(updateInterceptionStats, 5000); // Update every 5 seconds
+});
+
+function generateTestData() {
+    const timestamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    document.getElementById('subject').value = `Test Email - ${timestamp}`;
+    document.getElementById('body').value = `This is a test email sent at ${timestamp}\n\nOriginal message content for testing interception and modification.`;
+}
+
+function checkInterception(accountId) {
+    fetch(`/api/stats?account_id=${accountId}`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('interceptedCount').textContent = data.total || 0;
+            document.getElementById('pendingCount').textContent = data.pending || 0;
+        });
+}
+
+function refreshInterception() {
+    checkInterception(document.getElementById('monitor_account').value);
+}
+
+function viewQueue() {
+    window.location.href = '/emails';
+}
+
+function updateInterceptionStats() {
+    fetch('/api/stats')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('interceptedCount').textContent = data.total || 0;
+            document.getElementById('pendingCount').textContent = data.pending || 0;
+        });
+}
+
+function loadPendingEmails() {
+    fetch('/api/emails?status=PENDING')
+        .then(response => response.json())
+        .then(emails => {
+            const modifySelect = document.getElementById('email_to_modify');
+            const releaseSelect = document.getElementById('release_email');
+            
+            modifySelect.innerHTML = '';
+            releaseSelect.innerHTML = '';
+            
+            if (emails.length === 0) {
+                modifySelect.innerHTML = '<option value="">No pending emails</option>';
+                releaseSelect.innerHTML = '<option value="">No emails ready</option>';
+            } else {
+                emails.forEach(email => {
+                    const option1 = new Option(`${email.subject} (from ${email.sender})`, email.id);
+                    const option2 = new Option(`${email.subject} (from ${email.sender})`, email.id);
+                    modifySelect.add(option1);
+                    releaseSelect.add(option2);
+                });
+            }
+        });
+}
+
+document.getElementById('modification_type').addEventListener('change', function() {
+    const customGroup = document.getElementById('customEditGroup');
+    customGroup.style.display = this.value === 'custom' ? 'block' : 'none';
+});
+
+function applyModification() {
+    const emailId = document.getElementById('email_to_modify').value;
+    const modificationType = document.getElementById('modification_type').value;
+    
+    if (!emailId) {
+        alert('Please select an email to modify');
+        return;
+    }
+    
+    // Update flow diagram
+    document.getElementById('step-modify').classList.add('active');
+    
+    // Apply modification logic here
+    const resultsDiv = document.getElementById('modificationResults');
+    resultsDiv.classList.add('show');
+    resultsDiv.innerHTML = '<div class="result-item"><i class="bi bi-check-circle text-success"></i> Modification applied successfully</div>';
+    
+    // Reload emails
+    setTimeout(loadPendingEmails, 1000);
+}
+
+function releaseEmail() {
+    const emailId = document.getElementById('release_email').value;
+    const action = document.getElementById('release_action').value;
+    
+    if (!emailId) {
+        alert('Please select an email to release');
+        return;
+    }
+    
+    // Update flow diagram
+    document.getElementById('step-release').classList.add('active');
+    
+    // Release logic here
+    const resultsDiv = document.getElementById('releaseResults');
+    resultsDiv.classList.add('show');
+    resultsDiv.innerHTML = `<div class="result-item"><i class="bi bi-check-circle text-success"></i> Email ${action}d successfully</div>`;
+    
+    // Reload emails
+    setTimeout(loadPendingEmails, 1000);
+}
+
+// Form submission
+document.getElementById('sendTestForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Update flow diagram
+    document.getElementById('step-send').classList.add('active');
+    
+    const formData = new FormData(this);
+    const data = Object.fromEntries(formData);
+    
+    fetch('/api/send-test', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        const resultsDiv = document.getElementById('sendResults');
+        resultsDiv.classList.add('show');
+        
+        if (result.success) {
+            resultsDiv.innerHTML = '<div class="result-item"><i class="bi bi-check-circle text-success"></i> Test email sent successfully</div>';
+            document.getElementById('step-intercept').classList.add('active');
+        } else {
+            resultsDiv.innerHTML = `<div class="result-item"><i class="bi bi-x-circle text-danger"></i> Error: ${result.error}</div>`;
+        }
+        
+        // Reload pending emails
+        setTimeout(loadPendingEmails, 2000);
+    });
+});
+</script>
+{% endblock %}

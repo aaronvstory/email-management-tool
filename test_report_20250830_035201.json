@@ -1,0 +1,259 @@
+{
+  "timestamp": "20250830_035201",
+  "results": {
+    "outgoing": false,
+    "incoming": false
+  },
+  "initial_stats": {
+    "hourly_volume": [],
+    "stats": {
+      "approved": 0,
+      "high_risk": 0,
+      "pending": 0,
+      "rejected": 0,
+      "total": 0
+    }
+  },
+  "final_stats": {
+    "hourly_volume": [],
+    "stats": {
+      "approved": 0,
+      "high_risk": 0,
+      "pending": 0,
+      "rejected": 0,
+      "total": 0
+    }
+  },
+  "test_log": [
+    {
+      "timestamp": "2025-08-30 03:52:01.969",
+      "level": "INFO",
+      "message": "======================================================================"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:01.969",
+      "level": "INFO",
+      "message": "EMAIL INTERCEPTION, EDIT & RELEASE TEST SUITE"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:01.969",
+      "level": "INFO",
+      "message": "Test Session: 20250830_035201"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:01.969",
+      "level": "INFO",
+      "message": "======================================================================"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:01.969",
+      "level": "INFO",
+      "message": "Logging into dashboard..."
+    },
+    {
+      "timestamp": "2025-08-30 03:52:02.076",
+      "level": "SUCCESS",
+      "message": "\u2705 Successfully logged into dashboard"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:02.076",
+      "level": "INFO",
+      "message": "Verifying dashboard classification..."
+    },
+    {
+      "timestamp": "2025-08-30 03:52:02.079",
+      "level": "INFO",
+      "message": "Dashboard Statistics:"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:02.079",
+      "level": "INFO",
+      "message": "  Total Emails: 0"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:02.079",
+      "level": "INFO",
+      "message": "  Pending: 0"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:02.079",
+      "level": "INFO",
+      "message": "  Approved: 0"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:02.079",
+      "level": "INFO",
+      "message": "  Rejected: 0"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:02.079",
+      "level": "INFO",
+      "message": "  High Risk: 0"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:02.079",
+      "level": "INFO",
+      "message": "\n======================================================================"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:02.079",
+      "level": "INFO",
+      "message": "TEST 1: OUTGOING EMAIL INTERCEPTION"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:02.079",
+      "level": "INFO",
+      "message": "======================================================================"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:02.079",
+      "level": "INFO",
+      "message": "Sending test email #OUTGOING via proxy..."
+    },
+    {
+      "timestamp": "2025-08-30 03:52:02.089",
+      "level": "SUCCESS",
+      "message": "\u2705 Email #OUTGOING sent successfully"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:04.090",
+      "level": "INFO",
+      "message": "Fetching pending emails from database..."
+    },
+    {
+      "timestamp": "2025-08-30 03:52:04.091",
+      "level": "INFO",
+      "message": "Found 0 pending emails"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:04.091",
+      "level": "ERROR",
+      "message": "\u274c Test email not found in pending queue"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:04.091",
+      "level": "INFO",
+      "message": "\n======================================================================"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:04.091",
+      "level": "INFO",
+      "message": "TEST 2: INCOMING EMAIL INTERCEPTION"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:04.091",
+      "level": "INFO",
+      "message": "======================================================================"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:04.091",
+      "level": "INFO",
+      "message": "Sending test email #INCOMING via proxy..."
+    },
+    {
+      "timestamp": "2025-08-30 03:52:04.096",
+      "level": "SUCCESS",
+      "message": "\u2705 Email #INCOMING sent successfully"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:06.096",
+      "level": "INFO",
+      "message": "Fetching pending emails from database..."
+    },
+    {
+      "timestamp": "2025-08-30 03:52:06.096",
+      "level": "INFO",
+      "message": "Found 0 pending emails"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:06.096",
+      "level": "ERROR",
+      "message": "\u274c Test email not found"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:06.096",
+      "level": "INFO",
+      "message": "Verifying dashboard classification..."
+    },
+    {
+      "timestamp": "2025-08-30 03:52:06.100",
+      "level": "INFO",
+      "message": "Dashboard Statistics:"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:06.100",
+      "level": "INFO",
+      "message": "  Total Emails: 0"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:06.100",
+      "level": "INFO",
+      "message": "  Pending: 0"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:06.100",
+      "level": "INFO",
+      "message": "  Approved: 0"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:06.100",
+      "level": "INFO",
+      "message": "  Rejected: 0"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:06.100",
+      "level": "INFO",
+      "message": "  High Risk: 0"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:06.100",
+      "level": "INFO",
+      "message": "\n======================================================================"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:06.100",
+      "level": "INFO",
+      "message": "TEST REPORT"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:06.100",
+      "level": "INFO",
+      "message": "======================================================================"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:06.100",
+      "level": "INFO",
+      "message": "Test Results:"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:06.100",
+      "level": "ERROR",
+      "message": "  \u2705 Outgoing Interception: FAILED"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:06.100",
+      "level": "ERROR",
+      "message": "  \u2705 Incoming Interception: FAILED"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:06.100",
+      "level": "INFO",
+      "message": "\nEmail Statistics:"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:06.100",
+      "level": "INFO",
+      "message": "  Total Emails: 0 \u2192 0"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:06.100",
+      "level": "INFO",
+      "message": "  Pending: 0 \u2192 0"
+    },
+    {
+      "timestamp": "2025-08-30 03:52:06.100",
+      "level": "INFO",
+      "message": "  Approved: 0 \u2192 0"
+    }
+  ]
+}

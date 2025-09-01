@@ -1,0 +1,35 @@
+{
+  "timestamp": "2025-08-31T22:53:12.906336",
+  "summary": {
+    "total_accounts": 2,
+    "smtp_success": 0,
+    "imap_success": 0,
+    "all_success": false
+  },
+  "accounts": [
+    {
+      "name": "Gmail Test Account",
+      "email": "test.email.manager@gmail.com",
+      "smtp": {
+        "success": false,
+        "message": "(535, b'5.7.8 Username and Password not accepted. For more information, go to\\n5.7.8  https://support.google.com/mail/?p=BadCredentials 006d021491bc7-61e3206cb40sm631462eaf.12 - gsmtp')"
+      },
+      "imap": {
+        "success": false,
+        "message": "b'[AUTHENTICATIONFAILED] Invalid credentials (Failure)'"
+      }
+    },
+    {
+      "name": "Hostinger Account",
+      "email": "mcintyre@corrinbox.com",
+      "smtp": {
+        "success": false,
+        "message": "(535, b'5.7.8 Error: authentication failed: (reason unavailable)')"
+      },
+      "imap": {
+        "success": false,
+        "message": "b'[AUTHENTICATIONFAILED] Authentication failed.'"
+      }
+    }
+  ]
+}

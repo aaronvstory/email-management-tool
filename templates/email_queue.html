@@ -2,6 +2,85 @@
 
 {% block title %}Email Queue - Email Management Tool{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Fix nav-tabs text visibility */
+    .nav-tabs {
+        border-bottom: 2px solid #e9ecef;
+        margin-bottom: 20px;
+    }
+    
+    .nav-tabs .nav-link {
+        color: #212529; /* Dark color for better contrast */
+        border: 2px solid transparent;
+        padding: 12px 25px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        background: white;
+        margin-right: 5px;
+        border-radius: 10px 10px 0 0;
+        position: relative;
+    }
+    
+    .nav-tabs .nav-link:hover {
+        color: #212529; /* Keep text dark on hover for readability */
+        background: #f8f9fa; /* Light gray background */
+        border-color: #667eea; /* Purple border accent */
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2);
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: white;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        font-weight: 600;
+        border-color: transparent;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+    
+    .nav-tabs .nav-link.active:hover {
+        color: white; /* Keep white text on active hover */
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+    }
+    
+    .nav-tabs .nav-link .badge {
+        margin-left: 8px;
+        font-size: 0.8rem;
+        padding: 0.3em 0.7em;
+        font-weight: 600;
+        vertical-align: middle;
+    }
+    
+    /* Ensure badges are visible in all states */
+    .nav-tabs .nav-link.active .badge {
+        background-color: rgba(255, 255, 255, 0.25) !important;
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+    
+    .nav-tabs .nav-link:not(.active) .badge.bg-warning {
+        background-color: #ffc107 !important;
+        color: #000 !important;
+    }
+    
+    .nav-tabs .nav-link:not(.active) .badge.bg-success {
+        background-color: #28a745 !important;
+        color: white !important;
+    }
+    
+    .nav-tabs .nav-link:not(.active) .badge.bg-danger {
+        background-color: #dc3545 !important;
+        color: white !important;
+    }
+    
+    .nav-tabs .nav-link:not(.active) .badge.bg-info {
+        background-color: #17a2b8 !important;
+        color: white !important;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1><i class="bi bi-inbox-fill"></i> Email Queue</h1>
@@ -17,22 +96,34 @@
 <ul class="nav nav-tabs mb-4">
     <li class="nav-item">
         <a class="nav-link {% if current_filter == 'PENDING' %}active{% endif %}" href="/emails?status=PENDING">
-            Pending <span class="badge bg-warning">{{ emails|selectattr('status', 'equalto', 'PENDING')|list|length }}</span>
+            Pending 
+            {% if pending_count > 0 %}
+            <span class="badge bg-warning">{{ pending_count }}</span>
+            {% endif %}
         </a>
     </li>
     <li class="nav-item">
         <a class="nav-link {% if current_filter == 'APPROVED' %}active{% endif %}" href="/emails?status=APPROVED">
             Approved
+            {% if approved_count > 0 %}
+            <span class="badge bg-success">{{ approved_count }}</span>
+            {% endif %}
         </a>
     </li>
     <li class="nav-item">
         <a class="nav-link {% if current_filter == 'REJECTED' %}active{% endif %}" href="/emails?status=REJECTED">
             Rejected
+            {% if rejected_count > 0 %}
+            <span class="badge bg-danger">{{ rejected_count }}</span>
+            {% endif %}
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link {% if current_filter == 'ALL' %}active{% endif %}" href="/emails?status=ALL">
+        <a class="nav-link {% if current_filter == 'ALL' or current_filter == 'all' %}active{% endif %}" href="/emails?status=ALL">
             All Emails
+            {% if total_count > 0 %}
+            <span class="badge bg-info">{{ total_count }}</span>
+            {% endif %}
         </a>
     </li>
 </ul>
