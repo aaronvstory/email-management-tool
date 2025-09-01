@@ -184,7 +184,7 @@
                         <div class="detail-value">{{ account.last_checked or 'Never' }}</div>
                         {% if account.last_error %}
                         <div style="font-size: 0.85rem; color: #dc3545;">
-                            Error: {{ account.last_error[:50] }}
+                            Error: {{ account.last_error[:50] if account.last_error else 'Unknown error' }}
                         </div>
                         {% endif %}
                     </div>

@@ -1424,7 +1424,10 @@ def diagnostics(account_id=None):
     conn.close()
     
     # Redirect to dashboard with diagnostics tab
-    return redirect(url_for('dashboard', tab='diagnostics') + f'?account_id={account_id}' if account_id else '')
+    if account_id:
+        return redirect(url_for('dashboard', tab='diagnostics') + f'?account_id={account_id}')
+    else:
+        return redirect(url_for('dashboard', tab='diagnostics'))
 
 @app.route('/diagnostics/test', methods=['POST'])
 @login_required
