@@ -1,0 +1,28 @@
+{
+  "test_name": "Email Interception and Editing E2E Test",
+  "timestamp": "2025-09-01T01:34:37.564443",
+  "results": [
+    {
+      "timestamp": "2025-09-01T01:34:37.138504",
+      "step": "Login failed",
+      "status": "error",
+      "error": "Timeout 5000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation to \"http://localhost:5000/dashboard\" until 'load'\n============================================================"
+    },
+    {
+      "timestamp": "2025-09-01T01:34:37.138524",
+      "step": "Setup failed",
+      "status": "error",
+      "error": "Timeout 5000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation to \"http://localhost:5000/dashboard\" until 'load'\n============================================================"
+    }
+  ],
+  "screenshots": [
+    "screenshots/interception_test/01_login_page.png",
+    "screenshots/interception_test/02_login_filled.png",
+    "screenshots/interception_test/99_final_state.png"
+  ],
+  "summary": {
+    "total_steps": 2,
+    "successful": 0,
+    "failed": 2
+  }
+}
