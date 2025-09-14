@@ -1,377 +1,331 @@
-# Email Management Tool - PowerShell Management Script
-# Requires Administrator privileges for service installation
+#==============================================================================
+#  EMAIL MANAGEMENT TOOL - POWERSHELL MANAGER
+#==============================================================================
+#  Professional management script for Email Management Tool
+#  Handles starting, stopping, status checks, and maintenance
+#==============================================================================
 
 param(
     [Parameter(Position=0)]
-    [ValidateSet('install', 'uninstall', 'start', 'stop', 'restart', 'status', 'backup', 'restore', 'logs', 'config')]
-    [string]$Action = 'status'
+    [ValidateSet('start', 'stop', 'restart', 'status', 'test', 'clean')]
+    [string]$Action = 'start'
 )
 
-$ErrorActionPreference = "Stop"
-$AppName = "EmailManagementTool"
-$AppPath = $PSScriptRoot
-$VenvPath = Join-Path $AppPath ".venv"
-$PythonExe = Join-Path $VenvPath "Scripts\python.exe"
-$ServiceName = "EmailManagementService"
-$ServiceDisplayName = "Email Management Tool Service"
+# Configuration
+$AppName = "Email Management Tool"
+$PythonScript = "simple_app.py"
+$Port = 5000
+$SMTPPort = 8587
+$VenvPath = ".venv"
 
-# Color output functions
-function Write-Success { Write-Host $args -ForegroundColor Green }
-function Write-Error { Write-Host $args -ForegroundColor Red }
-function Write-Warning { Write-Host $args -ForegroundColor Yellow }
-function Write-Info { Write-Host $args -ForegroundColor Cyan }
-
-# Banner
-function Show-Banner {
-    Clear-Host
-    Write-Host "============================================================" -ForegroundColor Cyan
-    Write-Host "   EMAIL MANAGEMENT TOOL - POWERSHELL MANAGER" -ForegroundColor White
-    Write-Host "============================================================" -ForegroundColor Cyan
+# Colors for output
+function Write-Header {
+    param([string]$Message)
+    Write-Host ""
+    Write-Host "========================================================" -ForegroundColor Cyan
+    Write-Host "   $Message" -ForegroundColor Yellow
+    Write-Host "========================================================" -ForegroundColor Cyan
     Write-Host ""
 }
 
-# Check if running as administrator
-function Test-Administrator {
-    $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
-    $principal = New-Object Security.Principal.WindowsPrincipal($currentUser)
-    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+function Write-Success {
+    param([string]$Message)
+    Write-Host "[OK] " -NoNewline -ForegroundColor Green
+    Write-Host $Message
 }
 
-# Install as Windows Service
-function Install-Service {
-    if (-not (Test-Administrator)) {
-        Write-Error "Administrator privileges required to install service!"
-        Write-Warning "Please run PowerShell as Administrator"
-        return
+function Write-Error {
+    param([string]$Message)
+    Write-Host "[ERROR] " -NoNewline -ForegroundColor Red
+    Write-Host $Message
+}
+
+function Write-Info {
+    param([string]$Message)
+    Write-Host "[INFO] " -NoNewline -ForegroundColor Cyan
+    Write-Host $Message
+}
+
+function Write-Warning {
+    param([string]$Message)
+    Write-Host "[WARN] " -NoNewline -ForegroundColor Yellow
+    Write-Host $Message
+}
+
+# Check if virtual environment exists
+function Test-VirtualEnv {
+    if (Test-Path $VenvPath) {
+        return $true
     }
+    Write-Warning "Virtual environment not found at $VenvPath"
+    Write-Info "Creating virtual environment..."
+    python -m venv $VenvPath
+    if ($LASTEXITCODE -eq 0) {
+        Write-Success "Virtual environment created"
+        return $true
+    }
+    Write-Error "Failed to create virtual environment"
+    return $false
+}
 
-    Write-Info "Installing Email Management Tool as Windows Service..."
-    
-    # Create service wrapper script
-    $serviceScript = @"
-import sys
-import os
-sys.path.insert(0, r'$AppPath')
-os.chdir(r'$AppPath')
+# Activate virtual environment
+function Activate-VirtualEnv {
+    $activateScript = Join-Path $VenvPath "Scripts\Activate.ps1"
+    if (Test-Path $activateScript) {
+        & $activateScript
+        Write-Success "Virtual environment activated"
+        return $true
+    }
+    Write-Error "Could not find activation script"
+    return $false
+}
 
-# Import and run the application
-from simple_app import *
+# Install dependencies
+function Install-Dependencies {
+    Write-Info "Checking dependencies..."
+    if (Test-Path "requirements.txt") {
+        pip install -q -r requirements.txt
+        if ($LASTEXITCODE -eq 0) {
+            Write-Success "Dependencies installed/verified"
+            return $true
+        }
+        Write-Error "Failed to install dependencies"
+        return $false
+    }
+    Write-Warning "requirements.txt not found"
+    return $true
+}
 
-if __name__ == '__main__':
-    import logging
-    logging.basicConfig(level=logging.INFO)
-    
-    # Start SMTP server in thread
-    smtp_thread = threading.Thread(target=run_smtp_server, daemon=True)
-    smtp_thread.start()
-    
-    # Run Flask app
-    app.run(host='0.0.0.0', port=5000, debug=False)
-"@
-    
-    $serviceScript | Out-File -FilePath (Join-Path $AppPath "service_wrapper.py") -Encoding UTF8
-    
-    # Install using NSSM (Non-Sucking Service Manager) if available
-    $nssmPath = Get-Command nssm -ErrorAction SilentlyContinue
-    
-    if ($nssmPath) {
-        nssm install $ServiceName $PythonExe (Join-Path $AppPath "service_wrapper.py")
-        nssm set $ServiceName DisplayName $ServiceDisplayName
-        nssm set $ServiceName Description "Email moderation and management system"
-        nssm set $ServiceName Start SERVICE_AUTO_START
-        nssm set $ServiceName AppDirectory $AppPath
-        Write-Success "Service installed successfully using NSSM"
-    } else {
-        # Create using sc.exe
-        $binPath = "`"$PythonExe`" `"$(Join-Path $AppPath 'service_wrapper.py')`""
-        sc.exe create $ServiceName binPath= $binPath DisplayName= $ServiceDisplayName start= auto
-        Write-Success "Service installed successfully using SC"
-        Write-Warning "For better service management, consider installing NSSM"
+# Check if application is running
+function Test-AppRunning {
+    try {
+        $response = Invoke-WebRequest -Uri "http://127.0.0.1:$Port" -UseBasicParsing -TimeoutSec 2 -ErrorAction SilentlyContinue
+        return $true
+    } catch {
+        return $false
     }
 }
 
-# Uninstall Windows Service
-function Uninstall-Service {
-    if (-not (Test-Administrator)) {
-        Write-Error "Administrator privileges required to uninstall service!"
-        return
-    }
-
-    Write-Info "Uninstalling Email Management Tool Service..."
-    
-    # Stop service first
-    Stop-Service -Name $ServiceName -ErrorAction SilentlyContinue
-    
-    # Check if NSSM is available
-    $nssmPath = Get-Command nssm -ErrorAction SilentlyContinue
-    
-    if ($nssmPath) {
-        nssm remove $ServiceName confirm
-    } else {
-        sc.exe delete $ServiceName
-    }
-    
-    Write-Success "Service uninstalled successfully"
-}
-
-# Start the application
-function Start-App {
-    Write-Info "Starting Email Management Tool..."
-    
-    # Check if running as service
-    $service = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
-    
-    if ($service) {
-        Start-Service -Name $ServiceName
-        Write-Success "Service started successfully"
-    } else {
-        # Start as regular application
-        $process = Start-Process -FilePath $PythonExe -ArgumentList "simple_app.py" -WorkingDirectory $AppPath -PassThru
-        Write-Success "Application started (PID: $($process.Id))"
-        Write-Info "Dashboard: http://localhost:5000"
-        Write-Info "SMTP Proxy: localhost:8587"
+# Get Python processes running our app
+function Get-AppProcesses {
+    Get-Process python -ErrorAction SilentlyContinue | Where-Object {
+        $_.CommandLine -like "*$PythonScript*"
     }
 }
 
 # Stop the application
-function Stop-App {
-    Write-Info "Stopping Email Management Tool..."
+function Stop-Application {
+    Write-Header "STOPPING $AppName"
     
-    # Check if running as service
-    $service = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
-    
-    if ($service -and $service.Status -eq 'Running') {
-        Stop-Service -Name $ServiceName
-        Write-Success "Service stopped successfully"
-    } else {
-        # Stop regular process
-        $processes = Get-Process python* | Where-Object { $_.Path -like "*$AppPath*" }
-        if ($processes) {
-            $processes | Stop-Process -Force
-            Write-Success "Application stopped"
-        } else {
-            Write-Warning "No running instances found"
-        }
-    }
-}
-
-# Restart the application
-function Restart-App {
-    Stop-App
-    Start-Sleep -Seconds 2
-    Start-App
-}
-
-# Show application status
-function Show-Status {
-    Write-Host ""
-    Write-Info "=== Application Status ==="
-    
-    # Check service
-    $service = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
-    if ($service) {
-        $status = $service.Status
-        $color = if ($status -eq 'Running') { 'Green' } else { 'Red' }
-        Write-Host "Service Status: " -NoNewline
-        Write-Host $status -ForegroundColor $color
-    } else {
-        Write-Warning "Service not installed"
-    }
-    
-    # Check processes
-    $processes = Get-Process python* -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "*$AppPath*" }
+    $processes = Get-AppProcesses
     if ($processes) {
-        Write-Success "Application is running"
         foreach ($proc in $processes) {
-            Write-Info "  PID: $($proc.Id) - Memory: $([math]::Round($proc.WorkingSet64/1MB, 2)) MB"
+            Write-Info "Stopping process $($proc.Id)..."
+            Stop-Process -Id $proc.Id -Force
+        }
+        Start-Sleep -Seconds 2
+        Write-Success "Application stopped"
+    } else {
+        Write-Info "Application is not running"
+    }
+}
+
+# Start the application
+function Start-Application {
+    Write-Header "STARTING $AppName"
+    
+    # Check if already running
+    if (Test-AppRunning) {
+        Write-Warning "Application is already running on port $Port"
+        Write-Info "Use 'manage.ps1 restart' to restart the application"
+        return
+    }
+    
+    # Setup environment
+    if (-not (Test-VirtualEnv)) {
+        Write-Error "Failed to setup virtual environment"
+        return
+    }
+    
+    if (-not (Activate-VirtualEnv)) {
+        Write-Error "Failed to activate virtual environment"
+        return
+    }
+    
+    if (-not (Install-Dependencies)) {
+        Write-Error "Failed to install dependencies"
+        return
+    }
+    
+    # Check if main script exists
+    if (-not (Test-Path $PythonScript)) {
+        Write-Error "$PythonScript not found in current directory"
+        return
+    }
+    
+    Write-Info "Starting Flask application..."
+    
+    # Start the application in a new window
+    $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $startInfo.FileName = "python"
+    $startInfo.Arguments = $PythonScript
+    $startInfo.WorkingDirectory = Get-Location
+    $startInfo.UseShellExecute = $true
+    $startInfo.CreateNoWindow = $false
+    
+    try {
+        $process = [System.Diagnostics.Process]::Start($startInfo)
+        
+        # Wait for app to start
+        Write-Info "Waiting for application to start..."
+        $maxWait = 30
+        $waited = 0
+        while ($waited -lt $maxWait -and -not (Test-AppRunning)) {
+            Start-Sleep -Seconds 1
+            $waited++
+            Write-Host "." -NoNewline
+        }
+        Write-Host ""
+        
+        if (Test-AppRunning) {
+            Write-Success "Application started successfully!"
+            Write-Host ""
+            Write-Host "  Services Running:" -ForegroundColor Cyan
+            Write-Host "  ----------------" -ForegroundColor Cyan
+            Write-Host "  Web Dashboard:  " -NoNewline
+            Write-Host "http://127.0.0.1:$Port" -ForegroundColor Green
+            Write-Host "  SMTP Proxy:     " -NoNewline
+            Write-Host "localhost:$SMTPPort" -ForegroundColor Green
+            Write-Host "  Login:          " -NoNewline
+            Write-Host "admin / admin123" -ForegroundColor Yellow
+            Write-Host ""
+            Write-Info "Press Ctrl+C in the application window to stop"
+        } else {
+            Write-Error "Application failed to start within $maxWait seconds"
+        }
+    } catch {
+        Write-Error "Failed to start application: $_"
+    }
+}
+
+# Check application status
+function Get-ApplicationStatus {
+    Write-Header "$AppName STATUS"
+    
+    # Check if running
+    if (Test-AppRunning) {
+        Write-Success "Web Dashboard is RUNNING on port $Port"
+    } else {
+        Write-Warning "Web Dashboard is NOT RUNNING"
+    }
+    
+    # Check SMTP port
+    $smtpListener = Get-NetTCPConnection -LocalPort $SMTPPort -ErrorAction SilentlyContinue
+    if ($smtpListener) {
+        Write-Success "SMTP Proxy is LISTENING on port $SMTPPort"
+    } else {
+        Write-Warning "SMTP Proxy is NOT LISTENING"
+    }
+    
+    # Check Python processes
+    $processes = Get-AppProcesses
+    if ($processes) {
+        Write-Info "Python processes found:"
+        foreach ($proc in $processes) {
+            Write-Host "    PID: $($proc.Id), Memory: $([math]::Round($proc.WorkingSet64/1MB, 2)) MB"
         }
     } else {
-        Write-Warning "Application is not running"
-    }
-    
-    # Check ports
-    Write-Host ""
-    Write-Info "=== Port Status ==="
-    $smtp = Test-NetConnection -ComputerName localhost -Port 8587 -WarningAction SilentlyContinue
-    $web = Test-NetConnection -ComputerName localhost -Port 5000 -WarningAction SilentlyContinue
-    
-    if ($smtp.TcpTestSucceeded) {
-        Write-Success "SMTP Proxy (8587): Active"
-    } else {
-        Write-Warning "SMTP Proxy (8587): Inactive"
-    }
-    
-    if ($web.TcpTestSucceeded) {
-        Write-Success "Web Dashboard (5000): Active"
-        Write-Info "Dashboard URL: http://localhost:5000"
-    } else {
-        Write-Warning "Web Dashboard (5000): Inactive"
+        Write-Info "No Python processes found for $PythonScript"
     }
     
     # Check database
-    Write-Host ""
-    Write-Info "=== Database Status ==="
-    $dbPath = Join-Path $AppPath "data\email_moderation.db"
-    if (Test-Path $dbPath) {
-        $dbInfo = Get-Item $dbPath
-        Write-Success "Database exists"
-        Write-Info "  Size: $([math]::Round($dbInfo.Length/1MB, 2)) MB"
-        Write-Info "  Modified: $($dbInfo.LastWriteTime)"
+    if (Test-Path "email_manager.db") {
+        $dbSize = (Get-Item "email_manager.db").Length / 1KB
+        Write-Success "Database found (Size: $([math]::Round($dbSize, 2)) KB)"
     } else {
-        Write-Warning "Database not found"
+        Write-Warning "Database file not found"
     }
 }
 
-# Backup database and config
-function Backup-Data {
-    Write-Info "Creating backup..."
+# Run tests
+function Test-Application {
+    Write-Header "TESTING $AppName"
     
-    $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-    $backupDir = Join-Path $AppPath "backups\backup_$timestamp"
-    
-    New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
-    
-    # Backup database
-    $dbPath = Join-Path $AppPath "data\email_moderation.db"
-    if (Test-Path $dbPath) {
-        Copy-Item $dbPath -Destination $backupDir
-        Write-Success "Database backed up"
+    if (-not (Test-AppRunning)) {
+        Write-Warning "Application is not running. Starting it first..."
+        Start-Application
+        Start-Sleep -Seconds 5
     }
     
-    # Backup config
-    $configPath = Join-Path $AppPath "config"
-    if (Test-Path $configPath) {
-        Copy-Item $configPath -Destination $backupDir -Recurse
-        Write-Success "Configuration backed up"
+    Write-Info "Running validation tests..."
+    
+    # Check if test script exists
+    $testScripts = @("final_validation.py", "tests\test_complete_workflow.py")
+    $testFound = $false
+    
+    foreach ($script in $testScripts) {
+        if (Test-Path $script) {
+            Write-Info "Running $script..."
+            python $script
+            $testFound = $true
+            break
+        }
     }
     
-    # Create backup info
-    @{
-        Timestamp = $timestamp
-        Date = Get-Date
-        AppVersion = "1.0.0"
-    } | ConvertTo-Json | Out-File -FilePath (Join-Path $backupDir "backup_info.json")
-    
-    Write-Success "Backup created: $backupDir"
-}
-
-# Restore from backup
-function Restore-Data {
-    $backupDir = Join-Path $AppPath "backups"
-    
-    if (-not (Test-Path $backupDir)) {
-        Write-Error "No backups found"
-        return
-    }
-    
-    # List available backups
-    $backups = Get-ChildItem $backupDir -Directory | Sort-Object Name -Descending
-    
-    if ($backups.Count -eq 0) {
-        Write-Error "No backups found"
-        return
-    }
-    
-    Write-Info "Available backups:"
-    for ($i = 0; $i -lt $backups.Count; $i++) {
-        Write-Host "[$i] $($backups[$i].Name)"
-    }
-    
-    $selection = Read-Host "Select backup number"
-    $selectedBackup = $backups[$selection]
-    
-    if (-not $selectedBackup) {
-        Write-Error "Invalid selection"
-        return
-    }
-    
-    Write-Warning "This will overwrite current data. Continue? (Y/N)"
-    $confirm = Read-Host
-    
-    if ($confirm -ne 'Y') {
-        Write-Info "Restore cancelled"
-        return
-    }
-    
-    # Stop application first
-    Stop-App
-    
-    # Restore database
-    $dbBackup = Join-Path $selectedBackup.FullName "email_moderation.db"
-    if (Test-Path $dbBackup) {
-        Copy-Item $dbBackup -Destination (Join-Path $AppPath "data") -Force
-        Write-Success "Database restored"
-    }
-    
-    # Restore config
-    $configBackup = Join-Path $selectedBackup.FullName "config"
-    if (Test-Path $configBackup) {
-        Copy-Item $configBackup -Destination $AppPath -Recurse -Force
-        Write-Success "Configuration restored"
-    }
-    
-    Write-Success "Restore completed from: $($selectedBackup.Name)"
-}
-
-# Show logs
-function Show-Logs {
-    param([int]$Lines = 50)
-    
-    $logPath = Join-Path $AppPath "logs\email_moderation.log"
-    
-    if (-not (Test-Path $logPath)) {
-        Write-Warning "Log file not found"
-        return
-    }
-    
-    Write-Info "=== Recent Log Entries ==="
-    Get-Content $logPath -Tail $Lines | ForEach-Object {
-        if ($_ -match "ERROR") {
-            Write-Error $_
-        } elseif ($_ -match "WARNING") {
-            Write-Warning $_
-        } else {
-            Write-Host $_
+    if (-not $testFound) {
+        Write-Warning "No test scripts found"
+        Write-Info "Testing basic connectivity..."
+        
+        try {
+            $response = Invoke-WebRequest -Uri "http://127.0.0.1:$Port/login" -UseBasicParsing
+            if ($response.StatusCode -eq 200) {
+                Write-Success "Login page accessible"
+            }
+        } catch {
+            Write-Error "Failed to access login page"
         }
     }
 }
 
-# Edit configuration
-function Edit-Config {
-    $configPath = Join-Path $AppPath "config\config.ini"
+# Clean workspace
+function Clean-Workspace {
+    Write-Header "CLEANING WORKSPACE"
     
-    if (-not (Test-Path $configPath)) {
-        Write-Error "Configuration file not found"
-        return
-    }
+    Write-Info "Cleaning Python cache..."
+    Get-ChildItem -Path . -Include __pycache__ -Recurse -Directory | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path . -Include *.pyc -Recurse -File | Remove-Item -Force -ErrorAction SilentlyContinue
     
-    Write-Info "Opening configuration in notepad..."
-    Start-Process notepad.exe -ArgumentList $configPath -Wait
+    Write-Info "Cleaning test artifacts..."
+    Get-ChildItem -Path . -Include test_results*.json -File | Remove-Item -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path . -Include validation_report*.json -File | Remove-Item -Force -ErrorAction SilentlyContinue
     
-    Write-Warning "Configuration changed. Restart required for changes to take effect."
-    $restart = Read-Host "Restart now? (Y/N)"
-    
-    if ($restart -eq 'Y') {
-        Restart-App
-    }
+    Write-Success "Workspace cleaned"
 }
 
 # Main execution
-Show-Banner
+Clear-Host
 
 switch ($Action) {
-    'install' { Install-Service }
-    'uninstall' { Uninstall-Service }
-    'start' { Start-App }
-    'stop' { Stop-App }
-    'restart' { Restart-App }
-    'status' { Show-Status }
-    'backup' { Backup-Data }
-    'restore' { Restore-Data }
-    'logs' { Show-Logs }
-    'config' { Edit-Config }
-    default { Show-Status }
+    'start' {
+        Start-Application
+    }
+    'stop' {
+        Stop-Application
+    }
+    'restart' {
+        Stop-Application
+        Start-Sleep -Seconds 2
+        Start-Application
+    }
+    'status' {
+        Get-ApplicationStatus
+    }
+    'test' {
+        Test-Application
+    }
+    'clean' {
+        Clean-Workspace
+    }
 }
 
 Write-Host ""
-Write-Host "============================================================" -ForegroundColor Cyan

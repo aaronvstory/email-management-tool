@@ -1,54 +1,37 @@
 @echo off
-setlocal EnableDelayedExpansion
+REM ========================================================
+REM    EMAIL MANAGEMENT TOOL - LAUNCHER
+REM ========================================================
+REM    Quick launcher for Email Management Tool
+REM    Runs PowerShell script with proper execution policy
+REM ========================================================
 
-echo ============================================================
-echo    EMAIL MANAGEMENT TOOL - LAUNCHER
-echo ============================================================
-echo.
-
-:: Check if virtual environment exists
-if not exist ".venv" (
-    echo [ERROR] Virtual environment not found!
-    echo Please run setup-uv.bat first.
-    pause
-    exit /b 1
-)
-
-:: Activate virtual environment
-echo Activating virtual environment...
-call .venv\Scripts\activate.bat
-
-:: Check if dependencies are installed
-python -c "import flask, sqlalchemy, aiosmtpd" >nul 2>&1
-if %errorlevel% neq 0 (
-    echo [ERROR] Dependencies not installed!
-    echo Please run setup-uv.bat first.
-    pause
-    exit /b 1
-)
-
-:: Clear screen for clean display
 cls
-
-echo ============================================================
-echo    EMAIL MANAGEMENT TOOL - STARTING SERVICES
-echo ============================================================
 echo.
-echo [*] Starting Email Management Tool...
-echo [*] SMTP Proxy Port: 8587
-echo [*] Web Dashboard: http://localhost:5000
-echo [*] Default Login: admin / admin123
-echo.
-echo [*] Press Ctrl+C to stop the application
-echo.
-echo ============================================================
+echo ========================================================
+echo    EMAIL MANAGEMENT TOOL - STARTING...
+echo ========================================================
 echo.
 
-:: Start the application
-python simple_app.py
+REM Check if PowerShell script exists
+if not exist "%~dp0manage.ps1" (
+    echo ERROR: manage.ps1 not found!
+    echo Please ensure manage.ps1 is in the same directory as this batch file.
+    pause
+    exit /b 1
+)
 
-:: If we get here, the app has stopped
-echo.
-echo Application stopped.
-pause
+REM Launch PowerShell script with bypass execution policy
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0manage.ps1" start
+
+REM Check if PowerShell script executed successfully
+if %ERRORLEVEL% NEQ 0 (
+    echo.
+    echo ========================================================
+    echo    ERROR: Failed to start Email Management Tool
+    echo ========================================================
+    pause
+    exit /b %ERRORLEVEL%
+)
+
 exit /b 0

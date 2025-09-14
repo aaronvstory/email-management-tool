@@ -1,0 +1,142 @@
+{
+  "timestamp": "2025-09-12T21:34:22.376Z",
+  "totalTests": 12,
+  "passed": 11,
+  "failed": 1,
+  "details": [
+    {
+      "name": "Application Accessibility",
+      "status": "passed",
+      "duration": "734ms"
+    },
+    {
+      "name": "Login Page Rendering",
+      "status": "passed",
+      "duration": "1086ms"
+    },
+    {
+      "name": "Login Functionality",
+      "status": "passed",
+      "duration": "1815ms"
+    },
+    {
+      "name": "Dashboard Layout",
+      "status": "passed",
+      "duration": "612ms"
+    },
+    {
+      "name": "Email Queue Page",
+      "status": "passed",
+      "duration": "798ms"
+    },
+    {
+      "name": "Email Compose Page",
+      "status": "passed",
+      "duration": "1320ms"
+    },
+    {
+      "name": "Inbox Page",
+      "status": "passed",
+      "duration": "677ms"
+    },
+    {
+      "name": "Account Management Page",
+      "status": "failed",
+      "duration": "1137ms",
+      "error": "SyntaxError: Failed to execute 'querySelector' on 'Document': 'a[href*=\"/add\"], button:has-text(\"Add\")' is not a valid selector."
+    },
+    {
+      "name": "Responsive Design Check",
+      "status": "passed",
+      "duration": "3170ms"
+    },
+    {
+      "name": "Performance Metrics",
+      "status": "passed",
+      "duration": "865ms"
+    },
+    {
+      "name": "Styling Consistency Check",
+      "status": "passed",
+      "duration": "1079ms"
+    },
+    {
+      "name": "Error Handling Check",
+      "status": "passed",
+      "duration": "942ms"
+    }
+  ],
+  "screenshots": [
+    {
+      "name": "login-page",
+      "description": "Login page with styling",
+      "filename": "login-page_1757712864353.png",
+      "timestamp": "2025-09-12T21:34:24.748Z"
+    },
+    {
+      "name": "login-filled",
+      "description": "Login form filled",
+      "filename": "login-filled_1757712864792.png",
+      "timestamp": "2025-09-12T21:34:25.242Z"
+    },
+    {
+      "name": "dashboard",
+      "description": "Main dashboard view",
+      "filename": "dashboard_1757712866579.png",
+      "timestamp": "2025-09-12T21:34:27.175Z"
+    },
+    {
+      "name": "email-queue",
+      "description": "Email queue page",
+      "filename": "email-queue_1757712867810.png",
+      "timestamp": "2025-09-12T21:34:27.973Z"
+    },
+    {
+      "name": "compose-page",
+      "description": "Email compose interface",
+      "filename": "compose-page_1757712869022.png",
+      "timestamp": "2025-09-12T21:34:29.293Z"
+    },
+    {
+      "name": "inbox-page",
+      "description": "Email inbox view",
+      "filename": "inbox-page_1757712869844.png",
+      "timestamp": "2025-09-12T21:34:29.970Z"
+    },
+    {
+      "name": "responsive-mobile",
+      "description": "Mobile view (375x667)",
+      "filename": "responsive-mobile_1757712872127.png",
+      "timestamp": "2025-09-12T21:34:32.358Z"
+    },
+    {
+      "name": "responsive-tablet",
+      "description": "Tablet view (768x1024)",
+      "filename": "responsive-tablet_1757712873119.png",
+      "timestamp": "2025-09-12T21:34:33.311Z"
+    },
+    {
+      "name": "responsive-desktop",
+      "description": "Desktop view (1920x1080)",
+      "filename": "responsive-desktop_1757712874131.png",
+      "timestamp": "2025-09-12T21:34:34.277Z"
+    }
+  ],
+  "performanceMetrics": {
+    "Timestamp": 11385.308922,
+    "Documents": 27,
+    "Frames": 17,
+    "JSEventListeners": 288,
+    "Nodes": 5847,
+    "LayoutCount": 13,
+    "RecalcStyleCount": 17,
+    "LayoutDuration": 0.016173,
+    "RecalcStyleDuration": 0.01786,
+    "ScriptDuration": 0.006661,
+    "TaskDuration": 0.09413,
+    "JSHeapUsedSize": 10321492,
+    "JSHeapTotalSize": 14045184,
+    "domContentLoaded": 22,
+    "loadComplete": 22
+  }
+}

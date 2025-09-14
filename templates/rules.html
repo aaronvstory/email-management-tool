@@ -29,12 +29,12 @@
                 <td>
                     <span class="badge bg-primary">{{ rule.priority }}</span>
                 </td>
-                <td><strong>{{ rule.name }}</strong></td>
+                <td><strong>{{ rule.rule_name }}</strong></td>
                 <td>
                     <span class="badge bg-info">{{ rule.rule_type }}</span>
                 </td>
                 <td>
-                    <code>{{ rule.pattern[:50] }}{% if rule.pattern|length > 50 %}...{% endif %}</code>
+                    <code>{{ rule.condition_value[:50] }}{% if rule.condition_value|length > 50 %}...{% endif %}</code>
                 </td>
                 <td>
                     <span class="badge bg-{{ 'danger' if rule.action == 'REJECT' else 'warning' if rule.action == 'HOLD' else 'success' }}">

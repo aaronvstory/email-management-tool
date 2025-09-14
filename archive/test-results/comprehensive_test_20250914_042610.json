@@ -1,0 +1,36 @@
+{
+  "timestamp": "2025-09-14T04:26:08.000505",
+  "tests": {
+    "dashboard": true,
+    "compose_ui": true,
+    "inbox_ui": true,
+    "email_queue_ui": true,
+    "configured_accounts": true,
+    "interception_workflow": true
+  },
+  "ui_features": {
+    "dashboard_tabs": true,
+    "compose": {
+      "account_selector": true,
+      "recipient_field": true,
+      "subject_field": true,
+      "message_field": true,
+      "formatting_buttons": true
+    },
+    "inbox": {
+      "account_filter": true,
+      "email_cards": true,
+      "refresh_button": false
+    },
+    "email_queue": {
+      "status_tabs": true,
+      "search_bar": true,
+      "filter_button": true,
+      "email_table": true
+    }
+  },
+  "functionality": {
+    "configured_accounts": 3,
+    "active_accounts": 3
+  }
+}
