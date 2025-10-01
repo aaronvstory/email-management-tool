@@ -7,14 +7,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Email Management Tool** is a **fully functional, production-ready** Python Flask application for local email interception, moderation, and management. It runs entirely on localhost with SQLite—no cloud services, no Docker required.
 
 **Current Status**: ✅ **WORKING AND DEPLOYED**
-**Version**: 2.1 (Smart Detection + Permanent Test Accounts)
-**Last Updated**: September 30, 2025
+**Version**: 2.2 (UI Refinements + Dark Theme Consistency)
+**Last Updated**: October 1, 2025
 **Recent Updates**:
+- ✅ Fixed email edit button functionality with working Bootstrap modal
+- ✅ Fixed search input white backgrounds (now consistent dark theme)
+- ✅ Added `.input-modern` CSS class for uniform input styling
+- ✅ Fixed background scrolling issue with `background-attachment: fixed`
+- ✅ Darkened chart containers for theme consistency
+- ✅ Comprehensive style guide created (`STYLEGUIDE.md`) - **MUST FOLLOW**
 - ✅ Smart SMTP/IMAP detection implemented (auto-detects settings from email domain)
 - ✅ Two permanent test accounts configured and verified (Gmail + Hostinger)
 - ✅ API endpoint for auto-detection: `POST /api/detect-email-settings`
 - ✅ Testing scripts created for connection validation
-- ✅ Template context processor fixed, critical indentation error resolved
 
 ## Quick Start Commands
 
@@ -311,12 +316,25 @@ class EmailModerationHandler:
 
 ### Email Editing & Release
 
-**Frontend**: Edit modal with live preview (Bootstrap 5.3)
+**Frontend**:
+- **Email Viewer** (`templates/email_viewer.html`): Full-featured email display with edit capability
+- **Edit Modal**: Bootstrap modal with form fields for subject/body editing
+- **Working Edit Button**: Fixed implementation that properly opens modal and saves changes
+- **View Modes**: Toggle between Text, HTML, and Raw email content
+- **Action Buttons**: Reply, Forward, Download, Intercept/Release, Edit, Delete
+
 **Backend**:
-- `POST /api/email/<id>/edit` - Save changes to database
+- `GET /email/<id>/edit` - Fetch email details for editing (returns JSON)
+- `POST /api/email/<id>/edit` - Save changes to database with validation
 - `POST /api/interception/release/<id>` - Rebuild MIME and APPEND to INBOX
 - Diff tracking: Compare original vs edited (unified diff format)
 - Attachment stripping: Optional removal with audit trail
+
+**Critical Fix (Oct 1, 2025)**:
+- Email edit button now properly fetches data and opens modal
+- Added complete modal HTML structure to `email_viewer.html`
+- Implemented `saveEmailEdit()` function with error handling
+- Modal includes proper styling matching dark theme
 
 ### Multi-Account Management
 
@@ -334,15 +352,39 @@ Supports Gmail, Outlook, Hostinger, and any IMAP/SMTP provider:
 
 ## UI/UX Design System
 
-**Theme**: Modern gradient purple/pink (#667eea to #764ba2)
-**Framework**: Bootstrap 5.3 with custom CSS
+**⚠️ CRITICAL**: All UI/UX work MUST follow the comprehensive style guide in `STYLEGUIDE.md`. This is mandatory for consistency and maintainability.
+
+**Theme**: Dark-first design with red accent (#dc2626)
+**Framework**: Bootstrap 5.3 with extensive custom CSS
 **Icons**: Bootstrap Icons + Font Awesome 6.5
+
+**Key Design Principles** (See `STYLEGUIDE.md` for full details):
+- **Dark Theme**: Consistent dark backgrounds with proper contrast ratios
+- **Fixed Background**: Body uses `background-attachment: fixed` to prevent white screen on scroll
+- **Input Styling**: All inputs use `.input-modern` class with dark backgrounds
+- **Chart Containers**: Dark gradients matching overall theme
+- **Gradient System**: Multi-layer gradients for depth
+- **Consistent Sizing**: All buttons/inputs maintain uniform height (42px standard)
 
 **Layout**:
 - Sidebar navigation (fixed left, 250px width, dark theme)
-- Content area (fluid width, 20px padding, max-width 1400px)
-- Cards with rounded corners (15px), subtle shadows
+- Content area (fluid width, 20px padding, full-width)
+- Cards with rounded corners (15-18px), multi-layer gradient backgrounds
 - Responsive: 4 columns → 2 tablets → 1 mobile
+
+**Color System** (from `STYLEGUIDE.md`):
+```css
+--primary-color: #dc2626;        /* Bright red - primary actions */
+--card-bg: #1a1a1a;              /* Card background */
+--text-light: #ffffff;            /* Primary text */
+--grad-card: linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%);
+```
+
+**Component Standards**:
+- All inputs: `background: rgba(255,255,255,0.06)`, white text
+- Buttons: Consistent 42px height, 10px 20px padding
+- Cards: Dark gradient backgrounds, 1px rgba border
+- Modals: Dark backgrounds with red gradient headers
 
 ## Configuration & Settings
 
@@ -355,15 +397,84 @@ Supports Gmail, Outlook, Hostinger, and any IMAP/SMTP provider:
 5. SMTP: `smtp.gmail.com:587` (STARTTLS)
 6. IMAP: `imap.gmail.com:993` (SSL)
 
+## UI Development Guidelines
+
+### Critical Requirements
+
+**⚠️ ALWAYS consult `STYLEGUIDE.md` before making ANY UI changes!**
+
+### Common UI Patterns
+
+**Input Fields**:
+```html
+<!-- Use .input-modern class for all inputs -->
+<input type="text" class="input-modern" placeholder="Enter text...">
+<select class="input-modern">...</select>
+<textarea class="input-modern" rows="5"></textarea>
+```
+
+**Buttons**:
+```html
+<!-- Standard button (42px height) -->
+<button class="btn-modern btn-primary-modern">Action</button>
+<button class="action-btn primary">Primary Action</button>
+
+<!-- Small button (34px height) -->
+<button class="btn-sm">Small Action</button>
+```
+
+**Cards**:
+```html
+<!-- Use gradient backgrounds -->
+<div style="background: linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 18px;
+            padding: 20px;">
+  Card content
+</div>
+```
+
+**Modals**:
+```html
+<!-- Dark themed modal with red gradient header -->
+<div class="modal-content" style="background: linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%);">
+  <div class="modal-header" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 50%, #7f1d1d 100%);">
+    <h5 class="modal-title text-white">Title</h5>
+  </div>
+  <div class="modal-body" style="color: #fff;">Content</div>
+</div>
+```
+
+### UI Testing Checklist
+
+Before committing UI changes:
+- [ ] Dark theme consistency maintained (no white backgrounds unless intentional)
+- [ ] All inputs use `.input-modern` class or similar dark styling
+- [ ] Buttons are consistent height (42px standard, 34px small, 50px large)
+- [ ] Cards use gradient backgrounds, not solid colors
+- [ ] Text is readable (white on dark, proper contrast)
+- [ ] Hover states work and match theme
+- [ ] Background doesn't show white on scroll (`background-attachment: fixed`)
+- [ ] Modals use dark backgrounds with gradient headers
+- [ ] Responsive design tested (desktop, tablet, mobile)
+
 ## Development Workflow
 
 ### Adding New Features
 
-1. Update database schema if needed (with migration check)
-2. Add route handler in `simple_app.py` or create blueprint
-3. Create/update Jinja2 template in `templates/`
-4. Add JavaScript if interactive (inline in template)
-5. Update this documentation
+1. **Consult STYLEGUIDE.md first** if adding UI components
+2. Update database schema if needed (with migration check)
+3. Add route handler in `simple_app.py` or create blueprint
+4. Create/update Jinja2 template in `templates/`
+   - Use `.input-modern` for all inputs
+   - Use gradient backgrounds for cards
+   - Maintain dark theme consistency
+5. Add JavaScript if interactive (inline in template)
+   - Use Bootstrap 5.3 modal patterns
+   - Include error handling with try-catch
+   - Provide user feedback with alerts or toasts
+6. Test UI checklist (see above)
+7. Update this documentation
 
 ### Template Variable Injection
 
@@ -466,7 +577,8 @@ Email-Management-Tool/
 
 ✅ Full email interception (SMTP + IMAP)
 ✅ Multi-account management with smart detection
-✅ Email editing before approval
+✅ Email editing before approval with working modal UI
+✅ Email viewer with Text/HTML/Raw display modes
 ✅ Dashboard with live stats
 ✅ Risk scoring and filtering
 ✅ Complete audit trail
@@ -476,6 +588,9 @@ Email-Management-Tool/
 ✅ Auto-detect SMTP/IMAP settings from email domain
 ✅ Two verified permanent test accounts (Gmail + Hostinger)
 ✅ Comprehensive testing and verification scripts
+✅ Consistent dark theme with proper contrast
+✅ Fixed background scrolling (no white screen)
+✅ Uniform input styling with `.input-modern` class
 
 ## Important Notes
 
@@ -486,6 +601,7 @@ Email-Management-Tool/
 ## Additional Documentation
 
 For more detailed information, see:
+- **STYLEGUIDE.md** - **MANDATORY** comprehensive style guide (colors, typography, components, patterns)
 - **PERMANENT_TEST_ACCOUNTS.md** - Complete guide to permanent test accounts, setup commands, and troubleshooting
 - **SETUP_COMPLETE.md** - Summary of smart detection implementation and test results
 - **INTERCEPTION_IMPLEMENTATION.md** - Technical details of email interception architecture
