@@ -8,17 +8,18 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
     <style>
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
         }
         .login-container {
-            background: white;
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
             border-radius: 20px;
             padding: 40px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
             width: 100%;
             max-width: 400px;
         }
@@ -27,37 +28,54 @@
             margin-bottom: 30px;
         }
         .login-header h2 {
-            color: #333;
+            color: #ffffff;
             font-weight: 700;
         }
         .login-header .icon {
             font-size: 3rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: #dc2626;
+        }
+        .form-label {
+            color: #9ca3af;
         }
         .form-control {
+            background: #0a0a0a;
+            border: 1px solid #2a2a2a;
+            color: #ffffff;
             border-radius: 10px;
             padding: 12px;
-            border: 2px solid #e0e0e0;
         }
         .form-control:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            background: #0a0a0a;
+            border-color: #dc2626;
+            color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+        }
+        .input-group-text {
+            background: #0a0a0a;
+            border: 1px solid #2a2a2a;
+            color: #9ca3af;
         }
         .btn-login {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #dc2626;
             color: white;
             border: none;
             border-radius: 10px;
             padding: 12px;
             font-weight: 600;
             width: 100%;
-            transition: transform 0.3s ease;
+            transition: all 0.3s ease;
         }
         .btn-login:hover {
+            background: #b91c1c;
             transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 5px 20px rgba(220, 38, 38, 0.4);
+        }
+        .text-muted {
+            color: #6b7280 !important;
+        }
+        .small {
+            color: #6b7280;
         }
     </style>
 </head>

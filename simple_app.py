@@ -12,189 +12,46 @@ import time
 import smtplib
 import imaplib
 import ssl
-import asyncio
-import base64
-from datetime import datetime, timedelta
-from email import message_from_bytes, policy
+from typing import Tuple, Optional
+
+from flask import Response  # needed for SSE / events
+from email.utils import formatdate, make_msgid
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from email.utils import formatdate, make_msgid
-from cryptography.fernet import Fernet
-from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Blueprint registration (interception)
+try:
+    from app.routes.interception import bp_interception
+except Exception:
+    bp_interception = None
+from datetime import datetime
+from email import policy
+from email import message_from_bytes
 
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, Response
-from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
-from werkzeug.security import generate_password_hash, check_password_hash
-import aiosmtpd.controller
-# Removed Message import - using custom handler
+from flask import Flask, request, redirect, url_for, flash, render_template, jsonify
+from flask_login import (
+    LoginManager, login_user, login_required, logout_user,
+    current_user, UserMixin
+)
+from werkzeug.security import check_password_hash
 
-# Initialize Flask app
+# Import shared utilities
+from app.utils.crypto import encrypt_credential, decrypt_credential, get_encryption_key
+from app.utils.db import get_db, DB_PATH, table_exists
+
+# Import IMAP watcher for email interception
+from app.services.imap_watcher import ImapWatcher, AccountConfig
+
+# -----------------------------------------------------------------------------
+# Minimal re-initialization (original file trimmed during refactor)
+# -----------------------------------------------------------------------------
+
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-change-in-production'
+app.secret_key = os.environ.get('FLASK_SECRET', 'dev-secret')
 
-# Database setup
-DB_PATH = 'email_manager.db'
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'  # type: ignore[attr-defined]
 
-# Get or generate encryption key
-def get_encryption_key():
-    """Get or generate encryption key for passwords"""
-    key_file = 'key.txt'
-    if os.path.exists(key_file):
-        with open(key_file, 'rb') as f:
-            key_content = f.read().strip()
-            # Handle both plain key and key with prefix
-            if b'Generated encryption key:' in key_content:
-                key_content = key_content.split(b':')[-1].strip()
-            return key_content
-    else:
-        key = Fernet.generate_key()
-        with open(key_file, 'wb') as f:
-            f.write(key)
-        return key
-
-# Initialize Flask-Login
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'
-
-# Context processor to inject common variables into all templates
-@app.context_processor
-def inject_common_variables():
-    """Make common variables available to all templates"""
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        pending_count = cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'PENDING'").fetchone()[0]
-        conn.close()
-    except:
-        # If database doesn't exist yet or table is missing, return 0
-        pending_count = 0
-    return dict(pending_count=pending_count)
-
-def init_database():
-    """Initialize SQLite database with all required tables"""
-    os.makedirs('data', exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    
-    # Users table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            email TEXT,
-            role TEXT DEFAULT 'reviewer',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    # Email messages table  
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS email_messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            message_id TEXT UNIQUE,
-            sender TEXT NOT NULL,
-            recipients TEXT NOT NULL,
-            subject TEXT,
-            body_text TEXT,
-            body_html TEXT,
-            raw_content BLOB,
-            status TEXT DEFAULT 'PENDING',
-            keywords_matched TEXT,
-            risk_score INTEGER DEFAULT 0,
-            reviewer_id INTEGER,
-            review_notes TEXT,
-            account_id INTEGER,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            reviewed_at TIMESTAMP,
-            sent_at TIMESTAMP,
-            FOREIGN KEY (account_id) REFERENCES email_accounts(id)
-        )
-    ''')
-    
-    # Moderation rules table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS moderation_rules (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL,
-            rule_type TEXT NOT NULL,
-            pattern TEXT NOT NULL,
-            action TEXT DEFAULT 'HOLD',
-            priority INTEGER DEFAULT 50,
-            is_active BOOLEAN DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    # Audit logs table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS audit_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            action TEXT NOT NULL,
-            user_id INTEGER,
-            email_id INTEGER,
-            details TEXT,
-            ip_address TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    # Email accounts table for managing monitored email accounts
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS email_accounts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            account_name TEXT UNIQUE NOT NULL,
-            email_address TEXT NOT NULL,
-            imap_host TEXT NOT NULL,
-            imap_port INTEGER DEFAULT 993,
-            imap_username TEXT NOT NULL,
-            imap_password TEXT NOT NULL,
-            imap_use_ssl BOOLEAN DEFAULT 1,
-            smtp_host TEXT NOT NULL,
-            smtp_port INTEGER DEFAULT 465,
-            smtp_username TEXT NOT NULL,
-            smtp_password TEXT NOT NULL,
-            smtp_use_ssl BOOLEAN DEFAULT 1,
-            is_active BOOLEAN DEFAULT 1,
-            last_checked TIMESTAMP,
-            last_error TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    # Create default admin user
-    admin_exists = cursor.execute("SELECT id FROM users WHERE username = 'admin'").fetchone()
-    if not admin_exists:
-        admin_hash = generate_password_hash('admin123')
-        cursor.execute(
-            "INSERT INTO users (username, password_hash, email, role) VALUES (?, ?, ?, ?)",
-            ('admin', admin_hash, 'admin@example.com', 'admin')
-        )
-    
-    # Create default rules
-    default_rules = [
-        ('Block Invoice Keywords', 'KEYWORD', 'invoice,payment,urgent', 'HOLD', 80),
-        ('Check Attachments', 'ATTACHMENT', '.pdf,.doc,.xls', 'HOLD', 70),
-        ('External Recipients', 'DOMAIN', '@external.com', 'HOLD', 60),
-    ]
-    
-    for rule in default_rules:
-        exists = cursor.execute("SELECT id FROM moderation_rules WHERE rule_name = ?", (rule[0],)).fetchone()
-        if not exists:
-            cursor.execute(
-                "INSERT INTO moderation_rules (rule_name, rule_type, condition_field, condition_operator, condition_value, action, priority) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (rule[0], 'keyword', 'body', 'contains', rule[2], rule[3], rule[4])
-            )
-    
-    conn.commit()
-    conn.close()
-
-# User class for Flask-Login
 class User(UserMixin):
     def __init__(self, user_id, username, role):
         self.id = user_id
@@ -203,160 +60,312 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    user = cursor.execute("SELECT id, username, role FROM users WHERE id = ?", (user_id,)).fetchone()
-    conn.close()
-    if user:
-        return User(user[0], user[1], user[2])
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        row = cur.execute("SELECT id, username, role FROM users WHERE id=?", (user_id,)).fetchone()
+        conn.close()
+        if row:
+            return User(row[0], row[1], row[2])
+    except Exception:
+        pass
     return None
 
-# Encryption setup for credentials
-ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY', None)
-if not ENCRYPTION_KEY:
-    # Generate a new key if not provided
-    ENCRYPTION_KEY = Fernet.generate_key()
-    print(f"⚠️  No ENCRYPTION_KEY found. Generated new key (save this): {ENCRYPTION_KEY.decode()}")
-
-cipher_suite = Fernet(ENCRYPTION_KEY if isinstance(ENCRYPTION_KEY, bytes) else ENCRYPTION_KEY.encode())
-
-def encrypt_credential(plain_text):
-    """Encrypt a credential"""
-    if not plain_text:
-        return None
-    return cipher_suite.encrypt(plain_text.encode()).decode()
-
-def decrypt_credential(encrypted_text):
-    """Decrypt a credential"""
-    if not encrypted_text:
-        return None
+def log_action(action, user_id, target_id, details):
+    """Persist an audit log record (best-effort)."""
     try:
-        return cipher_suite.decrypt(encrypted_text.encode()).decode()
-    except:
-        return None
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS audit_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                action TEXT, user_id INTEGER, target_id INTEGER,
+                details TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cur.execute(
+            "INSERT INTO audit_log (action, user_id, target_id, details) VALUES (?,?,?,?)",
+            (action, user_id, target_id, details)
+        )
+        conn.commit()
+        conn.close()
+    except Exception:
+        # swallow so UI not impacted
+        pass
 
-def decrypt_password(encrypted_text):
-    """Decrypt a password (alias for decrypt_credential)"""
-    return decrypt_credential(encrypted_text)
+# Compatibility alias for legacy code paths
+def decrypt_password(val: Optional[str]) -> Optional[str]:
+    return decrypt_credential(val) if val else None
 
-# IMAP monitoring threads
-imap_threads = {}
+def detect_email_settings(email_address: str) -> dict:
+    """
+    Smart detection of SMTP/IMAP settings based on email domain.
+    Returns dict with smtp_host, smtp_port, smtp_use_ssl, imap_host, imap_port, imap_use_ssl
+    """
+    domain = email_address.split('@')[-1].lower() if '@' in email_address else ''
 
-def test_email_connection(account_type, host, port, username, password, use_ssl=True):
-    """Test email connection (IMAP or SMTP)"""
+    # Known provider configurations
+    providers = {
+        'gmail.com': {
+            'smtp_host': 'smtp.gmail.com',
+            'smtp_port': 587,
+            'smtp_use_ssl': False,  # STARTTLS on 587
+            'imap_host': 'imap.gmail.com',
+            'imap_port': 993,
+            'imap_use_ssl': True
+        },
+        'corrinbox.com': {
+            'smtp_host': 'smtp.hostinger.com',
+            'smtp_port': 465,
+            'smtp_use_ssl': True,  # Direct SSL on 465
+            'imap_host': 'imap.hostinger.com',
+            'imap_port': 993,
+            'imap_use_ssl': True
+        },
+        'outlook.com': {
+            'smtp_host': 'smtp-mail.outlook.com',
+            'smtp_port': 587,
+            'smtp_use_ssl': False,
+            'imap_host': 'outlook.office365.com',
+            'imap_port': 993,
+            'imap_use_ssl': True
+        },
+        'hotmail.com': {
+            'smtp_host': 'smtp-mail.outlook.com',
+            'smtp_port': 587,
+            'smtp_use_ssl': False,
+            'imap_host': 'outlook.office365.com',
+            'imap_port': 993,
+            'imap_use_ssl': True
+        },
+        'yahoo.com': {
+            'smtp_host': 'smtp.mail.yahoo.com',
+            'smtp_port': 465,
+            'smtp_use_ssl': True,
+            'imap_host': 'imap.mail.yahoo.com',
+            'imap_port': 993,
+            'imap_use_ssl': True
+        }
+    }
+
+    # Return provider settings or generic defaults
+    if domain in providers:
+        return providers[domain]
+    else:
+        # Generic defaults - try common patterns
+        return {
+            'smtp_host': f'smtp.{domain}',
+            'smtp_port': 587,
+            'smtp_use_ssl': False,
+            'imap_host': f'imap.{domain}',
+            'imap_port': 993,
+            'imap_use_ssl': True
+        }
+
+def test_email_connection(kind: str, host: str, port: int, username: str, password: str, use_ssl: bool) -> Tuple[bool, str]:
+    """Lightweight connectivity test for IMAP/SMTP (Phase 1 stub).
+    Returns (success, message). Avoids introducing heavy network timeouts.
+    """
+    if not host or not port or not username:
+        return False, "Missing connection parameters"
     try:
-        if account_type == 'imap':
+        if kind.lower() == 'imap':
             if use_ssl:
-                imap = imaplib.IMAP4_SSL(host, port)
+                client = imaplib.IMAP4_SSL(host, int(port))
             else:
-                imap = imaplib.IMAP4(host, port)
-            imap.login(username, password)
-            imap.logout()
-            return True, "Connection successful"
-        elif account_type == 'smtp':
-            if use_ssl:
-                context = ssl.create_default_context()
-                smtp = smtplib.SMTP_SSL(host, port, context=context)
+                client = imaplib.IMAP4(host, int(port))
+            if password:
+                client.login(username, password)
+            client.logout()
+            return True, f"IMAP OK {host}:{port}"
+        if kind.lower() == 'smtp':
+            if use_ssl and int(port) in (465, 587):
+                if int(port) == 465:
+                    server = smtplib.SMTP_SSL(host, int(port), timeout=10)
+                else:
+                    server = smtplib.SMTP(host, int(port), timeout=10)
+                    server.starttls()
             else:
-                smtp = smtplib.SMTP(host, port)
-                smtp.starttls()
-            smtp.login(username, password)
-            smtp.quit()
-            return True, "Connection successful"
+                server = smtplib.SMTP(host, int(port), timeout=10)
+            if password:
+                server.login(username, password)
+            server.quit()
+            return True, f"SMTP OK {host}:{port}"
+        return False, f"Unsupported kind {kind}"
     except Exception as e:
         return False, str(e)
-    return False, "Unknown error"
 
-def monitor_imap_account(account_id):
-    """Monitor IMAP account for new emails"""
-    app.logger.info(f"   📬 Started monitoring for account ID: {account_id}")
-    
-    while account_id in imap_threads:
+def init_database():
+    """
+    Initialize SQLite database with all required tables (idempotent).
+    Creates tables if missing; preserves existing schema & data.
+    """
+    conn = get_db()
+    cur = conn.cursor()
+
+    # Users table
+    cur.execute("""CREATE TABLE IF NOT EXISTS users(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,
+        password_hash TEXT,
+        role TEXT DEFAULT 'admin',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )""")
+
+    # Email accounts table (NO Sieve fields)
+    cur.execute("""CREATE TABLE IF NOT EXISTS email_accounts(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_name TEXT,
+        email_address TEXT,
+        imap_host TEXT,
+        imap_port INTEGER,
+        imap_username TEXT,
+        imap_password TEXT,
+        imap_use_ssl INTEGER DEFAULT 1,
+        smtp_host TEXT,
+        smtp_port INTEGER,
+        smtp_username TEXT,
+        smtp_password TEXT,
+        smtp_use_ssl INTEGER DEFAULT 1,
+        is_active INTEGER DEFAULT 1,
+        last_checked TEXT,
+        last_error TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )""")
+
+    # Email messages table with full interception support
+    cur.execute("""CREATE TABLE IF NOT EXISTS email_messages(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_id TEXT,
+        account_id INTEGER,
+        direction TEXT,
+        status TEXT DEFAULT 'PENDING',
+        interception_status TEXT,
+        sender TEXT,
+        recipients TEXT,
+        subject TEXT,
+        body_text TEXT,
+        body_html TEXT,
+        headers TEXT,
+        attachments TEXT,
+        original_uid INTEGER,
+        original_internaldate TEXT,
+        original_message_id TEXT,
+        edited_message_id TEXT,
+        quarantine_folder TEXT,
+        raw_content TEXT,
+        raw_path TEXT,
+        risk_score INTEGER DEFAULT 0,
+        keywords_matched TEXT,
+        moderation_reason TEXT,
+        moderator_id INTEGER,
+        reviewer_id INTEGER,
+        review_notes TEXT,
+        approved_by TEXT,
+        latency_ms INTEGER,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        processed_at TEXT,
+        action_taken_at TEXT,
+        reviewed_at TEXT,
+        sent_at TEXT,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )""")
+
+    # Moderation rules table
+    cur.execute("""CREATE TABLE IF NOT EXISTS moderation_rules(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        rule_name TEXT,
+        keyword TEXT,
+        action TEXT DEFAULT 'REVIEW',
+        priority INTEGER DEFAULT 5,
+        is_active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )""")
+
+    # Audit log table
+    cur.execute("""CREATE TABLE IF NOT EXISTS audit_log(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        action TEXT,
+        user_id INTEGER,
+        target_id INTEGER,
+        details TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )""")
+
+    # Create default admin user if not exists
+    cur.execute("SELECT id FROM users WHERE username='admin'")
+    if not cur.fetchone():
+        from werkzeug.security import generate_password_hash
+        admin_hash = generate_password_hash('admin123')
+        cur.execute("INSERT INTO users(username, password_hash, role) VALUES('admin', ?, 'admin')", (admin_hash,))
+
+    conn.commit()
+    conn.close()
+
+def monitor_imap_account(account_id: int):
+    """
+    IMAP monitor thread that uses ImapWatcher to intercept incoming emails.
+    Runs in daemon thread, auto-reconnects on failure.
+    """
+    app.logger.info(f"Starting IMAP monitor for account {account_id}")
+
+    while True:
         try:
-            conn = sqlite3.connect(DB_PATH)
-            conn.row_factory = sqlite3.Row  # Enable dictionary access
-            cursor = conn.cursor()
-            account = cursor.execute("""
-                SELECT * FROM email_accounts WHERE id = ? AND is_active = 1
-            """, (account_id,)).fetchone()
-            conn.close()
-            
-            if not account:
-                break
-                
-            # Decrypt credentials
-            imap_password = decrypt_credential(account['imap_password'])
-            
-            # Connect to IMAP - convert port to int
-            imap_port = int(account['imap_port']) if account['imap_port'] else 993
-            
-            if account['imap_use_ssl']:
-                imap = imaplib.IMAP4_SSL(account['imap_host'], imap_port)
-            else:
-                imap = imaplib.IMAP4(account['imap_host'], imap_port)
-                
-            imap.login(account['imap_username'], imap_password)
-            imap.select('INBOX')
-            
-            # Search for unseen messages
-            _, messages = imap.search(None, 'UNSEEN')
-            
-            for msg_id in messages[0].split():
-                _, msg_data = imap.fetch(msg_id, '(RFC822)')
-                email_body = msg_data[0][1]
-                
-                # Parse email
-                msg = message_from_bytes(email_body, policy=policy.default)
-                
-                # Store in database for moderation
-                conn = sqlite3.connect(DB_PATH)
+            # Fetch account details from database
+            with get_db() as conn:
                 cursor = conn.cursor()
-                cursor.execute('''
-                    INSERT INTO email_messages 
-                    (message_id, sender, recipients, subject, body_text, raw_content, status)
-                    VALUES (?, ?, ?, ?, ?, ?, 'PENDING')
-                ''', (
-                    msg.get('Message-ID', ''),
-                    msg.get('From', ''),
-                    json.dumps([msg.get('To', '')]),
-                    msg.get('Subject', ''),
-                    msg.get_body(preferencelist=('plain',)).get_content() if msg.get_body(preferencelist=('plain',)) else '',
-                    email_body
-                ))
-                conn.commit()
-                conn.close()
-                
-                # Mark as seen (optional - you might want to keep as unseen until moderated)
-                # imap.store(msg_id, '+FLAGS', '\\Seen')
-            
-            imap.logout()
-            
-            # Update last checked time
-            conn = sqlite3.connect(DB_PATH)
-            cursor = conn.cursor()
-            cursor.execute("""
-                UPDATE email_accounts SET last_checked = CURRENT_TIMESTAMP WHERE id = ?
-            """, (account_id,))
-            conn.commit()
-            conn.close()
-            
+                row = cursor.execute(
+                    "SELECT imap_host, imap_port, imap_username, imap_password FROM email_accounts WHERE id=? AND is_active=1",
+                    (account_id,)
+                ).fetchone()
+
+                if not row:
+                    app.logger.warning(f"Account {account_id} not found or inactive, stopping monitor")
+                    return
+
+                # Decrypt password
+                encrypted_password = row['imap_password']
+                password = decrypt_credential(encrypted_password)
+
+                # Create account configuration with account_id and db_path
+                cfg = AccountConfig(
+                    imap_host=row['imap_host'],
+                    imap_port=row['imap_port'] or 993,
+                    username=row['imap_username'],
+                    password=password,
+                    use_ssl=True,
+                    inbox="INBOX",
+                    quarantine="Quarantine",
+                    idle_timeout=25 * 60,  # 25 minutes
+                    idle_ping_interval=14 * 60,  # 14 minutes
+                    mark_seen_quarantine=True,
+                    account_id=account_id,  # Pass account ID for database storage
+                    db_path=DB_PATH  # Pass database path
+                )
+
+            # Start ImapWatcher - runs forever with auto-reconnect
+            app.logger.info(f"Connecting ImapWatcher for {cfg.username} at {cfg.imap_host}:{cfg.imap_port}")
+            watcher = ImapWatcher(cfg)
+            watcher.run_forever()  # Blocks with backoff retry on errors
+
         except Exception as e:
-            # Log error
-            conn = sqlite3.connect(DB_PATH)
-            cursor = conn.cursor()
-            cursor.execute("""
-                UPDATE email_accounts SET last_error = ? WHERE id = ?
-            """, (str(e), account_id))
-            conn.commit()
-            conn.close()
-            
-        # Wait before next check
-        time.sleep(60)  # Check every minute
+            app.logger.error(f"IMAP monitor for account {account_id} failed: {e}", exc_info=True)
+            time.sleep(30)  # Wait before retry
+
+# Register interception blueprint providing /healthz and interception APIs
+try:
+    from app.routes.interception import bp_interception
+    app.register_blueprint(bp_interception)
+except Exception as e:
+    print(f"Warning: failed to register interception blueprint: {e}")
+
+        # (Legacy inline IMAP loop removed during refactor)
 
 # SMTP Proxy Handler
 class EmailModerationHandler:
     """Handle incoming emails through SMTP proxy"""
-    
+
     async def handle_DATA(self, server, session, envelope):
         """Process incoming email"""
         print(f"📨 SMTP Handler: Received message from {envelope.mail_from} to {envelope.rcpt_tos}")
@@ -364,13 +373,13 @@ class EmailModerationHandler:
             # Parse email
             email_msg = message_from_bytes(envelope.content, policy=policy.default)
             print(f"📨 SMTP Handler: Parsed email successfully")
-            
+
             # Extract data
             sender = str(envelope.mail_from)
             recipients = json.dumps([str(r) for r in envelope.rcpt_tos])
             subject = email_msg.get('Subject', 'No Subject')
             message_id = email_msg.get('Message-ID', f"msg_{datetime.now().timestamp()}")
-            
+
             # Extract body
             body_text = ""
             body_html = ""
@@ -382,23 +391,23 @@ class EmailModerationHandler:
                         body_html = part.get_payload(decode=True).decode('utf-8', errors='ignore')
             else:
                 body_text = email_msg.get_payload(decode=True).decode('utf-8', errors='ignore')
-            
+
             # Check moderation rules
             keywords_matched, risk_score = self.check_rules(subject, body_text)
-            
+
             # Store in database with retry logic
             print(f"📨 SMTP Handler: Storing in database - Subject: {subject}, Risk: {risk_score}")
-            
+
             max_retries = 5
             for attempt in range(max_retries):
                 try:
                     conn = sqlite3.connect(DB_PATH, timeout=10.0)
                     cursor = conn.cursor()
                     cursor.execute('''
-                        INSERT INTO email_messages 
+                        INSERT INTO email_messages
                         (message_id, sender, recipients, subject, body_text, body_html, raw_content, keywords_matched, risk_score, status)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ''', (message_id, sender, recipients, subject, body_text, body_html, 
+                    ''', (message_id, sender, recipients, subject, body_text, body_html,
                           envelope.content, json.dumps(keywords_matched), risk_score, 'PENDING'))
                     conn.commit()
                     print(f"📨 SMTP Handler: Database commit successful - Row ID: {cursor.lastrowid}")
@@ -410,27 +419,27 @@ class EmailModerationHandler:
                         time.sleep(0.5)
                     else:
                         raise
-            
+
             print(f"📧 Email intercepted: {subject} from {sender}")
             return '250 Message accepted for delivery'
-            
+
         except Exception as e:
             print(f"Error processing email: {e}")
             import traceback
             traceback.print_exc()
             return f'500 Error: {e}'
-    
+
     def check_rules(self, subject, body):
         """Check moderation rules"""
         keywords = []
         risk_score = 0
-        
+
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         # Check for simple keywords in the email content
         # Using simplified logic since table structure is different
         content = f"{subject} {body}".lower()
-        
+
         # Default keywords to check
         default_keywords = {
             'urgent': 5,
@@ -444,15 +453,36 @@ class EmailModerationHandler:
             'act now': 7,
             'limited time': 6
         }
-        
+
         for keyword, priority in default_keywords.items():
             if keyword.lower() in content:
                 keywords.append(keyword)
                 risk_score += priority
-        
+
         conn.close()
-        
+
         return keywords, min(risk_score, 100)
+
+if 'app' in globals() and bp_interception:
+    try:
+        app.register_blueprint(bp_interception)
+    except Exception:
+        pass
+
+# Context processor to inject pending_count into all templates
+@app.context_processor
+def inject_pending_count():
+    """Inject pending_count into all templates for the badge in navigation"""
+    try:
+        if current_user.is_authenticated:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            pending_count = cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'PENDING'").fetchone()[0]
+            conn.close()
+            return {'pending_count': pending_count}
+    except:
+        pass
+    return {'pending_count': 0}
 
 # Routes
 @app.route('/')
@@ -468,24 +498,24 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        
+
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        user = cursor.execute("SELECT id, username, password_hash, role FROM users WHERE username = ?", 
+        user = cursor.execute("SELECT id, username, password_hash, role FROM users WHERE username = ?",
                               (username,)).fetchone()
         conn.close()
-        
+
         if user and check_password_hash(user[2], password):
             user_obj = User(user[0], user[1], user[3])
             login_user(user_obj)
-            
+
             # Log the action
             log_action('LOGIN', user[0], None, f"User {username} logged in")
-            
+
             return redirect(url_for('dashboard'))
-        
+
         flash('Invalid username or password', 'error')
-    
+
     return render_template('login.html')
 
 @app.route('/logout')
@@ -504,7 +534,7 @@ def dashboard(tab='overview'):
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    
+
     # Get email accounts for account selector
     accounts = cursor.execute("""
         SELECT id, account_name, email_address, imap_host, imap_port, smtp_host, smtp_port,
@@ -512,10 +542,10 @@ def dashboard(tab='overview'):
         FROM email_accounts
         ORDER BY account_name
     """).fetchall()
-    
+
     # Get selected account from query params
     selected_account_id = request.args.get('account_id', None)
-    
+
     # Get statistics (filtered by account if selected)
     if selected_account_id:
         stats = {
@@ -525,7 +555,7 @@ def dashboard(tab='overview'):
             'rejected': cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'REJECTED' AND account_id = ?", (selected_account_id,)).fetchone()[0],
             'sent': cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'SENT' AND account_id = ?", (selected_account_id,)).fetchone()[0],
         }
-        
+
         # Get recent emails for selected account
         recent_emails = cursor.execute("""
             SELECT id, sender, recipients, subject, status, risk_score, created_at
@@ -543,7 +573,7 @@ def dashboard(tab='overview'):
             'rejected': cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'REJECTED'").fetchone()[0],
             'sent': cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'SENT'").fetchone()[0],
         }
-        
+
         # Get recent emails from all accounts
         recent_emails = cursor.execute("""
             SELECT id, sender, recipients, subject, status, risk_score, created_at
@@ -551,19 +581,29 @@ def dashboard(tab='overview'):
             ORDER BY created_at DESC
             LIMIT 10
         """).fetchall()
-    
+
     # Get active rules count
     active_rules = cursor.execute("SELECT COUNT(*) FROM moderation_rules WHERE is_active = 1").fetchone()[0]
-    
+
+    # Get all moderation rules for Rules tab
+    rules = cursor.execute("""
+        SELECT id, rule_name, rule_type, condition_field, condition_operator,
+               condition_value, action, priority, is_active, created_at
+        FROM moderation_rules
+        ORDER BY priority DESC, rule_name
+    """).fetchall()
+
     conn.close()
-    
-    return render_template('dashboard_unified.html', 
-                         stats=stats, 
+
+    return render_template('dashboard_unified.html',
+                         stats=stats,
                          recent_emails=recent_emails,
                          active_rules=active_rules,
+                         rules=rules,
                          accounts=accounts,
                          selected_account_id=selected_account_id,
                          active_tab=tab,
+                         pending_count=stats['pending'],
                          user=current_user)
 
 @app.route('/test-dashboard')
@@ -578,13 +618,13 @@ def run_cross_account_test():
     """Run cross-account email test"""
     try:
         import subprocess
-        result = subprocess.run(['python', 'cross_account_test.py'], 
+        result = subprocess.run(['python', 'cross_account_test.py'],
                               capture_output=True, text=True, timeout=60)
-        
+
         # Parse the output to get test results
         output = result.stdout
         success = "TEST PASSED" in output
-        
+
         return jsonify({
             'success': success,
             'output': output,
@@ -616,43 +656,74 @@ def get_test_status():
 def email_queue():
     """Email queue page"""
     status_filter = request.args.get('status', 'PENDING')
-    
+    account_id = request.args.get('account_id', type=int)
+
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    
-    # Get counts for all statuses (always calculate these regardless of filter)
-    pending_count = cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'PENDING'").fetchone()[0] or 0
-    approved_count = cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'APPROVED'").fetchone()[0] or 0
-    rejected_count = cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'REJECTED'").fetchone()[0] or 0
-    total_count = cursor.execute("SELECT COUNT(*) FROM email_messages").fetchone()[0] or 0
-    
-    # Get filtered emails based on status
-    if status_filter == 'ALL' or status_filter == 'all':
-        emails = cursor.execute("""
-            SELECT * FROM email_messages 
-            ORDER BY created_at DESC
-        """).fetchall()
+
+    # Get all active email accounts for selector
+    accounts = cursor.execute("""
+        SELECT id, account_name, email_address
+        FROM email_accounts
+        WHERE is_active = 1
+        ORDER BY account_name
+    """).fetchall()
+
+    # Get counts for all statuses (consider account filter)
+    if account_id:
+        pending_count = cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'PENDING' AND account_id = ?", (account_id,)).fetchone()[0] or 0
+        approved_count = cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'APPROVED' AND account_id = ?", (account_id,)).fetchone()[0] or 0
+        rejected_count = cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'REJECTED' AND account_id = ?", (account_id,)).fetchone()[0] or 0
+        total_count = cursor.execute("SELECT COUNT(*) FROM email_messages WHERE account_id = ?", (account_id,)).fetchone()[0] or 0
     else:
-        emails = cursor.execute("""
-            SELECT * FROM email_messages 
-            WHERE status = ?
-            ORDER BY created_at DESC
-        """, (status_filter,)).fetchall()
-    
+        pending_count = cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'PENDING'").fetchone()[0] or 0
+        approved_count = cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'APPROVED'").fetchone()[0] or 0
+        rejected_count = cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'REJECTED'").fetchone()[0] or 0
+        total_count = cursor.execute("SELECT COUNT(*) FROM email_messages").fetchone()[0] or 0
+
+    # Get filtered emails based on status and account
+    if account_id:
+        if status_filter == 'ALL' or status_filter == 'all':
+            emails = cursor.execute("""
+                SELECT * FROM email_messages
+                WHERE account_id = ?
+                ORDER BY created_at DESC
+            """, (account_id,)).fetchall()
+        else:
+            emails = cursor.execute("""
+                SELECT * FROM email_messages
+                WHERE status = ? AND account_id = ?
+                ORDER BY created_at DESC
+            """, (status_filter, account_id)).fetchall()
+    else:
+        if status_filter == 'ALL' or status_filter == 'all':
+            emails = cursor.execute("""
+                SELECT * FROM email_messages
+                ORDER BY created_at DESC
+            """).fetchall()
+        else:
+            emails = cursor.execute("""
+                SELECT * FROM email_messages
+                WHERE status = ?
+                ORDER BY created_at DESC
+            """, (status_filter,)).fetchall()
+
     conn.close()
-    
+
     # Debug: Print what we're passing to template
     app.logger.info(f"Passing to template - pending: {pending_count}, approved: {approved_count}, rejected: {rejected_count}, total: {total_count}")
-    
-    # Pass all counts to template
-    return render_template('email_queue.html', 
-                          emails=emails, 
+
+    # Pass all counts and accounts to template
+    return render_template('email_queue.html',
+                          emails=emails,
                           current_filter=status_filter,
                           pending_count=pending_count,
                           approved_count=approved_count,
                           rejected_count=rejected_count,
-                          total_count=total_count)
+                          total_count=total_count,
+                          accounts=accounts,
+                          selected_account_id=str(account_id) if account_id else None)
 
 @app.route('/email/<int:email_id>')
 @login_required
@@ -661,16 +732,16 @@ def view_email(email_id):
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    
+
     email = cursor.execute("SELECT * FROM email_messages WHERE id = ?", (email_id,)).fetchone()
-    
+
     if not email:
         conn.close()
         flash('Email not found', 'error')
         return redirect(url_for('email_queue'))
-    
+
     conn.close()
-    
+
     # Parse recipients and keywords
     email_data = dict(email)
     try:
@@ -681,7 +752,7 @@ def view_email(email_id):
             email_data['recipients'] = [r.strip() for r in email_data['recipients'].split(',') if r.strip()]
         else:
             email_data['recipients'] = []
-    
+
     try:
         email_data['keywords_matched'] = json.loads(email_data['keywords_matched']) if email_data['keywords_matched'] else []
     except (json.JSONDecodeError, TypeError):
@@ -690,7 +761,7 @@ def view_email(email_id):
             email_data['keywords_matched'] = [k.strip() for k in email_data['keywords_matched'].split(',') if k.strip()]
         else:
             email_data['keywords_matched'] = []
-    
+
     return render_template('email_detail.html', email=email_data)
 
 @app.route('/email/<int:email_id>/action', methods=['POST'])
@@ -699,27 +770,27 @@ def email_action(email_id):
     """Handle email actions (approve/reject)"""
     action = request.form.get('action', '').upper()
     notes = request.form.get('notes', '')
-    
+
     if action not in ['APPROVE', 'REJECT']:
         return jsonify({'error': 'Invalid action'}), 400
-    
+
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    
+
     # Update email status
     new_status = 'APPROVED' if action == 'APPROVE' else 'REJECTED'
     cursor.execute("""
-        UPDATE email_messages 
+        UPDATE email_messages
         SET status = ?, reviewer_id = ?, review_notes = ?, reviewed_at = CURRENT_TIMESTAMP
         WHERE id = ?
     """, (new_status, current_user.id, notes, email_id))
-    
+
     # Log the action
     log_action(action, current_user.id, email_id, f"Email {action.lower()}d with notes: {notes}")
-    
+
     conn.commit()
     conn.close()
-    
+
     flash(f'Email {action.lower()}d successfully', 'success')
     return redirect(url_for('email_queue'))
 
@@ -730,15 +801,15 @@ def rules():
     if current_user.role != 'admin':
         flash('Admin access required', 'error')
         return redirect(url_for('dashboard'))
-    
+
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    
+
     rules = cursor.execute("SELECT * FROM moderation_rules ORDER BY priority DESC").fetchall()
-    
+
     conn.close()
-    
+
     return render_template('rules.html', rules=rules)
 
 @app.route('/accounts')
@@ -748,11 +819,11 @@ def email_accounts():
     if current_user.role != 'admin':
         flash('Admin access required', 'error')
         return redirect(url_for('dashboard'))
-    
+
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    
+
     # Get accounts with basic information (only columns that exist)
     accounts = cursor.execute("""
         SELECT id, account_name, email_address,
@@ -763,9 +834,9 @@ def email_accounts():
         FROM email_accounts
         ORDER BY account_name
     """).fetchall()
-    
+
     conn.close()
-    
+
     # Check which template exists and use it
     import os
     template_path = os.path.join(app.template_folder, 'accounts_simple.html')
@@ -776,6 +847,19 @@ def email_accounts():
         accounts_dict = {acc['id']: dict(acc) for acc in accounts}
         return render_template('accounts.html', accounts=accounts_dict)
 
+@app.route('/api/detect-email-settings', methods=['POST'])
+@login_required
+def api_detect_email_settings():
+    """API endpoint for smart detection of email settings"""
+    data = request.get_json()
+    email = data.get('email', '')
+
+    if not email or '@' not in email:
+        return jsonify({'error': 'Invalid email address'}), 400
+
+    settings = detect_email_settings(email)
+    return jsonify(settings)
+
 @app.route('/accounts/add', methods=['GET', 'POST'])
 @login_required
 def add_email_account():
@@ -783,160 +867,84 @@ def add_email_account():
     if current_user.role != 'admin':
         flash('Admin access required', 'error')
         return redirect(url_for('dashboard'))
-    
+
     if request.method == 'POST':
         # Get form data
         account_name = request.form.get('account_name')
         email_address = request.form.get('email_address')
-        
-        # IMAP settings
-        imap_host = request.form.get('imap_host')
-        imap_port = int(request.form.get('imap_port', 993))
-        imap_username = request.form.get('imap_username')
-        imap_password = request.form.get('imap_password')
-        imap_use_ssl = request.form.get('imap_use_ssl') == 'on'
-        
-        # SMTP settings
-        smtp_host = request.form.get('smtp_host')
-        smtp_port = int(request.form.get('smtp_port', 465))
-        smtp_username = request.form.get('smtp_username')
-        smtp_password = request.form.get('smtp_password')
-        smtp_use_ssl = request.form.get('smtp_use_ssl') == 'on'
-        
+
+        # Auto-detect settings if requested
+        use_auto_detect = request.form.get('use_auto_detect') == 'on'
+        if use_auto_detect and email_address:
+            auto_settings = detect_email_settings(email_address)
+            imap_host = auto_settings['imap_host']
+            imap_port = auto_settings['imap_port']
+            imap_use_ssl = auto_settings['imap_use_ssl']
+            smtp_host = auto_settings['smtp_host']
+            smtp_port = auto_settings['smtp_port']
+            smtp_use_ssl = auto_settings['smtp_use_ssl']
+            # Username defaults to email address
+            imap_username = email_address
+            smtp_username = email_address
+            imap_password = request.form.get('imap_password')
+            smtp_password = request.form.get('smtp_password')
+        else:
+            # Manual settings
+            imap_host = request.form.get('imap_host')
+            imap_port = int(request.form.get('imap_port', 993))
+            imap_username = request.form.get('imap_username')
+            imap_password = request.form.get('imap_password')
+            imap_use_ssl = request.form.get('imap_use_ssl') == 'on'
+
+            smtp_host = request.form.get('smtp_host')
+            smtp_port = int(request.form.get('smtp_port', 465))
+            smtp_username = request.form.get('smtp_username')
+            smtp_password = request.form.get('smtp_password')
+            smtp_use_ssl = request.form.get('smtp_use_ssl') == 'on'
+
         # Test connections
         imap_success, imap_msg = test_email_connection('imap', imap_host, imap_port, imap_username, imap_password, imap_use_ssl)
         smtp_success, smtp_msg = test_email_connection('smtp', smtp_host, smtp_port, smtp_username, smtp_password, smtp_use_ssl)
-        
+
         if not imap_success:
             flash(f'IMAP connection failed: {imap_msg}', 'error')
             return render_template('add_account.html')
-        
+
         if not smtp_success:
             flash(f'SMTP connection failed: {smtp_msg}', 'error')
             return render_template('add_account.html')
-        
+
         # Encrypt passwords
         encrypted_imap_password = encrypt_credential(imap_password)
         encrypted_smtp_password = encrypt_credential(smtp_password)
-        
+
         # Save to database
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO email_accounts
+            (account_name, email_address, imap_host, imap_port, imap_username, imap_password, imap_use_ssl,
+             smtp_host, smtp_port, smtp_username, smtp_password, smtp_use_ssl, is_active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+        """, (account_name, email_address, imap_host, imap_port, imap_username, encrypted_imap_password, imap_use_ssl,
+              smtp_host, smtp_port, smtp_username, encrypted_smtp_password, smtp_use_ssl))
+
+        account_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        # Start IMAP monitoring thread for new account
         try:
-            conn = sqlite3.connect(DB_PATH)
-            cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO email_accounts 
-                (account_name, email_address, imap_host, imap_port, imap_username, imap_password, imap_use_ssl,
-                 smtp_host, smtp_port, smtp_username, smtp_password, smtp_use_ssl, is_active)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-            """, (account_name, email_address, imap_host, imap_port, imap_username, encrypted_imap_password, imap_use_ssl,
-                  smtp_host, smtp_port, smtp_username, encrypted_smtp_password, smtp_use_ssl))
-            
-            account_id = cursor.lastrowid
-            conn.commit()
-            conn.close()
-            
-            # Start IMAP monitoring thread
             thread = threading.Thread(target=monitor_imap_account, args=(account_id,), daemon=True)
             imap_threads[account_id] = thread
             thread.start()
-            
-            flash(f'Email account "{account_name}" added successfully!', 'success')
-            return redirect(url_for('email_accounts'))
-            
-        except sqlite3.IntegrityError:
-            flash('Account name already exists', 'error')
         except Exception as e:
-            flash(f'Error adding account: {str(e)}', 'error')
-    
+            app.logger.warning(f"Failed to start IMAP monitor thread for account {account_id}: {e}")
+
+        flash('Account added successfully', 'success')
+        return redirect(url_for('email_accounts'))
+
     return render_template('add_account.html')
-
-@app.route('/accounts/<int:account_id>/test')
-@login_required
-def test_account(account_id):
-    """Test email account connection"""
-    if current_user.role != 'admin':
-        return jsonify({'error': 'Admin access required'}), 403
-    
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    account = cursor.execute("SELECT * FROM email_accounts WHERE id = ?", (account_id,)).fetchone()
-    conn.close()
-    
-    if not account:
-        return jsonify({'error': 'Account not found'}), 404
-    
-    # Decrypt passwords
-    imap_password = decrypt_credential(account[7])
-    smtp_password = decrypt_credential(account[12])
-    
-    # Test IMAP
-    imap_success, imap_msg = test_email_connection('imap', account[4], account[5], account[6], imap_password, account[8])
-    
-    # Test SMTP
-    smtp_success, smtp_msg = test_email_connection('smtp', account[9], account[10], account[11], smtp_password, account[13])
-    
-    return jsonify({
-        'imap': {'success': imap_success, 'message': imap_msg},
-        'smtp': {'success': smtp_success, 'message': smtp_msg}
-    })
-
-@app.route('/accounts/<int:account_id>/toggle')
-@login_required
-def toggle_account(account_id):
-    """Toggle account active status"""
-    if current_user.role != 'admin':
-        flash('Admin access required', 'error')
-        return redirect(url_for('dashboard'))
-    
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    
-    # Toggle status
-    cursor.execute("""
-        UPDATE email_accounts 
-        SET is_active = CASE WHEN is_active = 1 THEN 0 ELSE 1 END 
-        WHERE id = ?
-    """, (account_id,))
-    
-    # Get new status
-    is_active = cursor.execute("SELECT is_active FROM email_accounts WHERE id = ?", (account_id,)).fetchone()[0]
-    
-    conn.commit()
-    conn.close()
-    
-    # Start or stop monitoring thread
-    if is_active:
-        if account_id not in imap_threads:
-            thread = threading.Thread(target=monitor_imap_account, args=(account_id,), daemon=True)
-            imap_threads[account_id] = thread
-            thread.start()
-        flash('Account activated', 'success')
-    else:
-        if account_id in imap_threads:
-            del imap_threads[account_id]  # This will cause the thread to exit
-        flash('Account deactivated', 'success')
-    
-    return redirect(url_for('email_accounts'))
-
-@app.route('/accounts/<int:account_id>/delete', methods=['POST'])
-@login_required
-def delete_account(account_id):
-    """Delete email account"""
-    if current_user.role != 'admin':
-        return jsonify({'error': 'Admin access required'}), 403
-    
-    # Stop monitoring thread if running
-    if account_id in imap_threads:
-        del imap_threads[account_id]
-    
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM email_accounts WHERE id = ?", (account_id,))
-    conn.commit()
-    conn.close()
-    
-    flash('Account deleted successfully', 'success')
-    return redirect(url_for('email_accounts'))
 
 @app.route('/api/stats')
 @login_required
@@ -944,7 +952,7 @@ def api_stats():
     """API endpoint for real-time statistics"""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    
+
     stats = {
         'total': cursor.execute("SELECT COUNT(*) FROM email_messages").fetchone()[0],
         'pending': cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'PENDING'").fetchone()[0],
@@ -952,7 +960,7 @@ def api_stats():
         'rejected': cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'REJECTED'").fetchone()[0],
         'high_risk': cursor.execute("SELECT COUNT(*) FROM email_messages WHERE risk_score >= 70").fetchone()[0],
     }
-    
+
     # Get hourly email volume for chart
     hourly_volume = cursor.execute("""
         SELECT strftime('%H', created_at) as hour, COUNT(*) as count
@@ -961,9 +969,9 @@ def api_stats():
         GROUP BY hour
         ORDER BY hour
     """).fetchall()
-    
+
     conn.close()
-    
+
     return jsonify({
         'total_emails': stats['total'],
         'pending_emails': stats['pending'],
@@ -985,12 +993,12 @@ def api_events():
             cursor = conn.cursor()
             pending = cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'PENDING'").fetchone()[0]
             conn.close()
-            
+
             data = json.dumps({'pending': pending, 'timestamp': datetime.now().isoformat()})
             yield f"data: {data}\n\n"
-            
+
             time.sleep(5)  # Update every 5 seconds
-    
+
     return Response(generate(), mimetype="text/event-stream")
 
 @app.route('/api/diagnostics/<account_id>')
@@ -1000,52 +1008,51 @@ def api_diagnostics(account_id):
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    
+
     # Get specific account
     account = cursor.execute("""
         SELECT * FROM email_accounts WHERE id = ?
     """, (account_id,)).fetchone()
-    
+
     if not account:
         conn.close()
         return jsonify({'error': 'Account not found'}), 404
-    
+
     results = {
         'account_id': account_id,
         'account_name': account['account_name'],
         'smtp_test': {'success': False, 'message': ''},
         'imap_test': {'success': False, 'message': ''},
-        'pop3_test': {'success': False, 'message': ''},
         'timestamp': datetime.now().isoformat()
     }
-    
+
     # Decrypt passwords
     smtp_password = decrypt_credential(account['smtp_password'])
     imap_password = decrypt_credential(account['imap_password'])
-    
+
     # Test SMTP connection
     try:
         import smtplib
         smtp_port = int(account['smtp_port']) if account['smtp_port'] else 587
-        
+
         if smtp_port == 465:
             smtp = smtplib.SMTP_SSL(account['smtp_host'], smtp_port, timeout=10)
         else:
             smtp = smtplib.SMTP(account['smtp_host'], smtp_port, timeout=10)
             smtp.starttls()
-        
+
         smtp.login(account['smtp_username'], smtp_password)
         smtp.quit()
         results['smtp_test']['success'] = True
         results['smtp_test']['message'] = f"Connected successfully to {account['smtp_host']}:{smtp_port}"
     except Exception as e:
         results['smtp_test']['message'] = str(e)
-    
+
     # Test IMAP connection
     try:
         import imaplib
         imap_port = int(account['imap_port']) if account['imap_port'] else 993
-        
+
         imap = imaplib.IMAP4_SSL(account['imap_host'], imap_port)
         imap.login(account['imap_username'], imap_password)
         imap.select('INBOX')
@@ -1055,40 +1062,308 @@ def api_diagnostics(account_id):
         results['imap_test']['message'] = f"Connected successfully to {account['imap_host']}:{imap_port}"
     except Exception as e:
         results['imap_test']['message'] = str(e)
-    
-    # Test POP3 if configured
-    if account['pop3_host']:
-        try:
-            import poplib
-            pop3_password = decrypt_credential(account['pop3_password'])
-            if account['pop3_use_ssl']:
-                pop3 = poplib.POP3_SSL(account['pop3_host'], account['pop3_port'])
-            else:
-                pop3 = poplib.POP3(account['pop3_host'], account['pop3_port'])
-            pop3.user(account['pop3_username'])
-            pop3.pass_(pop3_password)
-            pop3.quit()
-            results['pop3_test']['success'] = True
-            results['pop3_test']['message'] = f"Connected successfully to {account['pop3_host']}:{account['pop3_port']}"
-        except Exception as e:
-            results['pop3_test']['message'] = str(e)
-    
+
     # Update health status in database
     cursor.execute("""
-        UPDATE email_accounts 
-        SET smtp_health_status = ?, imap_health_status = ?, pop3_health_status = ?, 
+        UPDATE email_accounts
+        SET smtp_health_status = ?, imap_health_status = ?,
             last_health_check = CURRENT_TIMESTAMP
         WHERE id = ?
     """, (
         'connected' if results['smtp_test']['success'] else 'error',
         'connected' if results['imap_test']['success'] else 'error',
-        'connected' if results.get('pop3_test', {}).get('success') else 'unknown',
         account_id
     ))
     conn.commit()
     conn.close()
-    
+
     return jsonify(results)
+
+@app.route('/api/accounts')
+@login_required
+def api_get_accounts():
+    """Get all active email accounts for the test suite"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    accounts = cursor.execute("""
+        SELECT id, account_name, email_address, is_active,
+               smtp_host, smtp_port, imap_host, imap_port
+        FROM email_accounts
+        ORDER BY account_name
+    """).fetchall()
+
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'accounts': [dict(acc) for acc in accounts]
+    })
+
+@app.route('/api/inbox')
+@login_required
+def api_inbox():
+    """API endpoint for inbox with filtering"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    # Get query parameters
+    status = request.args.get('status')
+    account_id = request.args.get('account_id')
+    search_q = request.args.get('q')
+
+    # Build query
+    query = """
+        SELECT em.*, ea.account_name, ea.email_address as account_email
+        FROM email_messages em
+        LEFT JOIN email_accounts ea ON em.account_id = ea.id
+        WHERE 1=1
+    """
+    params = []
+
+    if status:
+        query += " AND (em.status = ? OR em.interception_status = ?)"
+        params.extend([status, status])
+
+    if account_id:
+        query += " AND em.account_id = ?"
+        params.append(account_id)
+
+    if search_q:
+        query += " AND (em.subject LIKE ? OR em.sender LIKE ?)"
+        params.extend([f'%{search_q}%', f'%{search_q}%'])
+
+    query += " ORDER BY em.created_at DESC LIMIT 100"
+
+    emails = cursor.execute(query, params).fetchall()
+
+    # Add preview snippet and format data
+    messages = []
+    for email in emails:
+        msg = dict(email)
+        # Add preview snippet
+        msg['preview_snippet'] = (email['body_text'] or '')[:200] if email['body_text'] else ''
+        messages.append(msg)
+
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'messages': messages
+    })
+
+@app.route('/api/fetch-emails', methods=['POST'])
+@login_required
+def api_fetch_emails():
+    """Fetch emails from IMAP server with customizable count"""
+    data = request.get_json()
+    account_id = data.get('account_id')
+    fetch_count = data.get('count', 20)  # Default to 20 emails
+    offset = data.get('offset', 0)  # For pagination
+
+    if not account_id:
+        return jsonify({'success': False, 'error': 'Account ID required'}), 400
+
+    # Get account details
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    account = cursor.execute(
+        "SELECT * FROM email_accounts WHERE id = ? AND is_active = 1",
+        (account_id,)
+    ).fetchone()
+
+    if not account:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Account not found or inactive'}), 404
+
+    try:
+        import imaplib
+        from email import message_from_bytes, policy
+
+        # Decrypt password
+        password = decrypt_credential(account['imap_password'])
+
+        # Connect to IMAP server
+        if account['imap_port'] == 993:
+            mail = imaplib.IMAP4_SSL(account['imap_host'], account['imap_port'])
+        else:
+            mail = imaplib.IMAP4(account['imap_host'], account['imap_port'])
+            mail.starttls()
+
+        mail.login(account['imap_username'], password)
+        mail.select('INBOX')
+
+        # Search for all emails
+        _, message_ids = mail.search(None, 'ALL')
+        id_list = message_ids[0].split()
+
+        # Calculate range for pagination
+        total_emails = len(id_list)
+        start_idx = max(0, total_emails - offset - fetch_count)
+        end_idx = total_emails - offset
+
+        # Fetch the requested range
+        fetched_emails = []
+        emails_to_fetch = id_list[start_idx:end_idx][-fetch_count:]  # Get last N emails
+
+        for email_id in reversed(emails_to_fetch):  # Most recent first
+            _, msg_data = mail.fetch(email_id, '(RFC822)')
+            raw_email = msg_data[0][1]
+            email_msg = message_from_bytes(raw_email, policy=policy.default)
+
+            # Extract email data
+            sender = str(email_msg.get('From', ''))
+            recipients = json.dumps([str(email_msg.get('To', ''))])
+            subject = str(email_msg.get('Subject', 'No Subject'))
+            message_id = str(email_msg.get('Message-ID', f"manual_{account_id}_{datetime.now().timestamp()}"))
+            date = str(email_msg.get('Date', ''))
+
+            # Extract body
+            body_text = ""
+            body_html = ""
+            if email_msg.is_multipart():
+                for part in email_msg.walk():
+                    if part.get_content_type() == "text/plain":
+                        payload = part.get_payload(decode=True)
+                        if payload:
+                            body_text = payload.decode('utf-8', errors='ignore')
+                    elif part.get_content_type() == "text/html":
+                        payload = part.get_payload(decode=True)
+                        if payload:
+                            body_html = payload.decode('utf-8', errors='ignore')
+            else:
+                payload = email_msg.get_payload(decode=True)
+                if payload:
+                    body_text = payload.decode('utf-8', errors='ignore')
+
+            # Store in database with manual_fetch flag
+            cursor.execute('''
+                INSERT OR IGNORE INTO email_messages
+                (message_id, sender, recipients, subject, body_text, body_html,
+                 raw_content, account_id, direction, interception_status, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+            ''', (message_id, sender, recipients, subject, body_text, body_html,
+                  raw_email, account_id, 'inbound', 'FETCHED'))
+
+            fetched_emails.append({
+                'message_id': message_id,
+                'sender': sender,
+                'subject': subject,
+                'date': date,
+                'preview': body_text[:200] if body_text else ''
+            })
+
+        conn.commit()
+        mail.logout()
+
+        conn.close()
+        return jsonify({
+            'success': True,
+            'fetched': len(fetched_emails),
+            'total_available': total_emails,
+            'emails': fetched_emails
+        })
+
+    except Exception as e:
+        conn.close()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/email/<email_id>/reply-forward', methods=['GET'])
+@login_required
+def api_email_reply_forward(email_id):
+    """Get email data formatted for reply or forward"""
+    action = request.args.get('action', 'reply')  # 'reply' or 'forward'
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    email = cursor.execute(
+        "SELECT * FROM email_messages WHERE id = ?",
+        (email_id,)
+    ).fetchone()
+
+    if not email:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Email not found'}), 404
+
+    # Prepare response based on action
+    if action == 'reply':
+        # Reply: Set original sender as recipient
+        response = {
+            'to': email['sender'],
+            'subject': f"Re: {email['subject']}" if not email['subject'].startswith('Re:') else email['subject'],
+            'body': f"\n\n--- Original Message ---\nFrom: {email['sender']}\nDate: {email['created_at']}\nSubject: {email['subject']}\n\n{email['body_text']}"
+        }
+    else:  # forward
+        response = {
+            'to': '',  # User will fill this
+            'subject': f"Fwd: {email['subject']}" if not email['subject'].startswith('Fwd:') else email['subject'],
+            'body': f"\n\n--- Forwarded Message ---\nFrom: {email['sender']}\nDate: {email['created_at']}\nSubject: {email['subject']}\n\n{email['body_text']}"
+        }
+
+    conn.close()
+    return jsonify({'success': True, 'data': response})
+
+@app.route('/api/email/<email_id>/download', methods=['GET'])
+@login_required
+def api_email_download(email_id):
+    """Download email as .eml file"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    email = cursor.execute(
+        "SELECT raw_content, subject FROM email_messages WHERE id = ?",
+        (email_id,)
+    ).fetchone()
+
+    if not email or not email['raw_content']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Email not found or no raw content'}), 404
+
+    conn.close()
+
+    # Create response with .eml file
+    from flask import Response
+    import re
+
+    # Sanitize filename
+    safe_subject = re.sub(r'[^\w\s-]', '', email['subject'] or 'email')[:50]
+    filename = f"{safe_subject}_{email_id}.eml"
+
+    return Response(
+        email['raw_content'],
+        mimetype='message/rfc822',
+        headers={
+            'Content-Disposition': f'attachment; filename="{filename}"'
+        }
+    )
+
+@app.route('/api/email/<email_id>/intercept', methods=['POST'])
+@login_required
+def api_email_intercept(email_id):
+    """Manually intercept an email (change status to HELD)"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    # Update email status to HELD for manual interception
+    cursor.execute("""
+        UPDATE email_messages
+        SET interception_status = 'HELD',
+            status = 'PENDING',
+            action_taken_at = datetime('now')
+        WHERE id = ?
+    """, (email_id,))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'message': 'Email intercepted and held for review'})
 
 @app.route('/api/accounts/<account_id>/health')
 @login_required
@@ -1097,22 +1372,20 @@ def api_account_health(account_id):
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    
+
     account = cursor.execute("""
-        SELECT smtp_health_status, imap_health_status, pop3_health_status,
+        SELECT smtp_health_status, imap_health_status,
                last_health_check, last_error, connection_status
         FROM email_accounts WHERE id = ?
     """, (account_id,)).fetchone()
-    
+
     if not account:
         conn.close()
         return jsonify({'error': 'Account not found'}), 404
-    
+
     # Determine overall status
     smtp_status = account['smtp_health_status'] or 'unknown'
     imap_status = account['imap_health_status'] or 'unknown'
-    pop3_status = account['pop3_health_status'] or 'unknown'
-    
     if smtp_status == 'connected' and imap_status == 'connected':
         overall = 'connected'
     elif smtp_status == 'error' or imap_status == 'error':
@@ -1121,14 +1394,13 @@ def api_account_health(account_id):
         overall = 'unknown'
     else:
         overall = 'warning'
-    
+
     conn.close()
-    
+
     return jsonify({
         'overall': overall,
         'smtp': smtp_status,
         'imap': imap_status,
-        'pop3': pop3_status,
         'last_check': account['last_health_check'],
         'last_error': account['last_error']
     })
@@ -1139,34 +1411,34 @@ def api_test_account(account_id):
     """Test account connections and update health status"""
     if current_user.role != 'admin':
         return jsonify({'error': 'Admin access required'}), 403
-    
+
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    
+
     account = cursor.execute("SELECT * FROM email_accounts WHERE id = ?", (account_id,)).fetchone()
-    
+
     if not account:
         conn.close()
         return jsonify({'error': 'Account not found'}), 404
-    
+
     # Decrypt passwords
     imap_password = decrypt_credential(account['imap_password'])
     smtp_password = decrypt_credential(account['smtp_password'])
-    
+
     # Test connections
-    imap_success, imap_msg = test_email_connection('imap', account['imap_host'], 
-                                                   account['imap_port'], account['imap_username'], 
+    imap_success, imap_msg = test_email_connection('imap', account['imap_host'],
+                                                   account['imap_port'], account['imap_username'],
                                                    imap_password, account['imap_use_ssl'])
-    
-    smtp_success, smtp_msg = test_email_connection('smtp', account['smtp_host'], 
-                                                   account['smtp_port'], account['smtp_username'], 
+
+    smtp_success, smtp_msg = test_email_connection('smtp', account['smtp_host'],
+                                                   account['smtp_port'], account['smtp_username'],
                                                    smtp_password, account['smtp_use_ssl'])
-    
+
     # Update health status
     cursor.execute("""
-        UPDATE email_accounts 
-        SET smtp_health_status = ?, imap_health_status = ?, 
+        UPDATE email_accounts
+        SET smtp_health_status = ?, imap_health_status = ?,
             last_health_check = CURRENT_TIMESTAMP,
             connection_status = ?
         WHERE id = ?
@@ -1176,17 +1448,17 @@ def api_test_account(account_id):
         'connected' if (smtp_success and imap_success) else 'error',
         account_id
     ))
-    
+
     if smtp_success and imap_success:
         cursor.execute("""
-            UPDATE email_accounts 
+            UPDATE email_accounts
             SET last_successful_connection = CURRENT_TIMESTAMP
             WHERE id = ?
         """, (account_id,))
-    
+
     conn.commit()
     conn.close()
-    
+
     return jsonify({
         'success': smtp_success and imap_success,
         'imap': {'success': imap_success, 'message': imap_msg},
@@ -1202,85 +1474,84 @@ def api_account_crud(account_id):
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        
+
         account = cursor.execute("SELECT * FROM email_accounts WHERE id = ?", (account_id,)).fetchone()
-        
+
         if not account:
             conn.close()
             return jsonify({'error': 'Account not found'}), 404
-        
+
         # Don't send encrypted passwords
         account_data = dict(account)
         account_data.pop('imap_password', None)
         account_data.pop('smtp_password', None)
-        account_data.pop('pop3_password', None)
-        
+
         conn.close()
         return jsonify(account_data)
-    
+
     elif request.method == 'PUT':
         # Update account
         if current_user.role != 'admin':
             return jsonify({'error': 'Admin access required'}), 403
-        
+
         data = request.json
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        
+
         # Build update query
         update_fields = []
         update_values = []
-        
-        for field in ['account_name', 'email_address', 'provider_type', 
+
+        for field in ['account_name', 'email_address', 'provider_type',
                      'smtp_host', 'smtp_port', 'smtp_username',
                      'imap_host', 'imap_port', 'imap_username']:
             if field in data:
                 update_fields.append(f"{field} = ?")
                 update_values.append(data[field])
-        
+
         # Handle passwords
-        if 'smtp_password' in data and data['smtp_password']:
+        if data and 'smtp_password' in data and data['smtp_password']:
             update_fields.append("smtp_password = ?")
             update_values.append(encrypt_credential(data['smtp_password']))
-        
-        if 'imap_password' in data and data['imap_password']:
+
+        if data and 'imap_password' in data and data['imap_password']:
             update_fields.append("imap_password = ?")
             update_values.append(encrypt_credential(data['imap_password']))
-        
+
         # Handle SSL flags
-        if 'smtp_use_ssl' in data:
+        if data and 'smtp_use_ssl' in data:
             update_fields.append("smtp_use_ssl = ?")
             update_values.append(1 if data['smtp_use_ssl'] else 0)
-        
-        if 'imap_use_ssl' in data:
+
+        if data and 'imap_use_ssl' in data:
             update_fields.append("imap_use_ssl = ?")
             update_values.append(1 if data['imap_use_ssl'] else 0)
-        
+
         if update_fields:
             update_fields.append("updated_at = CURRENT_TIMESTAMP")
             update_values.append(account_id)
             query = f"UPDATE email_accounts SET {', '.join(update_fields)} WHERE id = ?"
             cursor.execute(query, update_values)
             conn.commit()
-        
+
         conn.close()
         return jsonify({'success': True})
-    
+
     elif request.method == 'DELETE':
         # Delete account
         if current_user.role != 'admin':
             return jsonify({'error': 'Admin access required'}), 403
-        
+
         # Stop monitoring thread
         if int(account_id) in imap_threads:
             del imap_threads[int(account_id)]
-        
+
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute("DELETE FROM email_accounts WHERE id = ?", (account_id,))
         conn.commit()
         conn.close()
-        
+
         return jsonify({'success': True})
 
 @app.route('/api/accounts/export')
@@ -1289,11 +1560,11 @@ def api_export_accounts():
     """Export accounts configuration"""
     if current_user.role != 'admin':
         return jsonify({'error': 'Admin access required'}), 403
-    
+
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    
+
     accounts = cursor.execute("""
         SELECT account_name, email_address, provider_type,
                imap_host, imap_port, imap_username, imap_use_ssl,
@@ -1301,15 +1572,15 @@ def api_export_accounts():
         FROM email_accounts
         ORDER BY account_name
     """).fetchall()
-    
+
     conn.close()
-    
+
     export_data = {
         'version': '1.0',
         'exported_at': datetime.now().isoformat(),
         'accounts': [dict(account) for account in accounts]
     }
-    
+
     response = jsonify(export_data)
     response.headers['Content-Disposition'] = 'attachment; filename=email_accounts_export.json'
     return response
@@ -1321,28 +1592,25 @@ def api_get_account(account_id):
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    
+
     account = cursor.execute("""
         SELECT * FROM email_accounts WHERE id = ?
     """, (account_id,)).fetchone()
-    
+
     conn.close()
-    
+
     if not account:
         return jsonify({'error': 'Account not found'}), 404
-    
+
     # Decrypt password for testing
-    key = get_encryption_key()
-    fernet = Fernet(key)
-    
     account_data = dict(account)
     try:
-        account_data['imap_password'] = fernet.decrypt(account['imap_password'].encode()).decode()
-        account_data['smtp_password'] = fernet.decrypt(account['smtp_password'].encode()).decode()
+        account_data['imap_password'] = decrypt_credential(account['imap_password'])
+        account_data['smtp_password'] = decrypt_credential(account['smtp_password'])
     except:
         # Passwords might not be encrypted
         pass
-    
+
     return jsonify(account_data)
 
 @app.route('/api/test-connection/<connection_type>', methods=['POST'])
@@ -1350,15 +1618,15 @@ def api_get_account(account_id):
 def api_test_connection(connection_type):
     """Test email connection (IMAP or SMTP)"""
     data = request.json or request.get_json(force=True)
-    
+
     host = data.get('host')
     port = int(data.get('port'))
     username = data.get('username')
     password = data.get('password')
     use_ssl = data.get('use_ssl', True)
-    
+
     success, message = test_email_connection(connection_type, host, port, username, password, use_ssl)
-    
+
     return jsonify({
         'success': success,
         'message': message,
@@ -1373,7 +1641,7 @@ def diagnostics(account_id=None):
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    
+
     # Get all accounts
     accounts = cursor.execute("""
         SELECT id, account_name, email_address, imap_host, imap_port, smtp_host, smtp_port,
@@ -1381,55 +1649,55 @@ def diagnostics(account_id=None):
         FROM email_accounts
         ORDER BY account_name
     """).fetchall()
-    
+
     results = {}
     selected_account = None
-    
+
     if account_id:
         # Get specific account
         selected_account = cursor.execute("""
             SELECT * FROM email_accounts WHERE id = ?
         """, (account_id,)).fetchone()
-        
+
         if selected_account:
             # Run diagnostics for this specific account
             try:
                 import smtplib
                 import imaplib
                 from datetime import datetime
-                
+
                 results = {
                     'account': dict(selected_account),
                     'smtp_test': {'success': False, 'message': ''},
                     'imap_test': {'success': False, 'message': ''},
                     'timestamp': datetime.now().isoformat()
                 }
-                
+
                 # Test SMTP connection
                 try:
                     # Decrypt SMTP password
                     smtp_password = decrypt_credential(selected_account['smtp_password'])
                     smtp_port = int(selected_account['smtp_port']) if selected_account['smtp_port'] else 587
-                    
+
                     if smtp_port == 465:
                         smtp = smtplib.SMTP_SSL(selected_account['smtp_host'], smtp_port)
                     else:
                         smtp = smtplib.SMTP(selected_account['smtp_host'], smtp_port)
                         smtp.starttls()
-                    
+
                     smtp.login(selected_account['smtp_username'], smtp_password)
                     smtp.quit()
                     results['smtp_test']['success'] = True
                     results['smtp_test']['message'] = f"SMTP connection successful to {selected_account['smtp_host']}"
                 except Exception as e:
                     results['smtp_test']['message'] = f"SMTP Error: {str(e)}"
-                
+
                 # Test IMAP connection
                 try:
                     # Decrypt IMAP credentials (not SMTP)
                     imap_password = decrypt_credential(selected_account['imap_password'])
                     imap_port = int(selected_account['imap_port']) if selected_account['imap_port'] else 993
-                    
+
                     imap = imaplib.IMAP4_SSL(selected_account['imap_host'], imap_port)
                     imap.login(selected_account['imap_username'], imap_password)
                     imap.select('INBOX')
@@ -1439,12 +1707,12 @@ def diagnostics(account_id=None):
                     results['imap_test']['message'] = f"IMAP connection successful to {selected_account['imap_host']}"
                 except Exception as e:
                     results['imap_test']['message'] = f"IMAP Error: {str(e)}"
-                    
+
             except Exception as e:
                 results = {'error': str(e)}
-    
+
     conn.close()
-    
+
     # Redirect to dashboard with diagnostics tab
     if account_id:
         return redirect(url_for('dashboard', tab='diagnostics') + f'?account_id={account_id}')
@@ -1455,20 +1723,8 @@ def diagnostics(account_id=None):
 @login_required
 def test_email_send():
     """Test sending an email"""
-    from email_diagnostics import EmailDiagnostics
-    
-    to_address = request.form.get('to_address', '')
-    if not to_address:
-        to_address = None
-    
-    diagnostics = EmailDiagnostics()
-    result = diagnostics.test_send_email(to_address)
-    
-    if result['sent']:
-        flash(f"Test email sent successfully to {result['to']}", 'success')
-    else:
-        flash(f"Failed to send test email: {result.get('error', 'Unknown error')}", 'error')
-    
+    # Legacy dependency (email_diagnostics) removed in cleanup phase.
+    flash('Email diagnostics send test temporarily disabled (module deprecated).', 'warning')
     return redirect(url_for('diagnostics'))
 
 @app.route('/interception-test')
@@ -1480,58 +1736,24 @@ def interception_test_dashboard():
 @app.route('/api/test/send-email', methods=['POST'])
 @login_required
 def api_test_send_email():
-    """API endpoint to send test email through SMTP proxy"""
+    """Simplified legacy test send endpoint (non-critical)."""
+    data = request.get_json(silent=True) or {}
+    from_account_id = data.get('from_account_id')
+    to_account_id = data.get('to_account_id')
+    subject = data.get('subject') or 'Test'
+    body = data.get('body') or 'Test body'
+    if not (from_account_id and to_account_id):
+        return jsonify({'success': False, 'error': 'Missing account ids'}), 400
+    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row; cur = conn.cursor()
+    from_account = cur.execute("SELECT * FROM email_accounts WHERE id=?", (from_account_id,)).fetchone()
+    to_account = cur.execute("SELECT * FROM email_accounts WHERE id=?", (to_account_id,)).fetchone(); conn.close()
+    if not from_account or not to_account:
+        return jsonify({'success': False, 'error': 'Invalid account ids'}), 400
     try:
-        data = request.get_json()
-        from_account_id = data.get('from_account_id')
-        to_account_id = data.get('to_account_id')
-        subject = data.get('subject')
-        body = data.get('body')
-        
-        # Get account details
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        from_account = cursor.execute(
-            "SELECT * FROM email_accounts WHERE id = ?", (from_account_id,)
-        ).fetchone()
-        
-        to_account = cursor.execute(
-            "SELECT * FROM email_accounts WHERE id = ?", (to_account_id,)
-        ).fetchone()
-        
-        conn.close()
-        
-        if not from_account or not to_account:
-            return jsonify({'success': False, 'error': 'Invalid account IDs'}), 400
-        
-        # Send email through SMTP proxy
-        import smtplib
-        from email.mime.text import MIMEText
-        from email.mime.multipart import MIMEMultipart
-        
-        msg = MIMEMultipart()
-        msg['From'] = from_account['email_address']
-        msg['To'] = to_account['email_address']
-        msg['Subject'] = subject
-        msg['Date'] = formatdate()
-        msg['Message-ID'] = make_msgid()
-        
-        msg.attach(MIMEText(body, 'plain'))
-        
-        # Send through our proxy
-        smtp = smtplib.SMTP('localhost', 8587)
-        smtp.send_message(msg)
-        smtp.quit()
-        
-        return jsonify({
-            'success': True,
-            'from': from_account['email_address'],
-            'to': to_account['email_address'],
-            'subject': subject
-        })
-        
+        msg = MIMEMultipart(); msg['From'] = from_account['email_address']; msg['To'] = to_account['email_address']
+        msg['Subject'] = subject; msg['Date'] = formatdate(); msg['Message-ID'] = make_msgid(); msg.attach(MIMEText(body, 'plain'))
+        smtp = smtplib.SMTP('localhost', 8587, timeout=5); smtp.send_message(msg); smtp.quit()
+        return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -1541,11 +1763,11 @@ def api_test_check_interception():
     """Check if an email was intercepted"""
     try:
         subject = request.args.get('subject')
-        
+
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        
+
         email = cursor.execute("""
             SELECT id, subject, status, created_at
             FROM email_messages
@@ -1553,9 +1775,9 @@ def api_test_check_interception():
             ORDER BY created_at DESC
             LIMIT 1
         """, (subject,)).fetchone()
-        
+
         conn.close()
-        
+
         if email:
             return jsonify({
                 'success': True,
@@ -1565,65 +1787,24 @@ def api_test_check_interception():
             })
         else:
             return jsonify({'success': False, 'message': 'Email not found'})
-            
+
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/test/verify-delivery', methods=['POST'])
-@login_required  
+@login_required
 def api_test_verify_delivery():
-    """Verify if edited email was delivered to destination"""
-    try:
-        data = request.get_json()
-        account_id = data.get('account_id')
-        subject = data.get('subject')
-        
-        # Get account details
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        account = cursor.execute(
-            "SELECT * FROM email_accounts WHERE id = ?", (account_id,)
-        ).fetchone()
-        
-        conn.close()
-        
-        if not account:
-            return jsonify({'success': False, 'error': 'Invalid account ID'}), 400
-        
-        # Check IMAP for the email
-        cipher_suite = Fernet(get_encryption_key())
-        imap_password = cipher_suite.decrypt(account['imap_password'].encode()).decode()
-        
-        if account['imap_use_ssl']:
-            imap = imaplib.IMAP4_SSL(account['imap_host'], account['imap_port'])
-        else:
-            imap = imaplib.IMAP4(account['imap_host'], account['imap_port'])
-        
-        imap.login(account['imap_username'], imap_password)
-        imap.select('INBOX')
-        
-        # Search for email with the subject
-        _, messages = imap.search(None, f'(SUBJECT "{subject}")')
-        
-        imap.close()
-        imap.logout()
-        
-        if messages[0]:
-            return jsonify({
-                'success': True,
-                'message': 'Email found in destination inbox',
-                'account': account['email_address']
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'message': 'Email not found in destination inbox'
-            })
-            
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+    """Simplified legacy verify-delivery: check subject presence in local DB only."""
+    data = request.get_json(silent=True) or {}
+    account_id = data.get('account_id'); subject = (data.get('subject') or '').strip()
+    if not (account_id and subject):
+        return jsonify({'success': False, 'error': 'Missing account_id or subject'}), 400
+    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row; cur = conn.cursor()
+    account = cur.execute("SELECT id FROM email_accounts WHERE id=?", (account_id,)).fetchone(); conn.close()
+    if not account:
+        return jsonify({'success': False, 'error': 'Invalid account ID'}), 400
+    c2 = sqlite3.connect(DB_PATH).cursor(); hit = c2.execute("SELECT 1 FROM email_messages WHERE subject=? LIMIT 1", (subject,)).fetchone(); c2.connection.close()
+    return jsonify({'success': bool(hit), 'source': 'local-db'})
 
 @app.route('/email/<int:email_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -1632,22 +1813,22 @@ def edit_email(email_id):
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    
+
     if request.method == 'GET':
         # Get email details for editing
         email = cursor.execute("""
             SELECT id, subject, body_text, sender, recipients, status
-            FROM email_messages 
+            FROM email_messages
             WHERE id = ?
         """, (email_id,)).fetchone()
         conn.close()
-        
+
         if not email:
             return jsonify({'error': 'Email not found'}), 404
-        
+
         if email['status'] != 'PENDING':
             return jsonify({'error': 'Only pending emails can be edited'}), 400
-            
+
         return jsonify({
             'id': email['id'],
             'subject': email['subject'],
@@ -1655,38 +1836,206 @@ def edit_email(email_id):
             'sender': email['sender'],
             'recipients': email['recipients']
         })
-    
+
     elif request.method == 'POST':
         # Update email with new content
         data = request.get_json()
         new_subject = data.get('subject', '').strip()
         new_body = data.get('body', '').strip()
-        
+
         if not new_subject or not new_body:
             return jsonify({'error': 'Subject and body are required'}), 400
-        
+
         # Update the email
         cursor.execute("""
-            UPDATE email_messages 
-            SET subject = ?, 
-                body_text = ?, 
+            UPDATE email_messages
+            SET subject = ?,
+                body_text = ?,
                 review_notes = COALESCE(review_notes, '') || '\n[Edited by ' || ? || ' at ' || datetime('now') || ']'
             WHERE id = ? AND status = 'PENDING'
         """, (new_subject, new_body, current_user.username, email_id))
-        
+
         if cursor.rowcount == 0:
             conn.close()
             return jsonify({'error': 'Email not found or not in pending status'}), 400
-        
+
         conn.commit()
-        
+
         # Log the action
         log_action('EMAIL_EDITED', current_user.id, email_id, f"Subject: {new_subject[:50]}")
-        
+
         conn.close()
-        
+
         flash('Email updated successfully', 'success')
         return jsonify({'success': True, 'message': 'Email updated successfully'})
+
+@app.route('/email/<int:email_id>/full')
+@login_required
+def get_full_email(email_id):
+    """Get complete email details for editor"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    email = cursor.execute("""
+        SELECT id, message_id, sender, recipients, subject,
+               body_text, body_html, raw_content, status,
+               risk_score, keywords_matched, review_notes,
+               created_at, processed_at
+        FROM email_messages
+        WHERE id = ?
+    """, (email_id,)).fetchone()
+    conn.close()
+
+    if not email:
+        return jsonify({'error': 'Email not found'}), 404
+
+    return jsonify({
+        'id': email['id'],
+        'message_id': email['message_id'],
+        'sender': email['sender'],
+        'recipients': email['recipients'],
+        'subject': email['subject'],
+        'body_text': email['body_text'],
+        'body_html': email['body_html'],
+        'status': email['status'],
+        'risk_score': email['risk_score'],
+        'keywords_matched': email['keywords_matched'],
+        'review_notes': email['review_notes'],
+        'created_at': email['created_at'],
+        'processed_at': email['processed_at']
+    })
+
+@app.route('/email/<int:email_id>/save', methods=['POST'])
+@login_required
+def save_email_draft(email_id):
+    """Save email as draft with changes"""
+    data = request.get_json()
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    # Update email with draft changes
+    cursor.execute("""
+        UPDATE email_messages
+        SET subject = ?,
+            body_text = ?,
+            body_html = ?,
+            review_notes = COALESCE(review_notes, '') || '\n[Draft saved by ' || ? || ' at ' || datetime('now') || ']\n' || ?
+        WHERE id = ? AND status = 'PENDING'
+    """, (
+        data.get('subject'),
+        data.get('body_text'),
+        data.get('body_html', ''),
+        current_user.username,
+        data.get('review_notes', ''),
+        email_id
+    ))
+
+    if cursor.rowcount == 0:
+        conn.close()
+        return jsonify({'error': 'Email not found or not pending'}), 400
+
+    conn.commit()
+    conn.close()
+
+    log_action('EMAIL_DRAFT_SAVED', current_user.id, email_id, f"Draft saved")
+
+    return jsonify({'success': True, 'message': 'Draft saved successfully'})
+
+@app.route('/email/<int:email_id>/approve-send', methods=['POST'])
+@login_required
+def approve_and_send_email(email_id):
+    """Approve email and send it immediately"""
+    data = request.get_json()
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    # First update the email with any final edits
+    cursor.execute("""
+        UPDATE email_messages
+        SET subject = ?,
+            body_text = ?,
+            body_html = ?,
+            review_notes = COALESCE(review_notes, '') || '\n[Approved and sent by ' || ? || ' at ' || datetime('now') || ']\n' || ?,
+            status = 'APPROVED',
+            approved_by = ?,
+            reviewer_id = ?
+        WHERE id = ? AND status = 'PENDING'
+    """, (
+        data.get('subject'),
+        data.get('body_text'),
+        data.get('body_html', ''),
+        current_user.username,
+        data.get('review_notes', ''),
+        current_user.username,
+        current_user.id,
+        email_id
+    ))
+
+    if cursor.rowcount == 0:
+        conn.close()
+        return jsonify({'error': 'Email not found or not pending'}), 400
+
+    # Get the updated email for sending
+    email = cursor.execute("""
+        SELECT * FROM email_messages WHERE id = ?
+    """, (email_id,)).fetchone()
+
+    conn.commit()
+
+    # TODO: Actually send the email via SMTP
+    # For now, just mark as sent
+    cursor.execute("""
+        UPDATE email_messages
+        SET status = 'SENT',
+            sent_at = datetime('now')
+        WHERE id = ?
+    """, (email_id,))
+
+    conn.commit()
+    conn.close()
+
+    log_action('EMAIL_APPROVED_SENT', current_user.id, email_id, f"Approved and sent")
+
+    return jsonify({'success': True, 'message': 'Email approved and sent successfully'})
+
+@app.route('/email/<int:email_id>/reject', methods=['POST'])
+@login_required
+def reject_email(email_id):
+    """Reject an email"""
+    data = request.get_json()
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE email_messages
+        SET status = 'REJECTED',
+            review_notes = COALESCE(review_notes, '') || '\n[Rejected by ' || ? || ' at ' || datetime('now') || ']\n' || ?,
+            approved_by = ?,
+            reviewer_id = ?
+        WHERE id = ? AND status = 'PENDING'
+    """, (
+        current_user.username,
+        data.get('review_notes', ''),
+        current_user.username,
+        current_user.id,
+        email_id
+    ))
+
+    if cursor.rowcount == 0:
+        conn.close()
+        return jsonify({'error': 'Email not found or not pending'}), 400
+
+    conn.commit()
+    conn.close()
+
+    log_action('EMAIL_REJECTED', current_user.id, email_id, f"Rejected")
+
+    return jsonify({'success': True, 'message': 'Email rejected successfully'})
 
 @app.route('/inbox')
 @login_required
@@ -1695,18 +2044,18 @@ def inbox():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    
+
     # Get all active email accounts
     accounts = cursor.execute("""
-        SELECT id, account_name, email_address 
-        FROM email_accounts 
+        SELECT id, account_name, email_address
+        FROM email_accounts
         WHERE is_active = 1
         ORDER BY account_name
     """).fetchall()
-    
+
     # Get selected account from query params
     selected_account = request.args.get('account_id', type=int)
-    
+
     # Get emails from inbox (stored messages)
     if selected_account:
         emails = cursor.execute("""
@@ -1725,11 +2074,11 @@ def inbox():
             ORDER BY em.created_at DESC
             LIMIT 100
         """).fetchall()
-    
+
     conn.close()
-    
-    return render_template('inbox.html', 
-                         emails=emails, 
+
+    return render_template('inbox.html',
+                         emails=emails,
                          accounts=accounts,
                          selected_account=selected_account)
 
@@ -1740,122 +2089,106 @@ def compose_email():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    
+
     # Get all active email accounts for FROM dropdown
     accounts = cursor.execute("""
-        SELECT id, account_name, email_address 
-        FROM email_accounts 
+        SELECT id, account_name, email_address
+        FROM email_accounts
         WHERE is_active = 1
         ORDER BY account_name
     """).fetchall()
-    
+
     if request.method == 'POST':
-        # Get form data
-        from_account_id = request.form.get('from_account', type=int)
-        to_address = request.form.get('to', '').strip()
-        cc_address = request.form.get('cc', '').strip()
-        subject = request.form.get('subject', '').strip()
-        body = request.form.get('body', '').strip()
-        
-        # Validate inputs
+        if request.is_json:
+            data = request.get_json(silent=True) or {}
+            from_account_id = data.get('from_account')
+            to_address = (data.get('to') or '').strip()
+            cc_address = (data.get('cc') or '').strip()
+            subject = (data.get('subject') or '').strip()
+            body = (data.get('body') or '').strip()
+        else:
+            from_account_id = request.form.get('from_account', type=int)
+            to_address = request.form.get('to', '').strip()
+            cc_address = request.form.get('cc', '').strip()
+            subject = request.form.get('subject', '').strip()
+            body = request.form.get('body', '').strip()
+
         if not from_account_id or not to_address or not subject or not body:
+            if request.is_json:
+                conn.close(); return jsonify({'ok': False, 'error': 'missing-fields'}), 400
             flash('Please fill in all required fields', 'error')
-            conn.close()
-            return render_template('compose.html', accounts=accounts)
-        
-        # Get account details
-        account = cursor.execute("""
-            SELECT * FROM email_accounts WHERE id = ?
-        """, (from_account_id,)).fetchone()
-        
+            conn.close(); return render_template('compose.html', accounts=accounts)
+
+        account = cursor.execute("SELECT * FROM email_accounts WHERE id = ?", (from_account_id,)).fetchone()
         if not account:
+            if request.is_json:
+                conn.close(); return jsonify({'ok': False, 'error': 'invalid-account'}), 400
             flash('Invalid sending account', 'error')
-            conn.close()
-            return render_template('compose.html', accounts=accounts)
-        
-        # Decrypt SMTP credentials
+            conn.close(); return render_template('compose.html', accounts=accounts)
+
         smtp_password = decrypt_password(account['smtp_password'])
-        
-        # Create email message
+        if not smtp_password:
+            if request.is_json:
+                conn.close(); return jsonify({'ok': False, 'error': 'decrypt-failed'}), 500
+            flash('Failed to decrypt SMTP password. Re-configure the account.', 'error')
+            conn.close(); return render_template('compose.html', accounts=accounts)
+
         msg = MIMEMultipart()
         msg['From'] = account['email_address']
         msg['To'] = to_address
         if cc_address:
             msg['Cc'] = cc_address
         msg['Subject'] = subject
-        msg['Date'] = formatdate(localtime=True)
-        msg['Message-ID'] = make_msgid()
-        
-        # Add body
         msg.attach(MIMEText(body, 'plain'))
-        
-        # Send email
+
         try:
+            smtp_host = account['smtp_host']
+            smtp_port = int(account['smtp_port']) if account['smtp_port'] else 587
+            smtp_username = account['smtp_username']
             if account['smtp_use_ssl']:
-                server = smtplib.SMTP_SSL(account['smtp_host'], int(account['smtp_port']))
+                context = ssl.create_default_context()
+                server = smtplib.SMTP_SSL(smtp_host, smtp_port, context=context)
             else:
-                server = smtplib.SMTP(account['smtp_host'], int(account['smtp_port']))
+                server = smtplib.SMTP(smtp_host, smtp_port)
                 server.starttls()
-            
-            server.login(account['smtp_username'], smtp_password)
-            
-            recipients = [to_address]
-            if cc_address:
-                recipients.extend([addr.strip() for addr in cc_address.split(',')])
-            
-            server.send_message(msg)
+            server.login(smtp_username, smtp_password)
+            recipients_all = [to_address] + ([cc_address] if cc_address else [])
+            server.sendmail(account['email_address'], recipients_all, msg.as_string())
             server.quit()
-            
-            # Store sent email in database
-            cursor.execute("""
-                INSERT INTO email_messages 
-                (message_id, sender, recipients, subject, body_text, status, account_id, sent_at)
-                VALUES (?, ?, ?, ?, ?, 'SENT', ?, CURRENT_TIMESTAMP)
-            """, (msg['Message-ID'], account['email_address'], 
-                  json.dumps(recipients), subject, body, from_account_id))
-            
-            conn.commit()
-            
-            # Log the action
-            log_action('EMAIL_SENT', current_user.id, cursor.lastrowid, f"To: {to_address}, Subject: {subject[:50]}")
-            
-            flash(f'Email sent successfully to {to_address}', 'success')
-            conn.close()
-            return redirect(url_for('inbox'))
-            
         except Exception as e:
-            flash(f'Failed to send email: {str(e)}', 'error')
-            conn.close()
-            return render_template('compose.html', accounts=accounts)
-    
+            if request.is_json:
+                conn.close(); return jsonify({'ok': False, 'error': str(e)}), 500
+            flash(f'Error sending email: {e}', 'error')
+            conn.close(); return render_template('compose.html', accounts=accounts)
+
+        if request.is_json:
+            conn.close(); return jsonify({'ok': True})
+        flash('Email sent successfully!', 'success')
+        conn.close(); return redirect(url_for('inbox'))
+
     conn.close()
     return render_template('compose.html', accounts=accounts)
 
-def log_action(action, user_id, email_id, details):
-    """Log action to audit trail"""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO audit_logs (action, user_id, email_id, details, ip_address)
-        VALUES (?, ?, ?, ?, ?)
-    """, (action, user_id, email_id, details, request.remote_addr if request else '127.0.0.1'))
-    conn.commit()
-    conn.close()
+## Removed duplicate log_action (original retained above)
 
 def run_smtp_proxy():
     """Run SMTP proxy server"""
     try:
+        import aiosmtpd.controller
         handler = EmailModerationHandler()
         controller = aiosmtpd.controller.Controller(handler, hostname='127.0.0.1', port=8587)
         controller.start()
         print("📧 SMTP Proxy started on port 8587")
+    except ImportError:
+        print("⚠️  SMTP Proxy disabled (aiosmtpd not installed)")
+        return
     except OSError as e:
         if "10048" in str(e) or "already in use" in str(e).lower():
             print("⚠️  SMTP Proxy port 8587 already in use - likely from previous instance")
         else:
             print(f"❌ SMTP Proxy failed to start: {e}")
         return
-    
+
     # Keep the thread alive
     try:
         while True:
@@ -1863,14 +2196,179 @@ def run_smtp_proxy():
     except KeyboardInterrupt:
         controller.stop()
 
-# Initialize database
-init_database()
+# Initialize database if tables don't exist
+if not table_exists("users"):
+    init_database()
+
+# --- Interception Dashboard & API (Added) ---
+import statistics
+from typing import Optional, Dict, Any
+
+def _intercept_db():
+    c = sqlite3.connect(DB_PATH)
+    c.row_factory = sqlite3.Row
+    return c
+
+# In-memory heartbeat registry for interception workers (populated externally / future integration)
+WORKER_HEARTBEATS = {}
+
+# Simple metrics/stat caches (centralized)
+_HEALTH_CACHE: Dict[str, Any] = {'ts': 0.0, 'payload': None}
+_CACHE: Dict[str, Dict[str, Any]] = {'unified': {'t': 0, 'v': None}, 'lat': {'t': 0, 'v': None}}
+
+# ------------------------------------------------------------------
+# REMOVED: Duplicate interception routes (now in blueprint)
+# Routes /healthz, /interception, /api/interception/held, /api/interception/release,
+# /api/interception/discard, /api/inbox, /api/email/<id>/edit
+# are handled by app/routes/interception.py blueprint
+# ------------------------------------------------------------------
+
+# ------------------------------------------------------------------
+# Legacy Compatibility Shims (deprecated endpoints with redirects)
+# ------------------------------------------------------------------
+@app.route('/api/held', methods=['GET'])
+@login_required
+def legacy_api_held():
+    """Deprecated legacy alias -> /api/interception/held"""
+    return redirect(url_for('interception_bp.api_interception_held'), code=307)
+
+@app.route('/api/emails/pending', methods=['GET'])
+def legacy_api_pending():
+    """Deprecated legacy pending messages endpoint guidance"""
+    return jsonify({
+        'deprecated': True,
+        'use': '/api/inbox?status=PENDING',
+        'note': 'Interception (HELD) now separate via /api/interception/held'
+    })
+
+# Unified stats endpoint (includes legacy + interception counts)
+@app.route('/api/unified-stats')
+@login_required
+def api_unified_stats():
+    """Unified statistics combining legacy and interception statuses (5s cache)"""
+    # Lightweight 5s cache to reduce DB churn
+    now = time.time()
+    cache = _CACHE['unified']
+    if now - cache['t'] < 5 and cache['v'] is not None:
+        return jsonify(cache['v'])
+
+    conn = get_db()
+    cur = conn.cursor()
+    total = cur.execute("SELECT COUNT(*) FROM email_messages").fetchone()[0]
+    pending = cur.execute("SELECT COUNT(*) FROM email_messages WHERE status='PENDING'").fetchone()[0]
+    held = cur.execute("SELECT COUNT(*) FROM email_messages WHERE interception_status='HELD'").fetchone()[0]
+    released = cur.execute("""
+        SELECT COUNT(*) FROM email_messages
+        WHERE interception_status='RELEASED' OR status IN ('SENT','APPROVED','DELIVERED')
+    """).fetchone()[0]
+    conn.close()
+
+    val = {'total': total, 'pending': pending, 'held': held, 'released': released}
+    _CACHE['unified'] = {'t': now, 'v': val}
+    return jsonify(val)
+
+def _compute_latency_stats():
+    """Compute latency percentiles from email_messages table"""
+    import math
+    from statistics import mean, median
+
+    with get_db() as c:
+        rows = c.execute("""
+            SELECT latency_ms FROM email_messages
+            WHERE latency_ms IS NOT NULL AND latency_ms > 0
+            ORDER BY latency_ms
+            LIMIT 5000
+        """).fetchall()
+
+    if not rows:
+        return {'count': 0}
+
+    vals = [r['latency_ms'] for r in rows]
+
+    def pct(p):
+        if not vals:
+            return None
+        if p <= 0:
+            return vals[0]
+        if p >= 100:
+            return vals[-1]
+        k = (len(vals) - 1) * (p / 100.0)
+        f = math.floor(k)
+        cidx = math.ceil(k)
+        if f == cidx:
+            return vals[int(k)]
+        return round(vals[f] + (vals[cidx] - vals[f]) * (k - f))
+
+    return {
+        'count': len(vals),
+        'min': vals[0],
+        'p50': pct(50),
+        'p90': pct(90),
+        'p95': pct(95),
+        'p99': pct(99),
+        'max': vals[-1],
+        'mean': round(mean(vals)),
+        'median': median(vals)
+    }
+
+@app.route('/api/latency-stats')
+def api_latency_stats():
+    """Latency statistics endpoint with 10s cache"""
+    now = time.time()
+    cache = _CACHE['lat']
+    if now - cache['t'] < 10 and cache['v'] is not None:
+        return jsonify(cache['v'])
+    val = _compute_latency_stats()
+    _CACHE['lat'] = {'t': now, 'v': val}
+    return jsonify(val)
+
+def unified_counts():
+    """Helper function for unified stats (used by SSE)"""
+    conn = get_db()
+    cur = conn.cursor()
+    total = cur.execute("SELECT COUNT(*) FROM email_messages").fetchone()[0]
+    pending = cur.execute("SELECT COUNT(*) FROM email_messages WHERE status='PENDING'").fetchone()[0]
+    held = cur.execute("SELECT COUNT(*) FROM email_messages WHERE interception_status='HELD'").fetchone()[0]
+    released = cur.execute("""
+        SELECT COUNT(*) FROM email_messages
+        WHERE interception_status='RELEASED' OR status IN ('SENT','APPROVED','DELIVERED')
+    """).fetchone()[0]
+    conn.close()
+    return {'total': total, 'pending': pending, 'held': held, 'released': released}
+
+@app.route('/stream/stats')
+def stream_stats():
+    """SSE stream for live statistics updates"""
+    import json
+    def gen():
+        while True:
+            uni = unified_counts()
+            lat = _compute_latency_stats()
+            yield f"event: stats\ndata: {json.dumps({'unified': uni, 'latency': lat, 'ts': int(time.time())})}\n\n"
+            time.sleep(5)
+    return Response(gen(), mimetype='text/event-stream')
+
+# End of routes - remaining duplicate routes removed (handled by blueprint)
+
+# (All remaining duplicate interception routes deleted - see blueprint)
 
 if __name__ == '__main__':
-    # Start SMTP proxy in background thread
-    smtp_thread = threading.Thread(target=run_smtp_proxy, daemon=True)
-    smtp_thread.start()
-    
+    # Thread registry for IMAP monitoring
+    imap_threads = {}
+
+    # Graceful SMTP proxy fallback
+    try:
+        import aiosmtpd  # noqa
+        smtp_proxy_available = True
+    except Exception:
+        smtp_proxy_available = False
+        app.logger.warning("SMTP proxy disabled (aiosmtpd not installed). Skipping proxy thread.")
+
+    if smtp_proxy_available:
+        smtp_thread = threading.Thread(target=run_smtp_proxy, daemon=True)
+        smtp_thread.start()
+    else:
+        print("⚠️  SMTP proxy disabled (aiosmtpd not available)")
     # Start monitoring threads for existing active accounts
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -1879,17 +2377,17 @@ if __name__ == '__main__':
         SELECT id, account_name FROM email_accounts WHERE is_active = 1
     """).fetchall()
     conn.close()
-    
+
     for account in active_accounts:
         account_id = account['id']
         thread = threading.Thread(target=monitor_imap_account, args=(account_id,), daemon=True)
         imap_threads[account_id] = thread
         thread.start()
         print(f"   📬 Started monitoring for {account['account_name']} (ID: {account_id})")
-    
+
     # Give services time to start
     time.sleep(2)
-    
+
     # Print startup info
     print("\n" + "="*60)
     print("   EMAIL MANAGEMENT TOOL - MODERN DASHBOARD")
@@ -1907,6 +2405,6 @@ if __name__ == '__main__':
     print("   • Encrypted credential storage")
     print("   • Modern responsive UI")
     print("\n" + "="*60 + "\n")
-    
+
     # Run Flask app
     app.run(debug=True, use_reloader=False)

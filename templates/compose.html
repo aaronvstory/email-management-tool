@@ -5,42 +5,73 @@
 {% block extra_css %}
 <style>
     .compose-container {
-        background: white;
+        background: linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%);
         border-radius: 15px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        padding: 30px;
-        max-width: 800px;
-        margin: 0 auto;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.6);
+        padding: 30px 40px;
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        border: 1px solid rgba(255,255,255,0.06);
     }
-    
+
     .compose-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg,#dc2626 0%,#991b1b 50%,#7f1d1d 100%);
         color: white;
-        padding: 20px;
+        padding: 15px 30px;
         border-radius: 10px 10px 0 0;
-        margin: -30px -30px 30px -30px;
+        margin: -30px -40px 20px -40px;
     }
-    
+
+    .compose-header h2 {
+        margin: 0;
+        font-size: 1.3rem;
+        font-weight: 500;
+    }
+
+    /* Better layout for form fields */
+    .form-row {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+
+    .form-row > div {
+        flex: 1;
+    }
+
     .form-label {
         font-weight: 600;
-        color: #495057;
+        color: #ffffff !important;
         margin-bottom: 8px;
     }
-    
+
     .form-control, .form-select {
-        border: 2px solid #e9ecef;
+        background: rgba(255,255,255,0.06) !important;
+        border: 2px solid rgba(255,255,255,0.06) !important;
         border-radius: 8px;
         padding: 10px 15px;
         transition: border-color 0.3s;
+        color: #ffffff !important;
     }
-    
+
+    .form-control::placeholder {
+        color: #6b7280 !important;
+    }
+
     .form-control:focus, .form-select:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        border-color: #dc2626 !important;
+        box-shadow: 0 0 0 0.2rem rgba(220, 38, 38, 0.25) !important;
+        background: rgba(255,255,255,0.08) !important;
     }
-    
+
+    .form-select option {
+        background: #1a1a1a;
+        color: #ffffff;
+    }
+
     .btn-send {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg,#dc2626 0%,#991b1b 50%,#7f1d1d 100%);
         color: white;
         border: none;
         padding: 12px 30px;
@@ -48,66 +79,67 @@
         font-weight: 500;
         transition: transform 0.2s, box-shadow 0.2s;
     }
-    
+
     .btn-send:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
         color: white;
+        filter: brightness(1.1);
     }
-    
+
     .btn-cancel {
-        background-color: #6c757d;
+        background-color: rgba(255,255,255,0.06);
         color: white;
-        border: none;
+        border: 1px solid rgba(255,255,255,0.12);
         padding: 12px 30px;
         border-radius: 8px;
         font-weight: 500;
         transition: background-color 0.2s;
     }
-    
+
     .btn-cancel:hover {
-        background-color: #5a6268;
+        background-color: rgba(255,255,255,0.12);
         color: white;
     }
-    
+
     .char-counter {
         font-size: 0.85rem;
-        color: #6c757d;
+        color: #9ca3af !important;
         text-align: right;
         margin-top: 5px;
     }
-    
+
     .required-field::after {
         content: " *";
-        color: #dc3545;
+        color: #dc2626;
     }
-    
+
     .help-text {
         font-size: 0.85rem;
-        color: #6c757d;
+        color: #9ca3af !important;
         margin-top: 5px;
     }
-    
+
     .email-toolbar {
-        border-bottom: 1px solid #e9ecef;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
         padding-bottom: 10px;
         margin-bottom: 10px;
     }
-    
+
     .toolbar-btn {
-        background: transparent;
-        border: 1px solid #dee2e6;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.12);
         padding: 5px 10px;
         margin-right: 5px;
         border-radius: 4px;
-        color: #495057;
+        color: #ffffff !important;
         transition: all 0.2s;
     }
-    
+
     .toolbar-btn:hover {
-        background-color: #f8f9fa;
-        border-color: #667eea;
-        color: #667eea;
+        background-color: rgba(220,38,38,0.15);
+        border-color: #dc2626;
+        color: #ffffff !important;
     }
 </style>
 {% endblock %}
@@ -119,32 +151,33 @@
     </div>
     
     <form method="POST" action="/compose" id="composeForm">
-        <!-- From Account Selection -->
-        <div class="mb-4">
-            <label for="from_account" class="form-label required-field">From Account</label>
-            <select class="form-select" id="from_account" name="from_account" required>
-                <option value="">Select sending account...</option>
-                {% for account in accounts %}
-                <option value="{{ account.id }}">
-                    {{ account.account_name }} ({{ account.email_address }})
-                </option>
-                {% endfor %}
-            </select>
-            <div class="help-text">Select which email account to send from</div>
+        <!-- From Account and To Address in same row -->
+        <div class="form-row">
+            <div>
+                <label for="from_account" class="form-label required-field">From Account</label>
+                <select class="form-select" id="from_account" name="from_account" required>
+                    <option value="">Select sending account...</option>
+                    {% for account in accounts %}
+                    <option value="{{ account.id }}">
+                        {{ account.account_name }} ({{ account.email_address }})
+                    </option>
+                    {% endfor %}
+                </select>
+                <div class="help-text">Select which email account to send from</div>
+            </div>
+
+            <div>
+                <label for="to" class="form-label required-field">To</label>
+                <input type="email" class="form-control" id="to" name="to"
+                       placeholder="recipient@example.com" required>
+                <div class="help-text">Enter recipient's email address</div>
+            </div>
         </div>
-        
-        <!-- To Address -->
-        <div class="mb-4">
-            <label for="to" class="form-label required-field">To</label>
-            <input type="email" class="form-control" id="to" name="to" 
-                   placeholder="recipient@example.com" required>
-            <div class="help-text">Enter recipient's email address</div>
-        </div>
-        
-        <!-- CC Address (Optional) -->
+
+        <!-- CC Address (Optional) - full width -->
         <div class="mb-4">
             <label for="cc" class="form-label">CC</label>
-            <input type="text" class="form-control" id="cc" name="cc" 
+            <input type="text" class="form-control" id="cc" name="cc"
                    placeholder="cc1@example.com, cc2@example.com">
             <div class="help-text">Optional: Enter CC recipients (comma-separated for multiple)</div>
         </div>
@@ -300,22 +333,28 @@ document.querySelectorAll('#composeForm input, #composeForm textarea, #composeFo
     });
 });
 
-// Load draft on page load
+// Load draft on page load - SILENTLY without annoying popup
 window.addEventListener('load', function() {
     const draft = localStorage.getItem('emailDraft');
     if (draft) {
-        const formData = JSON.parse(draft);
-        if (confirm('A draft was found. Would you like to restore it?')) {
-            document.getElementById('from_account').value = formData.from_account || '';
-            document.getElementById('to').value = formData.to || '';
-            document.getElementById('cc').value = formData.cc || '';
-            document.getElementById('subject').value = formData.subject || '';
-            document.getElementById('body').value = formData.body || '';
-            
-            // Update counters
-            document.getElementById('subjectCounter').textContent = formData.subject ? formData.subject.length : 0;
-            document.getElementById('bodyCounter').textContent = formData.body ? formData.body.length : 0;
-        } else {
+        try {
+            const formData = JSON.parse(draft);
+            // Silently restore draft WITHOUT popup - only if fields are empty
+            if (!document.getElementById('to').value && !document.getElementById('subject').value && !document.getElementById('body').value) {
+                document.getElementById('from_account').value = formData.from_account || '';
+                document.getElementById('to').value = formData.to || '';
+                document.getElementById('cc').value = formData.cc || '';
+                document.getElementById('subject').value = formData.subject || '';
+                document.getElementById('body').value = formData.body || '';
+
+                // Update counters
+                document.getElementById('subjectCounter').textContent = formData.subject ? formData.subject.length : 0;
+                document.getElementById('bodyCounter').textContent = formData.body ? formData.body.length : 0;
+
+                console.log('Draft silently restored');
+            }
+        } catch (e) {
+            // Invalid draft data, remove it
             localStorage.removeItem('emailDraft');
         }
     }

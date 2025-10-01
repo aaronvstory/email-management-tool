@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% block title %}Inbound Interception Dashboard{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+  <div class="cards-grid">
+    <div class="stat-card-modern">
+      <span class="stat-label">Held</span>
+      <span class="stat-value" id="stat-held">--</span>
+      <span class="stat-delta" id="stat-held-delta">&nbsp;</span>
+    </div>
+    <div class="stat-card-modern">
+      <span class="stat-label">Released (24h)</span>
+      <span class="stat-value" id="stat-released">--</span>
+      <span class="stat-delta" id="stat-release-rate">&nbsp;</span>
+    </div>
+    <div class="stat-card-modern">
+      <span class="stat-label">Median Intercept ms</span>
+      <span class="stat-value" id="stat-latency">--</span>
+      <span class="stat-delta" id="stat-latency-delta">&nbsp;</span>
+    </div>
+    <div class="stat-card-modern">
+      <span class="stat-label">Accounts Active</span>
+      <span class="stat-value" id="stat-accounts">--</span>
+      <span class="stat-delta" id="stat-accounts-delta">&nbsp;</span>
+    </div>
+  </div>
+
+  <div class="split-layout">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Held Messages</div>
+        <div class="panel-actions">
+          <button class="btn-ghost" onclick="reloadHeld()">Refresh</button>
+        </div>
+      </div>
+      <table class="table-modern" id="held-table">
+        <thead>
+          <tr>
+            <th>UID</th>
+            <th>From</th>
+            <th>To</th>
+            <th>Subject</th>
+            <th>Latency</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- dynamic -->
+        </tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Preview & Actions</div>
+        <div class="panel-actions">
+          <button class="btn-accent" id="btn-release" disabled>Release</button>
+          <button class="btn-ghost" id="btn-discard" disabled>Discard</button>
+        </div>
+      </div>
+      <div id="preview-meta" class="message-preview" style="min-height:320px;">
+        <h4 id="pv-subject">Select a held message</h4>
+        <div class="message-meta" id="pv-meta"></div>
+        <div class="message-body" id="pv-body"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function reloadHeld(){
+  const res = await fetch('/api/interception/held');
+  if(!res.ok) return;
+  const data = await res.json();
+  const tbody = document.querySelector('#held-table tbody');
+  tbody.innerHTML='';
+  data.messages.forEach(m=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${m.original_uid||''}</td>
+      <td>${(m.sender||'').replace(/</g,'&lt;')}</td>
+      <td>${(m.recipients||'').replace(/</g,'&lt;')}</td>
+      <td>${(m.subject||'').replace(/</g,'&lt;')}</td>
+      <td>${m.latency_ms??''}</td>
+      <td><span class="status-pill status-${m.interception_status}">${m.interception_status}</span></td>
+      <td><button class="btn-ghost" data-id="${m.id}" onclick="selectHeld(${m.id})">View</button></td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('stat-held').textContent = data.stats.held;
+  document.getElementById('stat-released').textContent = data.stats.released24h;
+  document.getElementById('stat-latency').textContent = data.stats.median_latency_ms ?? '--';
+  document.getElementById('stat-accounts').textContent = data.stats.accounts_active ?? '--';
+}
+
+let currentMessageId = null;
+async function selectHeld(id){
+  const res = await fetch('/api/interception/held/'+id);
+  if(!res.ok) return;
+  const m = await res.json();
+  currentMessageId = m.id;
+  document.getElementById('btn-release').disabled=false;
+  document.getElementById('btn-discard').disabled=false;
+  document.getElementById('pv-subject').textContent = m.subject || '(no subject)';
+  document.getElementById('pv-meta').innerHTML = `
+    <span>From</span><span>${(m.sender||'').replace(/</g,'&lt;')}</span>
+    <span>To</span><span>${(m.recipients||'').replace(/</g,'&lt;')}</span>
+    <span>Latency</span><span>${m.latency_ms} ms</span>
+    <span>UID</span><span>${m.original_uid||''}</span>
+  `;
+  document.getElementById('pv-body').textContent = 'Original body fetch TBD (store raw, parse preview).';
+}
+
+async function releaseCurrent(){
+  if(!currentMessageId) return;
+  const res = await fetch('/api/interception/release/'+currentMessageId,{method:'POST'});
+  if(res.ok){ reloadHeld(); selectHeld(currentMessageId); }
+}
+async function discardCurrent(){
+  if(!currentMessageId) return;
+  const res = await fetch('/api/interception/discard/'+currentMessageId,{method:'POST'});
+  if(res.ok){ currentMessageId=null; document.getElementById('btn-release').disabled=true; document.getElementById('btn-discard').disabled=true; reloadHeld(); }
+}
+
+document.getElementById('btn-release').addEventListener('click', releaseCurrent);
+document.getElementById('btn-discard').addEventListener('click', discardCurrent);
+
+reloadHeld();
+</script>
+{% endblock %}

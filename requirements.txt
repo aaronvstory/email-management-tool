@@ -54,3 +54,8 @@ black==23.12.0
 pylint==3.0.3
 mypy==1.7.1
 pre-commit==3.6.0
+
+# IMAP/ManageSieve and DNS
+imapclient==3.0.0
+backoff==2.2.1
+dnspython==2.6.1

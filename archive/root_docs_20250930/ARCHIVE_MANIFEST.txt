@@ -1,0 +1,31 @@
+Archived high-noise root documents on 2025-09-30 to declutter workspace.
+
+Candidates (not all yet moved if still referenced by docs or README - verify before deletion):
+  WORKSPACE_ORGANIZATION_COMPLETE.md
+  WORKSPACE_CLEANUP_REPORT.md
+  VALIDATION_REPORT.md
+  TEST_COMPLETE_REPORT.md
+  SMTP_NETWORK_ISSUE_FIXED.md
+  SOLUTION_FOR_BLOCKED_SMTP.md
+  READY_TO_USE.md
+  QUICK_REFERENCE.md
+  interception-implement.md
+  intercept-implementation.md
+  INBOUND_INTERCEPTION_IMPLEMENTATION.md
+  FINAL_VALIDATION_REPORT.md
+  FINAL_DIAGNOSIS.md
+  EMAIL_INTERCEPTION_REPORT.md
+  EMAIL_EDITING_GUIDE.md
+  COMPLETE_DIAGNOSIS_REPORT.md
+  CLAUDE.md
+  chatlog.md
+  chatlog.pdf
+
+Keep:
+  README.md (root authoritative)
+  requirements.txt
+  app/, templates/, static/, tests/, scripts/
+
+Next Steps:
+  - Move above files if not linked directly by active UI.
+  - Update README with concise pointers into archive.

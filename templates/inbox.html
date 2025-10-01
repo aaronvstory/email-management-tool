@@ -1,202 +1,153 @@
 {% extends "base.html" %}
-
 {% block title %}Inbox - Email Management Tool{% endblock %}
-
 {% block extra_css %}
 <style>
-    .inbox-container {
-        background: white;
-        border-radius: 15px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        padding: 25px;
-        margin-bottom: 30px;
-    }
-    
-    .email-row {
-        border-bottom: 1px solid #e9ecef;
-        padding: 15px 0;
-        transition: background-color 0.2s;
-        cursor: pointer;
-    }
-    
-    .email-row:hover {
-        background-color: #f8f9fa;
-    }
-    
-    .email-row:last-child {
-        border-bottom: none;
-    }
-    
-    .email-sender {
-        font-weight: 600;
-        color: #212529;
-        margin-bottom: 5px;
-    }
-    
-    .email-subject {
-        color: #495057;
-        margin-bottom: 5px;
-    }
-    
-    .email-preview {
-        color: #6c757d;
-        font-size: 0.9rem;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-    
-    .email-time {
-        color: #6c757d;
-        font-size: 0.85rem;
-    }
-    
-    .email-status {
-        display: inline-block;
-        padding: 0.25em 0.6em;
-        font-size: 0.75rem;
-        font-weight: 700;
-        line-height: 1;
-        text-align: center;
-        white-space: nowrap;
-        vertical-align: baseline;
-        border-radius: 0.25rem;
-    }
-    
-    .status-pending {
-        background-color: #ffc107;
-        color: #000;
-    }
-    
-    .status-approved {
-        background-color: #28a745;
-        color: white;
-    }
-    
-    .status-rejected {
-        background-color: #dc3545;
-        color: white;
-    }
-    
-    .status-sent {
-        background-color: #17a2b8;
-        color: white;
-    }
-    
-    .account-filter {
-        margin-bottom: 20px;
-    }
-    
-    .compose-btn {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 8px;
-        font-weight: 500;
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-    
-    .compose-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        color: white;
-    }
+  /* Account Selector */
+  .account-selector {
+    background: rgba(26,26,26,0.9);
+    border-radius: 15px;
+    padding: 15px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px -1px rgba(0,0,0,.6),0 1px 2px rgba(0,0,0,.4);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .account-selector label {
+    color: #ffffff;
+    font-weight: 600;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .account-selector select {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: #ffffff;
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+  }
+
+  .account-selector select option {
+    background: #1a1a1a;
+    color: #ffffff;
+  }
+
+  .inbox-panel { background: linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%); backdrop-filter: blur(10px); border:1px solid rgba(255,255,255,0.06); border-radius:18px; padding:20px; }
+  .email-row { display:grid; grid-template-columns: 70px 1fr 120px 90px; gap:1rem; padding:.75rem 1rem; border-bottom:1px solid rgba(255,255,255,0.06); cursor:pointer; transition: background .2s; }
+  .email-row:hover { background: rgba(255,255,255,0.05); }
+  .email-row:last-child { border-bottom:none; }
+  .status-chip { display:inline-block; padding:.25rem .6rem; font-size:.65rem; border-radius:999px; letter-spacing:.5px; font-weight:600; text-transform:uppercase; }
+  .status-HELD { background:#ffb34733; color:#ffb347; }
+  .status-RELEASED { background:#4ade8033; color:#4ade80; }
+  .status-DISCARDED { background:#f8717133; color:#f87171; }
+  .status-PENDING { background:#6366f133; color:#818cf8; }
+  .filters-bar { display:flex; gap:.75rem; flex-wrap:wrap; margin-bottom:1rem; }
+  .search-input { flex:1; min-width:220px; }
+  .preview-snippet { font-size:.7rem; opacity:.8; margin-top:.25rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="bi bi-inbox-fill"></i> Inbox</h1>
-    <div>
-        <a href="/compose" class="btn compose-btn">
-            <i class="bi bi-pencil-square"></i> Compose New Email
-        </a>
-    </div>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 style="font-size:1.4rem;">Inbox</h1>
+  <div style="display:flex; gap:.5rem;">
+    <a href="/compose" class="btn-primary">Compose</a>
+    <a href="/interception" class="btn-secondary">Held</a>
+  </div>
 </div>
 
-<!-- Account Filter -->
-<div class="account-filter">
-    <label for="accountSelect" class="form-label">Filter by Account:</label>
-    <select class="form-select" id="accountSelect" onchange="filterByAccount(this.value)">
-        <option value="">All Accounts</option>
-        {% for account in accounts %}
-        <option value="{{ account.id }}" {% if selected_account == account.id %}selected{% endif %}>
-            {{ account.account_name }} ({{ account.email_address }})
-        </option>
-        {% endfor %}
+<!-- Account Selector -->
+<div class="account-selector">
+  <label class="form-label">Select Email Account:</label>
+  <select class="form-select" id="accountSelector" onchange="switchAccount(this.value)">
+    <option value="">All Accounts</option>
+    {% for account in accounts %}
+    <option value="{{ account.id }}" {% if selected_account == account.id %}selected{% endif %}>
+      {{ account.account_name }} ({{ account.email_address }})
+    </option>
+    {% endfor %}
+  </select>
+</div>
+
+<div class="inbox-panel">
+  <div class="filters-bar">
+    <select id="statusFilter" class="input-modern" style="max-width:140px;">
+      <option value="">All</option>
+      <option value="HELD">HELD</option>
+      <option value="RELEASED">RELEASED</option>
+      <option value="DISCARDED">DISCARDED</option>
+      <option value="PENDING">PENDING</option>
     </select>
+    <input id="searchBox" class="input-modern search-input" placeholder="Search subject or sender" />
+    <button class="btn-secondary" onclick="reloadInbox()">Apply</button>
+  </div>
+  <div id="inboxList"></div>
 </div>
-
-<!-- Inbox Container -->
-<div class="inbox-container">
-    {% if emails %}
-        {% for email in emails %}
-        <div class="email-row" onclick="viewEmail({{ email.id }})">
-            <div class="row">
-                <div class="col-md-9">
-                    <div class="email-sender">
-                        {{ email.sender }}
-                        {% if email.account_name %}
-                        <small class="text-muted">(via {{ email.account_name }})</small>
-                        {% endif %}
-                    </div>
-                    <div class="email-subject">
-                        <strong>{{ email.subject|default('(No Subject)', true) }}</strong>
-                    </div>
-                    <div class="email-preview">
-                        {{ email.body_text[:100] if email.body_text else '(No content)' }}{% if email.body_text and email.body_text|length > 100 %}...{% endif %}
-                    </div>
-                </div>
-                <div class="col-md-3 text-end">
-                    <div class="email-status status-{{ email.status|lower }}">
-                        {{ email.status }}
-                    </div>
-                    <div class="email-time mt-2">
-                        {{ email.created_at|default('N/A') }}
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    {% else %}
-        <div class="text-center py-5">
-            <i class="bi bi-inbox" style="font-size: 4rem; color: #dee2e6;"></i>
-            <p class="text-muted mt-3">No emails in your inbox</p>
-            <a href="/compose" class="btn compose-btn mt-3">
-                <i class="bi bi-pencil-square"></i> Compose Your First Email
-            </a>
-        </div>
-    {% endif %}
-</div>
-
-<!-- Pagination (if needed) -->
-{% if emails|length >= 100 %}
-<div class="alert alert-info">
-    <i class="bi bi-info-circle"></i> Showing the most recent 100 emails. Older emails are archived.
-</div>
-{% endif %}
 {% endblock %}
 
 {% block extra_js %}
 <script>
-function filterByAccount(accountId) {
+function switchAccount(accountId) {
+    let url = '/inbox';
     if (accountId) {
-        window.location.href = `/inbox?account_id=${accountId}`;
-    } else {
-        window.location.href = '/inbox';
+        url += `?account_id=${accountId}`;
     }
+    window.location.href = url;
 }
 
-function viewEmail(emailId) {
-    window.location.href = `/email/${emailId}`;
+async function fetchInbox(){
+    const status=document.getElementById('statusFilter').value;
+    const accountId = document.getElementById('accountSelector').value;
+    const q=document.getElementById('searchBox').value;
+    const params=new URLSearchParams();
+    if(status) params.append('status',status);
+    if(q) params.append('q',q);
+    if(accountId) params.append('account_id',accountId);
+    const r=await fetch('/api/inbox?'+params.toString());
+    if(!r.ok){return {messages:[]};}
+    return r.json();
 }
+function renderInbox(msgs){
+    const container=document.getElementById('inboxList');
+    if(!msgs.length){container.innerHTML='<div style="padding:2rem;text-align:center;opacity:.7;">No messages in inbox</div>';return;}
+    container.innerHTML='';
+    msgs.forEach(m=>{
+        const div=document.createElement('div');
+        div.className='email-row';
+        div.onclick=()=>window.location='/email/'+m.id;
+        const status = m.interception_status || m.status || '';
 
-// Auto-refresh inbox every 30 seconds
-setInterval(function() {
-    if (!document.hidden) {
-        location.reload();
-    }
-}, 30000);
+        // Build indicators for rules matched and hold status
+        let indicators = '';
+        if (m.keywords_matched && m.keywords_matched.length > 0) {
+            const keywords = JSON.parse(m.keywords_matched);
+            indicators += `<span style="color:#fbbf24;font-size:0.7rem;margin-right:5px;" title="Matched rules: ${keywords.join(', ')}">⚠️ Rules: ${keywords.length}</span>`;
+        }
+        if (m.risk_score && m.risk_score > 0) {
+            indicators += `<span style="color:#ef4444;font-size:0.7rem;margin-right:5px;" title="Risk score">Risk: ${m.risk_score}</span>`;
+        }
+        if (status === 'HELD') {
+            indicators += `<span style="color:#3b82f6;font-size:0.7rem;" title="Email is being held for review">🔒 Held</span>`;
+        }
+
+        div.innerHTML=`<div><div class='status-chip status-${status}'>${status||'—'}</div></div>
+            <div>
+                <div style='font-weight:600;'>${m.sender||''}</div>
+                <div>${m.subject||'(No Subject)'}</div>
+                <div class='preview-snippet'>${(m.preview_snippet||'').slice(0,120)}</div>
+                ${indicators ? `<div style="margin-top:5px;">${indicators}</div>` : ''}
+            </div>
+            <div style='font-size:.7rem;opacity:.7;'>${m.created_at||''}</div>
+            <div style='font-size:.7rem;opacity:.7;text-align:right;'>${m.latency_ms ? m.latency_ms + 'ms' : ''}</div>`;
+        container.appendChild(div);
+    });
+}
+async function reloadInbox(){
+    const data=await fetchInbox();
+    renderInbox(data.messages||[]);
+}
+reloadInbox();
+setInterval(()=>{ if(!document.hidden) reloadInbox(); }, 30000);
 </script>
 {% endblock %}

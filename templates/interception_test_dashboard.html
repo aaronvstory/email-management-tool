@@ -4,29 +4,39 @@
 
 {% block extra_css %}
 <style>
-    /* Modern, polished styling */
+    /* Modern dark theme styling */
     :root {
-        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --primary-gradient: linear-gradient(135deg, #dc2626 0%, #991b1b 50%, #7f1d1d 100%);
         --success-color: #10b981;
         --warning-color: #f59e0b;
         --danger-color: #ef4444;
         --info-color: #3b82f6;
+        --dark-bg: linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%);
+        --dark-border: rgba(255,255,255,0.06);
     }
 
     .test-container {
-        max-width: 1600px;
+        max-width: 95%;
+        width: 1800px;
         margin: 0 auto;
-        padding: 20px;
+        padding: 30px;
     }
 
-    /* Header with gradient */
+    /* Better spacing between sections */
+    .flow-container,
+    .control-card,
+    .results-container {
+        margin-bottom: 35px !important;
+    }
+
+    /* Header with red gradient matching app theme */
     .test-header {
         background: var(--primary-gradient);
         border-radius: 20px;
         padding: 30px;
         margin-bottom: 30px;
         color: white;
-        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 10px 30px rgba(220, 38, 38, 0.2);
     }
 
     .test-header h1 {
@@ -45,11 +55,12 @@
 
     /* Test flow visualization */
     .flow-container {
-        background: white;
+        background: var(--dark-bg);
+        border: 1px solid var(--dark-border);
         border-radius: 20px;
         padding: 30px;
         margin-bottom: 30px;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        box-shadow: 0 5px 20px rgba(0,0,0,0.3);
     }
 
     .flow-steps {
@@ -91,13 +102,14 @@
         width: 80px;
         height: 80px;
         margin: 0 auto 15px;
-        background: white;
-        border: 4px solid #e5e7eb;
+        background: rgba(255,255,255,0.06);
+        border: 4px solid rgba(255,255,255,0.12);
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 2rem;
+        color: #9ca3af;
         transition: all 0.3s ease;
     }
 
@@ -117,38 +129,40 @@
 
     .flow-step-title {
         font-weight: 600;
-        color: #374151;
+        color: #ffffff;
         margin-bottom: 5px;
     }
 
     .flow-step-status {
         font-size: 0.875rem;
-        color: #6b7280;
+        color: #9ca3af;
     }
 
     /* Main test controls */
     .test-controls {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
         gap: 25px;
         margin-bottom: 30px;
     }
 
     .control-card {
-        background: white;
+        background: var(--dark-bg);
+        border: 1px solid var(--dark-border);
         border-radius: 15px;
         padding: 25px;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        box-shadow: 0 5px 20px rgba(0,0,0,0.3);
         transition: transform 0.3s ease;
     }
 
     .control-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+        box-shadow: 0 10px 30px rgba(220, 38, 38, 0.2);
+        border-color: rgba(220, 38, 38, 0.3);
     }
 
     .control-card h3 {
-        color: #1f2937;
+        color: #ffffff;
         margin-bottom: 20px;
         display: flex;
         align-items: center;
@@ -162,7 +176,7 @@
 
     .form-label {
         display: block;
-        color: #4b5563;
+        color: #ffffff;
         font-weight: 500;
         margin-bottom: 8px;
         font-size: 0.95rem;
@@ -171,18 +185,30 @@
     .form-select, .form-input, .form-textarea {
         width: 100%;
         padding: 12px 15px;
-        border: 2px solid #e5e7eb;
-        border-radius: 10px;
+        background: #2a2a2a !important;
+        border: 2px solid #3a3a3a !important;
+        color: #ffffff !important;
+        border-radius: 4px;
         font-size: 1rem;
         transition: all 0.3s ease;
-        background: #f9fafb;
+        margin-bottom: 20px;
     }
 
     .form-select:focus, .form-input:focus, .form-textarea:focus {
         outline: none;
-        border-color: #667eea;
-        background: white;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        border-color: #4a4a4a !important;
+        background: #333333 !important;
+        box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2);
+    }
+    
+    .form-select option {
+        background: #1a1a1a;
+        color: #ffffff;
+    }
+    
+    .form-input::placeholder,
+    .form-textarea::placeholder {
+        color: #6b7280;
     }
 
     .form-textarea {
@@ -218,9 +244,9 @@
     }
 
     .btn-secondary {
-        background: #f3f4f6;
-        color: #4b5563;
-        border: 2px solid #e5e7eb;
+        background: rgba(255,255,255,0.06);
+        color: #ffffff;
+        border: 2px solid rgba(255,255,255,0.12);
         padding: 12px 24px;
         border-radius: 10px;
         font-size: 1rem;
@@ -230,16 +256,18 @@
     }
 
     .btn-secondary:hover {
-        background: #e5e7eb;
+        background: rgba(255,255,255,0.1);
+        border-color: rgba(255,255,255,0.2);
         transform: translateY(-2px);
     }
 
     /* Live test results */
     .results-container {
-        background: white;
+        background: var(--dark-bg);
+        border: 1px solid var(--dark-border);
         border-radius: 20px;
         padding: 30px;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        box-shadow: 0 5px 20px rgba(0,0,0,0.3);
     }
 
     .results-header {
@@ -250,7 +278,7 @@
     }
 
     .results-header h2 {
-        color: #1f2937;
+        color: #ffffff;
         font-size: 1.5rem;
         display: flex;
         align-items: center;
@@ -295,12 +323,13 @@
         width: 30px;
         height: 30px;
         border-radius: 50%;
-        background: white;
-        border: 3px solid #e5e7eb;
+        background: #242424;
+        border: 3px solid rgba(255,255,255,0.12);
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 0.875rem;
+        color: #ffffff;
     }
 
     .timeline-marker.success {
@@ -322,30 +351,31 @@
     }
 
     .timeline-content {
-        background: #f9fafb;
+        background: rgba(255,255,255,0.03);
         border-radius: 10px;
         padding: 15px 20px;
-        border-left: 4px solid #e5e7eb;
+        border-left: 4px solid rgba(255,255,255,0.12);
+        color: #ffffff;
     }
 
     .timeline-content.success {
         border-left-color: var(--success-color);
-        background: #f0fdf4;
+        background: rgba(16, 185, 129, 0.1);
     }
 
     .timeline-content.error {
         border-left-color: var(--danger-color);
-        background: #fef2f2;
+        background: rgba(239, 68, 68, 0.1);
     }
 
     .timeline-content.warning {
         border-left-color: var(--warning-color);
-        background: #fffbeb;
+        background: rgba(245, 158, 11, 0.1);
     }
 
     .timeline-title {
         font-weight: 600;
-        color: #1f2937;
+        color: #ffffff;
         margin-bottom: 5px;
     }
 
@@ -362,15 +392,15 @@
 
     /* Email preview modal */
     .email-preview {
-        background: #f9fafb;
+        background: rgba(255,255,255,0.03);
         border-radius: 10px;
         padding: 20px;
         margin-top: 20px;
-        border: 2px solid #e5e7eb;
+        border: 2px solid rgba(255,255,255,0.08);
     }
 
     .email-preview-header {
-        border-bottom: 2px solid #e5e7eb;
+        border-bottom: 2px solid rgba(255,255,255,0.08);
         padding-bottom: 15px;
         margin-bottom: 15px;
     }
@@ -382,54 +412,68 @@
 
     .email-preview-label {
         font-weight: 600;
-        color: #4b5563;
+        color: #9ca3af;
         min-width: 80px;
     }
 
     .email-preview-value {
-        color: #1f2937;
+        color: #ffffff;
         flex: 1;
     }
 
     .email-preview-body {
-        background: white;
+        background: rgba(255,255,255,0.04);
         border-radius: 8px;
         padding: 15px;
         margin-top: 15px;
         min-height: 100px;
         white-space: pre-wrap;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        color: #ffffff;
+        border: 1px solid rgba(255,255,255,0.08);
     }
 
-    /* Status badges */
+    /* Status badges - RECTANGULAR, NO PILLS */
     .status-badge {
         display: inline-flex;
         align-items: center;
         gap: 5px;
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 0.875rem;
-        font-weight: 600;
+        padding: 5px 10px;
+        border-radius: 3px !important;  /* Almost square */
+        font-size: 0.85rem;
+        font-weight: 500;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.15);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .status-badge i {
+        font-size: 0.7rem;
     }
 
     .status-badge.pending {
-        background: #fef3c7;
-        color: #92400e;
+        background: rgba(251, 191, 36, 0.08);
+        border-color: rgba(251, 191, 36, 0.25);
+        color: #fbbf24;
     }
 
     .status-badge.active {
-        background: #dbeafe;
-        color: #1e40af;
+        background: rgba(59, 130, 246, 0.08);
+        border-color: rgba(59, 130, 246, 0.25);
+        color: #60a5fa;
     }
 
     .status-badge.success {
-        background: #d1fae5;
-        color: #065f46;
+        background: rgba(16, 185, 129, 0.08);
+        border-color: rgba(16, 185, 129, 0.25);
+        color: #10b981;
     }
 
     .status-badge.error {
-        background: #fee2e2;
-        color: #991b1b;
+        background: rgba(239, 68, 68, 0.08);
+        border-color: rgba(239, 68, 68, 0.25);
+        color: #f87171;
     }
 
     /* Loading spinner */
@@ -478,7 +522,7 @@
 
     <!-- Flow Visualization -->
     <div class="flow-container">
-        <h2 style="color: #1f2937; margin-bottom: 20px;">
+        <h2 style="color: #ffffff; margin-bottom: 20px;">
             <i class="fas fa-project-diagram"></i>
             Test Flow Visualization
         </h2>

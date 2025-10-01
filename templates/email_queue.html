@@ -4,44 +4,76 @@
 
 {% block extra_css %}
 <style>
+    /* Account Selector */
+    .account-selector {
+        background: rgba(26,26,26,0.9);
+        border-radius: 15px;
+        padding: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px -1px rgba(0,0,0,.6),0 1px 2px rgba(0,0,0,.4);
+        border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .account-selector label {
+        color: #ffffff;
+        font-weight: 600;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    .account-selector select {
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.12);
+        color: #ffffff;
+        width: 100%;
+        padding: 10px;
+        border-radius: 8px;
+    }
+
+    .account-selector select option {
+        background: #1a1a1a;
+        color: #ffffff;
+    }
+
     /* Fix nav-tabs text visibility */
     .nav-tabs {
-        border-bottom: 2px solid #e9ecef;
+        border-bottom: 2px solid rgba(255,255,255,0.06);
         margin-bottom: 20px;
     }
-    
+
     .nav-tabs .nav-link {
-        color: #212529; /* Dark color for better contrast */
+        color: #9ca3af !important;
         border: 2px solid transparent;
         padding: 12px 25px;
         font-weight: 500;
         transition: all 0.3s ease;
-        background: white;
+        background: rgba(26,26,26,0.5);
         margin-right: 5px;
         border-radius: 10px 10px 0 0;
         position: relative;
     }
-    
+
     .nav-tabs .nav-link:hover {
-        color: #212529; /* Keep text dark on hover for readability */
-        background: #f8f9fa; /* Light gray background */
-        border-color: #667eea; /* Purple border accent */
+        color: #ffffff !important;
+        background: rgba(220,38,38,0.15);
+        border-color: #dc2626;
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2);
+        box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
     }
-    
+
     .nav-tabs .nav-link.active {
-        color: white;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white !important;
+        background: linear-gradient(135deg,#dc2626 0%,#991b1b 50%,#7f1d1d 100%);
         font-weight: 600;
         border-color: transparent;
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
     }
-    
+
     .nav-tabs .nav-link.active:hover {
-        color: white; /* Keep white text on active hover */
+        color: white !important;
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 6px 16px rgba(220, 38, 38, 0.5);
+        filter: brightness(1.1);
     }
     
     .nav-tabs .nav-link .badge {
@@ -90,6 +122,19 @@
             <i class="bi bi-funnel"></i> Filter
         </button>
     </div>
+</div>
+
+<!-- Account Selector -->
+<div class="account-selector">
+    <label class="form-label">Select Email Account:</label>
+    <select class="form-select" id="accountSelector" onchange="switchAccount(this.value)">
+        <option value="">All Accounts</option>
+        {% for account in accounts %}
+        <option value="{{ account.id }}" {% if selected_account_id == account.id|string %}selected{% endif %}>
+            {{ account.account_name }} ({{ account.email_address }})
+        </option>
+        {% endfor %}
+    </select>
 </div>
 
 <!-- Filter Tabs -->
@@ -187,8 +232,8 @@
                             <i class="bi bi-eye"></i>
                         </a>
                         {% if email.status == 'PENDING' %}
-                        <button class="btn btn-sm btn-outline-info" onclick="editEmail({{ email.id }})" title="Edit">
-                            <i class="bi bi-pencil"></i>
+                        <button class="btn btn-sm btn-outline-info" onclick="openEmailEditor({{ email.id }})" title="Full Email Editor">
+                            <i class="bi bi-pencil-square"></i> Edit
                         </button>
                         <button class="btn btn-sm btn-outline-success" onclick="quickAction({{ email.id }}, 'APPROVE')" title="Approve">
                             <i class="bi bi-check"></i>
@@ -228,14 +273,14 @@
 <!-- Edit Email Modal -->
 <div class="modal fade" id="editEmailModal" tabindex="-1" aria-labelledby="editEmailModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-gradient" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="modal-content" style="background:linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%);border:1px solid rgba(255,255,255,0.06);">
+            <div class="modal-header bg-gradient" style="background:linear-gradient(135deg,#dc2626 0%,#991b1b 50%,#7f1d1d 100%) !important;">
                 <h5 class="modal-title text-white" id="editEmailModalLabel">
                     <i class="bi bi-pencil-square"></i> Edit Email
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body" style="color:#fff !important;">
                 <form id="editEmailForm">
                     <input type="hidden" id="editEmailId" value="">
                     
@@ -275,8 +320,22 @@
     </div>
 </div>
 
+<!-- Include Enhanced Email Editor Modal -->
+{% include 'email_editor_modal.html' %}
+
 {% block extra_js %}
+<!-- Include Email Editor JavaScript -->
+<script src="{{ url_for('static', filename='js/email_editor.js') }}"></script>
 <script>
+function switchAccount(accountId) {
+    const currentStatus = '{{ current_filter }}' || 'PENDING';
+    let url = `/emails?status=${currentStatus}`;
+    if (accountId) {
+        url += `&account_id=${accountId}`;
+    }
+    window.location.href = url;
+}
+
 function quickAction(emailId, action) {
     if (confirm(`Are you sure you want to ${action.toLowerCase()} this email?`)) {
         const form = document.createElement('form');
@@ -318,29 +377,49 @@ document.querySelector('thead input[type="checkbox"]').addEventListener('change'
 
 // Edit email functionality
 function editEmail(emailId) {
+    console.log(`Fetching email details for ID: ${emailId}`);
+
     // Fetch email details
     fetch(`/email/${emailId}/edit`)
-        .then(response => response.json())
+        .then(response => {
+            console.log(`Response status: ${response.status}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('Received data:', data);
+
             if (data.error) {
                 alert(data.error);
                 return;
             }
-            
+
+            // Check if modal elements exist
+            const modalElement = document.getElementById('editEmailModal');
+            if (!modalElement) {
+                console.error('Modal element not found');
+                alert('Edit modal not found in the page');
+                return;
+            }
+
             // Populate modal fields
             document.getElementById('editEmailId').value = data.id;
             document.getElementById('editEmailFrom').textContent = data.sender;
             document.getElementById('editEmailTo').textContent = data.recipients;
             document.getElementById('editEmailSubject').value = data.subject || '';
             document.getElementById('editEmailBody').value = data.body || '';
-            
+
             // Show modal
-            const modal = new bootstrap.Modal(document.getElementById('editEmailModal'));
+            const modal = new bootstrap.Modal(modalElement);
             modal.show();
+            console.log('Modal should be visible now');
         })
         .catch(error => {
-            console.error('Error:', error);
-            alert('Failed to load email details');
+            console.error('Error loading email details:', error);
+            console.error('Error stack:', error.stack);
+            alert(`Failed to load email details: ${error.message}`);
         });
 }
 
@@ -348,12 +427,18 @@ function saveEmailEdit() {
     const emailId = document.getElementById('editEmailId').value;
     const subject = document.getElementById('editEmailSubject').value;
     const body = document.getElementById('editEmailBody').value;
-    
+
     if (!subject || !body) {
         alert('Subject and body are required');
         return;
     }
-    
+
+    // Show saving indicator
+    const saveBtn = event.target || document.querySelector('#editEmailModal .btn-primary');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+
     // Send update request
     fetch(`/email/${emailId}/edit`, {
         method: 'POST',
@@ -365,20 +450,33 @@ function saveEmailEdit() {
             body: body
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.error) {
             alert(data.error);
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalText;
         } else {
-            // Close modal and reload page
-            const modal = bootstrap.Modal.getInstance(document.getElementById('editEmailModal'));
-            modal.hide();
-            location.reload();
+            // Show success message briefly
+            saveBtn.innerHTML = '<i class="bi bi-check-circle"></i> Saved!';
+            setTimeout(() => {
+                // Close modal and reload page
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editEmailModal'));
+                modal.hide();
+                location.reload();
+            }, 500);
         }
     })
     .catch(error => {
-        console.error('Error:', error);
-        alert('Failed to save changes');
+        console.error('Error saving email:', error);
+        alert(`Failed to save changes: ${error.message}`);
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalText;
     });
 }
 </script>

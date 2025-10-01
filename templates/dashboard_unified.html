@@ -5,55 +5,126 @@
 {% block extra_css %}
 <style>
     .account-selector {
-        background: white;
+        background: rgba(26,26,26,0.9);
         border-radius: 15px;
         padding: 15px;
         margin-bottom: 20px;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        box-shadow: 0 2px 4px -1px rgba(0,0,0,.6),0 1px 2px rgba(0,0,0,.4);
+        border: 1px solid rgba(255,255,255,0.06);
     }
-    
+
+    .account-selector label {
+        color: #ffffff;
+    }
+
+    .account-selector select {
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.12);
+        color: #ffffff;
+    }
+
     .nav-tabs {
-        border-bottom: 2px solid #e9ecef;
+        border-bottom: 2px solid rgba(255,255,255,0.06);
         margin-bottom: 25px;
     }
-    
+
     .nav-tabs .nav-link {
-        color: #212529; /* Dark color for excellent contrast */
+        color: #9ca3af;
         border: 2px solid transparent;
         padding: 12px 25px;
         font-weight: 500;
         transition: all 0.3s ease;
-        background: white;
+        background: rgba(26,26,26,0.5);
         margin-right: 5px;
         border-radius: 10px 10px 0 0;
         position: relative;
     }
-    
+
     .nav-tabs .nav-link:hover {
-        color: #212529; /* Keep text dark on hover for readability */
-        background: #f8f9fa; /* Light gray background */
-        border-color: #667eea; /* Purple border accent */
+        color: #ffffff;
+        background: rgba(220,38,38,0.15);
+        border-color: rgba(220,38,38,0.3);
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2);
+        box-shadow: 0 4px 8px rgba(220,38,38,0.2);
     }
-    
+
     .nav-tabs .nav-link.active {
         color: white;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg,#dc2626 0%,#991b1b 50%,#7f1d1d 100%);
         font-weight: 600;
         border-color: transparent;
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 4px 12px rgba(220,38,38,0.4);
     }
-    
+
     .nav-tabs .nav-link.active:hover {
-        color: white; /* Keep white text on active hover */
+        color: white;
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 6px 16px rgba(220,38,38,0.5);
+        filter: brightness(1.1);
     }
-    
+
     .nav-tabs .nav-link .badge {
         margin-left: 8px;
         font-size: 0.75rem;
+        background: #dc2626;
+        color: #fff;
+    }
+
+    /* Unified Stats Grid */
+    .stats-grid {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        margin-bottom: 24px;
+    }
+
+    .stat-card-unified {
+        background: linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%);
+        padding: 14px 16px;
+        border-radius: 14px;
+        position: relative;
+        box-shadow: 0 2px 4px -1px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.06);
+        overflow: hidden;
+        border: 1px solid rgba(220,38,38,.15);
+    }
+
+    .stat-card-unified:before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 85% 15%, rgba(220,38,38,.18), transparent 60%);
+        opacity: .6;
+        pointer-events: none;
+    }
+
+    .stat-card-unified .stat-label {
+        font-size: .70rem;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        color: #9ca3af;
+        margin-bottom: 4px;
+        font-weight: 600;
+    }
+
+    .stat-card-unified .stat-value {
+        font-size: 1.9rem;
+        font-weight: 600;
+        line-height: 1.1;
+        color: #ffffff;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .stat-card-unified.updating {
+        animation: pulseStat 0.8s ease;
+    }
+
+    @keyframes pulseStat {
+        0% {
+            box-shadow: 0 0 0 0 rgba(220,38,38,0.5);
+        }
+        100% {
+            box-shadow: 0 0 0 12px rgba(220,38,38,0);
+        }
     }
 </style>
 {% endblock %}
@@ -139,97 +210,78 @@
     {% if active_tab == 'overview' %}
     <!-- Overview Tab -->
     <div class="tab-pane fade show active">
-        <!-- Statistics Cards -->
-        <div class="row mb-4">
-            <div class="col-md-3 mb-3">
-                <div class="stat-card">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="stat-number">{{ stats.total }}</div>
-                            <div class="stat-label">Total Emails</div>
-                        </div>
-                        <i class="bi bi-envelope-fill" style="font-size: 2rem; color: #667eea;"></i>
-                    </div>
-                </div>
+        <!-- Statistics Cards (Auto-refresh from /api/unified-stats or SSE stream) -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card-unified">
+                <div class="stat-label">Total</div>
+                <div class="stat-value" id="statTotal">-</div>
             </div>
-            
-            <div class="col-md-3 mb-3">
-                <div class="stat-card">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="stat-number">{{ stats.pending }}</div>
-                            <div class="stat-label">Pending Review</div>
-                        </div>
-                        <i class="bi bi-clock-fill" style="font-size: 2rem; color: #ffc107;"></i>
-                    </div>
-                </div>
+            <div class="stat-card-unified">
+                <div class="stat-label">Pending (Outbound)</div>
+                <div class="stat-value" id="statPending">-</div>
             </div>
-            
-            <div class="col-md-3 mb-3">
-                <div class="stat-card">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="stat-number">{{ stats.approved }}</div>
-                            <div class="stat-label">Approved</div>
-                        </div>
-                        <i class="bi bi-check-circle-fill" style="font-size: 2rem; color: #28a745;"></i>
-                    </div>
-                </div>
+            <div class="stat-card-unified">
+                <div class="stat-label">Held (Inbound)</div>
+                <div class="stat-value" id="statHeld">-</div>
             </div>
-            
-            <div class="col-md-3 mb-3">
-                <div class="stat-card">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="stat-number">{{ stats.rejected }}</div>
-                            <div class="stat-label">Rejected</div>
-                        </div>
-                        <i class="bi bi-x-circle-fill" style="font-size: 2rem; color: #dc3545;"></i>
-                    </div>
+            <div class="stat-card-unified">
+                <div class="stat-label">Released / Delivered</div>
+                <div class="stat-value" id="statReleased">-</div>
+            </div>
+            <div class="stat-card-unified">
+                <div class="stat-label" title="Email processing speed: p50 (median), p95 (95% processed within), max (slowest)">
+                    Latency <i class="bi bi-info-circle" style="font-size:0.7rem;opacity:0.7;cursor:help;"></i>
                 </div>
+                <div class="stat-value" id="latencyBucket" style="font-size: 0.9rem;">—</div>
             </div>
         </div>
         
         <!-- Recent Emails -->
-        <div class="card table-modern">
-            <div class="card-header bg-white py-3">
-                <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Emails</h5>
+        <div class="card table-modern" style="background:#1a1a1a !important;border:1px solid rgba(255,255,255,0.06) !important;">
+            <div class="card-header py-3" style="background:linear-gradient(135deg,#dc2626 0%,#991b1b 50%,#7f1d1d 100%) !important;border-bottom:1px solid rgba(255,255,255,0.06) !important;">
+                <h5 class="mb-0" style="color:#fff !important;"><i class="bi bi-clock-history"></i> Recent Emails</h5>
             </div>
-            <div class="card-body p-0">
+            <div class="card-body p-0" style="background:#1a1a1a !important;">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead>
-                            <tr>
-                                <th>From</th>
-                                <th>To</th>
-                                <th>Subject</th>
-                                <th>Status</th>
-                                <th>Risk</th>
-                                <th>Time</th>
-                                <th>Actions</th>
+                    <table class="table table-hover mb-0" style="color:#fff !important;background:#1a1a1a !important;">
+                        <thead style="background:#1a1a1a !important;">
+                            <tr style="background:#1a1a1a !important;">
+                                <th style="color:#9ca3af !important;background:#1a1a1a !important;border-color:rgba(255,255,255,0.06) !important;">From</th>
+                                <th style="color:#9ca3af !important;background:#1a1a1a !important;border-color:rgba(255,255,255,0.06) !important;">To</th>
+                                <th style="color:#9ca3af !important;background:#1a1a1a !important;border-color:rgba(255,255,255,0.06) !important;">Subject</th>
+                                <th style="color:#9ca3af !important;background:#1a1a1a !important;border-color:rgba(255,255,255,0.06) !important;">Status</th>
+                                <th style="color:#9ca3af !important;background:#1a1a1a !important;border-color:rgba(255,255,255,0.06) !important;">Risk</th>
+                                <th style="color:#9ca3af !important;background:#1a1a1a !important;border-color:rgba(255,255,255,0.06) !important;">Time</th>
+                                <th style="color:#9ca3af !important;background:#1a1a1a !important;border-color:rgba(255,255,255,0.06) !important;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for email in recent_emails %}
-                            <tr>
-                                <td>{{ email.sender }}</td>
-                                <td>{{ email.recipients }}</td>
-                                <td>{{ email.subject[:50] }}{% if email.subject|length > 50 %}...{% endif %}</td>
-                                <td>
-                                    <span class="badge bg-{% if email.status == 'PENDING' %}warning{% elif email.status == 'APPROVED' %}success{% elif email.status == 'REJECTED' %}danger{% else %}secondary{% endif %}">
+                            <tr style="background:#242424 !important;border-bottom:1px solid rgba(255,255,255,0.06) !important;">
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">{{ email.sender }}</td>
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">{{ email.recipients }}</td>
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">{{ email.subject[:50] }}{% if email.subject|length > 50 %}...{% endif %}</td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <span class="badge" style="background:{% if email.status == 'PENDING' %}#f59e0b{% elif email.status == 'APPROVED' %}#10b981{% elif email.status == 'REJECTED' %}#dc2626{% else %}#6b7280{% endif %} !important;color:#fff !important;">
                                         {{ email.status }}
                                     </span>
                                 </td>
-                                <td>
-                                    <span class="badge bg-{% if email.risk_score >= 80 %}danger{% elif email.risk_score >= 50 %}warning{% else %}success{% endif %}">
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <span class="badge" style="background:{% if email.risk_score >= 80 %}#dc2626{% elif email.risk_score >= 50 %}#f59e0b{% else %}#10b981{% endif %} !important;color:#fff !important;">
                                         {{ email.risk_score }}
                                     </span>
                                 </td>
-                                <td>{{ email.created_at }}</td>
-                                <td>
-                                    <a href="/emails/{{ email.id }}" class="btn btn-sm btn-outline-primary">
+                                <td style="color:#9ca3af !important;border-color:rgba(255,255,255,0.06) !important;">{{ email.created_at }}</td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <a href="/emails/{{ email.id }}" class="btn btn-sm" style="background:rgba(220,38,38,0.15) !important;color:#fff !important;border:1px solid rgba(220,38,38,0.3) !important;">
                                         <i class="bi bi-eye"></i>
                                     </a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr style="background:#242424 !important;">
+                                <td colspan="7" style="color:#9ca3af !important;text-align:center;padding:40px;border-color:rgba(255,255,255,0.06) !important;">
+                                    No emails yet. <a href="/compose" style="color:#dc2626 !important;">Compose your first email</a>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -300,7 +352,7 @@
             </div>
         </div>
         {% else %}
-        <div class="alert alert-info">
+        <div class="alert alert-info" style="background:rgba(59,130,246,0.1) !important;border:1px solid rgba(59,130,246,0.3) !important;color:#60a5fa !important;">
             <i class="bi bi-info-circle"></i> Please select an account from the dropdown above to run diagnostics.
         </div>
         {% endif %}
@@ -323,13 +375,86 @@
     {% elif active_tab == 'rules' %}
     <!-- Rules Tab -->
     <div class="tab-pane fade show active">
-        <div class="card">
-            <div class="card-header">
-                <h5>Moderation Rules</h5>
+        <div class="card" style="background:linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%);border:1px solid rgba(255,255,255,0.06);">
+            <div class="card-header" style="background:linear-gradient(135deg,#dc2626 0%,#991b1b 50%,#7f1d1d 100%);border-bottom:1px solid rgba(255,255,255,0.06);">
+                <h5 style="color:#fff;margin:0;"><i class="bi bi-shield-check"></i> Moderation Rules</h5>
             </div>
-            <div class="card-body">
-                <p>Active Rules: {{ active_rules }}</p>
-                <!-- Add rules management here -->
+            <div class="card-body" style="padding:0;">
+                <div style="padding:20px;border-bottom:1px solid rgba(255,255,255,0.06);">
+                    <p style="color:#fff;margin:0;">Active Rules: <span style="color:#dc2626;font-weight:600;">{{ active_rules }}</span></p>
+                    <p style="color:#9ca3af;font-size:0.9rem;margin:8px 0 0 0;">These rules automatically filter incoming emails based on keywords and conditions.</p>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" style="color:#fff !important;background:#1a1a1a !important;">
+                        <thead style="background:rgba(220,38,38,0.1) !important;border-bottom:2px solid rgba(220,38,38,0.3) !important;">
+                            <tr>
+                                <th style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;">Rule Name</th>
+                                <th style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;">Type</th>
+                                <th style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;">Condition</th>
+                                <th style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;">Keywords</th>
+                                <th style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;">Action</th>
+                                <th style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;">Priority</th>
+                                <th style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rule in rules %}
+                            <tr style="background:#242424 !important;border-bottom:1px solid rgba(255,255,255,0.06) !important;">
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;font-weight:600;">
+                                    {{ rule.rule_name }}
+                                </td>
+                                <td style="color:#9ca3af !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;">
+                                    <span class="badge" style="background:rgba(102,126,234,0.2);color:#6b7ef1;font-size:0.75rem;padding:4px 8px;">
+                                        {{ rule.rule_type|upper }}
+                                    </span>
+                                </td>
+                                <td style="color:#9ca3af !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;">
+                                    {{ rule.condition_field }} {{ rule.condition_operator }}
+                                </td>
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;max-width:300px;">
+                                    <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                        {% for keyword in rule.condition_value.split(',')[:3] %}
+                                        <span class="badge" style="background:rgba(220,38,38,0.2);color:#ef4444;margin:2px;font-size:0.7rem;padding:3px 6px;">
+                                            {{ keyword.strip() }}
+                                        </span>
+                                        {% endfor %}
+                                        {% if rule.condition_value.split(',')|length > 3 %}
+                                        <span style="color:#9ca3af;font-size:0.8rem;">+{{ rule.condition_value.split(',')|length - 3 }} more</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;">
+                                    <span class="badge" style="background:{% if rule.action == 'HOLD' %}rgba(251,191,36,0.2);color:#fbbf24{% elif rule.action == 'REJECT' %}rgba(239,68,68,0.2);color:#ef4444{% else %}rgba(34,197,94,0.2);color:#22c55e{% endif %};font-size:0.75rem;padding:4px 10px;font-weight:600;">
+                                        {{ rule.action }}
+                                    </span>
+                                </td>
+                                <td style="color:#9ca3af !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;">
+                                    {{ rule.priority }}
+                                </td>
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;">
+                                    {% if rule.is_active %}
+                                    <span class="badge" style="background:rgba(34,197,94,0.2);color:#22c55e;font-size:0.75rem;padding:4px 10px;">
+                                        <i class="bi bi-check-circle"></i> Active
+                                    </span>
+                                    {% else %}
+                                    <span class="badge" style="background:rgba(107,114,128,0.2);color:#6b7280;font-size:0.75rem;padding:4px 10px;">
+                                        <i class="bi bi-x-circle"></i> Inactive
+                                    </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr style="background:#242424 !important;">
+                                <td colspan="7" style="color:#9ca3af !important;text-align:center;padding:40px;border-color:rgba(255,255,255,0.06) !important;">
+                                    <i class="bi bi-shield-x" style="font-size:3rem;opacity:0.3;"></i>
+                                    <p style="margin-top:10px;">No moderation rules configured yet.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -344,6 +469,77 @@ function switchAccount(accountId) {
         url += `?account_id=${accountId}`;
     }
     window.location.href = url;
+}
+
+let useSSE = true;
+
+// Apply stats to UI (works for both polling and SSE)
+function applyStats(j) {
+    const m = (id, v) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = v;
+    };
+    const u = j.unified || j;
+    m('statTotal', u.total ?? 0);
+    m('statPending', u.pending ?? 0);
+    m('statHeld', u.held ?? 0);
+    m('statReleased', u.released ?? 0);
+
+    // Update latency if available
+    if (j.latency) {
+        const l = j.latency;
+        const el = document.getElementById('latencyBucket');
+        if (el) {
+            if (!l.count) {
+                el.textContent = '—';
+            } else {
+                el.textContent = `${l.p50}ms p50 • ${l.p95}ms p95 • ${l.max}ms max`;
+            }
+        }
+    }
+}
+
+// Load unified stats from API (fallback for non-SSE)
+async function loadUnifiedStats() {
+    try {
+        const r = await fetch('/api/unified-stats');
+        if (!r.ok) return;
+        applyStats(await r.json());
+    } catch(e) {
+        console.warn('Stats error:', e);
+    }
+}
+
+// Start SSE connection for live updates
+function startSSE() {
+    try {
+        const es = new EventSource('/stream/stats');
+        es.addEventListener('stats', e => {
+            try {
+                applyStats(JSON.parse(e.data));
+            } catch(err) {
+                console.warn('SSE parse error:', err);
+            }
+        });
+        es.onerror = () => {
+            console.warn('SSE connection failed, falling back to polling');
+            es.close();
+            useSSE = false;
+            setInterval(loadUnifiedStats, 10000);
+        };
+    } catch(e) {
+        console.warn('SSE not supported, using polling');
+        useSSE = false;
+        setInterval(loadUnifiedStats, 10000);
+    }
+}
+
+// Initialize stats loading on page load
+if (document.getElementById('statsGrid')) {
+    startSSE();
+    if (!useSSE) {
+        loadUnifiedStats();
+    }
 }
 
 function runDiagnostics(accountId) {

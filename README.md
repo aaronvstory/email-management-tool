@@ -30,6 +30,7 @@ setup.bat
 ```
 
 This will:
+
 - Check Python installation
 - Create virtual environment
 - Install all dependencies
@@ -57,6 +58,7 @@ start.bat
 ```
 
 The application will start with:
+
 - SMTP Proxy on `localhost:8587`
 - Web Dashboard on `http://localhost:5000`
 - Default login: `admin` / `admin123`
@@ -155,6 +157,7 @@ Email Management Tool/
 ### Configure Email Client
 
 Set your email client (Outlook, Thunderbird, etc.) to use:
+
 - **SMTP Server**: `localhost` or `127.0.0.1`
 - **Port**: `8587`
 - **Security**: None (proxy handles encryption to relay)
@@ -163,6 +166,7 @@ Set your email client (Outlook, Thunderbird, etc.) to use:
 ### Moderation Rules
 
 Default rules check for:
+
 - Keywords (invoice, payment, urgent)
 - Attachments (PDF, DOC, XLS)
 - External recipients
@@ -242,24 +246,153 @@ backup_retention = 30
 ## 📝 Logging
 
 Logs are stored in `logs\email_moderation.log` with automatic rotation:
+
 - Max file size: 10MB
 - Backup count: 5
 - Log levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
 
 View recent logs:
+
 ```powershell
 .\manage.ps1 logs
 ```
 
 ## 🚦 Monitoring
 
-### Health Check Endpoint
+### Health & Interception Metrics
 
 ```
-GET http://localhost:5000/health
+GET /healthz
 ```
+
+Returns JSON including held inbound count, releases in last 24h, median interception latency, and worker heartbeats (when active).
+
+Example:
+
+```json
+{
+  "ok": true,
+  "held_count": 2,
+  "released_24h": 14,
+  "median_latency_ms": 187,
+  "workers": [
+    { "worker": "acct-1", "last_heartbeat_sec": 3.14, "status": "ok" }
+  ],
+  "timestamp": "2025-09-30T12:10:05Z"
+}
+```
+
+---
+
+## ✂️ Inbound Interception & Release Flow
+
+Goal: Intercept inbound messages (hold-before-read) using only mailbox credentials (no MX / DNS changes) with sub‑second dwell.
+
+1. Rapid IMAP worker detects new UID via UIDNEXT delta or IDLE.
+2. Message is immediately COPIED into the local quarantine representation (DB row) and flagged \Deleted + EXPUNGE in source mailbox (kept safely in local raw file for review).
+3. Raw RFC822 bytes are fetched asynchronously and stored under `data/inbound_raw/<id>.eml` (path recorded as `raw_path`).
+4. Dashboard (Held view) lists HELD messages with preview snippet extracted from the raw file.
+5. Reviewer optionally edits subject and/or body via JSON edit endpoint.
+6. Release endpoint reconstructs (edited) MIME and APPENDs it back to the original mailbox (INBOX or specified folder) preserving (approximate) original internal date when available.
+7. Message row marked `RELEASED`; latency persisted (capture to hold time) for metrics.
+
+### Key Columns
+
+| Column              | Purpose                                            |
+| ------------------- | -------------------------------------------------- | -------- | --------- |
+| direction           | 'inbound' for intercepted path                     |
+| interception_status | HELD                                               | RELEASED | DISCARDED |
+| raw_path            | Filesystem path to stored RFC822                   |
+| latency_ms          | Milliseconds from detection to DB record persisted |
+| edited_message_id   | Message-ID of released (possibly edited) version   |
+
+### Core Endpoints
+
+| Method | Endpoint                       | Description                                                  |
+| ------ | ------------------------------ | ------------------------------------------------------------ |
+| GET    | /api/interception/held         | List last 200 HELD inbound messages + stats                  |
+| GET    | /api/interception/held/<id>    | Detailed JSON with preview snippet                           |
+| POST   | /api/email/<id>/edit           | Edit subject/body_text/body_html (HELD only)                 |
+| POST   | /api/interception/release/<id> | Release (optionally with JSON {edited_subject, edited_body}) |
+| POST   | /api/interception/discard/<id> | Discard HELD message                                         |
+| GET    | /api/inbox                     | Unified inbox view (filters: status, q)                      |
+| GET    | /healthz                       | Health & metrics (5s cache)                                  |
+
+### Edit Before Release (Client Flow)
+
+1. GET `/api/interception/held` → choose message id.
+2. (Optional) GET `/api/interception/held/<id>` for full preview.
+3. POST `/api/email/<id>/edit` JSON:
+
+```json
+{ "subject": "Revised Subject", "body_text": "Cleaned body" }
+```
+
+4. POST `/api/interception/release/<id>` JSON (optional overrides during release):
+
+```json
+{ "edited_subject": "Revised Subject FINAL", "edited_body": "Final text" }
+```
+
+5. UI refresh or polling picks up `interception_status=RELEASED`.
+
+### Example Release JSON Response
+
+```json
+{ "ok": true, "released_to": "INBOX" }
+```
+
+---
+
+## 🧪 Testing Strategy
+
+| Test File                                    | Purpose                                   |
+| -------------------------------------------- | ----------------------------------------- |
+| tests/interception/test_rapid_copy_purge.py  | Worker class import & instantiation       |
+| tests/interception/test_release_append.py    | MIME build & append helper structure      |
+| tests/interception/test_live_integration.py  | Optional live IMAP roundtrip (env gated)  |
+| tests/interception/test_edit_release_flow.py | DB-level edit → release E2E (IMAP mocked) |
+
+Run all interception tests:
+
+```powershell
+pytest -q tests/interception
+```
+
+---
+
+## 📂 Archived Historical Docs
+
+Legacy deep-dive and diagnostic markdown files were tagged with `ARCHIVED_AT` and may be moved under `archive/root_docs_20250930/` to declutter the root. The main `README.md` now serves as the authoritative operational guide.
+
+---
+
+## 🔌 Endpoint Quick Reference
+
+| Area    | Endpoint                            | Notes                                  |
+| ------- | ----------------------------------- | -------------------------------------- |
+| Health  | GET /healthz                        | Cached 5s, latency + worker heartbeats |
+| Held    | GET /api/interception/held          | Stats + list                           |
+| Held    | GET /api/interception/held/<id>     | Detailed + snippet                     |
+| Edit    | POST /api/email/<id>/edit           | Subject/body updates                   |
+| Release | POST /api/interception/release/<id> | Append back to mailbox                 |
+| Discard | POST /api/interception/discard/<id> | Mark discarded                         |
+| Inbox   | GET /api/inbox                      | Unified + search & status filter       |
+
+---
+
+## 🗺️ Future Enhancements (Roadmap)
+
+| Item                  | Description                                          |
+| --------------------- | ---------------------------------------------------- |
+| Attachment Scrubbing  | Strip or replace risky attachments before release    |
+| DKIM Re-Sign          | Optionally re-sign edited outbound releases          |
+| Rate / Burst Controls | Throttle release operations per account              |
+| Multi-Worker Registry | Persist worker heartbeats for distributed deployment |
+| UI Inline Diff        | Present diff of edits before release                 |
 
 Returns:
+
 ```json
 {
   "status": "healthy",
@@ -333,14 +466,14 @@ MIT License - See LICENSE file for details
 
 ## ⚡ Quick Commands Reference
 
-| Action | Command |
-|--------|---------|
-| Setup | `setup.bat` |
-| Start | `start.bat` |
-| Stop | `Ctrl+C` in console |
-| Status | `powershell .\manage.ps1 status` |
-| Backup | `powershell .\manage.ps1 backup` |
-| View Logs | `powershell .\manage.ps1 logs` |
+| Action          | Command                                  |
+| --------------- | ---------------------------------------- |
+| Setup           | `setup.bat`                              |
+| Start           | `start.bat`                              |
+| Stop            | `Ctrl+C` in console                      |
+| Status          | `powershell .\manage.ps1 status`         |
+| Backup          | `powershell .\manage.ps1 backup`         |
+| View Logs       | `powershell .\manage.ps1 logs`           |
 | Install Service | `powershell -Admin .\manage.ps1 install` |
 
 ---
