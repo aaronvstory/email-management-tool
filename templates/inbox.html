@@ -57,17 +57,45 @@
   </div>
 </div>
 
-<!-- Account Selector -->
+<!-- Account Selector with Fetch Controls -->
 <div class="account-selector">
-  <label class="form-label">Select Email Account:</label>
-  <select class="form-select" id="accountSelector" onchange="switchAccount(this.value)">
-    <option value="">All Accounts</option>
-    {% for account in accounts %}
-    <option value="{{ account.id }}" {% if selected_account == account.id %}selected{% endif %}>
-      {{ account.account_name }} ({{ account.email_address }})
-    </option>
-    {% endfor %}
-  </select>
+  <div style="display: flex; gap: 15px; align-items: flex-end;">
+    <div style="flex: 1;">
+      <label class="form-label">Select Email Account:</label>
+      <select class="form-select" id="accountSelector" onchange="switchAccount(this.value)">
+        <option value="">All Accounts</option>
+        {% for account in accounts %}
+        <option value="{{ account.id }}" {% if selected_account == account.id %}selected{% endif %}>
+          {{ account.account_name }} ({{ account.email_address }})
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Fetch Controls -->
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <div>
+        <label class="form-label" style="font-size: 0.85rem;">Fetch Count:</label>
+        <select class="form-select" id="fetchCount" style="width: 80px;">
+          <option value="10">10</option>
+          <option value="20" selected>20</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </div>
+      <button class="btn-primary" onclick="fetchEmails()" style="margin-top: 20px;">
+        <i class="bi bi-cloud-download"></i> Fetch Emails
+      </button>
+      <button class="btn-secondary" onclick="fetchMore()" style="margin-top: 20px;">
+        <i class="bi bi-plus-circle"></i> Load More
+      </button>
+    </div>
+  </div>
+
+  <!-- Fetch Status -->
+  <div id="fetchStatus" style="margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 8px; display: none;">
+    <span id="fetchMessage" style="color: #818cf8;"></span>
+  </div>
 </div>
 
 <div class="inbox-panel">
@@ -79,7 +107,7 @@
       <option value="DISCARDED">DISCARDED</option>
       <option value="PENDING">PENDING</option>
     </select>
-    <input id="searchBox" class="input-modern search-input" placeholder="Search subject or sender" />
+    <input id="searchBox" class="input-modern search-input" placeholder="Search subject or sender" style="background: rgba(255,255,255,0.06); color: #ffffff;" />
     <button class="btn-secondary" onclick="reloadInbox()">Apply</button>
   </div>
   <div id="inboxList"></div>
@@ -88,12 +116,102 @@
 
 {% block extra_js %}
 <script>
+let fetchOffset = 0;  // Track pagination offset
+
 function switchAccount(accountId) {
     let url = '/inbox';
     if (accountId) {
         url += `?account_id=${accountId}`;
     }
     window.location.href = url;
+}
+
+async function fetchEmails() {
+    const accountId = document.getElementById('accountSelector').value;
+    if (!accountId) {
+        alert('Please select an account first');
+        return;
+    }
+
+    const fetchCount = parseInt(document.getElementById('fetchCount').value);
+
+    // Show status
+    const statusDiv = document.getElementById('fetchStatus');
+    const statusMsg = document.getElementById('fetchMessage');
+    statusDiv.style.display = 'block';
+    statusMsg.textContent = `Fetching ${fetchCount} emails from server...`;
+
+    try {
+        const response = await fetch('/api/fetch-emails', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                account_id: accountId,
+                count: fetchCount,
+                offset: 0
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            statusMsg.textContent = `✅ Fetched ${data.fetched} emails successfully! Total available: ${data.total_available}`;
+            fetchOffset = data.fetched;  // Update offset for next fetch
+
+            // Reload inbox to show new emails
+            setTimeout(() => {
+                reloadInbox();
+            }, 1500);
+        } else {
+            statusMsg.textContent = `❌ Error: ${data.error}`;
+        }
+    } catch (error) {
+        statusMsg.textContent = `❌ Failed to fetch emails: ${error}`;
+    }
+}
+
+async function fetchMore() {
+    const accountId = document.getElementById('accountSelector').value;
+    if (!accountId) {
+        alert('Please select an account first');
+        return;
+    }
+
+    const fetchCount = parseInt(document.getElementById('fetchCount').value);
+
+    // Show status
+    const statusDiv = document.getElementById('fetchStatus');
+    const statusMsg = document.getElementById('fetchMessage');
+    statusDiv.style.display = 'block';
+    statusMsg.textContent = `Loading ${fetchCount} more emails...`;
+
+    try {
+        const response = await fetch('/api/fetch-emails', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                account_id: accountId,
+                count: fetchCount,
+                offset: fetchOffset
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            statusMsg.textContent = `✅ Loaded ${data.fetched} more emails! Total available: ${data.total_available}`;
+            fetchOffset += data.fetched;  // Update offset for next fetch
+
+            // Reload inbox to show new emails
+            setTimeout(() => {
+                reloadInbox();
+            }, 1500);
+        } else {
+            statusMsg.textContent = `❌ Error: ${data.error}`;
+        }
+    } catch (error) {
+        statusMsg.textContent = `❌ Failed to load more emails: ${error}`;
+    }
 }
 
 async function fetchInbox(){

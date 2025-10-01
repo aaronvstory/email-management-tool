@@ -31,6 +31,7 @@
 
         body {
             background: radial-gradient(circle at 20% 20%, #1a1a1a 0%, #121212 35%, #0d0d0d 70%, #0a0a0a 100%);
+            background-attachment: fixed;
             min-height: 100vh;
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
@@ -687,6 +688,27 @@
             outline: none;
         }
 
+        /* Input Modern - consistent dark styling for all modern inputs */
+        .input-modern {
+            background: rgba(255,255,255,0.06) !important;
+            border: 1px solid rgba(255,255,255,0.12) !important;
+            color: #ffffff !important;
+            padding: 10px 15px !important;
+            border-radius: 8px !important;
+        }
+
+        .input-modern:focus {
+            background: rgba(255,255,255,0.08) !important;
+            border-color: rgba(220, 38, 38, 0.5) !important;
+            box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2) !important;
+            outline: none !important;
+        }
+
+        .input-modern::placeholder {
+            color: #888888 !important;
+            opacity: 1 !important;
+        }
+
         .notification-dot {
             width: 10px;
             height: 10px;
@@ -705,10 +727,11 @@
         }
 
         .chart-container {
-            background: white;
+            background: linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%);
             border-radius: 15px;
             padding: 20px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.06);
             position: relative;
             height: 400px;
         }

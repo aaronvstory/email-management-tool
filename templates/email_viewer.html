@@ -1,0 +1,532 @@
+{% extends "base.html" %}
+{% block title %}Email Viewer - Email Management Tool{% endblock %}
+{% block extra_css %}
+<style>
+  .email-viewer {
+    background: linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%);
+    border-radius: 18px;
+    padding: 25px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .email-header {
+    border-bottom: 2px solid rgba(255,255,255,0.1);
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+  }
+
+  .email-subject {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 15px;
+  }
+
+  .email-meta {
+    display: grid;
+    gap: 10px;
+  }
+
+  .meta-row {
+    display: flex;
+    align-items: baseline;
+  }
+
+  .meta-label {
+    font-weight: 600;
+    color: #9ca3af;
+    min-width: 80px;
+    margin-right: 10px;
+  }
+
+  .meta-value {
+    color: #ffffff;
+    flex: 1;
+  }
+
+  .email-actions {
+    display: flex;
+    gap: 10px;
+    margin: 20px 0;
+    padding: 15px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 12px;
+    flex-wrap: wrap;
+  }
+
+  .action-btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.06);
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .action-btn:hover {
+    background: rgba(255,255,255,0.12);
+    transform: translateY(-2px);
+  }
+
+  .action-btn.primary {
+    background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+    border: none;
+  }
+
+  .action-btn.danger {
+    background: linear-gradient(135deg,#dc2626 0%,#991b1b 100%);
+    border: none;
+  }
+
+  .action-btn.success {
+    background: linear-gradient(135deg,#10b981 0%,#059669 100%);
+    border: none;
+  }
+
+  .email-body {
+    padding: 20px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 12px;
+    margin-top: 20px;
+    min-height: 300px;
+  }
+
+  .body-toggle {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+
+  .toggle-btn {
+    padding: 5px 15px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: #9ca3af;
+    cursor: pointer;
+  }
+
+  .toggle-btn.active {
+    background: rgba(103,126,234,0.2);
+    border-color: #667eea;
+    color: #667eea;
+  }
+
+  .email-content {
+    color: #ffffff;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  .email-html-content {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 20px;
+    color: #000000;
+  }
+
+  .attachments-section {
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 12px;
+  }
+
+  .attachment-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 8px;
+    margin: 5px 0;
+  }
+
+  .status-badge {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .status-HELD { background: #ffb34733; color: #ffb347; }
+  .status-RELEASED { background: #4ade8033; color: #4ade80; }
+  .status-FETCHED { background: #6366f133; color: #818cf8; }
+  .status-PENDING { background: #f59e0b33; color: #f59e0b; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 style="font-size:1.4rem;">Email Viewer</h1>
+  <a href="/inbox" class="btn-secondary">← Back to Inbox</a>
+</div>
+
+<div class="email-viewer">
+  <!-- Email Header -->
+  <div class="email-header">
+    <div class="email-subject">{{ email.subject or 'No Subject' }}</div>
+    <div class="email-meta">
+      <div class="meta-row">
+        <span class="meta-label">From:</span>
+        <span class="meta-value">{{ email.sender }}</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">To:</span>
+        <span class="meta-value">{{ email.recipients }}</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Date:</span>
+        <span class="meta-value">{{ email.created_at }}</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Status:</span>
+        <span class="status-badge status-{{ email.interception_status or email.status }}">
+          {{ email.interception_status or email.status or 'UNKNOWN' }}
+        </span>
+      </div>
+      {% if email.account_id %}
+      <div class="meta-row">
+        <span class="meta-label">Account:</span>
+        <span class="meta-value">Account #{{ email.account_id }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Email Actions -->
+  <div class="email-actions">
+    <button class="action-btn primary" onclick="replyEmail({{ email.id }})">
+      <i class="bi bi-reply"></i> Reply
+    </button>
+    <button class="action-btn primary" onclick="forwardEmail({{ email.id }})">
+      <i class="bi bi-forward"></i> Forward
+    </button>
+    <button class="action-btn success" onclick="downloadEmail({{ email.id }})">
+      <i class="bi bi-download"></i> Download
+    </button>
+    {% if email.interception_status != 'HELD' %}
+    <button class="action-btn danger" onclick="interceptEmail({{ email.id }})">
+      <i class="bi bi-hand-stop"></i> Intercept
+    </button>
+    {% else %}
+    <button class="action-btn success" onclick="releaseEmail({{ email.id }})">
+      <i class="bi bi-check-circle"></i> Release
+    </button>
+    <button class="action-btn" onclick="editEmail({{ email.id }})">
+      <i class="bi bi-pencil"></i> Edit
+    </button>
+    {% endif %}
+    <button class="action-btn danger" onclick="deleteEmail({{ email.id }})">
+      <i class="bi bi-trash"></i> Delete
+    </button>
+  </div>
+
+  <!-- Email Body -->
+  <div class="email-body">
+    <div class="body-toggle">
+      <button class="toggle-btn active" onclick="showTextBody()">Text</button>
+      <button class="toggle-btn" onclick="showHtmlBody()">HTML</button>
+      <button class="toggle-btn" onclick="showRawBody()">Raw</button>
+    </div>
+
+    <div id="textBody" class="email-content">
+      {{ email.body_text or 'No text content' }}
+    </div>
+
+    <div id="htmlBody" class="email-html-content" style="display:none;">
+      {% if email.body_html %}
+        <iframe srcdoc="{{ email.body_html | e }}" style="width:100%; height:500px; border:none;"></iframe>
+      {% else %}
+        No HTML content
+      {% endif %}
+    </div>
+
+    <div id="rawBody" class="email-content" style="display:none; font-family:monospace; font-size:0.9rem;">
+      {{ email.raw_content[:5000] if email.raw_content else 'No raw content available' }}
+    </div>
+  </div>
+
+  <!-- Attachments if any -->
+  {% if email.attachments %}
+  <div class="attachments-section">
+    <h3 style="color:#ffffff; margin-bottom:10px;">Attachments</h3>
+    {% for attachment in email.attachments %}
+    <div class="attachment-item">
+      <span>{{ attachment.filename }}</span>
+      <button class="action-btn" onclick="downloadAttachment({{ attachment.id }})">
+        <i class="bi bi-download"></i>
+      </button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<!-- Edit Email Modal -->
+<div class="modal fade" id="editEmailModal" tabindex="-1" aria-labelledby="editEmailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="background:linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%);border:1px solid rgba(255,255,255,0.06);">
+            <div class="modal-header bg-gradient" style="background:linear-gradient(135deg,#dc2626 0%,#991b1b 50%,#7f1d1d 100%) !important;">
+                <h5 class="modal-title text-white" id="editEmailModalLabel">
+                    <i class="bi bi-pencil-square"></i> Edit Email
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="color:#fff !important;">
+                <form id="editEmailForm">
+                    <input type="hidden" id="editEmailId" value="">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">From:</label>
+                        <p id="editEmailFrom" class="form-control-plaintext"></p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">To:</label>
+                        <p id="editEmailTo" class="form-control-plaintext"></p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editEmailSubject" class="form-label fw-bold">Subject:</label>
+                        <input type="text" class="form-control" id="editEmailSubject" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editEmailBody" class="form-label fw-bold">Message Body:</label>
+                        <textarea class="form-control" id="editEmailBody" rows="10" required style="font-family: monospace;"></textarea>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <small>Editing this email will update its content before it's sent to the final destination.</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveEmailEdit()">
+                    <i class="bi bi-save"></i> Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showTextBody() {
+  document.getElementById('textBody').style.display = 'block';
+  document.getElementById('htmlBody').style.display = 'none';
+  document.getElementById('rawBody').style.display = 'none';
+  updateToggleButtons(0);
+}
+
+function showHtmlBody() {
+  document.getElementById('textBody').style.display = 'none';
+  document.getElementById('htmlBody').style.display = 'block';
+  document.getElementById('rawBody').style.display = 'none';
+  updateToggleButtons(1);
+}
+
+function showRawBody() {
+  document.getElementById('textBody').style.display = 'none';
+  document.getElementById('htmlBody').style.display = 'none';
+  document.getElementById('rawBody').style.display = 'block';
+  updateToggleButtons(2);
+}
+
+function updateToggleButtons(activeIndex) {
+  const buttons = document.querySelectorAll('.toggle-btn');
+  buttons.forEach((btn, idx) => {
+    if (idx === activeIndex) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+}
+
+async function replyEmail(emailId) {
+  const response = await fetch(`/api/email/${emailId}/reply-forward?action=reply`);
+  const data = await response.json();
+  if (data.success) {
+    // Redirect to compose with pre-filled data
+    localStorage.setItem('emailDraft', JSON.stringify(data.data));
+    window.location.href = '/compose';
+  }
+}
+
+async function forwardEmail(emailId) {
+  const response = await fetch(`/api/email/${emailId}/reply-forward?action=forward`);
+  const data = await response.json();
+  if (data.success) {
+    // Redirect to compose with pre-filled data
+    localStorage.setItem('emailDraft', JSON.stringify(data.data));
+    window.location.href = '/compose';
+  }
+}
+
+function downloadEmail(emailId) {
+  window.location.href = `/api/email/${emailId}/download`;
+}
+
+async function interceptEmail(emailId) {
+  if (!confirm('Intercept this email and hold it for review?')) return;
+
+  const response = await fetch(`/api/email/${emailId}/intercept`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'}
+  });
+
+  const data = await response.json();
+  if (data.success) {
+    alert('Email intercepted successfully');
+    window.location.reload();
+  }
+}
+
+async function releaseEmail(emailId) {
+  if (!confirm('Release this email?')) return;
+
+  const response = await fetch(`/api/interception/release/${emailId}`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'}
+  });
+
+  const data = await response.json();
+  if (data.success) {
+    alert('Email released successfully');
+    window.location.reload();
+  }
+}
+
+function editEmail(emailId) {
+    console.log(`Fetching email details for ID: ${emailId}`);
+
+    // Fetch email details
+    fetch(`/email/${emailId}/edit`)
+        .then(response => {
+            console.log(`Response status: ${response.status}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Received data:', data);
+
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+
+            // Check if modal elements exist
+            const modalElement = document.getElementById('editEmailModal');
+            if (!modalElement) {
+                console.error('Modal element not found');
+                alert('Edit modal not found in the page');
+                return;
+            }
+
+            // Populate modal fields
+            document.getElementById('editEmailId').value = data.id;
+            document.getElementById('editEmailFrom').textContent = data.sender;
+            document.getElementById('editEmailTo').textContent = data.recipients;
+            document.getElementById('editEmailSubject').value = data.subject || '';
+            document.getElementById('editEmailBody').value = data.body || '';
+
+            // Show modal
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+            console.log('Modal should be visible now');
+        })
+        .catch(error => {
+            console.error('Error loading email details:', error);
+            console.error('Error stack:', error.stack);
+            alert(`Failed to load email details: ${error.message}`);
+        });
+}
+
+function saveEmailEdit() {
+    const emailId = document.getElementById('editEmailId').value;
+    const subject = document.getElementById('editEmailSubject').value;
+    const body = document.getElementById('editEmailBody').value;
+
+    if (!subject || !body) {
+        alert('Subject and body are required');
+        return;
+    }
+
+    // Show saving indicator
+    const saveBtn = event.target || document.querySelector('#editEmailModal .btn-primary');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+
+    // Send update request
+    fetch(`/email/${emailId}/edit`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            subject: subject,
+            body: body
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.error) {
+            alert(data.error);
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalText;
+        } else {
+            // Show success message briefly
+            saveBtn.innerHTML = '<i class="bi bi-check-circle"></i> Saved!';
+            setTimeout(() => {
+                // Close modal and reload page
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editEmailModal'));
+                modal.hide();
+                location.reload();
+            }, 500);
+        }
+    })
+    .catch(error => {
+        console.error('Error saving email:', error);
+        alert(`Failed to save changes: ${error.message}`);
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalText;
+    });
+}
+
+async function deleteEmail(emailId) {
+  if (!confirm('Are you sure you want to delete this email?')) return;
+
+  const response = await fetch(`/api/interception/discard/${emailId}`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'}
+  });
+
+  const data = await response.json();
+  if (data.success) {
+    alert('Email deleted successfully');
+    window.location.href = '/inbox';
+  }
+}
+</script>
+{% endblock %}
