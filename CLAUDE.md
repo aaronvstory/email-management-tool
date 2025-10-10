@@ -24,13 +24,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ✅ **INTERNALDATE Extraction** - Server timestamps properly parsed and stored
 - ✅ **Toast Notification System** - Replaced all browser alerts with Bootstrap 5.3 toasts
 - ✅ Modern UX - Non-blocking notifications with auto-dismiss
-- ✅ Dark theme toasts matching STYLEGUIDE.md principles
+- ✅ Dark theme toasts matching docs/STYLEGUIDE.md principles
 - ✅ Confirmation prompts only for critical actions (delete)
 - ✅ Fixed email edit button functionality with working Bootstrap modal
 - ✅ Fixed search input white backgrounds (now consistent dark theme)
 - ✅ Added `.input-modern` CSS class for uniform input styling
 - ✅ Fixed background scrolling issue with `background-attachment: fixed`
-- ✅ Comprehensive style guide created (`STYLEGUIDE.md`) - **MUST FOLLOW**
+- ✅ Comprehensive style guide created (`docs/STYLEGUIDE.md`) - **MUST FOLLOW**
 - ✅ Smart SMTP/IMAP detection implemented (auto-detects settings from email domain)
 - ✅ Two permanent test accounts configured and verified (Gmail + Hostinger)
 - ✅ Phase 0 DB Hardening: Added optimized indices (status/interception/account) + WAL mode + batch fetch helpers
@@ -631,13 +631,13 @@ Supports Gmail, Outlook, Hostinger, and any IMAP/SMTP provider:
 
 ## UI/UX Design System
 
-**⚠️ CRITICAL**: All UI/UX work MUST follow the comprehensive style guide in `STYLEGUIDE.md`. This is mandatory for consistency and maintainability.
+**⚠️ CRITICAL**: All UI/UX work MUST follow the comprehensive style guide in `docs/STYLEGUIDE.md`. This is mandatory for consistency and maintainability.
 
 **Theme**: Dark-first design with red accent (#dc2626)
 **Framework**: Bootstrap 5.3 with extensive custom CSS
 **Icons**: Bootstrap Icons + Font Awesome 6.5
 
-**Key Design Principles** (See `STYLEGUIDE.md` for full details):
+**Key Design Principles** (See `docs/STYLEGUIDE.md` for full details):
 
 - **Dark Theme**: Consistent dark backgrounds with proper contrast ratios
 - **Fixed Background**: Body uses `background-attachment: fixed` to prevent white screen on scroll
@@ -653,7 +653,7 @@ Supports Gmail, Outlook, Hostinger, and any IMAP/SMTP provider:
 - Cards with rounded corners (15-18px), multi-layer gradient backgrounds
 - Responsive: 4 columns → 2 tablets → 1 mobile
 
-**Color System** (from `STYLEGUIDE.md`):
+**Color System** (from `docs/STYLEGUIDE.md`):
 
 ```css
 --primary-color: #dc2626; /* Bright red - primary actions */
@@ -696,7 +696,7 @@ Supports Gmail, Outlook, Hostinger, and any IMAP/SMTP provider:
 
 ### Critical Requirements
 
-**⚠️ ALWAYS consult `STYLEGUIDE.md` before making ANY UI changes!**
+**⚠️ ALWAYS consult `docs/STYLEGUIDE.md` before making ANY UI changes!**
 
 ### Common UI Patterns
 
@@ -769,7 +769,7 @@ confirmToast(
 - Auto-dismiss after 4-5 seconds (configurable)
 - Manual close button always available
 - Top-right positioning with slide-in animation
-- Dark theme matching STYLEGUIDE.md
+- Dark theme matching docs/STYLEGUIDE.md
 - Non-blocking user experience
 - Only use `confirmToast()` for destructive actions (delete, discard)
 
@@ -810,7 +810,7 @@ Before committing UI changes:
 
 ### Adding New Features
 
-1. **Consult STYLEGUIDE.md first** if adding UI components
+1. **Consult docs/STYLEGUIDE.md first** if adding UI components
 2. Update database schema if needed (with migration check)
 3. Add route handler in `simple_app.py` or create blueprint
 4. Create/update Jinja2 template in `templates/`
@@ -932,12 +932,15 @@ Email-Management-Tool/
 ├── EmailManager.bat                     # Primary launcher (menu-driven)
 ├── launch.bat                           # Quick start launcher
 ├── CLAUDE.md                            # This file - main documentation
-├── STYLEGUIDE.md                        # UI/UX standards (MUST FOLLOW)
-├── PERMANENT_TEST_ACCOUNTS.md           # Permanent account guide
-├── INTERCEPTION_IMPLEMENTATION.md       # Technical architecture details
 ├── app/
 │   ├── routes/interception.py           # Interception blueprint
 │   └── utils/                           # db.py, crypto.py
+├── docs/                                # Documentation
+│   ├── STYLEGUIDE.md                    # UI/UX standards (MUST FOLLOW)
+│   ├── INTERCEPTION_IMPLEMENTATION.md   # Technical architecture details
+│   ├── architecture/                    # Architecture diagrams
+│   ├── reports/                         # Analysis reports
+│   └── setup/                           # Setup guides
 ├── static/
 │   ├── js/app.js                        # Toast notification system (v2.3)
 │   └── css/theme-dark.css               # Dark theme styling
@@ -949,6 +952,8 @@ Email-Management-Tool/
 │   └── check_status.bat                 # Quick status check
 ├── tests/                               # Test suite (pytest)
 ├── archive/                             # Historical files (see archive/README.md)
+│   ├── docs/                            # Superseded documentation
+│   ├── scripts/                         # Old utility scripts
 │   ├── milestones/                      # Completion markers from past phases
 │   ├── backups/                         # Backup files from major refactors
 │   ├── old-templates/                   # Legacy HTML templates
@@ -1118,11 +1123,10 @@ python -m pytest tests/ --ignore=tests/integration --ignore=tests/unit/frontend
 
 For more detailed information, see:
 
-- **STYLEGUIDE.md** - **MANDATORY** comprehensive style guide (colors, typography, components, patterns)
-- **INTERCEPTION_TESTS_COMPLETE.md** - Complete test suite documentation (INTERNALDATE, released counts, lifecycle tests)
-- **PERMANENT_TEST_ACCOUNTS.md** - Complete guide to permanent test accounts, setup commands, and troubleshooting
-- **INTERCEPTION_IMPLEMENTATION.md** - Technical details of email interception architecture
-- **.claude/research/testing/test-failure-analysis.md** - Comprehensive test failure root cause analysis
+- **docs/STYLEGUIDE.md** - **MANDATORY** comprehensive style guide (colors, typography, components, patterns)
+- **docs/INTERCEPTION_IMPLEMENTATION.md** - Technical details of email interception architecture
+- **archive/docs/PERMANENT_TEST_ACCOUNTS.md** - Complete guide to permanent test accounts (superseded by CLAUDE.md)
+- **archive/docs/WORKSPACE_CLEANUP_COMPLETE.md** - Previous workspace cleanup record
 
 ## Quick Reference Scripts
 
