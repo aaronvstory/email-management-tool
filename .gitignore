@@ -155,3 +155,20 @@ docker-compose.override.yml
 
 # YoYo AI version control directory
 .yoyo/
+
+# Test artifacts
+test_*.db
+test_*.sqlite
+*.backup-*
+
+# Backup files
+*.backup
+simple_app.py.backup*
+
+# MCP directories
+.serena/
+.playwright-mcp/
+.kilocode/
+
+# Development
+.claude-session
