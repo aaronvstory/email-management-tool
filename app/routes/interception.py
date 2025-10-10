@@ -131,10 +131,17 @@ def api_interception_release(msg_id:int):
     """, (msg_id,)).fetchone()
     if not row:
         conn.close(); return jsonify({'ok':False,'reason':'not-held'}), 409
+
+    # Load email from raw_path (legacy) or raw_content (new UID-based fetch)
     raw_path = row['raw_path']
-    if not raw_path or not os.path.exists(raw_path):
+    raw_content = row['raw_content']
+    if raw_path and os.path.exists(raw_path):
+        with open(raw_path,'rb') as f: original_bytes = f.read()
+    elif raw_content:
+        original_bytes = raw_content.encode('utf-8') if isinstance(raw_content, str) else raw_content
+    else:
         conn.close(); return jsonify({'ok':False,'reason':'raw-missing'}), 500
-    with open(raw_path,'rb') as f: original_bytes = f.read()
+
     msg = BytesParser(policy=default_policy).parsebytes(original_bytes)
     if edited_subject:
         msg.replace_header('Subject', edited_subject) if msg['Subject'] else msg.add_header('Subject', edited_subject)
@@ -182,11 +189,22 @@ def api_interception_release(msg_id:int):
         imap.login(row['imap_username'], decrypted_pass)
         status,_ = imap.select(target_folder)
         if status != 'OK': imap.select('INBOX')
-        internaldate = row['original_internaldate'] or datetime.utcnow().strftime('%d-%b-%Y %H:%M:%S +0000')
+        # Pass None for date (current time) or original internaldate if available
+        internaldate = row['original_internaldate'] if row['original_internaldate'] else None
         imap.append(target_folder, '', internaldate, msg.as_bytes()); imap.logout()
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         conn.close(); return jsonify({'ok':False,'reason':'append-failed','error':str(e)}), 500
-    cur.execute("UPDATE email_messages SET interception_status='RELEASED', action_taken_at=datetime('now'), edited_message_id=? WHERE id=?", (msg.get('Message-ID'), msg_id))
+    cur.execute("""
+        UPDATE email_messages
+        SET interception_status='RELEASED',
+            status='DELIVERED',
+            edited_message_id=?,
+            processed_at=datetime('now'),
+            action_taken_at=datetime('now')
+        WHERE id=?
+    """, (msg.get('Message-ID'), msg_id))
     conn.commit(); conn.close()
     return jsonify({'ok':True,'released_to':target_folder,'attachments_removed':removed})
 

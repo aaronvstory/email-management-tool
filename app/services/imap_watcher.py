@@ -146,9 +146,13 @@ class ImapWatcher:
                     if email_msg.is_multipart():
                         for part in email_msg.walk():
                             if part.get_content_type() == "text/plain":
-                                body_text = part.get_payload(decode=True).decode('utf-8', errors='ignore')
+                                payload = part.get_payload(decode=True)
+                                if payload:
+                                    body_text = payload.decode('utf-8', errors='ignore')
                             elif part.get_content_type() == "text/html":
-                                body_html = part.get_payload(decode=True).decode('utf-8', errors='ignore')
+                                payload = part.get_payload(decode=True)
+                                if payload:
+                                    body_html = payload.decode('utf-8', errors='ignore')
                     else:
                         content = email_msg.get_payload(decode=True)
                         if content:
@@ -285,24 +289,30 @@ class IMAPRapidInterceptor(threading.Thread):
 
     def run(self):
         while not self._stop.is_set():
+            c = None
             try:
-                with self._connect() as c:
-                    c.select_folder("INBOX")
-                    status = c.folder_status("INBOX", [b'UIDNEXT'])
-                    last_uidnext = status[b'UIDNEXT']
-                    while not self._stop.is_set():
-                        # IDLE wait
-                        with c.idle():
-                            _ = c.idle_check(timeout=60)
-                        # On exit from IDLE, check for new messages
-                        status2 = c.folder_status("INBOX", [b'UIDNEXT'])
-                        uidnext2 = status2[b'UIDNEXT']
-                        if uidnext2 > last_uidnext:
-                            new_uid_first = last_uidnext
-                            new_uids = c.search([u'UID', f'{new_uid_first}:{uidnext2 - 1}'])
-                            if new_uids:
-                                self._move_atomic(c, new_uids)
-                            last_uidnext = uidnext2
+                c = self._connect()
+                c.select_folder("INBOX")
+                status = c.folder_status("INBOX", [b'UIDNEXT'])
+                last_uidnext = status[b'UIDNEXT']
+                while not self._stop.is_set():
+                    # IDLE wait
+                    with c.idle():
+                        _ = c.idle_check(timeout=60)
+                    # On exit from IDLE, check for new messages
+                    status2 = c.folder_status("INBOX", [b'UIDNEXT'])
+                    uidnext2 = status2[b'UIDNEXT']
+                    if uidnext2 > last_uidnext:
+                        new_uid_first = last_uidnext
+                        new_uids = c.search(f'UID {new_uid_first}:{uidnext2 - 1}')
+                        if new_uids:
+                            self._move_atomic(c, new_uids)
+                        last_uidnext = uidnext2
             except Exception:
                 time.sleep(2.0)
-                continue
+            finally:
+                if c:
+                    try:
+                        c.logout()
+                    except Exception:
+                        pass

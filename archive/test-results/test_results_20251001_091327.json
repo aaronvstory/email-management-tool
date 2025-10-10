@@ -1,0 +1,59 @@
+{
+  "timestamp": "2025-10-01T09:13:27.915806",
+  "summary": {
+    "total_accounts": 4,
+    "smtp_success": 2,
+    "imap_success": 2,
+    "all_success": false
+  },
+  "accounts": [
+    {
+      "name": "Gmail Test Account",
+      "email": "test.email.manager@gmail.com",
+      "smtp": {
+        "success": false,
+        "message": "(535, b'5.7.8 Username and Password not accepted. For more information, go to\\n5.7.8  https://support.google.com/mail/?p=BadCredentials d9443c01a7336-28e8d1d95bdsm370295ad.119 - gsmtp')"
+      },
+      "imap": {
+        "success": false,
+        "message": "b'[AUTHENTICATIONFAILED] Invalid credentials (Failure)'"
+      }
+    },
+    {
+      "name": "Hostinger - Corrinbox (Secondary Test)",
+      "email": "mcintyre@corrinbox.com",
+      "smtp": {
+        "success": true,
+        "message": "Connected successfully"
+      },
+      "imap": {
+        "success": true,
+        "message": "Connected, 86 messages in inbox"
+      }
+    },
+    {
+      "name": "Gmail - NDayijecika (Primary Test)",
+      "email": "ndayijecika@gmail.com",
+      "smtp": {
+        "success": true,
+        "message": "Connected successfully"
+      },
+      "imap": {
+        "success": true,
+        "message": "Connected, 145 messages in inbox"
+      }
+    },
+    {
+      "name": "TestAcct",
+      "email": "sender@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    }
+  ]
+}

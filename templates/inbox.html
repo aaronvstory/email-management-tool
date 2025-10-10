@@ -129,7 +129,7 @@ function switchAccount(accountId) {
 async function fetchEmails() {
     const accountId = document.getElementById('accountSelector').value;
     if (!accountId) {
-        alert('Please select an account first');
+        showWarning('Please select an account first');
         return;
     }
 
@@ -173,7 +173,7 @@ async function fetchEmails() {
 async function fetchMore() {
     const accountId = document.getElementById('accountSelector').value;
     if (!accountId) {
-        alert('Please select an account first');
+        showWarning('Please select an account first');
         return;
     }
 

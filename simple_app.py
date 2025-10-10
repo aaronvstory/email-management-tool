@@ -15,15 +15,20 @@ import ssl
 from typing import Tuple, Optional
 
 from flask import Response  # needed for SSE / events
-from email.utils import formatdate, make_msgid
+from email.utils import formatdate, make_msgid, parsedate_to_datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-# Blueprint registration (interception)
-try:
-    from app.routes.interception import bp_interception
-except Exception:
-    bp_interception = None
+# Blueprint registration
+from app.routes.interception import bp_interception
+from app.routes.auth import auth_bp
+from app.routes.dashboard import dashboard_bp
+from app.routes.stats import stats_bp
+from app.routes.moderation import moderation_bp
+from app.routes.compose import compose_bp
+from app.routes.inbox import inbox_bp
+from app.routes.accounts import accounts_bp
+from app.routes.emails import emails_bp
 from datetime import datetime
 from email import policy
 from email import message_from_bytes
@@ -37,7 +42,7 @@ from werkzeug.security import check_password_hash
 
 # Import shared utilities
 from app.utils.crypto import encrypt_credential, decrypt_credential, get_encryption_key
-from app.utils.db import get_db, DB_PATH, table_exists
+from app.utils.db import get_db, DB_PATH, table_exists, fetch_counts
 
 # Import IMAP watcher for email interception
 from app.services.imap_watcher import ImapWatcher, AccountConfig
@@ -50,26 +55,15 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET', 'dev-secret')
 
 login_manager = LoginManager(app)
-login_manager.login_view = 'login'  # type: ignore[attr-defined]
+login_manager.login_view = 'auth.login'  # Updated for blueprint namespacing
 
-class User(UserMixin):
-    def __init__(self, user_id, username, role):
-        self.id = user_id
-        self.username = username
-        self.role = role
+# Import SimpleUser for Flask-Login (Phase 1B modularization)
+from app.models.simple_user import SimpleUser, load_user_from_db
 
 @login_manager.user_loader
 def load_user(user_id):
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        cur = conn.cursor()
-        row = cur.execute("SELECT id, username, role FROM users WHERE id=?", (user_id,)).fetchone()
-        conn.close()
-        if row:
-            return User(row[0], row[1], row[2])
-    except Exception:
-        pass
-    return None
+    """Load user for Flask-Login session management"""
+    return load_user_from_db(user_id)
 
 def log_action(action, user_id, target_id, details):
     """Persist an audit log record (best-effort)."""
@@ -96,6 +90,58 @@ def log_action(action, user_id, target_id, details):
 # Compatibility alias for legacy code paths
 def decrypt_password(val: Optional[str]) -> Optional[str]:
     return decrypt_credential(val) if val else None
+
+def _imap_connect_account(account_row):
+    """Connect to IMAP account and return (imap_obj, supports_move)"""
+    host = account_row['imap_host']
+    port = int(account_row['imap_port'] or 993)
+    username = account_row['imap_username']
+    password = decrypt_credential(account_row['imap_password'])
+    if not (host and username and password):
+        raise RuntimeError("Missing IMAP credentials")
+    if port == 993:
+        imap_obj = imaplib.IMAP4_SSL(host, port)
+    else:
+        imap_obj = imaplib.IMAP4(host, port)
+        try:
+            imap_obj.starttls()
+        except Exception:
+            pass
+    imap_obj.login(username, password)
+    try:
+        typ, caps = imap_obj.capability()
+        supports_move = any(b'MOVE' in c.upper() for c in caps) if isinstance(caps, list) else False
+    except Exception:
+        supports_move = False
+    return imap_obj, supports_move
+
+def _ensure_quarantine(imap_obj, folder_name="Quarantine"):
+    """Ensure quarantine folder exists"""
+    try:
+        imap_obj.create(folder_name)
+    except Exception:
+        pass
+
+def _move_uid_to_quarantine(imap_obj, uid, quarantine="Quarantine"):
+    """Move message to quarantine using MOVE or COPY+DELETE fallback"""
+    _ensure_quarantine(imap_obj, quarantine)
+    # Try native MOVE
+    try:
+        typ, _ = imap_obj.uid('MOVE', uid, quarantine)
+        if typ == 'OK':
+            return True
+    except Exception:
+        pass
+    # Fallback: COPY + delete
+    try:
+        typ, _ = imap_obj.uid('COPY', uid, quarantine)
+        if typ == 'OK':
+            imap_obj.uid('STORE', uid, '+FLAGS', r'(\Deleted)')
+            imap_obj.expunge()
+            return True
+    except Exception:
+        pass
+    return False
 
 def detect_email_settings(email_address: str) -> dict:
     """
@@ -353,12 +399,16 @@ def monitor_imap_account(account_id: int):
             app.logger.error(f"IMAP monitor for account {account_id} failed: {e}", exc_info=True)
             time.sleep(30)  # Wait before retry
 
-# Register interception blueprint providing /healthz and interception APIs
-try:
-    from app.routes.interception import bp_interception
-    app.register_blueprint(bp_interception)
-except Exception as e:
-    print(f"Warning: failed to register interception blueprint: {e}")
+# Register blueprints (Phase 1B modularization)
+app.register_blueprint(auth_bp)          # Auth routes: /, /login, /logout
+app.register_blueprint(dashboard_bp)     # Dashboard routes: /dashboard, /dashboard/<tab>
+app.register_blueprint(stats_bp)         # Stats API: /api/stats, /api/unified-stats, /stream/stats
+app.register_blueprint(moderation_bp)    # Moderation: /rules
+app.register_blueprint(bp_interception)  # Interception API (Phase 1A)
+app.register_blueprint(compose_bp)       # Compose: /compose (Phase 1C)
+app.register_blueprint(inbox_bp)         # Inbox: /inbox (Phase 1C)
+app.register_blueprint(accounts_bp)      # Accounts pages: /accounts, /accounts/add (Phase 1C)
+app.register_blueprint(emails_bp)        # Email queue + viewer: /emails, /email/<id> (Phase 1C)
 
         # (Legacy inline IMAP loop removed during refactor)
 
@@ -395,8 +445,26 @@ class EmailModerationHandler:
             # Check moderation rules
             keywords_matched, risk_score = self.check_rules(subject, body_text)
 
+            # Lookup account_id by matching recipient email addresses
+            account_id = None
+            rcpt_list = [str(r) for r in envelope.rcpt_tos]
+            if rcpt_list:
+                try:
+                    conn_match = sqlite3.connect(DB_PATH)
+                    curm = conn_match.cursor()
+                    placeholders = ",".join("?" for _ in rcpt_list)
+                    rows = curm.execute(
+                        f"SELECT id FROM email_accounts WHERE lower(email_address) IN ({placeholders})",
+                        [r.lower() for r in rcpt_list]
+                    ).fetchall()
+                    if rows:
+                        account_id = rows[0][0]
+                    conn_match.close()
+                except Exception:
+                    pass
+
             # Store in database with retry logic
-            print(f"📨 SMTP Handler: Storing in database - Subject: {subject}, Risk: {risk_score}")
+            print(f"📨 SMTP Handler: Storing in database - Subject: {subject}, Risk: {risk_score}, Account: {account_id}")
 
             max_retries = 5
             for attempt in range(max_retries):
@@ -405,10 +473,25 @@ class EmailModerationHandler:
                     cursor = conn.cursor()
                     cursor.execute('''
                         INSERT INTO email_messages
-                        (message_id, sender, recipients, subject, body_text, body_html, raw_content, keywords_matched, risk_score, status)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ''', (message_id, sender, recipients, subject, body_text, body_html,
-                          envelope.content, json.dumps(keywords_matched), risk_score, 'PENDING'))
+                        (message_id, account_id, direction, status, interception_status,
+                         sender, recipients, subject, body_text, body_html,
+                         raw_content, keywords_matched, risk_score, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                    ''', (
+                        message_id,
+                        account_id,
+                        'inbound',
+                        'PENDING',
+                        'HELD',
+                        sender,
+                        recipients,
+                        subject,
+                        body_text,
+                        body_html,
+                        envelope.content,
+                        json.dumps(keywords_matched),
+                        risk_score
+                    ))
                     conn.commit()
                     print(f"📨 SMTP Handler: Database commit successful - Row ID: {cursor.lastrowid}")
                     conn.close()
@@ -463,11 +546,12 @@ class EmailModerationHandler:
 
         return keywords, min(risk_score, 100)
 
-if 'app' in globals() and bp_interception:
-    try:
-        app.register_blueprint(bp_interception)
-    except Exception:
-        pass
+# Removed duplicate blueprint registration
+# if 'app' in globals() and bp_interception:
+#     try:
+#         app.register_blueprint(bp_interception)
+#     except Exception:
+#         pass
 
 # Context processor to inject pending_count into all templates
 @app.context_processor
@@ -485,132 +569,15 @@ def inject_pending_count():
     return {'pending_count': 0}
 
 # Routes
-@app.route('/')
-def index():
-    """Redirect to dashboard or login"""
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
-    return redirect(url_for('login'))
+# ============================================================================
+# PHASE 1B: Auth routes migrated to app/routes/auth.py
+# Routes: /, /login, /logout
+# ============================================================================
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    """Login page"""
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        user = cursor.execute("SELECT id, username, password_hash, role FROM users WHERE username = ?",
-                              (username,)).fetchone()
-        conn.close()
-
-        if user and check_password_hash(user[2], password):
-            user_obj = User(user[0], user[1], user[3])
-            login_user(user_obj)
-
-            # Log the action
-            log_action('LOGIN', user[0], None, f"User {username} logged in")
-
-            return redirect(url_for('dashboard'))
-
-        flash('Invalid username or password', 'error')
-
-    return render_template('login.html')
-
-@app.route('/logout')
-@login_required
-def logout():
-    """Logout"""
-    log_action('LOGOUT', current_user.id, None, f"User {current_user.username} logged out")
-    logout_user()
-    return redirect(url_for('login'))
-
-@app.route('/dashboard')
-@app.route('/dashboard/<tab>')
-@login_required
-def dashboard(tab='overview'):
-    """Main dashboard with tab navigation"""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    # Get email accounts for account selector
-    accounts = cursor.execute("""
-        SELECT id, account_name, email_address, imap_host, imap_port, smtp_host, smtp_port,
-               is_active, last_checked, last_error
-        FROM email_accounts
-        ORDER BY account_name
-    """).fetchall()
-
-    # Get selected account from query params
-    selected_account_id = request.args.get('account_id', None)
-
-    # Get statistics (filtered by account if selected)
-    if selected_account_id:
-        stats = {
-            'total': cursor.execute("SELECT COUNT(*) FROM email_messages WHERE account_id = ?", (selected_account_id,)).fetchone()[0],
-            'pending': cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'PENDING' AND account_id = ?", (selected_account_id,)).fetchone()[0],
-            'approved': cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'APPROVED' AND account_id = ?", (selected_account_id,)).fetchone()[0],
-            'rejected': cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'REJECTED' AND account_id = ?", (selected_account_id,)).fetchone()[0],
-            'sent': cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'SENT' AND account_id = ?", (selected_account_id,)).fetchone()[0],
-        }
-
-        # Get recent emails for selected account
-        recent_emails = cursor.execute("""
-            SELECT id, sender, recipients, subject, status, risk_score, created_at
-            FROM email_messages
-            WHERE account_id = ?
-            ORDER BY created_at DESC
-            LIMIT 10
-        """, (selected_account_id,)).fetchall()
-    else:
-        # Get overall statistics
-        stats = {
-            'total': cursor.execute("SELECT COUNT(*) FROM email_messages").fetchone()[0],
-            'pending': cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'PENDING'").fetchone()[0],
-            'approved': cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'APPROVED'").fetchone()[0],
-            'rejected': cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'REJECTED'").fetchone()[0],
-            'sent': cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'SENT'").fetchone()[0],
-        }
-
-        # Get recent emails from all accounts
-        recent_emails = cursor.execute("""
-            SELECT id, sender, recipients, subject, status, risk_score, created_at
-            FROM email_messages
-            ORDER BY created_at DESC
-            LIMIT 10
-        """).fetchall()
-
-    # Get active rules count
-    active_rules = cursor.execute("SELECT COUNT(*) FROM moderation_rules WHERE is_active = 1").fetchone()[0]
-
-    # Get all moderation rules for Rules tab
-    rules = cursor.execute("""
-        SELECT id, rule_name, rule_type, condition_field, condition_operator,
-               condition_value, action, priority, is_active, created_at
-        FROM moderation_rules
-        ORDER BY priority DESC, rule_name
-    """).fetchall()
-
-    conn.close()
-
-    return render_template('dashboard_unified.html',
-                         stats=stats,
-                         recent_emails=recent_emails,
-                         active_rules=active_rules,
-                         rules=rules,
-                         accounts=accounts,
-                         selected_account_id=selected_account_id,
-                         active_tab=tab,
-                         pending_count=stats['pending'],
-                         user=current_user)
-
-@app.route('/test-dashboard')
-@login_required
-def test_dashboard():
-    """Display the testing dashboard"""
-    return render_template('test_dashboard.html')
+# ============================================================================
+# PHASE 1B: Dashboard routes migrated to app/routes/dashboard.py
+# Routes: /dashboard, /dashboard/<tab>, /test-dashboard
+# ============================================================================
 
 @app.route('/test/cross-account', methods=['POST'])
 @login_required
@@ -651,336 +618,27 @@ def get_test_status():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/emails')
-@login_required
-def email_queue():
-    """Email queue page"""
-    status_filter = request.args.get('status', 'PENDING')
-    account_id = request.args.get('account_id', type=int)
+"""Moved: /emails queue page → app/routes/emails.py (emails_bp)"""
 
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
+"""Moved: /email/<id> viewer page → app/routes/emails.py (emails_bp)"""
 
-    # Get all active email accounts for selector
-    accounts = cursor.execute("""
-        SELECT id, account_name, email_address
-        FROM email_accounts
-        WHERE is_active = 1
-        ORDER BY account_name
-    """).fetchall()
+"""Moved: /email/<id>/action → app/routes/emails.py (emails_bp)"""
 
-    # Get counts for all statuses (consider account filter)
-    if account_id:
-        pending_count = cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'PENDING' AND account_id = ?", (account_id,)).fetchone()[0] or 0
-        approved_count = cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'APPROVED' AND account_id = ?", (account_id,)).fetchone()[0] or 0
-        rejected_count = cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'REJECTED' AND account_id = ?", (account_id,)).fetchone()[0] or 0
-        total_count = cursor.execute("SELECT COUNT(*) FROM email_messages WHERE account_id = ?", (account_id,)).fetchone()[0] or 0
-    else:
-        pending_count = cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'PENDING'").fetchone()[0] or 0
-        approved_count = cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'APPROVED'").fetchone()[0] or 0
-        rejected_count = cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'REJECTED'").fetchone()[0] or 0
-        total_count = cursor.execute("SELECT COUNT(*) FROM email_messages").fetchone()[0] or 0
+# ============================================================================
+# PHASE 1B: Moderation routes migrated to app/routes/moderation.py
+# Routes: /rules
+# ============================================================================
 
-    # Get filtered emails based on status and account
-    if account_id:
-        if status_filter == 'ALL' or status_filter == 'all':
-            emails = cursor.execute("""
-                SELECT * FROM email_messages
-                WHERE account_id = ?
-                ORDER BY created_at DESC
-            """, (account_id,)).fetchall()
-        else:
-            emails = cursor.execute("""
-                SELECT * FROM email_messages
-                WHERE status = ? AND account_id = ?
-                ORDER BY created_at DESC
-            """, (status_filter, account_id)).fetchall()
-    else:
-        if status_filter == 'ALL' or status_filter == 'all':
-            emails = cursor.execute("""
-                SELECT * FROM email_messages
-                ORDER BY created_at DESC
-            """).fetchall()
-        else:
-            emails = cursor.execute("""
-                SELECT * FROM email_messages
-                WHERE status = ?
-                ORDER BY created_at DESC
-            """, (status_filter,)).fetchall()
+# Moved: /accounts page → app/routes/accounts.py (accounts_bp)
 
-    conn.close()
+# Moved: /api/detect-email-settings → app/routes/accounts.py (accounts_bp)
 
-    # Debug: Print what we're passing to template
-    app.logger.info(f"Passing to template - pending: {pending_count}, approved: {approved_count}, rejected: {rejected_count}, total: {total_count}")
+# Moved: /accounts/add page → app/routes/accounts.py (accounts_bp)
 
-    # Pass all counts and accounts to template
-    return render_template('email_queue.html',
-                          emails=emails,
-                          current_filter=status_filter,
-                          pending_count=pending_count,
-                          approved_count=approved_count,
-                          rejected_count=rejected_count,
-                          total_count=total_count,
-                          accounts=accounts,
-                          selected_account_id=str(account_id) if account_id else None)
-
-@app.route('/email/<int:email_id>')
-@login_required
-def view_email(email_id):
-    """View email details"""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    email = cursor.execute("SELECT * FROM email_messages WHERE id = ?", (email_id,)).fetchone()
-
-    if not email:
-        conn.close()
-        flash('Email not found', 'error')
-        return redirect(url_for('email_queue'))
-
-    conn.close()
-
-    # Parse recipients and keywords
-    email_data = dict(email)
-    try:
-        email_data['recipients'] = json.loads(email_data['recipients']) if email_data['recipients'] else []
-    except (json.JSONDecodeError, TypeError):
-        # If not JSON, treat as comma-separated string
-        if isinstance(email_data['recipients'], str):
-            email_data['recipients'] = [r.strip() for r in email_data['recipients'].split(',') if r.strip()]
-        else:
-            email_data['recipients'] = []
-
-    try:
-        email_data['keywords_matched'] = json.loads(email_data['keywords_matched']) if email_data['keywords_matched'] else []
-    except (json.JSONDecodeError, TypeError):
-        # If not JSON, treat as comma-separated string
-        if isinstance(email_data['keywords_matched'], str):
-            email_data['keywords_matched'] = [k.strip() for k in email_data['keywords_matched'].split(',') if k.strip()]
-        else:
-            email_data['keywords_matched'] = []
-
-    return render_template('email_detail.html', email=email_data)
-
-@app.route('/email/<int:email_id>/action', methods=['POST'])
-@login_required
-def email_action(email_id):
-    """Handle email actions (approve/reject)"""
-    action = request.form.get('action', '').upper()
-    notes = request.form.get('notes', '')
-
-    if action not in ['APPROVE', 'REJECT']:
-        return jsonify({'error': 'Invalid action'}), 400
-
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    # Update email status
-    new_status = 'APPROVED' if action == 'APPROVE' else 'REJECTED'
-    cursor.execute("""
-        UPDATE email_messages
-        SET status = ?, reviewer_id = ?, review_notes = ?, reviewed_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-    """, (new_status, current_user.id, notes, email_id))
-
-    # Log the action
-    log_action(action, current_user.id, email_id, f"Email {action.lower()}d with notes: {notes}")
-
-    conn.commit()
-    conn.close()
-
-    flash(f'Email {action.lower()}d successfully', 'success')
-    return redirect(url_for('email_queue'))
-
-@app.route('/rules')
-@login_required
-def rules():
-    """Moderation rules page"""
-    if current_user.role != 'admin':
-        flash('Admin access required', 'error')
-        return redirect(url_for('dashboard'))
-
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    rules = cursor.execute("SELECT * FROM moderation_rules ORDER BY priority DESC").fetchall()
-
-    conn.close()
-
-    return render_template('rules.html', rules=rules)
-
-@app.route('/accounts')
-@login_required
-def email_accounts():
-    """Email accounts management page with enhanced status monitoring"""
-    if current_user.role != 'admin':
-        flash('Admin access required', 'error')
-        return redirect(url_for('dashboard'))
-
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    # Get accounts with basic information (only columns that exist)
-    accounts = cursor.execute("""
-        SELECT id, account_name, email_address,
-               imap_host, imap_port, imap_username, imap_use_ssl,
-               smtp_host, smtp_port, smtp_username, smtp_use_ssl,
-               is_active, last_checked, last_error,
-               created_at, updated_at
-        FROM email_accounts
-        ORDER BY account_name
-    """).fetchall()
-
-    conn.close()
-
-    # Check which template exists and use it
-    import os
-    template_path = os.path.join(app.template_folder, 'accounts_simple.html')
-    if os.path.exists(template_path):
-        return render_template('accounts_simple.html', accounts=accounts)
-    else:
-        # Convert list to dict for accounts.html compatibility
-        accounts_dict = {acc['id']: dict(acc) for acc in accounts}
-        return render_template('accounts.html', accounts=accounts_dict)
-
-@app.route('/api/detect-email-settings', methods=['POST'])
-@login_required
-def api_detect_email_settings():
-    """API endpoint for smart detection of email settings"""
-    data = request.get_json()
-    email = data.get('email', '')
-
-    if not email or '@' not in email:
-        return jsonify({'error': 'Invalid email address'}), 400
-
-    settings = detect_email_settings(email)
-    return jsonify(settings)
-
-@app.route('/accounts/add', methods=['GET', 'POST'])
-@login_required
-def add_email_account():
-    """Add new email account"""
-    if current_user.role != 'admin':
-        flash('Admin access required', 'error')
-        return redirect(url_for('dashboard'))
-
-    if request.method == 'POST':
-        # Get form data
-        account_name = request.form.get('account_name')
-        email_address = request.form.get('email_address')
-
-        # Auto-detect settings if requested
-        use_auto_detect = request.form.get('use_auto_detect') == 'on'
-        if use_auto_detect and email_address:
-            auto_settings = detect_email_settings(email_address)
-            imap_host = auto_settings['imap_host']
-            imap_port = auto_settings['imap_port']
-            imap_use_ssl = auto_settings['imap_use_ssl']
-            smtp_host = auto_settings['smtp_host']
-            smtp_port = auto_settings['smtp_port']
-            smtp_use_ssl = auto_settings['smtp_use_ssl']
-            # Username defaults to email address
-            imap_username = email_address
-            smtp_username = email_address
-            imap_password = request.form.get('imap_password')
-            smtp_password = request.form.get('smtp_password')
-        else:
-            # Manual settings
-            imap_host = request.form.get('imap_host')
-            imap_port = int(request.form.get('imap_port', 993))
-            imap_username = request.form.get('imap_username')
-            imap_password = request.form.get('imap_password')
-            imap_use_ssl = request.form.get('imap_use_ssl') == 'on'
-
-            smtp_host = request.form.get('smtp_host')
-            smtp_port = int(request.form.get('smtp_port', 465))
-            smtp_username = request.form.get('smtp_username')
-            smtp_password = request.form.get('smtp_password')
-            smtp_use_ssl = request.form.get('smtp_use_ssl') == 'on'
-
-        # Test connections
-        imap_success, imap_msg = test_email_connection('imap', imap_host, imap_port, imap_username, imap_password, imap_use_ssl)
-        smtp_success, smtp_msg = test_email_connection('smtp', smtp_host, smtp_port, smtp_username, smtp_password, smtp_use_ssl)
-
-        if not imap_success:
-            flash(f'IMAP connection failed: {imap_msg}', 'error')
-            return render_template('add_account.html')
-
-        if not smtp_success:
-            flash(f'SMTP connection failed: {smtp_msg}', 'error')
-            return render_template('add_account.html')
-
-        # Encrypt passwords
-        encrypted_imap_password = encrypt_credential(imap_password)
-        encrypted_smtp_password = encrypt_credential(smtp_password)
-
-        # Save to database
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO email_accounts
-            (account_name, email_address, imap_host, imap_port, imap_username, imap_password, imap_use_ssl,
-             smtp_host, smtp_port, smtp_username, smtp_password, smtp_use_ssl, is_active)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-        """, (account_name, email_address, imap_host, imap_port, imap_username, encrypted_imap_password, imap_use_ssl,
-              smtp_host, smtp_port, smtp_username, encrypted_smtp_password, smtp_use_ssl))
-
-        account_id = cursor.lastrowid
-        conn.commit()
-        conn.close()
-
-        # Start IMAP monitoring thread for new account
-        try:
-            thread = threading.Thread(target=monitor_imap_account, args=(account_id,), daemon=True)
-            imap_threads[account_id] = thread
-            thread.start()
-        except Exception as e:
-            app.logger.warning(f"Failed to start IMAP monitor thread for account {account_id}: {e}")
-
-        flash('Account added successfully', 'success')
-        return redirect(url_for('email_accounts'))
-
-    return render_template('add_account.html')
-
-@app.route('/api/stats')
-@login_required
-def api_stats():
-    """API endpoint for real-time statistics"""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    stats = {
-        'total': cursor.execute("SELECT COUNT(*) FROM email_messages").fetchone()[0],
-        'pending': cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'PENDING'").fetchone()[0],
-        'approved': cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'APPROVED'").fetchone()[0],
-        'rejected': cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'REJECTED'").fetchone()[0],
-        'high_risk': cursor.execute("SELECT COUNT(*) FROM email_messages WHERE risk_score >= 70").fetchone()[0],
-    }
-
-    # Get hourly email volume for chart
-    hourly_volume = cursor.execute("""
-        SELECT strftime('%H', created_at) as hour, COUNT(*) as count
-        FROM email_messages
-        WHERE date(created_at) = date('now')
-        GROUP BY hour
-        ORDER BY hour
-    """).fetchall()
-
-    conn.close()
-
-    return jsonify({
-        'total_emails': stats['total'],
-        'pending_emails': stats['pending'],
-        'approved_emails': stats['approved'],
-        'rejected_emails': stats['rejected'],
-        'high_risk_emails': stats['high_risk'],
-        'stats': stats,
-        'hourly_volume': [{'hour': h[0], 'count': h[1]} for h in hourly_volume]
-    })
+# ============================================================================
+# PHASE 1B: Stats routes migrated to app/routes/stats.py
+# Routes: /api/stats, /api/unified-stats, /api/latency-stats, /stream/stats
+# ============================================================================
 
 @app.route('/api/events')
 @login_required
@@ -988,11 +646,10 @@ def api_events():
     """Server-Sent Events endpoint for real-time updates"""
     def generate():
         while True:
+            # TODO: introduce in-memory cache layer (ttl ~2s) using a simple dict + timestamps
             # Get latest email count
-            conn = sqlite3.connect(DB_PATH)
-            cursor = conn.cursor()
-            pending = cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'PENDING'").fetchone()[0]
-            conn.close()
+            counts = fetch_counts()
+            pending = counts.get('pending', 0)
 
             data = json.dumps({'pending': pending, 'timestamp': datetime.now().isoformat()})
             yield f"data: {data}\n\n"
@@ -1101,176 +758,157 @@ def api_get_accounts():
         'accounts': [dict(acc) for acc in accounts]
     })
 
-@app.route('/api/inbox')
-@login_required
-def api_inbox():
-    """API endpoint for inbox with filtering"""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    # Get query parameters
-    status = request.args.get('status')
-    account_id = request.args.get('account_id')
-    search_q = request.args.get('q')
-
-    # Build query
-    query = """
-        SELECT em.*, ea.account_name, ea.email_address as account_email
-        FROM email_messages em
-        LEFT JOIN email_accounts ea ON em.account_id = ea.id
-        WHERE 1=1
-    """
-    params = []
-
-    if status:
-        query += " AND (em.status = ? OR em.interception_status = ?)"
-        params.extend([status, status])
-
-    if account_id:
-        query += " AND em.account_id = ?"
-        params.append(account_id)
-
-    if search_q:
-        query += " AND (em.subject LIKE ? OR em.sender LIKE ?)"
-        params.extend([f'%{search_q}%', f'%{search_q}%'])
-
-    query += " ORDER BY em.created_at DESC LIMIT 100"
-
-    emails = cursor.execute(query, params).fetchall()
-
-    # Add preview snippet and format data
-    messages = []
-    for email in emails:
-        msg = dict(email)
-        # Add preview snippet
-        msg['preview_snippet'] = (email['body_text'] or '')[:200] if email['body_text'] else ''
-        messages.append(msg)
-
-    conn.close()
-
-    return jsonify({
-        'success': True,
-        'messages': messages
-    })
+# ============================================================================
+# /api/inbox route removed - now provided by interception blueprint
+# See app/routes/interception.py for the canonical implementation
+# ============================================================================
 
 @app.route('/api/fetch-emails', methods=['POST'])
 @login_required
 def api_fetch_emails():
-    """Fetch emails from IMAP server with customizable count"""
-    data = request.get_json()
+    """Fetch emails from IMAP server using UID-based fetching"""
+    data = request.get_json() or {}
     account_id = data.get('account_id')
-    fetch_count = data.get('count', 20)  # Default to 20 emails
-    offset = data.get('offset', 0)  # For pagination
+    fetch_count = int(data.get('count', 20))
+    offset = int(data.get('offset', 0))
 
     if not account_id:
         return jsonify({'success': False, 'error': 'Account ID required'}), 400
 
-    # Get account details
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    account = cursor.execute(
-        "SELECT * FROM email_accounts WHERE id = ? AND is_active = 1",
+    cur = conn.cursor()
+    acct = cur.execute(
+        "SELECT * FROM email_accounts WHERE id=? AND is_active=1",
         (account_id,)
     ).fetchone()
-
-    if not account:
+    if not acct:
         conn.close()
-        return jsonify({'success': False, 'error': 'Account not found or inactive'}), 404
+        return jsonify({'success': False, 'error': 'Account not found'}), 404
 
+    mail = None
     try:
-        import imaplib
-        from email import message_from_bytes, policy
+        password = decrypt_credential(acct['imap_password'])
+        if not password:
+            conn.close()
+            return jsonify({'success': False, 'error': 'Password decrypt failed'}), 500
 
-        # Decrypt password
-        password = decrypt_credential(account['imap_password'])
-
-        # Connect to IMAP server
-        if account['imap_port'] == 993:
-            mail = imaplib.IMAP4_SSL(account['imap_host'], account['imap_port'])
+        if acct['imap_port'] == 993:
+            mail = imaplib.IMAP4_SSL(acct['imap_host'], acct['imap_port'])
         else:
-            mail = imaplib.IMAP4(account['imap_host'], account['imap_port'])
-            mail.starttls()
+            mail = imaplib.IMAP4(acct['imap_host'], acct['imap_port'])
+            try:
+                mail.starttls()
+            except Exception:
+                pass
 
-        mail.login(account['imap_username'], password)
+        mail.login(acct['imap_username'], password)
         mail.select('INBOX')
 
-        # Search for all emails
-        _, message_ids = mail.search(None, 'ALL')
-        id_list = message_ids[0].split()
+        typ, data = mail.uid('search', None, 'ALL')
+        if typ != 'OK':
+            return jsonify({'success': False, 'error': 'UID SEARCH failed'}), 500
 
-        # Calculate range for pagination
-        total_emails = len(id_list)
-        start_idx = max(0, total_emails - offset - fetch_count)
-        end_idx = total_emails - offset
+        uid_bytes = data[0].split() if data and data[0] else []
+        total = len(uid_bytes)
+        start = max(0, total - offset - fetch_count)
+        end = total - offset
+        window = uid_bytes[start:end][-fetch_count:]
 
-        # Fetch the requested range
-        fetched_emails = []
-        emails_to_fetch = id_list[start_idx:end_idx][-fetch_count:]  # Get last N emails
+        results = []
+        for raw_uid in reversed(window):
+            uid = raw_uid.decode()
+            typ, msg_payload = mail.uid('fetch', uid, '(RFC822 INTERNALDATE)')
+            if typ != 'OK' or not msg_payload or msg_payload[0] is None:
+                continue
 
-        for email_id in reversed(emails_to_fetch):  # Most recent first
-            _, msg_data = mail.fetch(email_id, '(RFC822)')
-            raw_email = msg_data[0][1]
-            email_msg = message_from_bytes(raw_email, policy=policy.default)
+            # Extract raw email and INTERNALDATE from IMAP response
+            raw_email = msg_payload[0][1]
+            msg = message_from_bytes(raw_email, policy=policy.default)
 
-            # Extract email data
-            sender = str(email_msg.get('From', ''))
-            recipients = json.dumps([str(email_msg.get('To', ''))])
-            subject = str(email_msg.get('Subject', 'No Subject'))
-            message_id = str(email_msg.get('Message-ID', f"manual_{account_id}_{datetime.now().timestamp()}"))
-            date = str(email_msg.get('Date', ''))
+            # Parse INTERNALDATE from IMAP response (more reliable than Date header)
+            internaldate = None
+            try:
+                # IMAP response format: msg_payload[0][0] contains flags and INTERNALDATE
+                fetch_data = msg_payload[0][0]
+                if isinstance(fetch_data, bytes):
+                    fetch_str = fetch_data.decode('utf-8', errors='ignore')
+                    # Extract INTERNALDATE from response like: b'1 (RFC822 {1234} INTERNALDATE "01-Jan-2025 12:00:00 +0000")'
+                    import re
+                    match = re.search(r'INTERNALDATE "([^"]+)"', fetch_str)
+                    if match:
+                        date_str = match.group(1)
+                        date_tuple = imaplib.Internaldate2tuple(f'INTERNALDATE "{date_str}"'.encode())
+                        if date_tuple:
+                            from datetime import datetime as dt
+                            internaldate = dt(*date_tuple[:6]).isoformat()
+            except Exception:
+                pass
 
-            # Extract body
-            body_text = ""
-            body_html = ""
-            if email_msg.is_multipart():
-                for part in email_msg.walk():
-                    if part.get_content_type() == "text/plain":
-                        payload = part.get_payload(decode=True)
-                        if payload:
-                            body_text = payload.decode('utf-8', errors='ignore')
-                    elif part.get_content_type() == "text/html":
-                        payload = part.get_payload(decode=True)
-                        if payload:
-                            body_html = payload.decode('utf-8', errors='ignore')
+            # Fallback to Date header if INTERNALDATE parsing failed
+            if not internaldate:
+                try:
+                    date_hdr = msg.get('Date')
+                    if date_hdr:
+                        internaldate = parsedate_to_datetime(date_hdr).isoformat()
+                except Exception:
+                    pass
+
+            message_id = msg.get('Message-ID') or f"fetch_{account_id}_{uid}"
+            sender = msg.get('From', '')
+            subject = msg.get('Subject', 'No Subject')
+            recipients = json.dumps([msg.get('To', '')])
+
+            body_text = ''
+            body_html = ''
+            if msg.is_multipart():
+                for part in msg.walk():
+                    ctype = part.get_content_type()
+                    payload = part.get_payload(decode=True)
+                    if not payload:
+                        continue
+                    if ctype == 'text/plain':
+                        body_text = payload.decode('utf-8', errors='ignore')
+                    elif ctype == 'text/html':
+                        body_html = payload.decode('utf-8', errors='ignore')
             else:
-                payload = email_msg.get_payload(decode=True)
+                payload = msg.get_payload(decode=True)
                 if payload:
                     body_text = payload.decode('utf-8', errors='ignore')
 
-            # Store in database with manual_fetch flag
-            cursor.execute('''
+            cur.execute("""
                 INSERT OR IGNORE INTO email_messages
                 (message_id, sender, recipients, subject, body_text, body_html,
-                 raw_content, account_id, direction, interception_status, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-            ''', (message_id, sender, recipients, subject, body_text, body_html,
-                  raw_email, account_id, 'inbound', 'FETCHED'))
+                 raw_content, account_id, direction, interception_status,
+                 original_uid, original_internaldate, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+            """, (
+                message_id, sender, recipients, subject, body_text, body_html,
+                raw_email, account_id, 'inbound', 'FETCHED', uid, internaldate
+            ))
 
-            fetched_emails.append({
+            row = cur.execute(
+                "SELECT id FROM email_messages WHERE message_id=? ORDER BY id DESC LIMIT 1",
+                (message_id,)
+            ).fetchone()
+            results.append({
+                'id': row['id'] if row else None,
                 'message_id': message_id,
-                'sender': sender,
-                'subject': subject,
-                'date': date,
-                'preview': body_text[:200] if body_text else ''
+                'uid': uid,
+                'subject': subject
             })
 
         conn.commit()
-        mail.logout()
-
+        return jsonify({'success': True, 'total_available': total, 'fetched': len(results), 'emails': results})
+    except Exception as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 500
+    finally:
+        if mail:
+            try:
+                mail.logout()
+            except Exception:
+                pass
         conn.close()
-        return jsonify({
-            'success': True,
-            'fetched': len(fetched_emails),
-            'total_available': total_emails,
-            'emails': fetched_emails
-        })
-
-    except Exception as e:
-        conn.close()
-        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/email/<email_id>/reply-forward', methods=['GET'])
 @login_required
@@ -1347,23 +985,113 @@ def api_email_download(email_id):
 @app.route('/api/email/<email_id>/intercept', methods=['POST'])
 @login_required
 def api_email_intercept(email_id):
-    """Manually intercept an email (change status to HELD)"""
+    """Manually intercept an email with remote MOVE to Quarantine folder"""
     conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    row = cur.execute("""
+        SELECT em.*, ea.imap_host, ea.imap_port, ea.imap_username, ea.imap_password
+        FROM email_messages em
+        LEFT JOIN email_accounts ea ON em.account_id = ea.id
+        WHERE em.id=?
+    """, (email_id,)).fetchone()
 
-    # Update email status to HELD for manual interception
-    cursor.execute("""
+    if not row:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Not found'}), 404
+    if not row['account_id']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'No linked account'}), 400
+
+    previous = row['interception_status']
+    remote_move = False
+    note = None
+
+    if previous != 'HELD':
+        try:
+            imap_obj, _supports_move = _imap_connect_account(row)
+            imap_obj.select('INBOX')
+            uid = row['original_uid']
+
+            if not uid and row['message_id']:
+                crit = f'(HEADER Message-ID "{row["message_id"]}")'
+                typ, data = imap_obj.uid('search', None, crit)
+                if typ == 'OK' and data and data[0]:
+                    found = data[0].split()
+                    if found:
+                        uid = found[-1].decode()
+
+            if not uid and row['subject']:
+                subj = row['subject'].replace('"', '')
+                typ, data = imap_obj.uid('search', None, f'(HEADER Subject "{subj}")')
+                if typ == 'OK' and data and data[0]:
+                    found = data[0].split()
+                    if found:
+                        uid = found[-1].decode()
+
+            if uid:
+                remote_move = _move_uid_to_quarantine(imap_obj, uid)
+                if remote_move and not row['original_uid']:
+                    cur.execute(
+                        "UPDATE email_messages SET original_uid=? WHERE id=?",
+                        (uid, email_id)
+                    )
+            else:
+                note = "Remote UID not found (Message-ID/Subject search failed)"
+            imap_obj.logout()
+        except Exception as exc:
+            note = f"IMAP error: {exc}"
+
+    cur.execute("""
         UPDATE email_messages
-        SET interception_status = 'HELD',
-            status = 'PENDING',
-            action_taken_at = datetime('now')
-        WHERE id = ?
+        SET interception_status='HELD',
+            status='PENDING',
+            quarantine_folder='Quarantine',
+            action_taken_at=datetime('now')
+        WHERE id=?
     """, (email_id,))
-
     conn.commit()
+
+    # Calculate and update latency_ms if not already set
+    try:
+        row_t = cur.execute("""
+            SELECT created_at, action_taken_at, latency_ms
+            FROM email_messages
+            WHERE id=?
+        """, (email_id,)).fetchone()
+
+        if row_t and row_t['created_at'] and row_t['action_taken_at'] and row_t['latency_ms'] is None:
+            cur.execute("""
+                UPDATE email_messages
+                SET latency_ms = CAST((julianday(action_taken_at) - julianday(created_at)) * 86400000 AS INTEGER)
+                WHERE id=?
+            """, (email_id,))
+            conn.commit()
+    except Exception as e:
+        # Best-effort latency calculation, don't fail the whole operation
+        print(f"Warning: Could not calculate latency_ms: {e}")
+
     conn.close()
 
-    return jsonify({'success': True, 'message': 'Email intercepted and held for review'})
+    # Audit log the manual interception action
+    try:
+        from app.services.audit import log_action
+        user_id = getattr(current_user, 'id', None)
+        details = f"Manual intercept: remote_move={remote_move}, previous_status={previous}"
+        if note:
+            details += f", note={note}"
+        log_action('MANUAL_INTERCEPT', user_id, email_id, details)
+    except Exception as e:
+        # Best-effort logging, don't fail the operation
+        print(f"Warning: Could not log audit action: {e}")
+
+    return jsonify({
+        'success': True,
+        'email_id': email_id,
+        'remote_move': remote_move,
+        'previous_status': previous,
+        'note': note
+    })
 
 @app.route('/api/accounts/<account_id>/health')
 @login_required
@@ -1715,9 +1443,9 @@ def diagnostics(account_id=None):
 
     # Redirect to dashboard with diagnostics tab
     if account_id:
-        return redirect(url_for('dashboard', tab='diagnostics') + f'?account_id={account_id}')
+        return redirect(url_for('dashboard.dashboard', tab='diagnostics') + f'?account_id={account_id}')
     else:
-        return redirect(url_for('dashboard', tab='diagnostics'))
+        return redirect(url_for('dashboard.dashboard', tab='diagnostics'))
 
 @app.route('/diagnostics/test', methods=['POST'])
 @login_required
@@ -1806,68 +1534,15 @@ def api_test_verify_delivery():
     c2 = sqlite3.connect(DB_PATH).cursor(); hit = c2.execute("SELECT 1 FROM email_messages WHERE subject=? LIMIT 1", (subject,)).fetchone(); c2.connection.close()
     return jsonify({'success': bool(hit), 'source': 'local-db'})
 
-@app.route('/email/<int:email_id>/edit', methods=['GET', 'POST'])
-@login_required
-def edit_email(email_id):
-    """Edit an email's subject and body"""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    if request.method == 'GET':
-        # Get email details for editing
-        email = cursor.execute("""
-            SELECT id, subject, body_text, sender, recipients, status
-            FROM email_messages
-            WHERE id = ?
-        """, (email_id,)).fetchone()
-        conn.close()
-
-        if not email:
-            return jsonify({'error': 'Email not found'}), 404
-
-        if email['status'] != 'PENDING':
-            return jsonify({'error': 'Only pending emails can be edited'}), 400
-
-        return jsonify({
-            'id': email['id'],
-            'subject': email['subject'],
-            'body': email['body_text'],
-            'sender': email['sender'],
-            'recipients': email['recipients']
-        })
-
-    elif request.method == 'POST':
-        # Update email with new content
-        data = request.get_json()
-        new_subject = data.get('subject', '').strip()
-        new_body = data.get('body', '').strip()
-
-        if not new_subject or not new_body:
-            return jsonify({'error': 'Subject and body are required'}), 400
-
-        # Update the email
-        cursor.execute("""
-            UPDATE email_messages
-            SET subject = ?,
-                body_text = ?,
-                review_notes = COALESCE(review_notes, '') || '\n[Edited by ' || ? || ' at ' || datetime('now') || ']'
-            WHERE id = ? AND status = 'PENDING'
-        """, (new_subject, new_body, current_user.username, email_id))
-
-        if cursor.rowcount == 0:
-            conn.close()
-            return jsonify({'error': 'Email not found or not in pending status'}), 400
-
-        conn.commit()
-
-        # Log the action
-        log_action('EMAIL_EDITED', current_user.id, email_id, f"Subject: {new_subject[:50]}")
-
-        conn.close()
-
-        flash('Email updated successfully', 'success')
-        return jsonify({'success': True, 'message': 'Email updated successfully'})
+# ===== LEGACY_REMOVED: legacy edit/review endpoints superseded by interception blueprint =====
+# @app.route('/email/<int:email_id>/edit', methods=['GET', 'POST'])
+# def edit_email(...): ...
+# @app.route('/email/<int:email_id>/save', methods=['POST'])
+# def save_email_draft(...): ...
+# @app.route('/email/<int:email_id>/approve-send', methods=['POST'])
+# def approve_and_send_email(...): ...
+# @app.route('/email/<int:email_id>/reject', methods=['POST'])
+# def reject_email(...): ...
 
 @app.route('/email/<int:email_id>/full')
 @login_required
@@ -1906,270 +1581,11 @@ def get_full_email(email_id):
         'processed_at': email['processed_at']
     })
 
-@app.route('/email/<int:email_id>/save', methods=['POST'])
-@login_required
-def save_email_draft(email_id):
-    """Save email as draft with changes"""
-    data = request.get_json()
+# (Functions removed - see LEGACY_REMOVED comment block above)
 
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
+# Moved: /inbox page → app/routes/inbox.py (inbox_bp)
 
-    # Update email with draft changes
-    cursor.execute("""
-        UPDATE email_messages
-        SET subject = ?,
-            body_text = ?,
-            body_html = ?,
-            review_notes = COALESCE(review_notes, '') || '\n[Draft saved by ' || ? || ' at ' || datetime('now') || ']\n' || ?
-        WHERE id = ? AND status = 'PENDING'
-    """, (
-        data.get('subject'),
-        data.get('body_text'),
-        data.get('body_html', ''),
-        current_user.username,
-        data.get('review_notes', ''),
-        email_id
-    ))
-
-    if cursor.rowcount == 0:
-        conn.close()
-        return jsonify({'error': 'Email not found or not pending'}), 400
-
-    conn.commit()
-    conn.close()
-
-    log_action('EMAIL_DRAFT_SAVED', current_user.id, email_id, f"Draft saved")
-
-    return jsonify({'success': True, 'message': 'Draft saved successfully'})
-
-@app.route('/email/<int:email_id>/approve-send', methods=['POST'])
-@login_required
-def approve_and_send_email(email_id):
-    """Approve email and send it immediately"""
-    data = request.get_json()
-
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    # First update the email with any final edits
-    cursor.execute("""
-        UPDATE email_messages
-        SET subject = ?,
-            body_text = ?,
-            body_html = ?,
-            review_notes = COALESCE(review_notes, '') || '\n[Approved and sent by ' || ? || ' at ' || datetime('now') || ']\n' || ?,
-            status = 'APPROVED',
-            approved_by = ?,
-            reviewer_id = ?
-        WHERE id = ? AND status = 'PENDING'
-    """, (
-        data.get('subject'),
-        data.get('body_text'),
-        data.get('body_html', ''),
-        current_user.username,
-        data.get('review_notes', ''),
-        current_user.username,
-        current_user.id,
-        email_id
-    ))
-
-    if cursor.rowcount == 0:
-        conn.close()
-        return jsonify({'error': 'Email not found or not pending'}), 400
-
-    # Get the updated email for sending
-    email = cursor.execute("""
-        SELECT * FROM email_messages WHERE id = ?
-    """, (email_id,)).fetchone()
-
-    conn.commit()
-
-    # TODO: Actually send the email via SMTP
-    # For now, just mark as sent
-    cursor.execute("""
-        UPDATE email_messages
-        SET status = 'SENT',
-            sent_at = datetime('now')
-        WHERE id = ?
-    """, (email_id,))
-
-    conn.commit()
-    conn.close()
-
-    log_action('EMAIL_APPROVED_SENT', current_user.id, email_id, f"Approved and sent")
-
-    return jsonify({'success': True, 'message': 'Email approved and sent successfully'})
-
-@app.route('/email/<int:email_id>/reject', methods=['POST'])
-@login_required
-def reject_email(email_id):
-    """Reject an email"""
-    data = request.get_json()
-
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        UPDATE email_messages
-        SET status = 'REJECTED',
-            review_notes = COALESCE(review_notes, '') || '\n[Rejected by ' || ? || ' at ' || datetime('now') || ']\n' || ?,
-            approved_by = ?,
-            reviewer_id = ?
-        WHERE id = ? AND status = 'PENDING'
-    """, (
-        current_user.username,
-        data.get('review_notes', ''),
-        current_user.username,
-        current_user.id,
-        email_id
-    ))
-
-    if cursor.rowcount == 0:
-        conn.close()
-        return jsonify({'error': 'Email not found or not pending'}), 400
-
-    conn.commit()
-    conn.close()
-
-    log_action('EMAIL_REJECTED', current_user.id, email_id, f"Rejected")
-
-    return jsonify({'success': True, 'message': 'Email rejected successfully'})
-
-@app.route('/inbox')
-@login_required
-def inbox():
-    """View inbox emails from all accounts"""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    # Get all active email accounts
-    accounts = cursor.execute("""
-        SELECT id, account_name, email_address
-        FROM email_accounts
-        WHERE is_active = 1
-        ORDER BY account_name
-    """).fetchall()
-
-    # Get selected account from query params
-    selected_account = request.args.get('account_id', type=int)
-
-    # Get emails from inbox (stored messages)
-    if selected_account:
-        emails = cursor.execute("""
-            SELECT em.*, ea.account_name, ea.email_address
-            FROM email_messages em
-            LEFT JOIN email_accounts ea ON em.account_id = ea.id
-            WHERE em.account_id = ?
-            ORDER BY em.created_at DESC
-            LIMIT 100
-        """, (selected_account,)).fetchall()
-    else:
-        emails = cursor.execute("""
-            SELECT em.*, ea.account_name, ea.email_address
-            FROM email_messages em
-            LEFT JOIN email_accounts ea ON em.account_id = ea.id
-            ORDER BY em.created_at DESC
-            LIMIT 100
-        """).fetchall()
-
-    conn.close()
-
-    return render_template('inbox.html',
-                         emails=emails,
-                         accounts=accounts,
-                         selected_account=selected_account)
-
-@app.route('/compose', methods=['GET', 'POST'])
-@login_required
-def compose_email():
-    """Compose and send a new email"""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    # Get all active email accounts for FROM dropdown
-    accounts = cursor.execute("""
-        SELECT id, account_name, email_address
-        FROM email_accounts
-        WHERE is_active = 1
-        ORDER BY account_name
-    """).fetchall()
-
-    if request.method == 'POST':
-        if request.is_json:
-            data = request.get_json(silent=True) or {}
-            from_account_id = data.get('from_account')
-            to_address = (data.get('to') or '').strip()
-            cc_address = (data.get('cc') or '').strip()
-            subject = (data.get('subject') or '').strip()
-            body = (data.get('body') or '').strip()
-        else:
-            from_account_id = request.form.get('from_account', type=int)
-            to_address = request.form.get('to', '').strip()
-            cc_address = request.form.get('cc', '').strip()
-            subject = request.form.get('subject', '').strip()
-            body = request.form.get('body', '').strip()
-
-        if not from_account_id or not to_address or not subject or not body:
-            if request.is_json:
-                conn.close(); return jsonify({'ok': False, 'error': 'missing-fields'}), 400
-            flash('Please fill in all required fields', 'error')
-            conn.close(); return render_template('compose.html', accounts=accounts)
-
-        account = cursor.execute("SELECT * FROM email_accounts WHERE id = ?", (from_account_id,)).fetchone()
-        if not account:
-            if request.is_json:
-                conn.close(); return jsonify({'ok': False, 'error': 'invalid-account'}), 400
-            flash('Invalid sending account', 'error')
-            conn.close(); return render_template('compose.html', accounts=accounts)
-
-        smtp_password = decrypt_password(account['smtp_password'])
-        if not smtp_password:
-            if request.is_json:
-                conn.close(); return jsonify({'ok': False, 'error': 'decrypt-failed'}), 500
-            flash('Failed to decrypt SMTP password. Re-configure the account.', 'error')
-            conn.close(); return render_template('compose.html', accounts=accounts)
-
-        msg = MIMEMultipart()
-        msg['From'] = account['email_address']
-        msg['To'] = to_address
-        if cc_address:
-            msg['Cc'] = cc_address
-        msg['Subject'] = subject
-        msg.attach(MIMEText(body, 'plain'))
-
-        try:
-            smtp_host = account['smtp_host']
-            smtp_port = int(account['smtp_port']) if account['smtp_port'] else 587
-            smtp_username = account['smtp_username']
-            if account['smtp_use_ssl']:
-                context = ssl.create_default_context()
-                server = smtplib.SMTP_SSL(smtp_host, smtp_port, context=context)
-            else:
-                server = smtplib.SMTP(smtp_host, smtp_port)
-                server.starttls()
-            server.login(smtp_username, smtp_password)
-            recipients_all = [to_address] + ([cc_address] if cc_address else [])
-            server.sendmail(account['email_address'], recipients_all, msg.as_string())
-            server.quit()
-        except Exception as e:
-            if request.is_json:
-                conn.close(); return jsonify({'ok': False, 'error': str(e)}), 500
-            flash(f'Error sending email: {e}', 'error')
-            conn.close(); return render_template('compose.html', accounts=accounts)
-
-        if request.is_json:
-            conn.close(); return jsonify({'ok': True})
-        flash('Email sent successfully!', 'success')
-        conn.close(); return redirect(url_for('inbox'))
-
-    conn.close()
-    return render_template('compose.html', accounts=accounts)
-
-## Removed duplicate log_action (original retained above)
+# (Compose routes migrated to app/routes/compose.py)
 
 def run_smtp_proxy():
     """Run SMTP proxy server"""
@@ -2241,112 +1657,8 @@ def legacy_api_pending():
         'note': 'Interception (HELD) now separate via /api/interception/held'
     })
 
-# Unified stats endpoint (includes legacy + interception counts)
-@app.route('/api/unified-stats')
-@login_required
-def api_unified_stats():
-    """Unified statistics combining legacy and interception statuses (5s cache)"""
-    # Lightweight 5s cache to reduce DB churn
-    now = time.time()
-    cache = _CACHE['unified']
-    if now - cache['t'] < 5 and cache['v'] is not None:
-        return jsonify(cache['v'])
-
-    conn = get_db()
-    cur = conn.cursor()
-    total = cur.execute("SELECT COUNT(*) FROM email_messages").fetchone()[0]
-    pending = cur.execute("SELECT COUNT(*) FROM email_messages WHERE status='PENDING'").fetchone()[0]
-    held = cur.execute("SELECT COUNT(*) FROM email_messages WHERE interception_status='HELD'").fetchone()[0]
-    released = cur.execute("""
-        SELECT COUNT(*) FROM email_messages
-        WHERE interception_status='RELEASED' OR status IN ('SENT','APPROVED','DELIVERED')
-    """).fetchone()[0]
-    conn.close()
-
-    val = {'total': total, 'pending': pending, 'held': held, 'released': released}
-    _CACHE['unified'] = {'t': now, 'v': val}
-    return jsonify(val)
-
-def _compute_latency_stats():
-    """Compute latency percentiles from email_messages table"""
-    import math
-    from statistics import mean, median
-
-    with get_db() as c:
-        rows = c.execute("""
-            SELECT latency_ms FROM email_messages
-            WHERE latency_ms IS NOT NULL AND latency_ms > 0
-            ORDER BY latency_ms
-            LIMIT 5000
-        """).fetchall()
-
-    if not rows:
-        return {'count': 0}
-
-    vals = [r['latency_ms'] for r in rows]
-
-    def pct(p):
-        if not vals:
-            return None
-        if p <= 0:
-            return vals[0]
-        if p >= 100:
-            return vals[-1]
-        k = (len(vals) - 1) * (p / 100.0)
-        f = math.floor(k)
-        cidx = math.ceil(k)
-        if f == cidx:
-            return vals[int(k)]
-        return round(vals[f] + (vals[cidx] - vals[f]) * (k - f))
-
-    return {
-        'count': len(vals),
-        'min': vals[0],
-        'p50': pct(50),
-        'p90': pct(90),
-        'p95': pct(95),
-        'p99': pct(99),
-        'max': vals[-1],
-        'mean': round(mean(vals)),
-        'median': median(vals)
-    }
-
-@app.route('/api/latency-stats')
-def api_latency_stats():
-    """Latency statistics endpoint with 10s cache"""
-    now = time.time()
-    cache = _CACHE['lat']
-    if now - cache['t'] < 10 and cache['v'] is not None:
-        return jsonify(cache['v'])
-    val = _compute_latency_stats()
-    _CACHE['lat'] = {'t': now, 'v': val}
-    return jsonify(val)
-
-def unified_counts():
-    """Helper function for unified stats (used by SSE)"""
-    conn = get_db()
-    cur = conn.cursor()
-    total = cur.execute("SELECT COUNT(*) FROM email_messages").fetchone()[0]
-    pending = cur.execute("SELECT COUNT(*) FROM email_messages WHERE status='PENDING'").fetchone()[0]
-    held = cur.execute("SELECT COUNT(*) FROM email_messages WHERE interception_status='HELD'").fetchone()[0]
-    released = cur.execute("""
-        SELECT COUNT(*) FROM email_messages
-        WHERE interception_status='RELEASED' OR status IN ('SENT','APPROVED','DELIVERED')
-    """).fetchone()[0]
-    conn.close()
-    return {'total': total, 'pending': pending, 'held': held, 'released': released}
-
-@app.route('/stream/stats')
-def stream_stats():
-    """SSE stream for live statistics updates"""
-    import json
-    def gen():
-        while True:
-            uni = unified_counts()
-            lat = _compute_latency_stats()
-            yield f"event: stats\ndata: {json.dumps({'unified': uni, 'latency': lat, 'ts': int(time.time())})}\n\n"
-            time.sleep(5)
-    return Response(gen(), mimetype='text/event-stream')
+# Note: /api/unified-stats, /api/latency-stats, and /stream/stats
+# migrated to app/routes/stats.py (see Phase 1B marker above)
 
 # End of routes - remaining duplicate routes removed (handled by blueprint)
 
@@ -2369,21 +1681,10 @@ if __name__ == '__main__':
         smtp_thread.start()
     else:
         print("⚠️  SMTP proxy disabled (aiosmtpd not available)")
-    # Start monitoring threads for existing active accounts
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    active_accounts = cursor.execute("""
-        SELECT id, account_name FROM email_accounts WHERE is_active = 1
-    """).fetchall()
-    conn.close()
 
-    for account in active_accounts:
-        account_id = account['id']
-        thread = threading.Thread(target=monitor_imap_account, args=(account_id,), daemon=True)
-        imap_threads[account_id] = thread
-        thread.start()
-        print(f"   📬 Started monitoring for {account['account_name']} (ID: {account_id})")
+    # Start IMAP monitoring threads (delegated to worker module)
+    from app.workers.imap_startup import start_imap_watchers
+    watchers_started = start_imap_watchers(monitor_imap_account, imap_threads, app.logger)
 
     # Give services time to start
     time.sleep(2)

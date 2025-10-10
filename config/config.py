@@ -1,29 +1,41 @@
 """
 Configuration settings for Email Management Tool
+
+IMPORTANT: This replaces hardcoded secrets in simple_app.py
+Supports dev/staging/prod environments with proper validation.
+
+Usage:
+    from config import get_config
+    config = get_config()
+    app.config.from_object(config)
 """
 import os
+import secrets
 from datetime import timedelta
-from dotenv import load_dotenv
+from pathlib import Path
 
-# Load environment variables
-load_dotenv()
+# Try to load .env file if python-dotenv is available
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # python-dotenv is optional
+
 
 class Config:
-    """Base configuration"""
-    # Flask
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
+    """Base configuration - NEVER use directly in production"""
+
+    # Project paths
+    PROJECT_ROOT = Path(__file__).parent.parent
+
+    # Flask Core Settings
+    SECRET_KEY = os.environ.get('FLASK_SECRET_KEY') or os.environ.get('SECRET_KEY')
     DEBUG = False
     TESTING = False
-    
-    # Database
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///data/email_moderation.db'
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': 10,
-        'pool_recycle': 3600,
-        'pool_pre_ping': True
-    }
-    
+
+    # Database Settings (SQLite-based, no SQLAlchemy required)
+    DB_PATH = os.environ.get('DB_PATH', 'email_manager.db')
+
     # SMTP Proxy Settings
     SMTP_PROXY_HOST = os.environ.get('SMTP_PROXY_HOST', '127.0.0.1')
     SMTP_PROXY_PORT = int(os.environ.get('SMTP_PROXY_PORT', 8587))
@@ -116,3 +128,20 @@ config = {
     'testing': TestingConfig,
     'default': DevelopmentConfig
 }
+
+
+def get_config(env: str = None) -> type[Config]:
+    """
+    Get configuration class based on environment.
+
+    Args:
+        env: Environment name ('development', 'production', 'testing').
+             If None, reads from FLASK_ENV or defaults to 'development'.
+
+    Returns:
+        Configuration class (DevelopmentConfig, ProductionConfig, or TestingConfig)
+    """
+    if env is None:
+        env = os.environ.get('FLASK_ENV', 'development').lower()
+
+    return config.get(env, config['default'])

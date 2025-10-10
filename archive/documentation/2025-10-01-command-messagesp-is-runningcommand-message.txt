@@ -1,0 +1,1201 @@
+
+ ▐▛███▜▌   Claude Code v2.0.1
+▝▜█████▛▘  Sonnet 4.5 · Claude Max
+  ▘▘ ▝▝    C:\claude\Email-Management-Tool
+
+> /sp is running… GitHub Copilot
+
+Assessment of current state (based on provided simple_app.py and prior context):
+
+1. IMAP Interception
+- monitor_imap_account spins a persistent loop per account, builds AccountConfig, calls ImapWatcher.run_forever().
+- Assumes ImapWatcher handles: IDLE loop, MOVE/COPY to Quarantine, raw MIME capture, latency_ms calculation, insertion into email_messages with interception_status='HELD'.
+- You should verify in imap_watcher.py that it:
+  - Writes interception_status='HELD'
+  - Records account_id, direction='inbound', latency_ms, raw_path or raw_content
+  - Commits inside a retry-safe block
+  - Handles reconnect/backoff cleanly
+If all true, inbound interception via IMAP is correctly wired.
+
+2. Blueprint vs Main App
+- Blueprint (bp_interception) is registered twice (early and again under if 'app' in globals()). Second attempt is harmless but redundant.
+- All interception/held/release/discard/edit API logic should now live solely in interception.py (not shown here)—confirm no shadow routes remain in simple_app.py (they appear
+removed except for legacy shims).
+
+3. SMTP Proxy Path
+- EmailModerationHandler.insert only sets: message_id, sender, recipients, subject, body_text/html, raw_content, keywords_matched, risk_score, status='PENDING'.
+- Missing fields for parity with IMAP interception:
+  - direction (should be 'inbound' or 'outbound')
+  - interception_status (HELD/FETCHED/RELEASED)
+  - account_id (to associate with a monitored account or a “virtual” inbound sink)
+  - latency_ms (if measuring)
+Result: Messages entering via SMTP proxy won’t appear in /api/interception/held stats or unified held/released counts unless later manipulated. This is a consistency gap.
+
+4. Manual Fetch Endpoint (/api/fetch-emails)
+- Inserts messages with interception_status='FETCHED', direction='inbound'.
+- Good that it differentiates from HELD; ensure your interception UI filters only HELD.
+
+5. Editing & Release
+- Legacy edit endpoints (/email/<id>/edit, save, approve-send, reject) still exist alongside the interception blueprint’s edit/release API.
+- Risk: Dual edit pathways can create inconsistent audit trails or bypass interception-specific logic (e.g. attachment stripping). Prefer one canonical route set (likely blueprint
+ /api/interception/* + /api/email/<id>/edit).
+
+6. Stats & SSE
+- Unified stats and latency caches centralized in _CACHE; works for single-process dev.
+- Latency endpoint computes percentiles correctly with linear interpolation.
+- In multi-worker deployment (gunicorn), each worker maintains its own cache → divergent snapshots (acceptable for now; document).
+
+7. Audit Logging
+- log_action writes opportunistically. Some core interception update paths (held creation, release) must call it (verify inside blueprint and ImapWatcher). If not, add minimal
+hooks.
+
+8. Password Handling
+- decrypt_credential used correctly for SMTP send and IMAP watcher.
+- add_email_account encrypts credentials before storage—good.
+
+9. Threading
+- IMAP monitor threads started at startup for all active accounts.
+- No explicit stop/join on shutdown (OK for daemon usage).
+- Potential race: account added during runtime spawns new thread; removal stops only by deleting from imap_threads dict (thread itself will continue until DB row becomes inactive
+or missing—currently only checks is_active each loop iteration start; acceptable but could add a sleep/backoff on missing row).
+
+10. Data Integrity Gaps
+- SMTP proxy inserts lack direction/account_id/interception_status → uniform reporting and filtering will be skewed.
+- Some diagnostic/account fields referenced (smtp_health_status, connection_status, last_successful_connection) are not created in init_database (missing columns). Routes updating
+ them will silently fail unless schema was previously migrated.
+
+11. Redundancies / Cleanup Targets
+- Duplicate blueprint registration.
+- Legacy test endpoints (/api/test/*) remain; if not essential, they add noise.
+- Overlapping edit/review routes vs interception edit API.
+
+12. Risk Summary
+- Core IMAP interception likely fine if ImapWatcher is robust.
+- Reporting consistency: moderate risk due to SMTP path omissions.
+- Schema mismatch for health/diagnostic columns: latent errors.
+- Dual edit paths: risk of bypassing modern interception release logic.
+
+Recommended immediate hardening (fast wins):
+1. Add direction='inbound', interception_status='HELD' or a distinct tag (e.g. 'PENDING_INBOUND') plus account_id (nullable) to SMTP handler insert for consistency.
+2. Remove or disable legacy /email/<id>/edit/save/approve-send/reject if interception blueprint covers moderation.
+3. Add missing columns if diagnostics needed (ALTER TABLE email_accounts ADD COLUMN smtp_health_status TEXT, etc.) or remove those diagnostic routes.
+4. Deduplicate blueprint registration (keep the first; drop second block).
+5. Confirm ImapWatcher sets latency_ms and raw_path consistently; if not, extend it.
+
+If you want I can generate a patch to (a) normalize SMTP interceptor inserts and (b) remove legacy edit endpoints while preserving functionality. Say: “patch consistency now” and
+I will produce it.
+
+Let me know if you want a deeper code review of ImapWatcher next—provide that file and I’ll validate interception correctness end-to-end. """// ...existing code...
+def init_database():
+    """
+    Initialize SQLite database with all required tables (idempotent).
+    Creates tables if missing; preserves existing schema & data.
+    """
+    conn = get_db()
+    cur = conn.cursor()
+
+    # Users table
+    cur.execute("""CREATE TABLE IF NOT EXISTS users(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,
+        password_hash TEXT,
+        role TEXT DEFAULT 'admin',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )""")
+
+    # Email accounts table (NO Sieve fields)
+    cur.execute("""CREATE TABLE IF NOT EXISTS email_accounts(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_name TEXT,
+        email_address TEXT,
+        provider_type TEXT,
+        imap_host TEXT,
+        imap_port INTEGER,
+        imap_username TEXT,
+        imap_password TEXT,
+        imap_use_ssl INTEGER DEFAULT 1,
+        smtp_host TEXT,
+        smtp_port INTEGER,
+        smtp_username TEXT,
+        smtp_password TEXT,
+        smtp_use_ssl INTEGER DEFAULT 1,
+        is_active INTEGER DEFAULT 1,
+        last_checked TEXT,
+        last_error TEXT,
+        smtp_health_status TEXT,
+        imap_health_status TEXT,
+        connection_status TEXT,
+        last_health_check TEXT,
+        last_successful_connection TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )""")
+
+    # Backfill missing columns (for existing DB upgraded in place)
+    cur.execute("PRAGMA table_info(email_accounts)")
+    existing_cols = {r[1] for r in cur.fetchall()}
+    account_upgrade_cols = {
+        'provider_type': "ALTER TABLE email_accounts ADD COLUMN provider_type TEXT",
+        'smtp_health_status': "ALTER TABLE email_accounts ADD COLUMN smtp_health_status TEXT",
+        'imap_health_status': "ALTER TABLE email_accounts ADD COLUMN imap_health_status TEXT",
+        'connection_status': "ALTER TABLE email_accounts ADD COLUMN connection_status TEXT",
+        'last_health_check': "ALTER TABLE email_accounts ADD COLUMN last_health_check TEXT",
+        'last_successful_connection': "ALTER TABLE email_accounts ADD COLUMN last_successful_connection TEXT"
+    }
+    for col, stmt in account_upgrade_cols.items():
+        if col not in existing_cols:
+            try:
+                cur.execute(stmt)
+            except Exception:
+                pass
+
+    # Email messages table with full interception support
+    cur.execute("""CREATE TABLE IF NOT EXISTS email_messages(
+// ...existing code...
+
+class EmailModerationHandler:
+    """Handle incoming emails through SMTP proxy"""
+
+    async def handle_DATA(self, server, session, envelope):
+        """Process incoming email"""
+        print(f"📨 SMTP Handler: Received message from {envelope.mail_from} to {envelope.rcpt_tos}")
+        try:
+            email_msg = message_from_bytes(envelope.content, policy=policy.default)
+
+            sender = str(envelope.mail_from)
+            rcpts_list = [str(r) for r in envelope.rcpt_tos]
+            recipients = json.dumps(rcpts_list)
+            subject = email_msg.get('Subject', 'No Subject')
+            message_id = email_msg.get('Message-ID', f"msg_{datetime.now().timestamp()}")
+
+            body_text = ""
+            body_html = ""
+            if email_msg.is_multipart():
+                for part in email_msg.walk():
+                    ctype = part.get_content_type()
+                    if ctype == "text/plain":
+                        payload = part.get_payload(decode=True)
+                        if payload:
+                            body_text = payload.decode('utf-8', errors='ignore')
+                    elif ctype == "text/html":
+                        payload = part.get_payload(decode=True)
+                        if payload:
+                            body_html = payload.decode('utf-8', errors='ignore')
+            else:
+                payload = email_msg.get_payload(decode=True)
+                if payload:
+                    body_text = payload.decode('utf-8', errors='ignore')
+
+            # Basic rule check
+            keywords_matched, risk_score = self.check_rules(subject, body_text)
+
+            # Attempt to associate with a known account (match any recipient)
+            account_id = None
+            try:
+                conn_match = sqlite3.connect(DB_PATH)
+                curm = conn_match.cursor()
+                placeholders = ",".join("?" for _ in rcpts_list)
+                if placeholders:
+                    rows = curm.execute(
+                        f"SELECT id, email_address FROM email_accounts WHERE lower(email_address) IN ({placeholders})",
+                        [r.lower() for r in rcpts_list]
+                    ).fetchall()
+                    if rows:
+                        account_id = rows[0][0]
+                conn_match.close()
+            except Exception:
+                account_id = None
+
+            # Store (normalize with IMAP interception): mark as HELD inbound
+            max_retries = 5
+            for attempt in range(max_retries):
+                try:
+                    conn = sqlite3.connect(DB_PATH, timeout=10.0)
+                    cursor = conn.cursor()
+                    cursor.execute('''
+                        INSERT INTO email_messages
+                        (message_id, account_id, direction, status, interception_status,
+                         sender, recipients, subject, body_text, body_html,
+                         raw_content, keywords_matched, risk_score, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                    ''', (
+                        message_id,
+                        account_id,
+                        'inbound',
+                        'PENDING',
+                        'HELD',
+                        sender,
+                        recipients,
+                        subject,
+                        body_text,
+                        body_html,
+                        envelope.content,
+                        json.dumps(keywords_matched),
+                        risk_score
+                    ))
+                    conn.commit()
+                    rid = cursor.lastrowid
+                    conn.close()
+                    print(f"📨 SMTP Handler: Stored HELD email row_id={rid}")
+                    break
+                except sqlite3.OperationalError as e:
+                    if "locked" in str(e).lower() and attempt < max_retries - 1:
+                        time.sleep(0.4)
+                        continue
+                    raise
+
+            return '250 Message accepted for moderation'
+
+        except Exception as e:
+            print(f"Error processing email: {e}")
+            import traceback
+            traceback.print_exc()
+            return f'500 Error: {e}'
+// ...existing code...
+
+# Remove redundant second blueprint registration (already registered above)
+# if 'app' in globals() and bp_interception:
+#     try:
+#         app.register_blueprint(bp_interception)
+#     except Exception:
+#         pass
+// ...existing code...
+@app.route('/api/unified-stats')
+@login_required
+def api_unified_stats():
+    """Unified statistics combining legacy and interception statuses (5s cache)"""
+    now = time.time()
+    cache = _CACHE['unified']
+    if now - cache['t'] < 5 and cache['v'] is not None:
+        return jsonify(cache['v'])
+    conn = get_db()
+    cur = conn.cursor()
+    total = cur.execute("SELECT COUNT(*) FROM email_messages").fetchone()[0]
+    pending = cur.execute("SELECT COUNT(*) FROM email_messages WHERE status='PENDING'").fetchone()[0]
+    held = cur.execute("SELECT COUNT(*) FROM email_messages WHERE interception_status='HELD'").fetchone()[0]
+    released = cur.execute("""
+        SELECT COUNT(*) FROM email_messages
+        WHERE interception_status='RELEASED' OR status IN ('SENT','APPROVED','DELIVERED')
+    """).fetchone()[0]
+    conn.close()
+    val = {'total': total, 'pending': pending, 'held': held, 'released': released}
+    _CACHE['unified'] = {'t': now, 'v': val}
+    return jsonify(val)
+// ...existing code...""" GitHub Copilot
+
+Below is the focused patch to:
+- Normalize SMTP proxy insertion (adds direction='inbound', interception_status='HELD', account_id resolution).
+- Remove redundant second blueprint registration block.
+
+````python
+// ...existing code...
+class EmailModerationHandler:
+    """Handle incoming emails through SMTP proxy"""
+
+    async def handle_DATA(self, server, session, envelope):
+        """Process incoming email"""
+        print(f"📨 SMTP Handler: Received message from {envelope.mail_from} to {envelope.rcpt_tos}")
+        try:
+            # Parse email
+            email_msg = message_from_bytes(envelope.content, policy=policy.default)
+            print(f"📨 SMTP Handler: Parsed email successfully")
+
+            # Extract data
+            sender = str(envelope.mail_from)
+            rcpt_list = [str(r) for r in envelope.rcpt_tos]
+            recipients = json.dumps(rcpt_list)
+            subject = email_msg.get('Subject', 'No Subject')
+            message_id = email_msg.get('Message-ID', f"msg_{datetime.now().timestamp()}")
+
+            # Extract body
+            body_text = ""
+            body_html = ""
+            if email_msg.is_multipart():
+                for part in email_msg.walk():
+                    ctype = part.get_content_type()
+                    if ctype == "text/plain":
+                        payload = part.get_payload(decode=True)
+                        if payload:
+                            body_text = payload.decode('utf-8', errors='ignore')
+                    elif ctype == "text/html":
+                        payload = part.get_payload(decode=True)
+                        if payload:
+                            body_html = payload.decode('utf-8', errors='ignore')
+            else:
+                payload = email_msg.get_payload(decode=True)
+                if payload:
+                    body_text = payload.decode('utf-8', errors='ignore')
+
+            # Check moderation rules
+            keywords_matched, risk_score = self.check_rules(subject, body_text)
+
+            # Attempt to associate with an existing account (match any recipient exactly)
+            account_id = None
+            try:
+                if rcpt_list:
+                    conn_match = sqlite3.connect(DB_PATH)
+                    curm = conn_match.cursor()
+                    placeholders = ",".join("?" for _ in rcpt_list)
+                    rows = curm.execute(
+                        f"SELECT id, email_address FROM email_accounts WHERE lower(email_address) IN ({placeholders})",
+                        [r.lower() for r in rcpt_list]
+                    ).fetchall()
+                    if rows:
+                        account_id = rows[0][0]
+                    conn_match.close()
+            except Exception as e:
+                print(f"SMTP Handler: account match failed: {e}")
+
+            # Store in database with normalized interception fields
+            print(f"📨 SMTP Handler: Storing (subject={subject}, risk={risk_score}, acct={account_id})")
+
+            max_retries = 5
+            for attempt in range(max_retries):
+                try:
+                    conn = sqlite3.connect(DB_PATH, timeout=10.0)
+                    cursor = conn.cursor()
+                    cursor.execute('''
+                        INSERT INTO email_messages
+                        (message_id, account_id, direction, status, interception_status,
+                         sender, recipients, subject, body_text, body_html,
+                         raw_content, keywords_matched, risk_score, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                    ''', (
+                        message_id,
+                        account_id,
+                        'inbound',
+                        'PENDING',
+                        'HELD',  # Normalize to held so it appears in interception views
+                        sender,
+                        recipients,
+                        subject,
+                        body_text,
+                        body_html,
+                        envelope.content,
+                        json.dumps(keywords_matched),
+                        risk_score
+                    ))
+                    conn.commit()
+                    rid = cursor.lastrowid
+                    conn.close()
+                    print(f"📨 SMTP Handler: Stored HELD email row_id={rid}")
+                    break
+                except sqlite3.OperationalError as e:
+                    if "locked" in str(e).lower() and attempt < max_retries - 1:
+                        time.sleep(0.4)
+                        continue
+                    raise
+
+            return '250 Message accepted for moderation (HELD)'
+
+        except Exception as e:
+            print(f"Error processing email: {e}")
+            import traceback
+            traceback.print_exc()
+            return f'500 Error: {e}'
+// ...existing code...
+
+# (Removed duplicate blueprint registration block below – already registered above)
+# if 'app' in globals() and bp_interception:
+#     try:
+#         app.register_blueprint(bp_interception)
+#     except Exception:
+#         pass
+// ...existing code...
+````
+
+Apply patch, restart app, send a test message via SMTP proxy; it should now appear under HELD (interception UI). Let me know if you want the legacy edit routes removed next.
+  ⎿  Allowed 21 tools for this command
+
+● I'll analyze the current state and apply the consistency patch to normalize SMTP interception and remove redundancies.
+
+● sequential-thinking - sequentialthinking (MCP)(thought: "Analyzing the GitHub Copilot assessment and requested patches. Key issues identified:\n\n1. SMTP proxy insertion lacks
+                                                normalization - missing direction, interception_status, account_id fields\n2. Duplicate blueprint registration needs removal\n3.
+                                                Need to verify consistency with IMAP interception flow\n4. Legacy edit routes may create conflicting pathways\n\nThe patch provided
+                                                 addresses items 1 and 2. I should apply these changes to simple_app.py to ensure SMTP-intercepted emails appear in the unified
+                                                interception views alongside IMAP-intercepted ones.", thoughtNumber: 1, totalThoughts: 5, nextThoughtNeeded: true)
+  ⎿  {
+       "thoughtNumber": 1,
+       "totalThoughts": 5,
+     … +4 lines (ctrl+o to expand)
+
+● sequential-thinking - sequentialthinking (MCP)(thought: "I'm in plan mode, so I should NOT apply any patches yet. Instead, I need to:\n1. Read and understand the current
+                                                simple_app.py implementation\n2. Analyze the GitHub Copilot assessment\n3. Verify the proposed patches\n4. Create a comprehensive
+                                                plan for the user to review\n5. Present via ExitPlanMode tool\n\nLet me start by reading the current EmailModerationHandler to see
+                                                what needs to be fixed.", thoughtNumber: 2, totalThoughts: 5, nextThoughtNeeded: true)
+  ⎿  {
+       "thoughtNumber": 2,
+       "totalThoughts": 5,
+     … +4 lines (ctrl+o to expand)
+
+● Read(simple_app.py)
+  ⎿  Read 100 lines (ctrl+o to expand)
+
+● Search(pattern: "class EmailModerationHandler", path: "simple_app.py", output_mode: "content")
+  ⎿  Found 1 line (ctrl+o to expand)
+
+● Read(simple_app.py)
+  ⎿  Read 150 lines (ctrl+o to expand)
+
+● sequential-thinking - sequentialthinking (MCP)(thought: "Perfect! I can now see the issue. The current SMTP handler (lines 406-411) only inserts these fields:\n- message_id,
+                                                sender, recipients, subject, body_text, body_html, raw_content, keywords_matched, risk_score, status='PENDING'\n\nMissing critical
+                                                interception fields:\n- account_id (to link with email account)\n- direction (should be 'inbound')\n- interception_status (should
+                                                be 'HELD' to appear in interception views)\n- latency_ms (for performance tracking)\n\nAlso confirmed line 466-470 shows redundant
+                                                blueprint registration that needs removal.\n\nNow let me check if there's an earlier blueprint registration to ensure we're not
+                                                breaking anything.", thoughtNumber: 3, totalThoughts: 5, nextThoughtNeeded: true)
+  ⎿  {
+       "thoughtNumber": 3,
+       "totalThoughts": 5,
+     … +4 lines (ctrl+o to expand)
+
+● Search(pattern: "register_blueprint.*bp_interception", path: "simple_app.py", output_mode: "content")
+  ⎿  Found 2 lines (ctrl+o to expand)
+
+● Read(simple_app.py)
+  ⎿  Read 15 lines (ctrl+o to expand)
+
+● sequential-thinking - sequentialthinking (MCP)(thought: "Perfect! Found both registrations:\n- Line 359: Primary registration (inside try/except)\n- Line 468: Duplicate
+                                                registration (also inside try/except, but redundant)\n\nThe second one at line 466-470 is completely unnecessary since the
+                                                blueprint is already registered at line 359.\n\nNow let me check the init_database to see if the required columns exist for the
+                                                normalized fields.", thoughtNumber: 4, totalThoughts: 5, nextThoughtNeeded: true)
+  ⎿  {
+       "thoughtNumber": 4,
+       "totalThoughts": 5,
+     … +4 lines (ctrl+o to expand)
+
+● Search(pattern: "def init_database", path: "simple_app.py", output_mode: "content")
+  ⎿  Found 1 line (ctrl+o to expand)
+
+● Read(simple_app.py)
+  ⎿  Read 100 lines (ctrl+o to expand)
+
+● sequential-thinking - sequentialthinking (MCP)(thought: "Excellent! The email_messages table schema (lines 238-273) already has all the required fields:\n- account_id (line 241)
+                                                 ✓\n- direction (line 242) ✓\n- interception_status (line 244) ✓\n- latency_ms (line 266) ✓\n\nSo the database schema supports the
+                                                normalized interception fields. The SMTP handler just needs to be updated to populate them correctly.\n\nNow I have all the
+                                                information needed to create a comprehensive plan. Let me summarize the findings and create the implementation plan.",
+                                                thoughtNumber: 5, totalThoughts: 5, nextThoughtNeeded: false)
+  ⎿  {
+       "thoughtNumber": 5,
+       "totalThoughts": 5,
+     … +4 lines (ctrl+o to expand)
+  ⎿  User rejected Claude's plan:
+     ╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+     │ SMTP Interception Normalization & Cleanup Plan                                                                                                                             │
+     │                                                                                                                                                                            │
+     │ Overview                                                                                                                                                                   │
+     │                                                                                                                                                                            │
+     │ Apply GitHub Copilot's consistency patch to normalize SMTP proxy email insertion and remove redundant code, ensuring SMTP-intercepted emails appear in unified             │
+     │ interception views alongside IMAP-intercepted messages.                                                                                                                    │
+     │                                                                                                                                                                            │
+     │ Current Issues Identified                                                                                                                                                  │
+     │                                                                                                                                                                            │
+     │ 1. SMTP Handler Data Inconsistency (Lines 406-411)                                                                                                                         │
+     │                                                                                                                                                                            │
+     │ Problem: SMTP proxy only populates 10 fields, missing critical interception fields:                                                                                        │
+     │ - ❌ Missing account_id (can't link to email account)                                                                                                                       │
+     │ - ❌ Missing direction (should be 'inbound')                                                                                                                                │
+     │ - ❌ Missing interception_status (should be 'HELD' to appear in interception UI)                                                                                            │
+     │ - ❌ Missing latency_ms (no performance tracking)                                                                                                                           │
+     │                                                                                                                                                                            │
+     │ Impact: SMTP-intercepted emails won't appear in /api/interception/held stats or unified held/released counts, creating reporting inconsistency.                            │
+     │                                                                                                                                                                            │
+     │ 2. Redundant Blueprint Registration (Lines 466-470)                                                                                                                        │
+     │                                                                                                                                                                            │
+     │ Problem: Blueprint bp_interception registered twice:                                                                                                                       │
+     │ - ✅ Line 359: Primary registration (correct)                                                                                                                               │
+     │ - ❌ Lines 466-470: Duplicate registration (unnecessary)                                                                                                                    │
+     │                                                                                                                                                                            │
+     │ Impact: Harmless but redundant code that adds confusion.                                                                                                                   │
+     │                                                                                                                                                                            │
+     │ Changes to Apply                                                                                                                                                           │
+     │                                                                                                                                                                            │
+     │ Change 1: Normalize SMTP Handler Insert (simple_app.py:406-411)                                                                                                            │
+     │                                                                                                                                                                            │
+     │ Current Code:                                                                                                                                                              │
+     │ cursor.execute('''                                                                                                                                                         │
+     │     INSERT INTO email_messages                                                                                                                                             │
+     │     (message_id, sender, recipients, subject, body_text, body_html, raw_content, keywords_matched, risk_score, status)                                                     │
+     │     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)                                                                                                                                  │
+     │ ''', (message_id, sender, recipients, subject, body_text, body_html,                                                                                                       │
+     │       envelope.content, json.dumps(keywords_matched), risk_score, 'PENDING'))                                                                                              │
+     │                                                                                                                                                                            │
+     │ Updated Code:                                                                                                                                                              │
+     │ # Add account_id resolution before insert (after line 396)                                                                                                                 │
+     │ account_id = None                                                                                                                                                          │
+     │ try:                                                                                                                                                                       │
+     │     rcpt_list = [str(r) for r in envelope.rcpt_tos]                                                                                                                        │
+     │     if rcpt_list:                                                                                                                                                          │
+     │         conn_match = sqlite3.connect(DB_PATH)                                                                                                                              │
+     │         curm = conn_match.cursor()                                                                                                                                         │
+     │         placeholders = ",".join("?" for _ in rcpt_list)                                                                                                                    │
+     │         rows = curm.execute(                                                                                                                                               │
+     │             f"SELECT id, email_address FROM email_accounts WHERE lower(email_address) IN ({placeholders})",                                                                │
+     │             [r.lower() for r in rcpt_list]                                                                                                                                 │
+     │         ).fetchall()                                                                                                                                                       │
+     │         if rows:                                                                                                                                                           │
+     │             account_id = rows[0][0]                                                                                                                                        │
+     │         conn_match.close()                                                                                                                                                 │
+     │ except Exception as e:                                                                                                                                                     │
+     │     print(f"SMTP Handler: account match failed: {e}")                                                                                                                      │
+     │                                                                                                                                                                            │
+     │ # Update INSERT statement                                                                                                                                                  │
+     │ cursor.execute('''                                                                                                                                                         │
+     │     INSERT INTO email_messages                                                                                                                                             │
+     │     (message_id, account_id, direction, status, interception_status,                                                                                                       │
+     │      sender, recipients, subject, body_text, body_html,                                                                                                                    │
+     │      raw_content, keywords_matched, risk_score, created_at)                                                                                                                │
+     │     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))                                                                                                        │
+     │ ''', (                                                                                                                                                                     │
+     │     message_id,                                                                                                                                                            │
+     │     account_id,                                                                                                                                                            │
+     │     'inbound',                                                                                                                                                             │
+     │     'PENDING',                                                                                                                                                             │
+     │     'HELD',  # Normalize to HELD so it appears in interception views                                                                                                       │
+     │     sender,                                                                                                                                                                │
+     │     recipients,                                                                                                                                                            │
+     │     subject,                                                                                                                                                               │
+     │     body_text,                                                                                                                                                             │
+     │     body_html,                                                                                                                                                             │
+     │     envelope.content,                                                                                                                                                      │
+     │     json.dumps(keywords_matched),                                                                                                                                          │
+     │     risk_score                                                                                                                                                             │
+     │ ))                                                                                                                                                                         │
+     │                                                                                                                                                                            │
+     │ Change 2: Remove Redundant Blueprint Registration (simple_app.py:466-470)                                                                                                  │
+     │                                                                                                                                                                            │
+     │ Delete Lines:                                                                                                                                                              │
+     │ if 'app' in globals() and bp_interception:                                                                                                                                 │
+     │     try:                                                                                                                                                                   │
+     │         app.register_blueprint(bp_interception)                                                                                                                            │
+     │     except Exception:                                                                                                                                                      │
+     │         pass                                                                                                                                                               │
+     │                                                                                                                                                                            │
+     │ Expected Benefits                                                                                                                                                          │
+     │                                                                                                                                                                            │
+     │ 1. Unified Reporting: SMTP-intercepted emails will now appear in:                                                                                                          │
+     │   - /api/interception/held endpoint                                                                                                                                        │
+     │   - /api/unified-stats held counts                                                                                                                                         │
+     │   - Interception dashboard UI                                                                                                                                              │
+     │ 2. Account Linkage: Messages associated with configured email accounts for proper tracking                                                                                 │
+     │ 3. Consistent Status: All intercepted emails (SMTP + IMAP) use same interception_status='HELD' pattern                                                                     │
+     │ 4. Code Cleanup: Removes 5 lines of redundant blueprint registration                                                                                                       │
+     │                                                                                                                                                                            │
+     │ Verification Steps (Post-Implementation)                                                                                                                                   │
+     │                                                                                                                                                                            │
+     │ 1. Restart application: python simple_app.py                                                                                                                               │
+     │ 2. Send test email via SMTP proxy (port 8587)                                                                                                                              │
+     │ 3. Verify email appears with:                                                                                                                                              │
+     │   - interception_status='HELD'                                                                                                                                             │
+     │   - direction='inbound'                                                                                                                                                    │
+     │   - account_id populated if recipient matches configured account                                                                                                           │
+     │ 4. Check /api/interception/held returns the message                                                                                                                        │
+     │ 5. Verify /api/unified-stats includes it in held count                                                                                                                     │
+     │                                                                                                                                                                            │
+     │ Risk Assessment                                                                                                                                                            │
+     │                                                                                                                                                                            │
+     │ - Low Risk: Database schema already supports all fields (verified lines 238-273)                                                                                           │
+     │ - Backward Compatible: Existing IMAP interception unchanged                                                                                                                │
+     │ - No Data Loss: Only adding fields, not removing                                                                                                                           │
+     │ - Tested Pattern: Follows same pattern as IMAP interception in ImapWatcher                                                                                                 │
+     ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+> GitHub Copilot
+
+Your plan is directionally correct for normalization and dedup, but it only covers half the interception lifecycle (capture). You also need:
+- Proper remote removal (IMAP MOVE) on manual “Intercept” from inbox
+- Consistent release (APPEND) path restoring into INBOX after edit
+- Avoiding dual edit/release pathways (legacy vs blueprint)
+- UID+internaldate capture during passive fetch (so later MOVE works)
+- Standardized status transitions
+
+Assessment of Claude’s Plan (SMTP normalization + duplicate blueprint registration removal):
+Good:
+- Adds account_id linkage
+- Normalizes direction='inbound'
+- Marks SMTP-inbound as interception_status='HELD' so it appears in held lists
+- Removes redundant blueprint registration
+
+Missing / Still Needed:
+1. Manual intercept currently only flips DB flag (no server-side MOVE).
+2. /api/fetch-emails stores no UID/internaldate → can’t later MOVE by UID.
+3. Release flow needs verification (must: reconstruct MIME, optional subject/body edits, handle attachments, APPEND to INBOX, set interception_status='RELEASED', store
+edited_message_id).
+4. Inconsistent sources: IMAP watcher vs manual fetch vs SMTP proxy vs legacy edit routes.
+5. Legacy edit endpoints (/email/<id>/edit, /email/<id>/save, approve-send, reject) bypass interception logic—should be retired in favor of /api/email/<id>/edit +
+/api/interception/release.
+6. No remote discard (optionally could just leave in Quarantine).
+7. No original_uid/original_internaldate persistence for fetched and SMTP paths.
+8. No remote UID search fallback logic implemented yet (Message-ID / Subject fallback).
+9. No audit entries specifically for manual intercept vs automatic.
+
+Recommended Phase Plan
+
+Phase 1 (Normalization + Capture Consistency)
+- Add UID + internaldate capture in /api/fetch-emails (use UID SEARCH + UID FETCH).
+- SMTP handler: as planned, but also store original_message_id and latency_ms=0 (or NULL).
+- Add direction default = 'inbound' if NULL.
+
+Phase 2 (Manual Interception Proper)
+- Replace current /api/email/<id>/intercept with:
+  Steps:
+    a. Resolve account credentials
+    b. If original_uid missing → attempt Message-ID search → fallback Subject
+    c. Attempt MOVE (UID MOVE) or COPY+STORE \Deleted + EXPUNGE
+    d. Update: interception_status='HELD', quarantine_folder='Quarantine', action_taken_at, original_uid (if found), latency_ms (if you want to measure from created_at)
+    e. Return JSON {remote_move: true/false, discovered_uid: "...", note: "..."}
+- Store discovered UID for future actions.
+
+Phase 3 (Release Hardening)
+- Ensure release (in blueprint) does:
+  - Load original raw_content
+  - Apply edited subject/body
+  - Strip attachments if requested
+  - Generate new Message-ID (store edited_message_id)
+  - APPEND to INBOX with internaldate (original_internaldate if present)
+  - Set interception_status='RELEASED', status='DELIVERED'
+  - Log audit (RELEASE with actor + changes summary)
+  - Optionally compute diff if not already.
+
+Phase 4 (Legacy Route Retirement)
+- Comment/remove:
+  - /email/<id>/edit
+  - /email/<id>/save
+  - /email/<id>/approve-send
+  - /email/<id>/reject
+  - /api/test/* (if no longer critical)
+- Replace UI calls with API-based editing (JS calls /api/email/<id>/edit in blueprint).
+- Update templates to use only canonical interception endpoints.
+
+Phase 5 (Status & Metrics Consistency)
+- Standard transition table:
+  NEW (FETCHED|HELD via watcher/SMTP/manual) → HELD (interception_status='HELD')
+  HELD → RELEASED (APPEND) → Delivered view
+  HELD → DISCARDED (optional)
+- Ensure unified stats count only current states (held = count where interception_status='HELD').
+
+Phase 6 (Documentation & Tests)
+- Update INTERCEPTION_IMPLEMENTATION.md with manual intercept flow.
+- Add tests (mock IMAP) for:
+  - Manual intercept: given stored UID, performs MOVE, sets HELD
+  - Manual intercept fallback: no UID → Message-ID search used
+  - Release: sets RELEASED and returns edited_message_id
+  - SMTP insert: appears in /api/interception/held
+
+Quick Patch Skeletons (for future application)
+
+Manual Intercept IMAP Helpers (already sketched, just not integrated in your current file):
+````python
+def _imap_connect(account_row):
+    # returns imap_obj
+    ...
+
+def _ensure_quarantine(imap_obj, name="Quarantine"):
+    try: imap_obj.create(name)
+    except: pass
+
+def _move_uid(imap_obj, uid, quarantine="Quarantine"):
+    try:
+        typ, _ = imap_obj.uid('MOVE', uid, quarantine)
+        if typ == 'OK': return True
+    except: pass
+    try:
+        typ, _ = imap_obj.uid('COPY', uid, quarantine)
+        if typ == 'OK':
+            imap_obj.uid('STORE', uid, '+FLAGS', r'(\Deleted)')
+            imap_obj.expunge()
+            return True
+    except: pass
+    return False
+````
+
+Revised /api/email/<id>/intercept (excerpt goal):
+````python
+@app.route('/api/email/<email_id>/intercept', methods=['POST'])
+@login_required
+def api_email_intercept(email_id):
+    row = cursor.execute("""SELECT em.*, ea.* FROM email_messages em
+                            LEFT JOIN email_accounts ea ON em.account_id=ea.id
+                            WHERE em.id=?""",(email_id,)).fetchone()
+    # attempt remote move if not already HELD
+    # update interception_status='HELD', set quarantine_folder, original_uid if discovered
+````
+
+Release (in blueprint) should include:
+````python
+# Pseudocode
+original = row['raw_content']
+edited = rebuild_mime(original, new_subject, new_body_text, strip_attachments)
+imap = connect()
+imap.append("INBOX", None, None, edited)
+update row: interception_status='RELEASED', edited_message_id, processed_at, status='DELIVERED'
+````
+
+Risks If You Stop Now
+- “Intercept” from inbox is misleading (does not remove remote message).
+- Release might produce duplicates (if original never actually quarantined).
+- SMTP and IMAP intercepted sets appear inconsistent in analytics before normalization.
+- Operators may edit via legacy routes bypassing interception-aware release flow.
+
+Recommendation
+Proceed with Phase 1–3 (normalization, true manual intercept, release verification) before further UI polish. Entire set is self-contained and low-risk.
+
+If you confirm, I can generate the Phase 1–3 patch set next (without removing legacy routes yet), or include Phase 4 removal at once.
+
+Reply with:
+- “Patch P1-3” (core interception correctness)
+- or “Patch P1-5” (includes status consistency)
+- or “Full patch (P1-6)” (everything including docs/test scaffolds)
+
+State preference and I’ll produce the code blocks. GitHub Copilot
+
+Summary: Manual “Intercept” from the Inbox is NOT fully implemented. The current route /api/email/<id>/intercept only updates the database. It does NOT remove
+(MOVE/COPY+DELETE) the message from the remote IMAP INBOX, because:
+- /api/fetch-emails does not store the server UID (uses sequence numbers via FETCH, not UID FETCH).
+- original_uid and original_internaldate remain NULL.
+- Manual interception has no IMAP operations, so the message still appears on the server.
+Therefore you cannot guarantee the user won’t still see the message in their mail client after clicking “Intercept”.
+
+Below are focused patches to implement proper manual interception:
+
+Plan:
+1. Enhance /api/fetch-emails to store UID + internaldate (original_uid, original_internaldate).
+2. Add IMAP helper to move a specific UID to Quarantine (MOVE or fallback COPY + STORE + EXPUNGE).
+3. Upgrade /api/email/<id>/intercept to:
+   - If original_uid present: perform server MOVE.
+   - Else: search by Message-ID; if still missing, fallback to SUBJECT header (best-effort).
+   - Create Quarantine if needed.
+   - Update interception_status='HELD', quarantine_folder='Quarantine', action_taken_at, latency_ms (optional).
+4. Add minimal error handling + response clarity.
+
+Patch 1: Add IMAP helper + modify fetch to store UID/internaldate.
+
+````python
+// ...existing code (near top imports)...
+import email.utils
+// ...existing code...
+
+def _imap_connect_account(account_row):
+    """Return (imap_conn, supports_move) for an email_accounts row."""
+    use_ssl = True  # we stored imap_use_ssl originally; treat non-993 as STARTTLS fallback
+    host = account_row['imap_host']; port = int(account_row['imap_port'] or 993)
+    username = account_row['imap_username']
+    password = decrypt_credential(account_row['imap_password'])
+    if not password:
+        raise RuntimeError("IMAP password decryption failed")
+    if port == 993:
+        imap_obj = imaplib.IMAP4_SSL(host, port)
+    else:
+        imap_obj = imaplib.IMAP4(host, port)
+        try:
+            imap_obj.starttls()
+        except Exception:
+            pass
+    imap_obj.login(username, password)
+    typ, caps = imap_obj.capability()
+    supports_move = any(b'MOVE' in c.upper() for c in caps) if isinstance(caps, list) else False
+    return imap_obj, supports_move
+
+def _ensure_quarantine(imap_obj, folder_name="Quarantine"):
+    """Create Quarantine folder if missing (ignore errors)."""
+    try:
+        imap_obj.create(folder_name)
+    except Exception:
+        pass
+
+def _move_uid_to_quarantine(imap_obj, uid: str, quarantine="Quarantine"):
+    """MOVE a message by UID to quarantine folder; fallback COPY+STORE+EXPUNGE."""
+    # Try MOVE (UID MOVE)
+    try:
+        # Some servers: imap_obj.uid('MOVE', uid, quarantine)
+        _ensure_quarantine(imap_obj, quarantine)
+        typ, data = imap_obj.uid('MOVE', uid, quarantine)
+        if typ == 'OK':
+            return True
+    except Exception:
+        pass
+    # Fallback: COPY then mark deleted and expunge from INBOX
+    try:
+        _ensure_quarantine(imap_obj, quarantine)
+        typ, _ = imap_obj.uid('COPY', uid, quarantine)
+        if typ == 'OK':
+            imap_obj.uid('STORE', uid, '+FLAGS', r'(\Deleted)')
+            imap_obj.expunge()
+            return True
+    except Exception:
+        pass
+    return False
+// ...existing code...
+@app.route('/api/fetch-emails', methods=['POST'])
+@login_required
+def api_fetch_emails():
+    """Fetch emails from IMAP server with customizable count (now stores UID & internaldate)."""
+    data = request.get_json()
+    account_id = data.get('account_id')
+    fetch_count = data.get('count', 20)
+    offset = data.get('offset', 0)
+
+    if not account_id:
+        return jsonify({'success': False, 'error': 'Account ID required'}), 400
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    account = cursor.execute(
+        "SELECT * FROM email_accounts WHERE id = ? AND is_active = 1",
+        (account_id,)
+    ).fetchone()
+
+    if not account:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Account not found or inactive'}), 404
+
+    try:
+        import imaplib
+        from email import message_from_bytes, policy
+
+        password = decrypt_credential(account['imap_password'])
+        if not password:
+            conn.close()
+            return jsonify({'success': False, 'error': 'Password decrypt failed'}), 500
+
+        if account['imap_port'] == 993:
+            mail = imaplib.IMAP4_SSL(account['imap_host'], account['imap_port'])
+        else:
+            mail = imaplib.IMAP4(account['imap_host'], account['imap_port'])
+            try:
+                mail.starttls()
+            except Exception:
+                pass
+
+        mail.login(account['imap_username'], password)
+        mail.select('INBOX')
+
+        # Use UID search for deterministic referencing
+        typ, msg_ids = mail.uid('search', None, 'ALL')
+        if typ != 'OK':
+            mail.logout()
+            conn.close()
+            return jsonify({'success': False, 'error': 'UID SEARCH failed'}), 500
+
+        uid_list = msg_ids[0].split()
+        total = len(uid_list)
+
+        start_idx = max(0, total - offset - fetch_count)
+        end_idx = total - offset
+        selected_uids = uid_list[start_idx:end_idx][-fetch_count:]
+
+        fetched = []
+        for raw_uid in reversed(selected_uids):
+            uid = raw_uid.decode()
+            typ, msg_data = mail.uid('fetch', uid, '(RFC822 INTERNALDATE)')
+            if typ != 'OK' or not msg_data or msg_data[0] is None:
+                continue
+            raw_email = msg_data[0][1]
+            email_msg = message_from_bytes(raw_email, policy=policy.default)
+
+            message_id = str(email_msg.get('Message-ID', f"manual_{account_id}_{uid}"))
+            sender = str(email_msg.get('From', ''))
+            subject = str(email_msg.get('Subject', 'No Subject'))
+            recipients = json.dumps([str(email_msg.get('To', ''))])
+
+            body_text = ""
+            body_html = ""
+            if email_msg.is_multipart():
+                for part in email_msg.walk():
+                    ctype = part.get_content_type()
+                    if ctype == "text/plain":
+                        payload = part.get_payload(decode=True)
+                        if payload:
+                            body_text = payload.decode('utf-8', errors='ignore')
+                    elif ctype == "text/html":
+                        payload = part.get_payload(decode=True)
+                        if payload:
+                            body_html = payload.decode('utf-8', errors='ignore')
+            else:
+                payload = email_msg.get_payload(decode=True)
+                if payload:
+                    body_text = payload.decode('utf-8', errors='ignore')
+
+            # Parse INTERNALDATE line for timestamp
+            internaldate = None
+            try:
+                # msg_data like: [(b'UID 1234 RFC822 {..}', bytes), (b')', None)]
+                # Use imaplib internaldate fetch alternative
+                # If INTERNALDATE not parsed, fallback to Date header
+                date_hdr = email_msg.get('Date')
+                if date_hdr:
+                    parsed = email.utils.parsedate_to_datetime(date_hdr)
+                    internaldate = parsed.isoformat()
+            except Exception:
+                internaldate = None
+
+            cursor.execute('''
+                INSERT OR IGNORE INTO email_messages
+                (message_id, sender, recipients, subject, body_text, body_html,
+                 raw_content, account_id, direction, interception_status,
+                 original_uid, original_internaldate, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+            ''', (
+                message_id, sender, recipients, subject, body_text, body_html,
+                raw_email, account_id, 'inbound', 'FETCHED',
+                uid, internaldate
+            ))
+
+            fetched.append({
+                'message_id': message_id,
+                'uid': uid,
+                'subject': subject,
+                'preview': body_text[:200] if body_text else ''
+            })
+
+        conn.commit()
+        mail.logout()
+        conn.close()
+        return jsonify({
+            'success': True,
+            'fetched': len(fetched),
+            'total_available': total,
+            'emails': fetched
+        })
+    except Exception as e:
+        conn.close()
+        return jsonify({'success': False, 'error': str(e)}), 500
+// ...existing code...
+@app.route('/api/email/<email_id>/intercept', methods=['POST'])
+@login_required
+def api_email_intercept(email_id):
+    """
+    Manually intercept an email:
+    - If not already HELD, attempt to MOVE from INBOX -> Quarantine (server side)
+    - Update interception_status='HELD'
+    - Return details
+    """
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    email_row = cursor.execute("""
+        SELECT em.*, ea.imap_host, ea.imap_port, ea.imap_username, ea.imap_password
+        FROM email_messages em
+        LEFT JOIN email_accounts ea ON em.account_id = ea.id
+        WHERE em.id = ?
+    """, (email_id,)).fetchone()
+
+    if not email_row:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Email not found'}), 404
+    if not email_row['account_id']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Email not linked to an account'}), 400
+
+    already = email_row['interception_status']
+    moved_remote = False
+    error_detail = None
+
+    # Only attempt remote move if not already HELD and we have credentials
+    if already != 'HELD':
+        try:
+            imap_obj, supports_move = _imap_connect_account(email_row)
+            imap_obj.select('INBOX')
+            uid = email_row['original_uid']
+
+            # If no stored UID, try to locate by Message-ID header
+            if not uid and email_row['message_id']:
+                search_crit = f'(HEADER Message-ID "{email_row["message_id"]}")'
+                typ, data = imap_obj.uid('search', None, search_crit)
+                if typ == 'OK' and data and data[0]:
+                    parts = data[0].split()
+                    if parts:
+                        uid = parts[-1].decode()
+
+            # Final fallback: SUBJECT search (less reliable)
+            if not uid and email_row['subject']:
+                subj = email_row['subject'].replace('"', '')
+                typ, data = imap_obj.uid('search', None, f'(HEADER Subject "{subj}")')
+                if typ == 'OK' and data and data[0]:
+                    parts = data[0].split()
+                    if parts:
+                        uid = parts[-1].decode()
+
+            # If UID found, attempt move
+            if uid:
+                moved_remote = _move_uid_to_quarantine(imap_obj, uid)
+                if moved_remote and not email_row['original_uid']:
+                    # store discovered uid
+                    cursor.execute("""
+                        UPDATE email_messages
+                        SET original_uid = ?
+                        WHERE id = ?
+                    """, (uid, email_id))
+            else:
+                error_detail = "Could not determine remote UID (Message-ID search failed)"
+            imap_obj.logout()
+        except Exception as e:
+            error_detail = f"IMAP operation failed: {e}"
+
+    # Update interception status locally
+    cursor.execute("""
+        UPDATE email_messages
+        SET interception_status='HELD',
+            status='PENDING',
+            quarantine_folder='Quarantine',
+            action_taken_at = datetime('now')
+        WHERE id=?
+    """, (email_id,))
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'email_id': email_id,
+        'remote_move': moved_remote,
+        'previous_status': already,
+        'note': error_detail
+    })
+````
+
+Patch 2 (Optional): Remove the old simpler intercept route earlier (if duplicate). You already had one—ensure only the enhanced version exists.
+
+Validation Steps:
+1. Fetch emails:
+   POST /api/fetch-emails {"account_id": 1, "count": 5}
+   Response now includes uid for each message.
+2. Intercept a fetched message:
+   POST /api/email/<id>/intercept
+   Should return remote_move: true if UID found and MOVE/COPY succeeded.
+3. Check server INBOX (via real mail client or IMAP) – message should be gone, present in Quarantine folder.
+4. Edit/release via existing interception blueprint (ensure its release logic uses raw_content or reconstructs and APPENDs to INBOX).
+
+Release Path Check:
+Provide (if needed) the release endpoint code from interception.py to confirm it APPENDs back and updates interception_status='RELEASED'. If it does not also optionally
+restore original_internaldate or record edited_message_id, that can be added next.
+
+Let me know:
+- If you want the release logic reviewed next.
+- If you want a fallback when remote move fails (e.g., mark as HELD_LOCAL_ONLY).
+
+Ready for next patch or review.
+
+● I need to expand my plan significantly based on this comprehensive analysis. Let me first check the existing interception blueprint to understand the current release
+  implementation:
+
+● Read(app\routes\interception.py)
+  ⎿  Read 244 lines (ctrl+o to expand)
+
+> GitHub Copilot
+
+Below is the next actionable message you can give Claude Code. It is broken into small, safe chunks. Have Claude complete each phase before moving on.
+
+---
+MESSAGE TO CLAUDE (PHASED IMPLEMENTATION PLAN)
+
+Phase 0 – Sanity / File Stabilization
+1. Open simple_app.py and fix the broken empty try/except block under “# Blueprint registration (interception)”. Either remove it or properly import and register the
+interception blueprint once.
+2. Search for any second/duplicate registration of the interception blueprint and remove it.
+3. Ensure EmailModerationHandler class still exists and has the normalized HELD insert (account_id, direction='inbound', interception_status='HELD').
+
+Phase 1 – Add IMAP Helpers (if not present)
+Add (or verify) these helper functions near top-level (only if missing):
+- _imap_connect_account(account_row)
+- _ensure_quarantine(imap_obj, folder_name="Quarantine")
+- _move_uid_to_quarantine(imap_obj, uid, quarantine="Quarantine")
+Make sure they import imaplib and reuse decrypt_credential.
+
+Phase 2 – Enhance /api/fetch-emails
+1. Ensure it uses UID SEARCH not sequence numbers.
+2. For each fetched message store:
+   - original_uid
+   - original_internaldate (parse Date header if INTERNALDATE not available)
+   - interception_status='FETCHED'
+3. Do not overwrite existing rows (use INSERT OR IGNORE).
+4. Return array with uid and message_id.
+
+Phase 3 – Implement Proper Manual Intercept
+1. Locate /api/email/<id>/intercept route (if old version exists, replace it).
+2. Flow:
+   - Load email row + linked account.
+   - If interception_status != 'HELD':
+     a. If original_uid present → attempt MOVE (or COPY+DELETE fallback).
+     b. Else: UID SEARCH by Message-ID → fallback Subject.
+   - On success update original_uid if newly discovered.
+   - Always set interception_status='HELD', quarantine_folder='Quarantine', action_taken_at=NOW.
+   - Return JSON: {success, remote_move, previous_status, note}.
+3. If remote move fails → still mark HELD but add note.
+
+Phase 4 – Release Endpoint Verification
+1. Open interception.py and locate release route (likely /api/interception/release/<id>).
+2. Confirm it:
+   - Loads original raw_content OR reconstructs from stored components.
+   - Applies edited subject/body.
+   - Optionally strips attachments.
+   - Generates new Message-ID (store as edited_message_id).
+   - APPENDs to INBOX (IMAP).
+   - Sets interception_status='RELEASED', status='DELIVERED'.
+   - Commits.
+If any part missing, patch to include it. If no raw_content stored, fall back to body_text/body_html.
+
+Phase 5 – Remove / Disable Legacy Edit Routes
+Search in simple_app.py for:
+- /email/<id>/edit
+- /email/<id>/save
+- /email/<id>/approve-send
+- /email/<id>/reject
+If these exist and UI now uses /api/email/<id>/edit + /api/interception/release, comment them out or delete. Add a LEGACY_REMOVED comment block.
+
+Phase 6 – Unified Status Consistency
+Ensure only these interception_status values appear:
+- HELD
+- RELEASED
+- DISCARDED (if discard exists)
+- FETCHED (pre-intercept inbox fetch)
+Update unified stats query if needed:
+held = COUNT interception_status='HELD'
+released = interception_status='RELEASED' OR status in ('DELIVERED','SENT','APPROVED')
+
+Phase 7 – Tests (add new file tests/test_intercept_flow.py)
+Add tests:
+1. test_fetch_emails_stores_uid (mock imaplib: ensure original_uid saved).
+2. test_manual_intercept_moves (mock _move_uid_to_quarantine returning True → route sets HELD and remote_move True).
+3. test_manual_intercept_uid_discovery (no original_uid, has message_id → mock uid search success).
+4. test_release_updates_status (mock IMAP append, assert RELEASED + edited_message_id set).
+
+Phase 8 – Documentation Update
+In INTERCEPTION_IMPLEMENTATION.md add:
+- Manual intercept flow (Fetch → Intercept → Edit → Release).
+- Distinction between FETCHED vs HELD.
+- UID resolution fallback order (original_uid → Message-ID → Subject).
+Add a short section in README: “Manual Inbox Intercept”.
+
+Phase 9 – Quick Manual Validation
+Run sequence:
+1. python simple_app.py
+2. POST /api/fetch-emails (account_id=X)
+3. Pick an id from DB (status FETCHED).
+4. POST /api/email/<id>/intercept → expect HELD + remote_move true.
+5. GET /api/interception/held → should list it.
+6. Edit + release via UI → verify appears in mailbox again.
+
+Phase 10 – Optional (Defer if time constrained)
+- Add latency_ms on manual intercept: (action_taken_at - created_at).
+- Add audit_log rows (action='MANUAL_INTERCEPT', 'RELEASE').
+- Bulk intercept (list of IDs).
+- Bulk release.
+
+Key Gotchas to Watch
+- Ensure decrypt_credential function name matches current utils (encrypt_credential/decrypt_credential).
+- Avoid double imports of imaplib.
+- Do not re-register blueprint after app creation.
+- Ensure DB schema contains fields: original_uid, original_internaldate, interception_status, quarantine_folder, action_taken_at.
+
+If any of those columns missing, add ALTER TABLE guards.
+
+Ready to proceed—execute Phase 0 first then report back diffs.
+
+---
+
+Let me know when Claude finishes Phase 0–2; I can prepare release endpoint patch verification after that.
+  ⎿  Interrupted · What should Claude do instead?
+
+
+
+

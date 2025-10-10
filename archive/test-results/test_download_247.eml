@@ -1,0 +1,21 @@
+Return-Path: <ndayijecika@gmail.com>
+Received: from [192.168.50.141] ([23.160.24.185])
+        by smtp.gmail.com with ESMTPSA id 98e67ed59e1d1-339a70246c1sm1786279a91.24.2025.10.01.02.01.46
+        for <ndayijecika@gmail.com>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Wed, 01 Oct 2025 02:01:46 -0700 (PDT)
+Message-ID: <68dcedfa.170a0220.154f2d.6adb@mx.google.com>
+Date: Wed, 01 Oct 2025 02:01:46 -0700 (PDT)
+Content-Type: multipart/mixed; boundary="===============5984235020008388768=="
+MIME-Version: 1.0
+From: ndayijecika@gmail.com
+To: ndayijecika@gmail.com
+Subject: Test Email 020145 - For Reply
+
+--===============5984235020008388768==
+Content-Type: text/plain; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+
+This email will be used to test reply functionality.
+--===============5984235020008388768==--

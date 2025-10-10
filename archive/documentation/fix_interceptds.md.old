@@ -1,0 +1,330 @@
+GitHub Copilot
+
+Summary: Manual “Intercept” from the Inbox is NOT fully implemented. The current route /api/email/<id>/intercept only updates the database. It does NOT remove (MOVE/COPY+DELETE) the message from the remote IMAP INBOX, because:
+
+- /api/fetch-emails does not store the server UID (uses sequence numbers via FETCH, not UID FETCH).
+- original_uid and original_internaldate remain NULL.
+- Manual interception has no IMAP operations, so the message still appears on the server.
+  Therefore you cannot guarantee the user won’t still see the message in their mail client after clicking “Intercept”.
+
+Below are focused patches to implement proper manual interception:
+
+Plan:
+
+1. Enhance /api/fetch-emails to store UID + internaldate (original_uid, original_internaldate).
+2. Add IMAP helper to move a specific UID to Quarantine (MOVE or fallback COPY + STORE + EXPUNGE).
+3. Upgrade /api/email/<id>/intercept to:
+   - If original_uid present: perform server MOVE.
+   - Else: search by Message-ID; if still missing, fallback to SUBJECT header (best-effort).
+   - Create Quarantine if needed.
+   - Update interception_status='HELD', quarantine_folder='Quarantine', action_taken_at, latency_ms (optional).
+4. Add minimal error handling + response clarity.
+
+Patch 1: Add IMAP helper + modify fetch to store UID/internaldate.
+
+```python
+// ...existing code (near top imports)...
+import email.utils
+// ...existing code...
+
+def _imap_connect_account(account_row):
+    """Return (imap_conn, supports_move) for an email_accounts row."""
+    use_ssl = True  # we stored imap_use_ssl originally; treat non-993 as STARTTLS fallback
+    host = account_row['imap_host']; port = int(account_row['imap_port'] or 993)
+    username = account_row['imap_username']
+    password = decrypt_credential(account_row['imap_password'])
+    if not password:
+        raise RuntimeError("IMAP password decryption failed")
+    if port == 993:
+        imap_obj = imaplib.IMAP4_SSL(host, port)
+    else:
+        imap_obj = imaplib.IMAP4(host, port)
+        try:
+            imap_obj.starttls()
+        except Exception:
+            pass
+    imap_obj.login(username, password)
+    typ, caps = imap_obj.capability()
+    supports_move = any(b'MOVE' in c.upper() for c in caps) if isinstance(caps, list) else False
+    return imap_obj, supports_move
+
+def _ensure_quarantine(imap_obj, folder_name="Quarantine"):
+    """Create Quarantine folder if missing (ignore errors)."""
+    try:
+        imap_obj.create(folder_name)
+    except Exception:
+        pass
+
+def _move_uid_to_quarantine(imap_obj, uid: str, quarantine="Quarantine"):
+    """MOVE a message by UID to quarantine folder; fallback COPY+STORE+EXPUNGE."""
+    # Try MOVE (UID MOVE)
+    try:
+        # Some servers: imap_obj.uid('MOVE', uid, quarantine)
+        _ensure_quarantine(imap_obj, quarantine)
+        typ, data = imap_obj.uid('MOVE', uid, quarantine)
+        if typ == 'OK':
+            return True
+    except Exception:
+        pass
+    # Fallback: COPY then mark deleted and expunge from INBOX
+    try:
+        _ensure_quarantine(imap_obj, quarantine)
+        typ, _ = imap_obj.uid('COPY', uid, quarantine)
+        if typ == 'OK':
+            imap_obj.uid('STORE', uid, '+FLAGS', r'(\Deleted)')
+            imap_obj.expunge()
+            return True
+    except Exception:
+        pass
+    return False
+// ...existing code...
+@app.route('/api/fetch-emails', methods=['POST'])
+@login_required
+def api_fetch_emails():
+    """Fetch emails from IMAP server with customizable count (now stores UID & internaldate)."""
+    data = request.get_json()
+    account_id = data.get('account_id')
+    fetch_count = data.get('count', 20)
+    offset = data.get('offset', 0)
+
+    if not account_id:
+        return jsonify({'success': False, 'error': 'Account ID required'}), 400
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    account = cursor.execute(
+        "SELECT * FROM email_accounts WHERE id = ? AND is_active = 1",
+        (account_id,)
+    ).fetchone()
+
+    if not account:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Account not found or inactive'}), 404
+
+    try:
+        import imaplib
+        from email import message_from_bytes, policy
+
+        password = decrypt_credential(account['imap_password'])
+        if not password:
+            conn.close()
+            return jsonify({'success': False, 'error': 'Password decrypt failed'}), 500
+
+        if account['imap_port'] == 993:
+            mail = imaplib.IMAP4_SSL(account['imap_host'], account['imap_port'])
+        else:
+            mail = imaplib.IMAP4(account['imap_host'], account['imap_port'])
+            try:
+                mail.starttls()
+            except Exception:
+                pass
+
+        mail.login(account['imap_username'], password)
+        mail.select('INBOX')
+
+        # Use UID search for deterministic referencing
+        typ, msg_ids = mail.uid('search', None, 'ALL')
+        if typ != 'OK':
+            mail.logout()
+            conn.close()
+            return jsonify({'success': False, 'error': 'UID SEARCH failed'}), 500
+
+        uid_list = msg_ids[0].split()
+        total = len(uid_list)
+
+        start_idx = max(0, total - offset - fetch_count)
+        end_idx = total - offset
+        selected_uids = uid_list[start_idx:end_idx][-fetch_count:]
+
+        fetched = []
+        for raw_uid in reversed(selected_uids):
+            uid = raw_uid.decode()
+            typ, msg_data = mail.uid('fetch', uid, '(RFC822 INTERNALDATE)')
+            if typ != 'OK' or not msg_data or msg_data[0] is None:
+                continue
+            raw_email = msg_data[0][1]
+            email_msg = message_from_bytes(raw_email, policy=policy.default)
+
+            message_id = str(email_msg.get('Message-ID', f"manual_{account_id}_{uid}"))
+            sender = str(email_msg.get('From', ''))
+            subject = str(email_msg.get('Subject', 'No Subject'))
+            recipients = json.dumps([str(email_msg.get('To', ''))])
+
+            body_text = ""
+            body_html = ""
+            if email_msg.is_multipart():
+                for part in email_msg.walk():
+                    ctype = part.get_content_type()
+                    if ctype == "text/plain":
+                        payload = part.get_payload(decode=True)
+                        if payload:
+                            body_text = payload.decode('utf-8', errors='ignore')
+                    elif ctype == "text/html":
+                        payload = part.get_payload(decode=True)
+                        if payload:
+                            body_html = payload.decode('utf-8', errors='ignore')
+            else:
+                payload = email_msg.get_payload(decode=True)
+                if payload:
+                    body_text = payload.decode('utf-8', errors='ignore')
+
+            # Parse INTERNALDATE line for timestamp
+            internaldate = None
+            try:
+                # msg_data like: [(b'UID 1234 RFC822 {..}', bytes), (b')', None)]
+                # Use imaplib internaldate fetch alternative
+                # If INTERNALDATE not parsed, fallback to Date header
+                date_hdr = email_msg.get('Date')
+                if date_hdr:
+                    parsed = email.utils.parsedate_to_datetime(date_hdr)
+                    internaldate = parsed.isoformat()
+            except Exception:
+                internaldate = None
+
+            cursor.execute('''
+                INSERT OR IGNORE INTO email_messages
+                (message_id, sender, recipients, subject, body_text, body_html,
+                 raw_content, account_id, direction, interception_status,
+                 original_uid, original_internaldate, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+            ''', (
+                message_id, sender, recipients, subject, body_text, body_html,
+                raw_email, account_id, 'inbound', 'FETCHED',
+                uid, internaldate
+            ))
+
+            fetched.append({
+                'message_id': message_id,
+                'uid': uid,
+                'subject': subject,
+                'preview': body_text[:200] if body_text else ''
+            })
+
+        conn.commit()
+        mail.logout()
+        conn.close()
+        return jsonify({
+            'success': True,
+            'fetched': len(fetched),
+            'total_available': total,
+            'emails': fetched
+        })
+    except Exception as e:
+        conn.close()
+        return jsonify({'success': False, 'error': str(e)}), 500
+// ...existing code...
+@app.route('/api/email/<email_id>/intercept', methods=['POST'])
+@login_required
+def api_email_intercept(email_id):
+    """
+    Manually intercept an email:
+    - If not already HELD, attempt to MOVE from INBOX -> Quarantine (server side)
+    - Update interception_status='HELD'
+    - Return details
+    """
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    email_row = cursor.execute("""
+        SELECT em.*, ea.imap_host, ea.imap_port, ea.imap_username, ea.imap_password
+        FROM email_messages em
+        LEFT JOIN email_accounts ea ON em.account_id = ea.id
+        WHERE em.id = ?
+    """, (email_id,)).fetchone()
+
+    if not email_row:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Email not found'}), 404
+    if not email_row['account_id']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Email not linked to an account'}), 400
+
+    already = email_row['interception_status']
+    moved_remote = False
+    error_detail = None
+
+    # Only attempt remote move if not already HELD and we have credentials
+    if already != 'HELD':
+        try:
+            imap_obj, supports_move = _imap_connect_account(email_row)
+            imap_obj.select('INBOX')
+            uid = email_row['original_uid']
+
+            # If no stored UID, try to locate by Message-ID header
+            if not uid and email_row['message_id']:
+                search_crit = f'(HEADER Message-ID "{email_row["message_id"]}")'
+                typ, data = imap_obj.uid('search', None, search_crit)
+                if typ == 'OK' and data and data[0]:
+                    parts = data[0].split()
+                    if parts:
+                        uid = parts[-1].decode()
+
+            # Final fallback: SUBJECT search (less reliable)
+            if not uid and email_row['subject']:
+                subj = email_row['subject'].replace('"', '')
+                typ, data = imap_obj.uid('search', None, f'(HEADER Subject "{subj}")')
+                if typ == 'OK' and data and data[0]:
+                    parts = data[0].split()
+                    if parts:
+                        uid = parts[-1].decode()
+
+            # If UID found, attempt move
+            if uid:
+                moved_remote = _move_uid_to_quarantine(imap_obj, uid)
+                if moved_remote and not email_row['original_uid']:
+                    # store discovered uid
+                    cursor.execute("""
+                        UPDATE email_messages
+                        SET original_uid = ?
+                        WHERE id = ?
+                    """, (uid, email_id))
+            else:
+                error_detail = "Could not determine remote UID (Message-ID search failed)"
+            imap_obj.logout()
+        except Exception as e:
+            error_detail = f"IMAP operation failed: {e}"
+
+    # Update interception status locally
+    cursor.execute("""
+        UPDATE email_messages
+        SET interception_status='HELD',
+            status='PENDING',
+            quarantine_folder='Quarantine',
+            action_taken_at = datetime('now')
+        WHERE id=?
+    """, (email_id,))
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'email_id': email_id,
+        'remote_move': moved_remote,
+        'previous_status': already,
+        'note': error_detail
+    })
+```
+
+Patch 2 (Optional): Remove the old simpler intercept route earlier (if duplicate). You already had one—ensure only the enhanced version exists.
+
+Validation Steps:
+
+1. Fetch emails:
+   POST /api/fetch-emails {"account_id": 1, "count": 5}
+   Response now includes uid for each message.
+2. Intercept a fetched message:
+   POST /api/email/<id>/intercept
+   Should return remote_move: true if UID found and MOVE/COPY succeeded.
+3. Check server INBOX (via real mail client or IMAP) – message should be gone, present in Quarantine folder.
+4. Edit/release via existing interception blueprint (ensure its release logic uses raw_content or reconstructs and APPENDs to INBOX).
+
+Release Path Check:
+Provide (if needed) the release endpoint code from interception.py to confirm it APPENDs back and updates interception_status='RELEASED'. If it does not also optionally restore original_internaldate or record edited_message_id, that can be added next.
+
+Let me know:
+
+- If you want the release logic reviewed next.
+- If you want a fallback when remote move fails (e.g., mark as HELD_LOCAL_ONLY).
+
+Ready for next patch or review.
