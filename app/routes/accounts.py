@@ -10,6 +10,7 @@ import imaplib
 import smtplib
 import json
 from app.utils.db import DB_PATH, get_db
+from datetime import datetime
 from app.utils.crypto import encrypt_credential, decrypt_credential
 
 accounts_bp = Blueprint('accounts', __name__)
@@ -71,6 +72,184 @@ def _test_email_connection(kind: str, host: str, port: int, username: str, passw
         return False, f"Unsupported kind {kind}"
     except Exception as e:
         return False, str(e)
+
+
+@accounts_bp.route('/api/accounts')
+@login_required
+def api_get_accounts():
+    """Get all email accounts (admin and diagnostics)."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    rows = cursor.execute(
+        """
+        SELECT id, account_name, email_address, is_active,
+               smtp_host, smtp_port, imap_host, imap_port
+        FROM email_accounts
+        ORDER BY account_name
+        """
+    ).fetchall()
+    conn.close()
+    return jsonify({'success': True, 'accounts': [dict(r) for r in rows]})
+
+
+@accounts_bp.route('/api/accounts/<account_id>/health')
+@login_required
+def api_account_health(account_id):
+    """Get real-time health status for an account (from DB fields)."""
+    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    account = cur.execute(
+        """
+        SELECT smtp_health_status, imap_health_status,
+               last_health_check, last_error, connection_status
+        FROM email_accounts WHERE id = ?
+        """,
+        (account_id,),
+    ).fetchone()
+    if not account:
+        conn.close(); return jsonify({'error': 'Account not found'}), 404
+    smtp_status = account['smtp_health_status'] or 'unknown'
+    imap_status = account['imap_health_status'] or 'unknown'
+    if smtp_status == 'connected' and imap_status == 'connected':
+        overall = 'connected'
+    elif smtp_status == 'error' or imap_status == 'error':
+        overall = 'error'
+    elif smtp_status == 'unknown' and imap_status == 'unknown':
+        overall = 'unknown'
+    else:
+        overall = 'warning'
+    conn.close()
+    return jsonify({
+        'overall': overall,
+        'smtp': smtp_status,
+        'imap': imap_status,
+        'last_check': account['last_health_check'],
+        'last_error': account['last_error']
+    })
+
+
+@accounts_bp.route('/api/accounts/<account_id>', methods=['GET', 'PUT', 'DELETE'])
+@login_required
+def api_account_crud(account_id):
+    """Account CRUD operations (sanitized; no decrypted secrets returned)."""
+    if request.method == 'GET':
+        conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row
+        cur = conn.cursor(); acc = cur.execute("SELECT * FROM email_accounts WHERE id=?", (account_id,)).fetchone()
+        if not acc:
+            conn.close(); return jsonify({'error': 'Account not found'}), 404
+        data = dict(acc); data.pop('imap_password', None); data.pop('smtp_password', None)
+        conn.close(); return jsonify(data)
+
+    if request.method == 'PUT':
+        if current_user.role != 'admin':
+            return jsonify({'error': 'Admin access required'}), 403
+        payload = request.get_json(silent=True) or {}
+        conn = sqlite3.connect(DB_PATH); cur = conn.cursor()
+        fields, values = [], []
+        for field in ['account_name','email_address','provider_type','smtp_host','smtp_port','smtp_username','imap_host','imap_port','imap_username']:
+            if field in payload:
+                fields.append(f"{field} = ?"); values.append(payload[field])
+        if payload.get('smtp_password'):
+            fields.append('smtp_password = ?'); values.append(encrypt_credential(payload['smtp_password']))
+        if payload.get('imap_password'):
+            fields.append('imap_password = ?'); values.append(encrypt_credential(payload['imap_password']))
+        if 'smtp_use_ssl' in payload:
+            fields.append('smtp_use_ssl = ?'); values.append(1 if payload['smtp_use_ssl'] else 0)
+        if 'imap_use_ssl' in payload:
+            fields.append('imap_use_ssl = ?'); values.append(1 if payload['imap_use_ssl'] else 0)
+        if fields:
+            fields.append('updated_at = CURRENT_TIMESTAMP'); values.append(account_id)
+            cur.execute(f"UPDATE email_accounts SET {', '.join(fields)} WHERE id = ?", values); conn.commit()
+        conn.close(); return jsonify({'success': True})
+
+    # DELETE
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+    conn = sqlite3.connect(DB_PATH); cur = conn.cursor()
+    cur.execute("DELETE FROM email_accounts WHERE id=?", (account_id,)); conn.commit(); conn.close()
+    return jsonify({'success': True})
+
+
+@accounts_bp.route('/api/accounts/<account_id>/test', methods=['POST'])
+@login_required
+def api_test_account(account_id):
+    """Test account IMAP/SMTP connectivity and update health fields."""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row
+    cur = conn.cursor(); acc = cur.execute("SELECT * FROM email_accounts WHERE id=?", (account_id,)).fetchone()
+    if not acc:
+        conn.close(); return jsonify({'error': 'Account not found'}), 404
+    imap_pwd = decrypt_credential(acc['imap_password'])
+    smtp_pwd = decrypt_credential(acc['smtp_password'])
+    imap_ok, imap_msg = _test_email_connection('imap', acc['imap_host'], acc['imap_port'], acc['imap_username'], imap_pwd or '', acc['imap_use_ssl'])
+    smtp_ok, smtp_msg = _test_email_connection('smtp', acc['smtp_host'], acc['smtp_port'], acc['smtp_username'], smtp_pwd or '', acc['smtp_use_ssl'])
+    cur.execute(
+        """
+        UPDATE email_accounts
+        SET smtp_health_status = ?, imap_health_status = ?,
+            last_health_check = CURRENT_TIMESTAMP,
+            connection_status = ?
+        WHERE id = ?
+        """,
+        (
+            'connected' if smtp_ok else 'error',
+            'connected' if imap_ok else 'error',
+            'connected' if (smtp_ok and imap_ok) else 'error',
+            account_id,
+        ),
+    )
+    if smtp_ok and imap_ok:
+        cur.execute("UPDATE email_accounts SET last_successful_connection = CURRENT_TIMESTAMP WHERE id=?", (account_id,))
+    conn.commit(); conn.close()
+    return jsonify({'success': smtp_ok and imap_ok, 'imap': {'success': imap_ok, 'message': imap_msg}, 'smtp': {'success': smtp_ok, 'message': smtp_msg}})
+
+
+@accounts_bp.route('/api/accounts/export')
+@login_required
+def api_export_accounts():
+    """Export non-secret account configuration as JSON file."""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    rows = cur.execute(
+        """
+        SELECT account_name, email_address, provider_type,
+               imap_host, imap_port, imap_username, imap_use_ssl,
+               smtp_host, smtp_port, smtp_username, smtp_use_ssl
+        FROM email_accounts
+        ORDER BY account_name
+        """
+    ).fetchall(); conn.close()
+    export = {'version': '1.0', 'exported_at': datetime.now().isoformat(), 'accounts': [dict(r) for r in rows]}
+    resp = jsonify(export); resp.headers['Content-Disposition'] = 'attachment; filename=email_accounts_export.json'
+    return resp
+
+
+@accounts_bp.route('/api/test-connection/<connection_type>', methods=['POST'])
+@login_required
+def api_test_connection(connection_type):
+    """Test IMAP/SMTP connectivity to an arbitrary host using provided params."""
+    data = request.get_json(silent=True) or {}
+    host = data.get('host'); port = int(data.get('port')) if data.get('port') else None
+    username = data.get('username'); password = data.get('password') or ''
+    use_ssl = bool(data.get('use_ssl', True))
+    if not (host and port and username):
+        return jsonify({'success': False, 'message': 'Missing parameters', 'error': 'Missing parameters'}), 400
+    ok, msg = _test_email_connection(connection_type, host, port, username, password, use_ssl)
+    return jsonify({'success': ok, 'message': msg, 'error': None if ok else msg})
+
+
+@accounts_bp.route('/diagnostics')
+@accounts_bp.route('/diagnostics/<account_id>')
+@login_required
+def diagnostics(account_id=None):
+    """Redirect to dashboard diagnostics tab, optionally scoped to account."""
+    if account_id:
+        return redirect(url_for('dashboard.dashboard', tab='diagnostics') + f'?account_id={account_id}')
+    return redirect(url_for('dashboard.dashboard', tab='diagnostics'))
 
 
 @accounts_bp.route('/accounts')

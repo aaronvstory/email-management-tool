@@ -10,7 +10,7 @@ from datetime import datetime
 import sqlite3
 from typing import Dict, Any
 from flask import Blueprint, jsonify, render_template, request
-from flask_login import login_required
+from flask_login import login_required, current_user
 from email.parser import BytesParser
 from email.policy import default as default_policy
 import difflib
@@ -259,3 +259,101 @@ def api_email_edit(email_id:int):
     values.append(email_id)
     cur.execute(f"UPDATE email_messages SET {', '.join(fields)}, updated_at = datetime('now') WHERE id = ?", values)
     conn.commit(); conn.close(); return jsonify({'ok':True,'updated_fields':[f.split('=')[0].strip() for f in fields]})
+
+
+@bp_interception.route('/api/email/<int:email_id>/intercept', methods=['POST'])
+@login_required
+def api_email_intercept(email_id:int):
+    """Manually intercept an email with remote MOVE to Quarantine folder (migrated)."""
+    conn = _db(); cur = conn.cursor()
+    row = cur.execute(
+        """
+        SELECT em.*, ea.imap_host, ea.imap_port, ea.imap_username, ea.imap_password
+        FROM email_messages em
+        LEFT JOIN email_accounts ea ON em.account_id = ea.id
+        WHERE em.id=?
+        """,
+        (email_id,),
+    ).fetchone()
+    if not row:
+        conn.close(); return jsonify({'success': False, 'error': 'Not found'}), 404
+    if not row['account_id']:
+        conn.close(); return jsonify({'success': False, 'error': 'No linked account'}), 400
+
+    previous = row['interception_status']; remote_move = False; note = None
+    if previous != 'HELD':
+        try:
+            # Connect to IMAP
+            host = row['imap_host']; port = int(row['imap_port'] or 993)
+            username = row['imap_username']; password = decrypt_credential(row['imap_password'])
+            imap_obj = imaplib.IMAP4_SSL(host, port) if port == 993 else imaplib.IMAP4(host, port)
+            try:
+                if port != 993: imap_obj.starttls()
+            except Exception:
+                pass
+            if not password: raise RuntimeError('Decrypted password missing')
+            imap_obj.login(username, password); imap_obj.select('INBOX')
+            uid = row['original_uid']
+            if not uid and row['message_id']:
+                crit = f'(HEADER Message-ID "{row["message_id"]}")'
+                typ, data = imap_obj.uid('search', None, crit)
+                if typ == 'OK' and data and data[0]:
+                    found = data[0].split();
+                    if found: uid = found[-1].decode()
+            if not uid and row['subject']:
+                subj = (row['subject'] or '').replace('"', '')
+                typ, data = imap_obj.uid('search', None, f'(HEADER Subject "{subj}")')
+                if typ == 'OK' and data and data[0]:
+                    found = data[0].split();
+                    if found: uid = found[-1].decode()
+            # Ensure quarantine folder and move
+            if uid:
+                try:
+                    typ, _ = imap_obj.uid('MOVE', uid, 'Quarantine')
+                    remote_move = (typ == 'OK')
+                except Exception:
+                    try:
+                        typ, _ = imap_obj.uid('COPY', uid, 'Quarantine')
+                        if typ == 'OK':
+                            imap_obj.uid('STORE', uid, '+FLAGS', r'(\Deleted)'); imap_obj.expunge(); remote_move = True
+                    except Exception:
+                        remote_move = False
+                if remote_move and not row['original_uid']:
+                    cur.execute('UPDATE email_messages SET original_uid=? WHERE id=?', (uid, email_id))
+            else:
+                note = 'Remote UID not found (Message-ID/Subject search failed)'
+            imap_obj.logout()
+        except Exception as exc:
+            note = f'IMAP error: {exc}'
+
+    cur.execute(
+        """
+        UPDATE email_messages
+        SET interception_status='HELD',
+            status='PENDING',
+            quarantine_folder='Quarantine',
+            action_taken_at=datetime('now')
+        WHERE id=?
+        """,
+        (email_id,),
+    ); conn.commit()
+
+    # Calculate latency_ms best-effort
+    try:
+        row_t = cur.execute("SELECT created_at, action_taken_at, latency_ms FROM email_messages WHERE id=?", (email_id,)).fetchone()
+        if row_t and row_t['created_at'] and row_t['action_taken_at'] and row_t['latency_ms'] is None:
+            cur.execute("UPDATE email_messages SET latency_ms = CAST((julianday(action_taken_at) - julianday(created_at)) * 86400000 AS INTEGER) WHERE id=?", (email_id,))
+            conn.commit()
+    except Exception:
+        pass
+    conn.close()
+
+    # Best-effort audit log
+    try:
+        from app.services.audit import log_action
+        user_id = getattr(current_user, 'id', None)
+        log_action('MANUAL_INTERCEPT', user_id, email_id, f"Manual intercept: remote_move={remote_move}, previous_status={previous}{', note='+note if note else ''}")
+    except Exception:
+        pass
+
+    return jsonify({'success': True, 'email_id': email_id, 'remote_move': remote_move, 'previous_status': previous, 'note': note})

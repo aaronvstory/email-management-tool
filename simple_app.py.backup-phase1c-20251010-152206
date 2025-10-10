@@ -656,38 +656,813 @@ def get_test_status():
 # Routes: /api/stats, /api/unified-stats, /api/latency-stats, /stream/stats
 # ============================================================================
 
-# Moved: /api/events -> stats blueprint (app/routes/stats.py)
+@app.route('/api/events')
+@login_required
+def api_events():
+    """Server-Sent Events endpoint for real-time updates"""
+    def generate():
+        while True:
+            # TODO: introduce in-memory cache layer (ttl ~2s) using a simple dict + timestamps
+            # Get latest email count
+            counts = fetch_counts()
+            pending = counts.get('pending', 0)
 
-# Moved: /api/diagnostics/<account_id> -> accounts blueprint
+            data = json.dumps({'pending': pending, 'timestamp': datetime.now().isoformat()})
+            yield f"data: {data}\n\n"
 
-# Moved: /api/accounts -> accounts blueprint
+            time.sleep(5)  # Update every 5 seconds
+
+    return Response(generate(), mimetype="text/event-stream")
+
+@app.route('/api/diagnostics/<account_id>')
+@login_required
+def api_diagnostics(account_id):
+    """API endpoint for per-account diagnostics"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    # Get specific account
+    account = cursor.execute("""
+        SELECT * FROM email_accounts WHERE id = ?
+    """, (account_id,)).fetchone()
+
+    if not account:
+        conn.close()
+        return jsonify({'error': 'Account not found'}), 404
+
+    results = {
+        'account_id': account_id,
+        'account_name': account['account_name'],
+        'smtp_test': {'success': False, 'message': ''},
+        'imap_test': {'success': False, 'message': ''},
+        'timestamp': datetime.now().isoformat()
+    }
+
+    # Decrypt passwords
+    smtp_password = decrypt_credential(account['smtp_password'])
+    imap_password = decrypt_credential(account['imap_password'])
+
+    # Test SMTP connection
+    try:
+        import smtplib
+        smtp_port = int(account['smtp_port']) if account['smtp_port'] else 587
+
+        if smtp_port == 465:
+            smtp = smtplib.SMTP_SSL(account['smtp_host'], smtp_port, timeout=10)
+        else:
+            smtp = smtplib.SMTP(account['smtp_host'], smtp_port, timeout=10)
+            smtp.starttls()
+
+        smtp.login(account['smtp_username'], smtp_password or '')
+        smtp.quit()
+        results['smtp_test']['success'] = True
+        results['smtp_test']['message'] = f"Connected successfully to {account['smtp_host']}:{smtp_port}"
+    except Exception as e:
+        results['smtp_test']['message'] = str(e)
+
+    # Test IMAP connection
+    try:
+        import imaplib
+        imap_port = int(account['imap_port']) if account['imap_port'] else 993
+
+        imap = imaplib.IMAP4_SSL(account['imap_host'], imap_port)
+        imap.login(account['imap_username'], imap_password or '')
+        imap.select('INBOX')
+        imap.close()
+        imap.logout()
+        results['imap_test']['success'] = True
+        results['imap_test']['message'] = f"Connected successfully to {account['imap_host']}:{imap_port}"
+    except Exception as e:
+        results['imap_test']['message'] = str(e)
+
+    # Update health status in database
+    cursor.execute("""
+        UPDATE email_accounts
+        SET smtp_health_status = ?, imap_health_status = ?,
+            last_health_check = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (
+        'connected' if results['smtp_test']['success'] else 'error',
+        'connected' if results['imap_test']['success'] else 'error',
+        account_id
+    ))
+    conn.commit()
+    conn.close()
+
+    return jsonify(results)
+
+@app.route('/api/accounts')
+@login_required
+def api_get_accounts():
+    """Get all active email accounts for the test suite"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    accounts = cursor.execute("""
+        SELECT id, account_name, email_address, is_active,
+               smtp_host, smtp_port, imap_host, imap_port
+        FROM email_accounts
+        ORDER BY account_name
+    """).fetchall()
+
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'accounts': [dict(acc) for acc in accounts]
+    })
 
 # ============================================================================
 # /api/inbox route removed - now provided by interception blueprint
 # See app/routes/interception.py for the canonical implementation
 # ============================================================================
 
-# Moved: /api/fetch-emails -> emails blueprint
+@app.route('/api/fetch-emails', methods=['POST'])
+@login_required
+def api_fetch_emails():
+    """Fetch emails from IMAP server using UID-based fetching"""
+    data = request.get_json() or {}
+    account_id = data.get('account_id')
+    fetch_count = int(data.get('count', 20))
+    offset = int(data.get('offset', 0))
 
-# Moved: /api/email/<id>/reply-forward -> emails blueprint
+    if not account_id:
+        return jsonify({'success': False, 'error': 'Account ID required'}), 400
 
-# Moved: /api/email/<id>/download -> emails blueprint
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    acct = cur.execute(
+        "SELECT * FROM email_accounts WHERE id=? AND is_active=1",
+        (account_id,)
+    ).fetchone()
+    if not acct:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Account not found'}), 404
 
-# Moved: /api/email/<id>/intercept -> interception blueprint
+    mail = None
+    try:
+        password = decrypt_credential(acct['imap_password'])
+        if not password:
+            conn.close()
+            return jsonify({'success': False, 'error': 'Password decrypt failed'}), 500
+        pwd: str = password
 
-# Moved: /api/accounts/<id>/health -> accounts blueprint
+        if acct['imap_port'] == 993:
+            mail = imaplib.IMAP4_SSL(acct['imap_host'], acct['imap_port'])
+        else:
+            mail = imaplib.IMAP4(acct['imap_host'], acct['imap_port'])
+            try:
+                mail.starttls()
+            except Exception:
+                pass
 
-# Moved: /api/accounts/<id>/test -> accounts blueprint
+        mail.login(acct['imap_username'], pwd)
+        mail.select('INBOX')
 
-# Moved: /api/accounts/<id> (CRUD) -> accounts blueprint
+        typ, data = mail.uid('search', None, 'ALL')  # type: ignore[arg-type]
+        if typ != 'OK':
+            return jsonify({'success': False, 'error': 'UID SEARCH failed'}), 500
 
-# Moved: /api/accounts/export -> accounts blueprint
+        uid_bytes = data[0].split() if data and data[0] else []
+        total = len(uid_bytes)
+        start = max(0, total - offset - fetch_count)
+        end = total - offset
+        window = uid_bytes[start:end][-fetch_count:]
 
-# Removed: /api/accounts/<int:account_id> (duplicate/unsafe testing route)
+        results = []
+        for raw_uid in reversed(window):
+            uid = raw_uid.decode()
+            typ, msg_payload = mail.uid('fetch', uid, '(RFC822 INTERNALDATE)')
+            if typ != 'OK' or not msg_payload or msg_payload[0] is None:
+                continue
 
-# Moved: /api/test-connection/<type> -> accounts blueprint
+            # Extract raw email and INTERNALDATE from IMAP response
+            raw_email = msg_payload[0][1]
+            msg = message_from_bytes(raw_email, policy=policy.default)
 
-# Moved: /diagnostics pages -> accounts blueprint
+            # Parse INTERNALDATE from IMAP response (more reliable than Date header)
+            internaldate = None
+            try:
+                # IMAP response format: msg_payload[0][0] contains flags and INTERNALDATE
+                fetch_data = msg_payload[0][0]
+                if isinstance(fetch_data, bytes):
+                    fetch_str = fetch_data.decode('utf-8', errors='ignore')
+                    # Extract INTERNALDATE from response like: b'1 (RFC822 {1234} INTERNALDATE "01-Jan-2025 12:00:00 +0000")'
+                    import re
+                    match = re.search(r'INTERNALDATE "([^"]+)"', fetch_str)
+                    if match:
+                        date_str = match.group(1)
+                        date_tuple = imaplib.Internaldate2tuple(f'INTERNALDATE "{date_str}"'.encode())
+                        if date_tuple:
+                            from datetime import datetime as dt
+                            internaldate = dt(*date_tuple[:6]).isoformat()
+            except Exception:
+                pass
+
+            # Fallback to Date header if INTERNALDATE parsing failed
+            if not internaldate:
+                try:
+                    date_hdr = msg.get('Date')
+                    if date_hdr:
+                        internaldate = parsedate_to_datetime(date_hdr).isoformat()
+                except Exception:
+                    pass
+
+            message_id = msg.get('Message-ID') or f"fetch_{account_id}_{uid}"
+            sender = msg.get('From', '')
+            subject = msg.get('Subject', 'No Subject')
+            recipients = json.dumps([msg.get('To', '')])
+
+            body_text = ''
+            body_html = ''
+            if msg.is_multipart():
+                for part in msg.walk():
+                    ctype = part.get_content_type()
+                    payload = part.get_payload(decode=True)
+                    if not payload:
+                        continue
+                    if ctype == 'text/plain':
+                        body_text = payload.decode('utf-8', errors='ignore')
+                    elif ctype == 'text/html':
+                        body_html = payload.decode('utf-8', errors='ignore')
+            else:
+                payload = msg.get_payload(decode=True)
+                if payload:
+                    body_text = payload.decode('utf-8', errors='ignore')
+
+            cur.execute("""
+                INSERT OR IGNORE INTO email_messages
+                (message_id, sender, recipients, subject, body_text, body_html,
+                 raw_content, account_id, direction, interception_status,
+                 original_uid, original_internaldate, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+            """, (
+                message_id, sender, recipients, subject, body_text, body_html,
+                raw_email, account_id, 'inbound', 'FETCHED', uid, internaldate
+            ))
+
+            row = cur.execute(
+                "SELECT id FROM email_messages WHERE message_id=? ORDER BY id DESC LIMIT 1",
+                (message_id,)
+            ).fetchone()
+            results.append({
+                'id': row['id'] if row else None,
+                'message_id': message_id,
+                'uid': uid,
+                'subject': subject
+            })
+
+        conn.commit()
+        return jsonify({'success': True, 'total_available': total, 'fetched': len(results), 'emails': results})
+    except Exception as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 500
+    finally:
+        if mail:
+            try:
+                mail.logout()
+            except Exception:
+                pass
+        conn.close()
+
+@app.route('/api/email/<email_id>/reply-forward', methods=['GET'])
+@login_required
+def api_email_reply_forward(email_id):
+    """Get email data formatted for reply or forward"""
+    action = request.args.get('action', 'reply')  # 'reply' or 'forward'
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    email = cursor.execute(
+        "SELECT * FROM email_messages WHERE id = ?",
+        (email_id,)
+    ).fetchone()
+
+    if not email:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Email not found'}), 404
+
+    # Prepare response based on action
+    if action == 'reply':
+        # Reply: Set original sender as recipient
+        response = {
+            'to': email['sender'],
+            'subject': f"Re: {email['subject']}" if not email['subject'].startswith('Re:') else email['subject'],
+            'body': f"\n\n--- Original Message ---\nFrom: {email['sender']}\nDate: {email['created_at']}\nSubject: {email['subject']}\n\n{email['body_text']}"
+        }
+    else:  # forward
+        response = {
+            'to': '',  # User will fill this
+            'subject': f"Fwd: {email['subject']}" if not email['subject'].startswith('Fwd:') else email['subject'],
+            'body': f"\n\n--- Forwarded Message ---\nFrom: {email['sender']}\nDate: {email['created_at']}\nSubject: {email['subject']}\n\n{email['body_text']}"
+        }
+
+    conn.close()
+    return jsonify({'success': True, 'data': response})
+
+@app.route('/api/email/<email_id>/download', methods=['GET'])
+@login_required
+def api_email_download(email_id):
+    """Download email as .eml file"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    email = cursor.execute(
+        "SELECT raw_content, subject FROM email_messages WHERE id = ?",
+        (email_id,)
+    ).fetchone()
+
+    if not email or not email['raw_content']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Email not found or no raw content'}), 404
+
+    conn.close()
+
+    # Create response with .eml file
+    from flask import Response
+    import re
+
+    # Sanitize filename
+    safe_subject = re.sub(r'[^\w\s-]', '', email['subject'] or 'email')[:50]
+    filename = f"{safe_subject}_{email_id}.eml"
+
+    return Response(
+        email['raw_content'],
+        mimetype='message/rfc822',
+        headers={
+            'Content-Disposition': f'attachment; filename="{filename}"'
+        }
+    )
+
+@app.route('/api/email/<email_id>/intercept', methods=['POST'])
+@login_required
+def api_email_intercept(email_id):
+    """Manually intercept an email with remote MOVE to Quarantine folder"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    row = cur.execute("""
+        SELECT em.*, ea.imap_host, ea.imap_port, ea.imap_username, ea.imap_password
+        FROM email_messages em
+        LEFT JOIN email_accounts ea ON em.account_id = ea.id
+        WHERE em.id=?
+    """, (email_id,)).fetchone()
+
+    if not row:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Not found'}), 404
+    if not row['account_id']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'No linked account'}), 400
+
+    previous = row['interception_status']
+    remote_move = False
+    note = None
+
+    if previous != 'HELD':
+        try:
+            imap_obj, _supports_move = _imap_connect_account(row)
+            imap_obj.select('INBOX')
+            uid = row['original_uid']
+
+            if not uid and row['message_id']:
+                crit = f'(HEADER Message-ID "{row["message_id"]}")'
+                typ, data = imap_obj.uid('search', None, crit)  # type: ignore[arg-type]
+                if typ == 'OK' and data and data[0]:
+                    found = data[0].split()
+                    if found:
+                        uid = found[-1].decode()
+
+            if not uid and row['subject']:
+                subj = row['subject'].replace('"', '')
+                typ, data = imap_obj.uid('search', None, f'(HEADER Subject "{subj}")')  # type: ignore[arg-type]
+                if typ == 'OK' and data and data[0]:
+                    found = data[0].split()
+                    if found:
+                        uid = found[-1].decode()
+
+            if uid:
+                remote_move = _move_uid_to_quarantine(imap_obj, uid)
+                if remote_move and not row['original_uid']:
+                    cur.execute(
+                        "UPDATE email_messages SET original_uid=? WHERE id=?",
+                        (uid, email_id)
+                    )
+            else:
+                note = "Remote UID not found (Message-ID/Subject search failed)"
+            imap_obj.logout()
+        except Exception as exc:
+            note = f"IMAP error: {exc}"
+
+    cur.execute("""
+        UPDATE email_messages
+        SET interception_status='HELD',
+            status='PENDING',
+            quarantine_folder='Quarantine',
+            action_taken_at=datetime('now')
+        WHERE id=?
+    """, (email_id,))
+    conn.commit()
+
+    # Calculate and update latency_ms if not already set
+    try:
+        row_t = cur.execute("""
+            SELECT created_at, action_taken_at, latency_ms
+            FROM email_messages
+            WHERE id=?
+        """, (email_id,)).fetchone()
+
+        if row_t and row_t['created_at'] and row_t['action_taken_at'] and row_t['latency_ms'] is None:
+            cur.execute("""
+                UPDATE email_messages
+                SET latency_ms = CAST((julianday(action_taken_at) - julianday(created_at)) * 86400000 AS INTEGER)
+                WHERE id=?
+            """, (email_id,))
+            conn.commit()
+    except Exception as e:
+        # Best-effort latency calculation, don't fail the whole operation
+        print(f"Warning: Could not calculate latency_ms: {e}")
+
+    conn.close()
+
+    # Audit log the manual interception action
+    try:
+        from app.services.audit import log_action
+        user_id = getattr(current_user, 'id', None)
+        details = f"Manual intercept: remote_move={remote_move}, previous_status={previous}"
+        if note:
+            details += f", note={note}"
+        log_action('MANUAL_INTERCEPT', user_id, email_id, details)
+    except Exception as e:
+        # Best-effort logging, don't fail the operation
+        print(f"Warning: Could not log audit action: {e}")
+
+    return jsonify({
+        'success': True,
+        'email_id': email_id,
+        'remote_move': remote_move,
+        'previous_status': previous,
+        'note': note
+    })
+
+@app.route('/api/accounts/<account_id>/health')
+@login_required
+def api_account_health(account_id):
+    """Get real-time health status for an account"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    account = cursor.execute("""
+        SELECT smtp_health_status, imap_health_status,
+               last_health_check, last_error, connection_status
+        FROM email_accounts WHERE id = ?
+    """, (account_id,)).fetchone()
+
+    if not account:
+        conn.close()
+        return jsonify({'error': 'Account not found'}), 404
+
+    # Determine overall status
+    smtp_status = account['smtp_health_status'] or 'unknown'
+    imap_status = account['imap_health_status'] or 'unknown'
+    if smtp_status == 'connected' and imap_status == 'connected':
+        overall = 'connected'
+    elif smtp_status == 'error' or imap_status == 'error':
+        overall = 'error'
+    elif smtp_status == 'unknown' and imap_status == 'unknown':
+        overall = 'unknown'
+    else:
+        overall = 'warning'
+
+    conn.close()
+
+    return jsonify({
+        'overall': overall,
+        'smtp': smtp_status,
+        'imap': imap_status,
+        'last_check': account['last_health_check'],
+        'last_error': account['last_error']
+    })
+
+@app.route('/api/accounts/<account_id>/test', methods=['POST'])
+@login_required
+def api_test_account(account_id):
+    """Test account connections and update health status"""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    account = cursor.execute("SELECT * FROM email_accounts WHERE id = ?", (account_id,)).fetchone()
+
+    if not account:
+        conn.close()
+        return jsonify({'error': 'Account not found'}), 404
+
+    # Decrypt passwords
+    imap_password = decrypt_credential(account['imap_password'])
+    smtp_password = decrypt_credential(account['smtp_password'])
+
+    # Test connections
+    imap_success, imap_msg = test_email_connection('imap', account['imap_host'],
+                                                   account['imap_port'], account['imap_username'],
+                                                   imap_password or '', account['imap_use_ssl'])
+
+    smtp_success, smtp_msg = test_email_connection('smtp', account['smtp_host'],
+                                                   account['smtp_port'], account['smtp_username'],
+                                                   smtp_password or '', account['smtp_use_ssl'])
+
+    # Update health status
+    cursor.execute("""
+        UPDATE email_accounts
+        SET smtp_health_status = ?, imap_health_status = ?,
+            last_health_check = CURRENT_TIMESTAMP,
+            connection_status = ?
+        WHERE id = ?
+    """, (
+        'connected' if smtp_success else 'error',
+        'connected' if imap_success else 'error',
+        'connected' if (smtp_success and imap_success) else 'error',
+        account_id
+    ))
+
+    if smtp_success and imap_success:
+        cursor.execute("""
+            UPDATE email_accounts
+            SET last_successful_connection = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (account_id,))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        'success': smtp_success and imap_success,
+        'imap': {'success': imap_success, 'message': imap_msg},
+        'smtp': {'success': smtp_success, 'message': smtp_msg}
+    })
+
+@app.route('/api/accounts/<account_id>', methods=['GET', 'PUT', 'DELETE'])
+@login_required
+def api_account_crud(account_id):
+    """Handle account CRUD operations"""
+    if request.method == 'GET':
+        # Get account details
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        account = cursor.execute("SELECT * FROM email_accounts WHERE id = ?", (account_id,)).fetchone()
+
+        if not account:
+            conn.close()
+            return jsonify({'error': 'Account not found'}), 404
+
+        # Don't send encrypted passwords
+        account_data = dict(account)
+        account_data.pop('imap_password', None)
+        account_data.pop('smtp_password', None)
+
+        conn.close()
+        return jsonify(account_data)
+
+    elif request.method == 'PUT':
+        # Update account
+        if current_user.role != 'admin':
+            return jsonify({'error': 'Admin access required'}), 403
+
+        data = request.get_json(silent=True) or {}
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Build update query
+        update_fields = []
+        update_values = []
+
+        for field in ['account_name', 'email_address', 'provider_type',
+                     'smtp_host', 'smtp_port', 'smtp_username',
+                     'imap_host', 'imap_port', 'imap_username']:
+            if field in data:
+                update_fields.append(f"{field} = ?")
+                update_values.append(data[field])
+
+        # Handle passwords
+        if data and 'smtp_password' in data and data['smtp_password']:
+            update_fields.append("smtp_password = ?")
+            update_values.append(encrypt_credential(data['smtp_password']))
+
+        if data and 'imap_password' in data and data['imap_password']:
+            update_fields.append("imap_password = ?")
+            update_values.append(encrypt_credential(data['imap_password']))
+
+        # Handle SSL flags
+        if data and 'smtp_use_ssl' in data:
+            update_fields.append("smtp_use_ssl = ?")
+            update_values.append(1 if data['smtp_use_ssl'] else 0)
+
+        if data and 'imap_use_ssl' in data:
+            update_fields.append("imap_use_ssl = ?")
+            update_values.append(1 if data['imap_use_ssl'] else 0)
+
+        if update_fields:
+            update_fields.append("updated_at = CURRENT_TIMESTAMP")
+            update_values.append(account_id)
+            query = f"UPDATE email_accounts SET {', '.join(update_fields)} WHERE id = ?"
+            cursor.execute(query, update_values)
+            conn.commit()
+
+        conn.close()
+        return jsonify({'success': True})
+
+    elif request.method == 'DELETE':
+        # Delete account
+        if current_user.role != 'admin':
+            return jsonify({'error': 'Admin access required'}), 403
+
+        # Stop monitoring thread
+        if int(account_id) in imap_threads:
+            del imap_threads[int(account_id)]
+
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM email_accounts WHERE id = ?", (account_id,))
+        conn.commit()
+        conn.close()
+
+        return jsonify({'success': True})
+
+@app.route('/api/accounts/export')
+@login_required
+def api_export_accounts():
+    """Export accounts configuration"""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    accounts = cursor.execute("""
+        SELECT account_name, email_address, provider_type,
+               imap_host, imap_port, imap_username, imap_use_ssl,
+               smtp_host, smtp_port, smtp_username, smtp_use_ssl
+        FROM email_accounts
+        ORDER BY account_name
+    """).fetchall()
+
+    conn.close()
+
+    export_data = {
+        'version': '1.0',
+        'exported_at': datetime.now().isoformat(),
+        'accounts': [dict(account) for account in accounts]
+    }
+
+    response = jsonify(export_data)
+    response.headers['Content-Disposition'] = 'attachment; filename=email_accounts_export.json'
+    return response
+
+@app.route('/api/accounts/<int:account_id>')
+@login_required
+def api_get_account(account_id):
+    """Get account details for testing"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    account = cursor.execute("""
+        SELECT * FROM email_accounts WHERE id = ?
+    """, (account_id,)).fetchone()
+
+    conn.close()
+
+    if not account:
+        return jsonify({'error': 'Account not found'}), 404
+
+    # Decrypt password for testing
+    account_data = dict(account)
+    try:
+        account_data['imap_password'] = decrypt_credential(account['imap_password'])
+        account_data['smtp_password'] = decrypt_credential(account['smtp_password'])
+    except:
+        # Passwords might not be encrypted
+        pass
+
+    return jsonify(account_data)
+
+@app.route('/api/test-connection/<connection_type>', methods=['POST'])
+@login_required
+def api_test_connection(connection_type):
+    """Test email connection (IMAP or SMTP)"""
+    data = request.get_json(silent=True) or {}
+
+    host = data.get('host')
+    port = int(data.get('port'))
+    username = data.get('username')
+    password = data.get('password') or ''
+    use_ssl = data.get('use_ssl', True)
+
+    success, message = test_email_connection(connection_type, host, port, username, password, use_ssl)
+
+    return jsonify({
+        'success': success,
+        'message': message,
+        'error': message if not success else None
+    })
+
+@app.route('/diagnostics')
+@app.route('/diagnostics/<account_id>')
+@login_required
+def diagnostics(account_id=None):
+    """Email connectivity diagnostics page (per-account)"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    # Get all accounts
+    accounts = cursor.execute("""
+        SELECT id, account_name, email_address, imap_host, imap_port, smtp_host, smtp_port,
+               is_active, last_checked, last_error, smtp_username, smtp_password
+        FROM email_accounts
+        ORDER BY account_name
+    """).fetchall()
+
+    results = {}
+    selected_account = None
+
+    if account_id:
+        # Get specific account
+        selected_account = cursor.execute("""
+            SELECT * FROM email_accounts WHERE id = ?
+        """, (account_id,)).fetchone()
+
+        if selected_account:
+            # Run diagnostics for this specific account
+            try:
+                import smtplib
+                import imaplib
+                from datetime import datetime
+
+                results = {
+                    'account': dict(selected_account),
+                    'smtp_test': {'success': False, 'message': ''},
+                    'imap_test': {'success': False, 'message': ''},
+                    'timestamp': datetime.now().isoformat()
+                }
+
+                # Test SMTP connection
+                try:
+                    # Decrypt SMTP password
+                    smtp_password = decrypt_credential(selected_account['smtp_password'])
+                    smtp_port = int(selected_account['smtp_port']) if selected_account['smtp_port'] else 587
+
+                    if smtp_port == 465:
+                        smtp = smtplib.SMTP_SSL(selected_account['smtp_host'], smtp_port)
+                    else:
+                        smtp = smtplib.SMTP(selected_account['smtp_host'], smtp_port)
+                        smtp.starttls()
+
+                    smtp.login(selected_account['smtp_username'], smtp_password or '')
+                    smtp.quit()
+                    results['smtp_test']['success'] = True
+                    results['smtp_test']['message'] = f"SMTP connection successful to {selected_account['smtp_host']}"
+                except Exception as e:
+                    results['smtp_test']['message'] = f"SMTP Error: {str(e)}"
+
+                # Test IMAP connection
+                try:
+                    # Decrypt IMAP credentials (not SMTP)
+                    imap_password = decrypt_credential(selected_account['imap_password'])
+                    imap_port = int(selected_account['imap_port']) if selected_account['imap_port'] else 993
+
+                    imap = imaplib.IMAP4_SSL(selected_account['imap_host'], imap_port)
+                    imap.login(selected_account['imap_username'], imap_password or '')
+                    imap.select('INBOX')
+                    imap.close()
+                    imap.logout()
+                    results['imap_test']['success'] = True
+                    results['imap_test']['message'] = f"IMAP connection successful to {selected_account['imap_host']}"
+                except Exception as e:
+                    results['imap_test']['message'] = f"IMAP Error: {str(e)}"
+
+            except Exception as e:
+                results = {'error': str(e)}
+
+    conn.close()
+
+    # Redirect to dashboard with diagnostics tab
+    if account_id:
+        return redirect(url_for('dashboard.dashboard', tab='diagnostics') + f'?account_id={account_id}')
+    else:
+        return redirect(url_for('dashboard.dashboard', tab='diagnostics'))
 
 @app.route('/diagnostics/test', methods=['POST'])
 @login_required
@@ -786,7 +1561,42 @@ def api_test_verify_delivery():
 # @app.route('/email/<int:email_id>/reject', methods=['POST'])
 # def reject_email(...): ...
 
-# Moved: /email/<int:id>/full -> emails blueprint
+@app.route('/email/<int:email_id>/full')
+@login_required
+def get_full_email(email_id):
+    """Get complete email details for editor"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    email = cursor.execute("""
+        SELECT id, message_id, sender, recipients, subject,
+               body_text, body_html, raw_content, status,
+               risk_score, keywords_matched, review_notes,
+               created_at, processed_at
+        FROM email_messages
+        WHERE id = ?
+    """, (email_id,)).fetchone()
+    conn.close()
+
+    if not email:
+        return jsonify({'error': 'Email not found'}), 404
+
+    return jsonify({
+        'id': email['id'],
+        'message_id': email['message_id'],
+        'sender': email['sender'],
+        'recipients': email['recipients'],
+        'subject': email['subject'],
+        'body_text': email['body_text'],
+        'body_html': email['body_html'],
+        'status': email['status'],
+        'risk_score': email['risk_score'],
+        'keywords_matched': email['keywords_matched'],
+        'review_notes': email['review_notes'],
+        'created_at': email['created_at'],
+        'processed_at': email['processed_at']
+    })
 
 # (Functions removed - see LEGACY_REMOVED comment block above)
 

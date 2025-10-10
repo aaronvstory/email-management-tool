@@ -4,14 +4,18 @@ Extracted from simple_app.py lines 721-2197
 Routes: /emails, /email/<id>, /email/<id>/action, /inbox, /compose, /api/held, /api/emails/pending
 Plus API routes for reply/forward, download, intercept
 """
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, Response
 from flask_login import login_required, current_user
 import sqlite3
 import os
 import json
 import email
+import imaplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email import policy
+from email import message_from_bytes
+from email.utils import parsedate_to_datetime
 from app.utils.db import DB_PATH, get_db, fetch_counts
 from app.utils.crypto import decrypt_credential
 from app.services.audit import log_action
@@ -172,3 +176,143 @@ def email_action(email_id):
 
     flash(f'Email {action.lower()}d successfully', 'success')
     return redirect(url_for('emails.email_queue'))
+
+
+@emails_bp.route('/api/fetch-emails', methods=['POST'])
+@login_required
+def api_fetch_emails():
+    """Fetch emails from IMAP server using UID-based fetching (migrated)."""
+    data = request.get_json(silent=True) or {}
+    account_id = data.get('account_id'); fetch_count = int(data.get('count', 20)); offset = int(data.get('offset', 0))
+    if not account_id:
+        return jsonify({'success': False, 'error': 'Account ID required'}), 400
+    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row; cur = conn.cursor()
+    acct = cur.execute("SELECT * FROM email_accounts WHERE id=? AND is_active=1", (account_id,)).fetchone()
+    if not acct:
+        conn.close(); return jsonify({'success': False, 'error': 'Account not found'}), 404
+    mail = None
+    try:
+        password = decrypt_credential(acct['imap_password'])
+        if not password:
+            conn.close(); return jsonify({'success': False, 'error': 'Password decrypt failed'}), 500
+        if int(acct['imap_port'] or 993) == 993:
+            mail = imaplib.IMAP4_SSL(acct['imap_host'], int(acct['imap_port']))
+        else:
+            mail = imaplib.IMAP4(acct['imap_host'], int(acct['imap_port']))
+            try: mail.starttls()
+            except Exception: pass
+        mail.login(acct['imap_username'], password); mail.select('INBOX')
+        typ, data_uids = mail.uid('search', None, 'ALL')
+        if typ != 'OK':
+            return jsonify({'success': False, 'error': 'UID SEARCH failed'}), 500
+        uid_bytes = data_uids[0].split() if data_uids and data_uids[0] else []
+        total = len(uid_bytes); start = max(0, total - offset - fetch_count); end = total - offset
+        window = uid_bytes[start:end][-fetch_count:]
+        results = []
+        for raw_uid in reversed(window):
+            uid = raw_uid.decode(); typ, msg_payload = mail.uid('fetch', uid, '(RFC822 INTERNALDATE)')
+            if typ != 'OK' or not msg_payload or msg_payload[0] is None: continue
+            raw_email = msg_payload[0][1]; msg = message_from_bytes(raw_email, policy=policy.default)
+            internaldate = None
+            try:
+                fetch_data = msg_payload[0][0]
+                if isinstance(fetch_data, bytes):
+                    fetch_str = fetch_data.decode('utf-8', errors='ignore')
+                    import re
+                    m = re.search(r'INTERNALDATE "([^"]+)"', fetch_str)
+                    if m:
+                        date_str = m.group(1)
+                        date_tuple = imaplib.Internaldate2tuple(f'INTERNALDATE "{date_str}"'.encode())
+                        if date_tuple:
+                            from datetime import datetime as dt
+                            internaldate = dt(*date_tuple[:6]).isoformat()
+            except Exception:
+                pass
+            if not internaldate:
+                try:
+                    date_hdr = msg.get('Date')
+                    if date_hdr: internaldate = parsedate_to_datetime(date_hdr).isoformat()
+                except Exception:
+                    pass
+            message_id = msg.get('Message-ID') or f"fetch_{account_id}_{uid}"
+            sender = msg.get('From', ''); subject = msg.get('Subject', 'No Subject'); recipients = json.dumps([msg.get('To', '')])
+            body_text = ''; body_html = ''
+            if msg.is_multipart():
+                for part in msg.walk():
+                    ctype = part.get_content_type(); payload = part.get_payload(decode=True)
+                    if not payload: continue
+                    if ctype == 'text/plain': body_text = payload.decode('utf-8', errors='ignore')
+                    elif ctype == 'text/html': body_html = payload.decode('utf-8', errors='ignore')
+            else:
+                payload = msg.get_payload(decode=True)
+                if payload: body_text = payload.decode('utf-8', errors='ignore')
+            cur.execute(
+                """
+                INSERT OR IGNORE INTO email_messages
+                (message_id, sender, recipients, subject, body_text, body_html,
+                 raw_content, account_id, direction, interception_status,
+                 original_uid, original_internaldate, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                """,
+                (message_id, sender, recipients, subject, body_text, body_html, raw_email, account_id, 'inbound', 'FETCHED', uid, internaldate),
+            )
+            row = cur.execute("SELECT id FROM email_messages WHERE message_id=? ORDER BY id DESC LIMIT 1", (message_id,)).fetchone()
+            results.append({'id': row['id'] if row else None, 'message_id': message_id, 'uid': uid, 'subject': subject})
+        conn.commit(); return jsonify({'success': True, 'total_available': total, 'fetched': len(results), 'emails': results})
+    except Exception as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 500
+    finally:
+        if mail:
+            try: mail.logout()
+            except Exception: pass
+        conn.close()
+
+
+@emails_bp.route('/api/email/<email_id>/reply-forward', methods=['GET'])
+@login_required
+def api_email_reply_forward(email_id):
+    """Get email data formatted for reply or forward (migrated)."""
+    action = request.args.get('action', 'reply')
+    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row; cur = conn.cursor()
+    row = cur.execute("SELECT * FROM email_messages WHERE id=?", (email_id,)).fetchone()
+    if not row:
+        conn.close(); return jsonify({'success': False, 'error': 'Email not found'}), 404
+    if action == 'reply':
+        data = {'to': row['sender'], 'subject': f"Re: {row['subject']}" if not (row['subject'] or '').startswith('Re:') else row['subject'], 'body': f"\n\n--- Original Message ---\nFrom: {row['sender']}\nDate: {row['created_at']}\nSubject: {row['subject']}\n\n{row['body_text']}"}
+    else:
+        data = {'to': '', 'subject': f"Fwd: {row['subject']}" if not (row['subject'] or '').startswith('Fwd:') else row['subject'], 'body': f"\n\n--- Forwarded Message ---\nFrom: {row['sender']}\nDate: {row['created_at']}\nSubject: {row['subject']}\n\n{row['body_text']}"}
+    conn.close(); return jsonify({'success': True, 'data': data})
+
+
+@emails_bp.route('/api/email/<email_id>/download', methods=['GET'])
+@login_required
+def api_email_download(email_id):
+    """Download email as .eml file (migrated)."""
+    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row; cur = conn.cursor()
+    row = cur.execute("SELECT raw_content, subject FROM email_messages WHERE id=?", (email_id,)).fetchone(); conn.close()
+    if not row or not row['raw_content']:
+        return jsonify({'success': False, 'error': 'Email not found or no raw content'}), 404
+    import re
+    safe_subject = re.sub(r'[^\w\s-]', '', row['subject'] or 'email')[:50]; filename = f"{safe_subject}_{email_id}.eml"
+    return Response(row['raw_content'], mimetype='message/rfc822', headers={'Content-Disposition': f'attachment; filename="{filename}"'})
+
+
+@emails_bp.route('/email/<int:email_id>/full')
+@login_required
+def get_full_email(email_id):
+    """Get complete email details for editor (migrated)."""
+    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row; cur = conn.cursor()
+    row = cur.execute(
+        """
+        SELECT id, message_id, sender, recipients, subject,
+               body_text, body_html, raw_content, status,
+               risk_score, keywords_matched, review_notes,
+               created_at, processed_at
+        FROM email_messages
+        WHERE id = ?
+        """,
+        (email_id,),
+    ).fetchone(); conn.close()
+    if not row:
+        return jsonify({'error': 'Email not found'}), 404
+    return jsonify({k: row[k] for k in row.keys()})

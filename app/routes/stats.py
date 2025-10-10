@@ -84,3 +84,17 @@ def stream_stats():
             yield f"data: {data}\n\n"
             time.sleep(2)
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
+
+
+@stats_bp.route('/api/events')
+@login_required
+def api_events():
+    """Legacy SSE endpoint for real-time updates (migrated from monolith)."""
+    def generate():
+        while True:
+            counts = get_stats()
+            pending = counts.get('pending', 0)
+            payload = json.dumps({'pending': pending, 'timestamp': datetime.utcnow().isoformat()})
+            yield f"data: {payload}\n\n"
+            time.sleep(5)
+    return Response(stream_with_context(generate()), mimetype='text/event-stream')

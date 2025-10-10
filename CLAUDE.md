@@ -17,6 +17,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - ✅ **Dependency-Injectable DB Layer** - db.py accepts injected connections, single-pass aggregates, WAL enforcement
 - ✅ **Blueprint Modularization** - Auth, dashboard, stats, moderation, interception routes now in app/routes/*
+- ✅ **Phase 1C Route Migration** - Moved accounts/emails/inbox/compose + SSE to blueprints; removed legacy duplicates
+- ✅ **Monolith Reduction** - simple_app.py reduced to ~918 lines (from ~1,700+) with blueprint coverage at ~100%
 - ✅ **Interception Lifecycle Tests** - Complete test suite with 100% pass rate (3/3)
 - ✅ **Released Count Aggregation** - Added to `fetch_counts()` for dashboard stats
 - ✅ **INTERNALDATE Extraction** - Server timestamps properly parsed and stored
@@ -263,7 +265,7 @@ python scripts/verify_accounts.py         # Check DB config
 
 ### Application Structure
 
-**`simple_app.py`** (1700+ lines) - Monolithic Flask application containing:
+**`simple_app.py`** (~918 lines) - Core application bootstrap and services; all web routes live in blueprints:
 
 - Flask web server with authentication (Flask-Login)
 - SMTP proxy server (aiosmtpd on port 8587)
@@ -271,7 +273,7 @@ python scripts/verify_accounts.py         # Check DB config
 - SQLite database layer with encrypted credentials (Fernet)
 - 25+ route handlers for web interface and API (Legacy routes - being migrated to blueprints)
 
-### Registered Blueprints (Phase 1B Modularization)
+### Registered Blueprints (Phase 1B/1C Modularization)
 
 **`app/routes/auth.py`** - Authentication blueprint:
 - Routes: `/`, `/login`, `/logout`
@@ -282,7 +284,7 @@ python scripts/verify_accounts.py         # Check DB config
 - Features: Account selector, stats display, recent emails, rules overview
 
 **`app/routes/stats.py`** - Statistics API blueprint:
-- Routes: `/api/stats`, `/api/unified-stats`, `/api/latency-stats`, `/stream/stats`
+- Routes: `/api/stats`, `/api/unified-stats`, `/api/latency-stats`, `/stream/stats`, `/api/events` (SSE)
 - Features: 2s-5s caching, SSE streaming for real-time updates
 
 **`app/routes/moderation.py`** - Moderation blueprint:
@@ -294,6 +296,18 @@ python scripts/verify_accounts.py         # Check DB config
 - Email editing with diff tracking
 - Attachment stripping functionality
 - Health and diagnostic endpoints
+
+**`app/routes/emails.py`** - Emails blueprint (Phase 1C):
+- Routes: `/emails`, `/email/<id>`, `/email/<id>/action`, `/email/<id>/full`, `/api/fetch-emails`, `/api/email/<id>/reply-forward`, `/api/email/<id>/download`
+- Features: Queue, viewer, reply/forward helpers, .eml download, IMAP UID fetch
+
+**`app/routes/accounts.py`** - Accounts blueprint (Phase 1C):
+- Routes: `/accounts`, `/accounts/add`, `/api/accounts`, `/api/accounts/<id>` (GET/PUT/DELETE), `/api/accounts/<id>/health`, `/api/accounts/<id>/test`, `/api/accounts/export`, `/api/test-connection/<type>`, `/diagnostics[/<id>]`
+- Features: Smart detection API, connectivity tests, export, diagnostics redirect
+
+**`app/routes/inbox.py`** - Inbox blueprint (Phase 1C):
+- Route: `/inbox`
+- Features: Unified inbox view by account
 
 **`app/routes/compose.py`** - Compose blueprint (Phase 1C):
 - Routes: `/compose` (GET, POST)
