@@ -15,7 +15,54 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from bs4 import BeautifulSoup  # type: ignore
+import os
+import math
+import re
+from collections import Counter
+
+# Load .env (if present) into process env BEFORE importing app
+def _load_dotenv_into_environ() -> None:
+    env_file = ROOT / '.env'
+    if not env_file.exists():
+        return
+    try:
+        text = env_file.read_text(encoding='utf-8', errors='ignore')
+        for raw in text.splitlines():
+            line = raw.strip()
+            if not line or line.startswith('#'):
+                continue
+            if '=' not in line:
+                continue
+            k, v = line.split('=', 1)
+            k = k.strip()
+            v = v.strip()
+            if k and v:
+                # Do not print secrets; set only in-memory for this process
+                os.environ[k] = v
+    except Exception:
+        pass
+
+_load_dotenv_into_environ()
+
 from simple_app import app
+
+WEAK_SECRETS = {
+    'dev-secret-change-in-production',
+    'change-this-to-a-random-secret-key',
+    'your-secret-here',
+    'secret',
+    'password',
+    'flask-secret-key',
+}
+
+
+def calculate_entropy(s: str) -> float:
+    """Shannon entropy in bits/char."""
+    if not s:
+        return 0.0
+    counts = Counter(s)
+    length = len(s)
+    return -sum((c/length) * math.log2(c/length) for c in counts.values())
 
 
 def get_csrf_token(html: str) -> str | None:
@@ -87,22 +134,26 @@ def test_rate_limit_on_login(client) -> tuple[bool, list[int], dict]:
     return bool(ok), status_codes, last_headers
 
 
-def check_secret_key_strength() -> tuple[bool, int, bool]:
-    """Verify SECRET_KEY is strong enough without printing it.
-    Returns (ok, length, is_default).
+def check_secret_key_strength() -> tuple[bool, int, bool, float]:
+    """Verify SECRET_KEY strength without printing it.
+    Returns (ok, length, is_blacklisted_or_default, entropy_bits_per_char).
+    Policy: length>=32, entropy>=4.0 bits/char, not in weak blacklist.
     """
     secret = app.config.get("SECRET_KEY") or ""
-    default = "dev-secret-change-in-production"
-    length = len(str(secret))
-    ok = bool(secret) and secret != default and length >= 32
-    return ok, length, secret == default
+    s = str(secret)
+    length = len(s)
+    entropy = calculate_entropy(s)
+    is_blacklisted = s in WEAK_SECRETS
+    is_hex = re.match(r'^[0-9a-fA-F]{64,}$', s) is not None  # secrets.token_hex(32)
+    ok = bool(s) and (length >= 32) and (not is_blacklisted) and (is_hex or entropy >= 4.0)
+    return ok, length, is_blacklisted, entropy
 
 
 def main() -> int:
     with app.test_client() as client:
         # 1) SECRET_KEY strength
-        ok_secret, sk_len, is_default = check_secret_key_strength()
-        print(f"Test 0 (SECRET_KEY strength ≥32 and not default): {'PASS' if ok_secret else 'FAIL'}  [len={sk_len}, default={is_default}]")
+        ok_secret, sk_len, is_blacklisted, ent = check_secret_key_strength()
+        print(f"Test 0 (SECRET_KEY strength: len>=32, entropy>=4.0, not blacklisted): {'PASS' if ok_secret else 'FAIL'}  [len={sk_len}, blacklisted={is_blacklisted}, entropy={ent:.2f} bits/char]")
 
         # 2) CSRF negative: missing token blocks login
         miss_ok, miss_code, miss_loc = test_missing_csrf_blocks_login(client)
@@ -119,7 +170,7 @@ def main() -> int:
 
     all_ok = ok_secret and miss_ok and valid_ok and rl_ok
     print("\nSummary:")
-    print(f"  SECRET_KEY: {'OK' if ok_secret else 'NOT OK'} (len={sk_len})")
+    print(f"  SECRET_KEY: {'OK' if ok_secret else 'NOT OK'} (len={sk_len}, entropy={ent:.2f} bpc)")
     print(f"  CSRF missing-token block: {'OK' if miss_ok else 'NOT OK'}")
     print(f"  CSRF valid-token success: {'OK' if valid_ok else 'NOT OK'}")
     print(f"  Rate limit: {'OK' if rl_ok else 'NOT OK'}")
