@@ -1,0 +1,3 @@
+email_address,imap_password,smtp_password
+alice@example.com,app-pass-1,app-pass-1
+bob@yahoo.com,app-pass-2,app-pass-2

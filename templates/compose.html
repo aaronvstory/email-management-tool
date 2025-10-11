@@ -293,7 +293,7 @@ document.getElementById('composeForm').addEventListener('submit', function(e) {
     
     if (!fromAccount || !to || !subject || !body) {
         e.preventDefault();
-        alert('Please fill in all required fields');
+        if (window.showError) showError('Please fill in all required fields'); else alert('Please fill in all required fields');
         return false;
     }
     
@@ -301,7 +301,7 @@ document.getElementById('composeForm').addEventListener('submit', function(e) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(to)) {
         e.preventDefault();
-        alert('Please enter a valid email address');
+        if (window.showError) showError('Please enter a valid email address'); else alert('Please enter a valid email address');
         return false;
     }
     

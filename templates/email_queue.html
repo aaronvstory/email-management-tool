@@ -337,35 +337,38 @@ function switchAccount(accountId) {
 }
 
 function quickAction(emailId, action) {
-    if (confirm(`Are you sure you want to ${action.toLowerCase()} this email?`)) {
+    const run = () => {
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = `/email/${emailId}/action`;
-        
         const actionInput = document.createElement('input');
         actionInput.type = 'hidden';
         actionInput.name = 'action';
         actionInput.value = action;
-        
         form.appendChild(actionInput);
         document.body.appendChild(form);
         form.submit();
+    };
+    if (window.confirmToast) {
+        confirmToast(`Are you sure you want to ${action.toLowerCase()} this email?`, run);
+    } else if (confirm(`Are you sure you want to ${action.toLowerCase()} this email?`)) {
+        run();
     }
 }
 
 function bulkAction(action) {
     const selected = document.querySelectorAll('tbody input[type="checkbox"]:checked');
     if (selected.length === 0) {
-        alert('Please select at least one email');
+        if (window.showWarning) showWarning('Please select at least one email'); else alert('Please select at least one email');
         return;
     }
-    
-    if (confirm(`Are you sure you want to ${action.toLowerCase()} ${selected.length} email(s)?`)) {
-        // Implement bulk action
+    const run = () => {
         selected.forEach(checkbox => {
             quickAction(checkbox.value, action);
         });
-    }
+    };
+    const msg = `Are you sure you want to ${action.toLowerCase()} ${selected.length} email(s)?`;
+    if (window.confirmToast) confirmToast(msg, run); else if (confirm(msg)) run();
 }
 
 // Select all checkbox
@@ -392,7 +395,7 @@ function editEmail(emailId) {
             console.log('Received data:', data);
 
             if (data.error) {
-                alert(data.error);
+                if (window.showError) showError(data.error); else alert(data.error);
                 return;
             }
 
@@ -400,7 +403,7 @@ function editEmail(emailId) {
             const modalElement = document.getElementById('editEmailModal');
             if (!modalElement) {
                 console.error('Modal element not found');
-                alert('Edit modal not found in the page');
+                if (window.showError) showError('Edit modal not found in the page'); else alert('Edit modal not found in the page');
                 return;
             }
 
@@ -419,7 +422,7 @@ function editEmail(emailId) {
         .catch(error => {
             console.error('Error loading email details:', error);
             console.error('Error stack:', error.stack);
-            alert(`Failed to load email details: ${error.message}`);
+            if (window.showError) showError(`Failed to load email details: ${error.message}`); else alert(`Failed to load email details: ${error.message}`);
         });
 }
 
@@ -429,7 +432,7 @@ function saveEmailEdit() {
     const body = document.getElementById('editEmailBody').value;
 
     if (!subject || !body) {
-        alert('Subject and body are required');
+        if (window.showError) showError('Subject and body are required'); else alert('Subject and body are required');
         return;
     }
 
@@ -440,7 +443,7 @@ function saveEmailEdit() {
     saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
 
     // Send update request
-    fetch(`/email/${emailId}/edit`, {
+    fetch(`/api/email/${emailId}/edit`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -458,14 +461,13 @@ function saveEmailEdit() {
     })
     .then(data => {
         if (data.error) {
-            alert(data.error);
+            if (window.showError) showError(data.error); else alert(data.error);
             saveBtn.disabled = false;
             saveBtn.innerHTML = originalText;
         } else {
-            // Show success message briefly
+            if (window.showSuccess) showSuccess('Email saved');
             saveBtn.innerHTML = '<i class="bi bi-check-circle"></i> Saved!';
             setTimeout(() => {
-                // Close modal and reload page
                 const modal = bootstrap.Modal.getInstance(document.getElementById('editEmailModal'));
                 modal.hide();
                 location.reload();
@@ -474,7 +476,7 @@ function saveEmailEdit() {
     })
     .catch(error => {
         console.error('Error saving email:', error);
-        alert(`Failed to save changes: ${error.message}`);
+        if (window.showError) showError(`Failed to save changes: ${error.message}`); else alert(`Failed to save changes: ${error.message}`);
         saveBtn.disabled = false;
         saveBtn.innerHTML = originalText;
     });

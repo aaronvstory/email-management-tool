@@ -154,6 +154,18 @@
             color: #ffffff !important;
         }
 
+        /* Global table override: ensure dark background even without .table-modern wrapper */
+        .table {
+            --bs-table-bg: #1a1a1a !important;
+            --bs-table-color: #ffffff !important;
+            --bs-table-border-color: rgba(255,255,255,0.12) !important;
+        }
+        .table > :not(caption) > * > * {
+            background-color: #1a1a1a !important;
+            color: #ffffff !important;
+            border-color: rgba(255,255,255,0.12) !important;
+        }
+
         /* ========================================
            GLOBAL DARK THEME OVERRIDES FOR MODALS AND FORMS
            ======================================== */
@@ -431,6 +443,15 @@
             justify-content: center !important;
             white-space: nowrap !important;
             min-width: 100px !important;
+        }
+        /* Include custom button classes used across app for consistent height */
+        .add-account-btn {
+            height: 42px !important;
+            padding: 8px 20px !important;
+            font-size: 15px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
         }
 
         /* Small buttons - consistent smaller size */
@@ -765,7 +786,7 @@
             <a href="/inbox" class="nav-mini-link {% if request.path.startswith('/inbox') %}active{% endif %}">Inbox</a>
             <a href="/interception" class="nav-mini-link {% if request.path.startswith('/interception') %}active{% endif %}">Held</a>
             <a href="/compose" class="nav-mini-link {% if request.path.startswith('/compose') %}active{% endif %}">Compose</a>
-            <a href="/healthz" class="nav-mini-link {% if request.path.startswith('/healthz') %}active{% endif %}">Health</a>
+            <a href="/diagnostics" class="nav-mini-link {% if request.path.startswith('/diagnostics') %}active{% endif %}">Diagnostics</a>
             {% if current_user.is_authenticated and current_user.role == 'admin' %}
             <a href="/accounts" class="nav-mini-link {% if request.path.startswith('/accounts') %}active{% endif %}">Accounts</a>
             {% endif %}
@@ -800,6 +821,7 @@
                 <a class="nav-item-link {% if request.endpoint == 'accounts.email_accounts' or request.endpoint == 'accounts.add_email_account' %}active{% endif %}" href="/accounts"><i class="bi bi-envelope-at"></i> Accounts</a>
                 <a class="nav-item-link {% if request.endpoint == 'accounts.accounts_import_page' %}active{% endif %}" href="/accounts/import"><i class="bi bi-upload"></i> Import Accounts</a>
                 <a class="nav-item-link {% if request.endpoint == 'diagnostics' %}active{% endif %}" href="/diagnostics"><i class="bi bi-heart-pulse"></i> Diagnostics</a>
+<a class="nav-item-link {% if request.endpoint == 'styleguide.styleguide' %}active{% endif %}" href="/styleguide"><i class="bi bi-palette2"></i> Style Guide</a>
                 <a class="nav-item-link {% if request.endpoint == 'interception_test_dashboard' %}active{% endif %}" href="/interception-test"><i class="bi bi-flask"></i> Test Suite</a>
             </nav>
             <div class="footer">
@@ -817,9 +839,7 @@
                 <div class="search-inline">
                     <input type="text" placeholder="Search mail, accounts, rules..." aria-label="Search">
                 </div>
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <span class="inline-badge badge-accent">Inbound Intercept Active</span>
-                </div>
+                <div style="display:flex;align-items:center;gap:10px;"></div>
             </div>
             <div class="content-scroll">
                 {% with messages = get_flashed_messages(with_categories=true) %}

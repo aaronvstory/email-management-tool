@@ -77,9 +77,9 @@
     
     .form-group input, .form-group select {
         padding: 10px;
-        border: 1px solid rgba(255,255,255,0.12);
-        background: rgba(255,255,255,0.06);
-        color: #ffffff;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        background: rgba(255,255,255,0.06) !important;
+        color: #ffffff !important;
         border-radius: 5px;
         font-size: 14px;
         transition: border-color 0.3s;
@@ -87,9 +87,9 @@
     
     .form-group input:focus, .form-group select:focus {
         outline: none;
-        border-color: #dc2626;
-        background: rgba(255,255,255,0.08);
-        box-shadow: 0 0 0 0.2rem rgba(220, 38, 38, 0.25);
+        border-color: #dc2626 !important;
+        background: rgba(255,255,255,0.08) !important;
+        box-shadow: 0 0 0 0.2rem rgba(220, 38, 38, 0.25) !important;
     }
     
     .form-group input::placeholder {
@@ -97,8 +97,27 @@
     }
     
     .form-group select option {
-        background: #1a1a1a;
-        color: #ffffff;
+        background: #1a1a1a !important;
+        color: #ffffff !important;
+    }
+
+    /* Force dark inputs throughout this page (covers any Bootstrap/browser overrides) */
+    .form-container input,
+    .form-container select,
+    .form-container textarea {
+        background: rgba(255,255,255,0.06) !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        color: #ffffff !important;
+    }
+    /* Autofill fix (Chrome/Edge) */
+    .form-container input:-webkit-autofill,
+    .form-container input:-webkit-autofill:hover,
+    .form-container input:-webkit-autofill:focus,
+    .form-container select:-webkit-autofill,
+    .form-container textarea:-webkit-autofill {
+        -webkit-box-shadow: 0 0 0px 1000px rgba(255,255,255,0.06) inset !important;
+        -webkit-text-fill-color: #ffffff !important;
+        caret-color: #ffffff !important;
     }
     
     .form-check {
@@ -129,9 +148,9 @@
     }
     
     .test-error {
-        background: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
+        background: #6c757d;
+        color: #ffffff;
+        border: 1px solid #545b62;
     }
 </style>
 {% endblock %}

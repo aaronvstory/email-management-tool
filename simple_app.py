@@ -32,6 +32,7 @@ from app.routes.accounts import accounts_bp
 from app.routes.emails import emails_bp
 from app.routes.diagnostics import diagnostics_bp
 from app.routes.legacy import legacy_bp
+from app.routes.styleguide import styleguide_bp
 from datetime import datetime
 from email import policy
 from email import message_from_bytes
@@ -116,6 +117,8 @@ def check_port_available(port, host='localhost'):
 load_dotenv()
 
 app = Flask(__name__)
+from app.utils.logging import setup_app_logging
+setup_app_logging(app)
 
 # Ensure backup directory exists
 import os
@@ -378,6 +381,7 @@ app.register_blueprint(accounts_bp)      # Accounts pages: /accounts, /accounts/
 app.register_blueprint(emails_bp)        # Email queue + viewer: /emails, /email/<id> (Phase 1C)
 app.register_blueprint(diagnostics_bp)   # Diagnostics & tests
 app.register_blueprint(legacy_bp)        # Legacy compatibility routes
+app.register_blueprint(styleguide_bp)    # UI style guide showcase
 
         # (Legacy inline IMAP loop removed during refactor)
 
@@ -581,10 +585,17 @@ def csrf_error(e):
 @app.errorhandler(429)
 def ratelimit_error(e):
     """Handle rate limit exceeded with user-friendly message"""
+    # JSON/AJAX requests: return JSON without redirects or flashes
     if request.is_json:
         return jsonify({'error': 'Too many requests. Please wait a moment and try again.'}), 429
-    flash('Too many login attempts. Please wait a minute and try again.', 'warning')
-    return redirect(url_for('auth.login'))
+    # For login endpoint, do not redirect-loop; return a plain 429 response
+    try:
+        if request.endpoint == 'auth.login' or request.path.startswith('/login'):
+            return ("Too many login attempts. Please wait a minute and try again.", 429)
+    except Exception:
+        pass
+    # For all other routes, return a simple 429 text response (no flash to avoid spam)
+    return ("Too many requests. Please slow down and try again shortly.", 429)
 
 
 @app.after_request

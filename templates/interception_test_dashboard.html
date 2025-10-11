@@ -941,12 +941,12 @@ async function editEmail(testData) {
     // Wait for configured delay
     await sleep(testData.edit_delay * 1000);
     
-    const response = await fetch(`/email/${currentEmailId}/edit`, {
+    const response = await fetch(`/api/email/${currentEmailId}/edit`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
             subject: testData.edited_subject,
-            body: testData.edited_body
+            body_text: testData.edited_body
         })
     });
     
@@ -970,21 +970,19 @@ async function approveEmail(testData) {
     
     addTimelineItem('info', 'Approving Email', 'Marking email as approved for delivery...');
     
-    const response = await fetch(`/email/${currentEmailId}/action`, {
+    const response = await fetch(`/api/interception/release/${currentEmailId}`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
-            action: 'approve',
-            notes: 'Approved by test suite'
+            edited_subject: testData.edited_subject,
+            edited_body: testData.edited_body
         })
     });
-    
     const result = await response.json();
-    
-    if (result.success) {
+    if (result.ok) {
         addTimelineItem('success', 'Email Approved', 'Email queued for delivery');
     } else {
-        throw new Error(result.error || 'Failed to approve email');
+        throw new Error(result.error || result.reason || 'Failed to approve email');
     }
     
     return result;

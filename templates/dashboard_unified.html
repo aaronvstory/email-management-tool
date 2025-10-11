@@ -318,14 +318,14 @@
                             </span>
                         </p>
                         <div class="btn-group" role="group">
-                            <button class="btn btn-sm btn-primary" onclick="testAccount('{{ account.id }}')">
+                            <button class="btn btn-sm btn-secondary" onclick="testAccount('{{ account.id }}')">
                                 <i class="bi bi-play-circle"></i> Test
                             </button>
-                            <button class="btn btn-sm btn-warning" onclick="editAccount('{{ account.id }}')">
+                            <button class="btn btn-sm btn-secondary" onclick="editAccount('{{ account.id }}')">
                                 <i class="bi bi-pencil"></i> Edit
                             </button>
                             <a href="{{ url_for('dashboard.dashboard', tab='diagnostics') }}?account_id={{ account.id }}"
-                               class="btn btn-sm btn-info">
+                               class="btn btn-sm btn-secondary">
                                 <i class="bi bi-heart-pulse"></i> Diagnostics
                             </a>
                         </div>
@@ -575,7 +575,8 @@ function testAccount(accountId) {
 }
 
 function editAccount(accountId) {
-    window.location.href = `/accounts/edit/${accountId}`;
+    // Route to Accounts page; editing handled in that view
+    window.location.href = `/accounts?edit=${accountId}`;
 }
 </script>
 {% endblock %}
