@@ -1,0 +1,142 @@
+{
+  "timestamp": "2025-10-11T10:39:41.674174",
+  "results": [
+    {
+      "name": "Health Check",
+      "url": "http://localhost:5000/healthz",
+      "method": "GET",
+      "status_code": 200,
+      "expected_status": 200,
+      "success": true,
+      "latency_ms": 8,
+      "content_length": 613,
+      "json": {
+        "db": "ok",
+        "held_count": 28,
+        "median_latency_ms": 60,
+        "ok": true,
+        "released_24h": 1,
+        "security": {
+          "csrf_enabled": false,
+          "csrf_time_limit": 7200,
+          "secret_key_configured": true,
+          "secret_key_prefix": "e67d8275",
+          "session_cookie_httponly": true,
+          "session_cookie_secure": false
+        },
+        "timestamp": "2025-10-11T17:39:41.111358Z",
+        "workers": [
+          {
+            "last_heartbeat": "2025-10-11 17:39:41",
+            "status": "active",
+            "worker_id": "imap_3"
+          },
+          {
+            "last_heartbeat": "2025-10-11 17:39:40",
+            "status": "active",
+            "worker_id": "imap_2"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Login Page",
+      "url": "http://localhost:5000/login",
+      "method": "GET",
+      "status_code": 200,
+      "expected_status": 200,
+      "success": true,
+      "latency_ms": 25,
+      "content_length": 4052,
+      "json": null
+    },
+    {
+      "name": "Dashboard (no auth)",
+      "url": "http://localhost:5000/dashboard",
+      "method": "GET",
+      "status_code": 200,
+      "expected_status": 302,
+      "success": false,
+      "latency_ms": 30,
+      "content_length": 4362,
+      "json": null
+    },
+    {
+      "name": "Dashboard",
+      "url": "/dashboard",
+      "status_code": 200,
+      "expected_status": 200,
+      "success": true,
+      "latency_ms": 31,
+      "content_length": 59174
+    },
+    {
+      "name": "Email Queue",
+      "url": "/emails",
+      "status_code": 200,
+      "expected_status": 200,
+      "success": true,
+      "latency_ms": 16,
+      "content_length": 146356
+    },
+    {
+      "name": "Accounts Page",
+      "url": "/accounts",
+      "status_code": 200,
+      "expected_status": 200,
+      "success": true,
+      "latency_ms": 27,
+      "content_length": 41626
+    },
+    {
+      "name": "API Stats",
+      "url": "/api/stats",
+      "status_code": 200,
+      "expected_status": 200,
+      "success": true,
+      "latency_ms": 27,
+      "content_length": 113
+    },
+    {
+      "name": "API Unified Stats",
+      "url": "/api/unified-stats",
+      "status_code": 200,
+      "expected_status": 200,
+      "success": true,
+      "latency_ms": 4,
+      "content_length": 66
+    },
+    {
+      "name": "API Interception Held",
+      "url": "/api/interception/held",
+      "status_code": 200,
+      "expected_status": 200,
+      "success": true,
+      "latency_ms": 26,
+      "content_length": 8666
+    },
+    {
+      "name": "Compose Page",
+      "url": "/compose",
+      "status_code": 200,
+      "expected_status": 200,
+      "success": true,
+      "latency_ms": 18,
+      "content_length": 39548
+    },
+    {
+      "name": "Inbox Page",
+      "url": "/inbox",
+      "status_code": 200,
+      "expected_status": 200,
+      "success": true,
+      "latency_ms": 32,
+      "content_length": 37845
+    }
+  ],
+  "summary": {
+    "total": 11,
+    "successful": 10,
+    "failed": 1
+  }
+}

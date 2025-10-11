@@ -1,0 +1,118 @@
+{
+  "timestamp": "2025-10-11T10:38:19.260288",
+  "summary": {
+    "passed": 5,
+    "total": 6,
+    "percentage": 83.33333333333334
+  },
+  "results": {
+    "database_connectivity": {
+      "success": true,
+      "data": {
+        "users": 1,
+        "email_accounts": 3,
+        "email_messages": 48,
+        "moderation_rules": 3,
+        "audit_log": 10
+      }
+    },
+    "credential_encryption": {
+      "success": true,
+      "data": [
+        {
+          "id": 1,
+          "name": "Gmail Test Account",
+          "email": "test.email.manager@gmail.com",
+          "encrypted_length": 120,
+          "decrypted": true,
+          "decrypted_length": 22
+        },
+        {
+          "id": 2,
+          "name": "Hostinger - Corrinbox (Secondary Test)",
+          "email": "mcintyre@corrinbox.com",
+          "encrypted_length": 100,
+          "decrypted": true,
+          "decrypted_length": 12
+        },
+        {
+          "id": 3,
+          "name": "Gmail - NDayijecika (Primary Test)",
+          "email": "ndayijecika@gmail.com",
+          "encrypted_length": 120,
+          "decrypted": true,
+          "decrypted_length": 16
+        }
+      ]
+    },
+    "imap_connections": {
+      "success": true,
+      "data": [
+        {
+          "id": 1,
+          "email": "test.email.manager@gmail.com",
+          "success": false,
+          "error": "b'[AUTHENTICATIONFAILED] Invalid credentials (Failure)'"
+        },
+        {
+          "id": 2,
+          "email": "mcintyre@corrinbox.com",
+          "success": true,
+          "folders": 5,
+          "messages": 95,
+          "latency_ms": 1373
+        },
+        {
+          "id": 3,
+          "email": "ndayijecika@gmail.com",
+          "success": true,
+          "folders": 10,
+          "messages": 149,
+          "latency_ms": 1212
+        }
+      ]
+    },
+    "smtp_proxy": {
+      "success": false,
+      "data": "[WinError 10061] No connection could be made because the target machine actively refused it"
+    },
+    "database_operations": {
+      "success": true,
+      "data": "All database operations working"
+    },
+    "email_messages": {
+      "success": true,
+      "data": {
+        "status_counts": [
+          {
+            "status": "APPROVED",
+            "count": 2
+          },
+          {
+            "status": "DELIVERED",
+            "count": 2
+          },
+          {
+            "status": "PENDING",
+            "count": 44
+          }
+        ],
+        "interception_counts": [
+          {
+            "interception_status": "FETCHED",
+            "count": 16
+          },
+          {
+            "interception_status": "HELD",
+            "count": 28
+          },
+          {
+            "interception_status": "RELEASED",
+            "count": 4
+          }
+        ],
+        "recent_count": 5
+      }
+    }
+  }
+}
