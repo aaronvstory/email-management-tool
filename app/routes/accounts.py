@@ -11,7 +11,9 @@ import json
 from app.utils.db import DB_PATH, get_db
 from datetime import datetime
 from app.utils.crypto import encrypt_credential, decrypt_credential
-from app.extensions import limiter
+from app.extensions import limiter, csrf
+import csv
+from io import StringIO
 
 # Phase 3: Import consolidated email helpers
 from app.utils.email_helpers import detect_email_settings as _detect_email_settings, test_email_connection as _test_email_connection
@@ -264,6 +266,15 @@ def email_accounts():
         return render_template('accounts.html', accounts=accounts_dict)
 
 
+@accounts_bp.route('/accounts/import', methods=['GET'])
+@login_required
+def accounts_import_page():
+    if current_user.role != 'admin':
+        flash('Admin access required', 'error')
+        return redirect(url_for('dashboard.dashboard'))
+    return render_template('accounts_import.html')
+
+
 @accounts_bp.route('/accounts/add', methods=['GET', 'POST'])
 @login_required
 def add_email_account():
@@ -345,6 +356,109 @@ def add_email_account():
         return redirect(url_for('accounts.email_accounts'))
 
     return render_template('add_account.html')
+
+
+@accounts_bp.route('/api/accounts/import', methods=['POST'])
+@csrf.exempt
+@login_required
+def api_import_accounts():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+    file = request.files.get('file')
+    auto_detect = (request.form.get('auto_detect') == 'on') or (request.args.get('auto_detect') == '1')
+    if not file:
+        return jsonify({'success': False, 'error': 'CSV file is required'}), 400
+    try:
+        content = file.read().decode('utf-8', errors='ignore')
+        reader = csv.DictReader(StringIO(content))
+        rows = list(reader)
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Invalid CSV: {e}'}), 400
+
+    inserted = updated = errors = 0
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        cur = conn.cursor()
+        for row in rows:
+            try:
+                # Normalize
+                r = {k.strip().lower(): (v.strip() if isinstance(v, str) else v) for k, v in row.items()}
+                email = r.get('email_address') or r.get('email')
+                if not email:
+                    raise ValueError('email_address missing')
+                account_name = r.get('account_name') or email
+                imap_user = r.get('imap_username') or email
+                smtp_user = r.get('smtp_username') or email
+                imap_pwd = r.get('imap_password')
+                smtp_pwd = r.get('smtp_password')
+                if not imap_pwd or not smtp_pwd:
+                    raise ValueError('imap_password and smtp_password required')
+                def _to_int(v, d=None):
+                    try: return int(v)
+                    except Exception: return d
+                def _to_bool(v, d=None):
+                    if v is None: return d
+                    s = str(v).strip().lower()
+                    if s in ('1','true','yes','y'): return True
+                    if s in ('0','false','no','n'): return False
+                    return d
+                imap_host = r.get('imap_host'); smtp_host = r.get('smtp_host')
+                imap_port = _to_int(r.get('imap_port'), 993); smtp_port = _to_int(r.get('smtp_port'), 465)
+                imap_ssl = _to_bool(r.get('imap_use_ssl'), True); smtp_ssl = _to_bool(r.get('smtp_use_ssl'), True)
+                if auto_detect and (not imap_host or not smtp_host):
+                    auto = _detect_email_settings(email)
+                    imap_host = imap_host or auto['imap_host']
+                    imap_port = imap_port or auto['imap_port']
+                    imap_ssl = auto['imap_use_ssl'] if imap_ssl is None else imap_ssl
+                    smtp_host = smtp_host or auto['smtp_host']
+                    smtp_port = smtp_port or auto['smtp_port']
+                    smtp_ssl = auto['smtp_use_ssl'] if smtp_ssl is None else smtp_ssl
+                is_active = 1 if _to_bool(r.get('is_active'), True) else 0
+
+                enc_imap = encrypt_credential(imap_pwd)
+                enc_smtp = encrypt_credential(smtp_pwd)
+                existing = cur.execute("SELECT id FROM email_accounts WHERE email_address=?", (email,)).fetchone()
+                if existing:
+                    cur.execute(
+                        """
+                        UPDATE email_accounts
+                        SET account_name=?,
+                            imap_host=?, imap_port=?, imap_username=?, imap_password=?, imap_use_ssl=?,
+                            smtp_host=?, smtp_port=?, smtp_username=?, smtp_password=?, smtp_use_ssl=?,
+                            is_active=?, updated_at=CURRENT_TIMESTAMP
+                        WHERE email_address=?
+                        """,
+                        (
+                            account_name,
+                            imap_host, imap_port, imap_user, enc_imap, 1 if (imap_ssl is not False) else 0,
+                            smtp_host, smtp_port, smtp_user, enc_smtp, 1 if (smtp_ssl is not False) else 0,
+                            is_active, email
+                        )
+                    ); updated += 1
+                else:
+                    cur.execute(
+                        """
+                        INSERT INTO email_accounts (
+                            account_name, email_address,
+                            imap_host, imap_port, imap_username, imap_password, imap_use_ssl,
+                            smtp_host, smtp_port, smtp_username, smtp_password, smtp_use_ssl,
+                            is_active
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            account_name, email,
+                            imap_host, imap_port, imap_user, enc_imap, 1 if (imap_ssl is not False) else 0,
+                            smtp_host, smtp_port, smtp_user, enc_smtp, 1 if (smtp_ssl is not False) else 0,
+                            is_active
+                        )
+                    ); inserted += 1
+            except Exception as e:
+                errors += 1
+                current_app.logger.warning(f"Import row error for {row.get('email_address')}: {e}")
+        conn.commit()
+    finally:
+        conn.close()
+    return jsonify({'success': True, 'inserted': inserted, 'updated': updated, 'errors': errors})
 
 @accounts_bp.route('/api/detect-email-settings', methods=['POST'])
 @login_required

@@ -12,12 +12,12 @@ import imaplib
 import smtplib
 from datetime import datetime
 
-# Test account credentials (from CLAUDE.md)
+# Test account credentials are sourced from environment (.env)
 ACCOUNTS = [
     {
         'name': 'Gmail - NDayijecika',
-        'email': 'ndayijecika@gmail.com',
-        'password': 'bjormgplhgwkgpad',
+        'email': os.environ.get('GMAIL_ADDRESS', ''),
+        'password': os.environ.get('GMAIL_PASSWORD', ''),
         'smtp_host': 'smtp.gmail.com',
         'smtp_port': 587,
         'smtp_ssl': False,  # STARTTLS
@@ -26,8 +26,8 @@ ACCOUNTS = [
     },
     {
         'name': 'Hostinger - Corrinbox',
-        'email': 'mcintyre@corrinbox.com',
-        'password': '25Horses807$',
+        'email': os.environ.get('HOSTINGER_ADDRESS', ''),
+        'password': os.environ.get('HOSTINGER_PASSWORD', ''),
         'smtp_host': 'smtp.hostinger.com',
         'smtp_port': 465,
         'smtp_ssl': True,  # Direct SSL
@@ -71,6 +71,9 @@ def main():
     print("=" * 80)
 
     for acc in ACCOUNTS:
+        if not acc['email'] or not acc['password']:
+            print(f"⚠️  Skipping {acc['name']}: missing credentials in environment (.env)")
+            continue
         print(f"\n{'─' * 80}")
         print(f"Testing: {acc['name']}")
         print(f"Email: {acc['email']}")

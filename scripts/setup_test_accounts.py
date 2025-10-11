@@ -12,12 +12,12 @@ import sqlite3
 from app.utils.crypto import encrypt_credential
 from app.utils.db import DB_PATH
 
-# Permanent test account credentials (from CLAUDE.md)
+# Permanent test account credentials via environment (.env)
 PERMANENT_ACCOUNTS = [
     {
         'account_name': 'Gmail - NDayijecika (Primary Test)',
-        'email_address': 'ndayijecika@gmail.com',
-        'password': 'bjormgplhgwkgpad',
+        'email_address': os.environ.get('GMAIL_ADDRESS', ''),
+        'password': os.environ.get('GMAIL_PASSWORD', ''),
         'smtp_host': 'smtp.gmail.com',
         'smtp_port': 587,
         'smtp_use_ssl': 0,  # STARTTLS
@@ -27,8 +27,8 @@ PERMANENT_ACCOUNTS = [
     },
     {
         'account_name': 'Hostinger - Corrinbox (Secondary Test)',
-        'email_address': 'mcintyre@corrinbox.com',
-        'password': '25Horses807$',
+        'email_address': os.environ.get('HOSTINGER_ADDRESS', ''),
+        'password': os.environ.get('HOSTINGER_PASSWORD', ''),
         'smtp_host': 'smtp.hostinger.com',
         'smtp_port': 465,
         'smtp_use_ssl': 1,  # Direct SSL
@@ -48,6 +48,9 @@ def setup_accounts():
     print("=" * 80)
 
     for acc in PERMANENT_ACCOUNTS:
+        if not acc['email_address'] or not acc['password']:
+            print(f"⚠️  Missing credentials in environment for '{acc['account_name']}'. Set in .env and retry.")
+            continue
         email = acc['email_address']
 
         # Check if account already exists

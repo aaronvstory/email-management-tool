@@ -153,7 +153,7 @@ python simple_app.py
 ### Account 1: Gmail - NDayijecika (Primary Test Account)
 
 - **Email**: ndayijecika@gmail.com
-- **Password**: bjormgplhgwkgpad (Gmail App Password - no spaces in storage)
+- **Password**: [REDACTED – set via .env GMAIL_PASSWORD]
 - **SMTP**: smtp.gmail.com:587 (STARTTLS, not SSL)
 - **IMAP**: imap.gmail.com:993 (SSL)
 - **Username**: ndayijecika@gmail.com (same as email)
@@ -166,7 +166,7 @@ python simple_app.py
 ### Account 2: Hostinger - Corrinbox (Secondary Test Account)
 
 - **Email**: mcintyre@corrinbox.com
-- **Password**: 25Horses807$ (see .env.example for credential format)
+- **Password**: [REDACTED – set via .env HOSTINGER_PASSWORD]
 - **SMTP**: smtp.hostinger.com:465 (SSL direct)
 - **IMAP**: imap.hostinger.com:993 (SSL)
 - **Username**: mcintyre@corrinbox.com (same as email)
@@ -1409,11 +1409,11 @@ ENABLE_WATCHERS=1  # 0 to disable IMAP threads (dev mode)
 ENABLE_LIVE_EMAIL_TESTS=0  # 1 to enable live tests
 LIVE_EMAIL_ACCOUNT=gmail   # or 'hostinger'
 
-# Credentials (for testing only - rotate if exposed)
+# Credentials (for testing only - values MUST be set locally in .env)
 GMAIL_ADDRESS=ndayijecika@gmail.com
-GMAIL_PASSWORD=bjormgplhgwkgpad
+GMAIL_PASSWORD=
 HOSTINGER_ADDRESS=mcintyre@corrinbox.com
-HOSTINGER_PASSWORD=25Horses807$
+HOSTINGER_PASSWORD=
 ```
 
 ## Important Notes

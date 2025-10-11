@@ -141,6 +141,7 @@ config/*.crt
 uploads/
 temp/
 cache/
+key.txt
 
 # Docker
 docker-compose.override.yml

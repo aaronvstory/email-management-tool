@@ -19,18 +19,19 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 
-# Test configuration using permanent accounts
+import os
+# Test configuration using environment (.env) for credentials
 ACCOUNT_1 = {
-    'email': 'ndayijecika@gmail.com',
-    'password': 'bjormgplhgwkgpad',  # Gmail App Password
+    'email': os.environ.get('GMAIL_ADDRESS', ''),
+    'password': os.environ.get('GMAIL_PASSWORD', ''),  # Gmail App Password
     'smtp_host': 'smtp.gmail.com',
     'smtp_port': 587,
     'name': 'Test Sender (Gmail)'
 }
 
 ACCOUNT_2 = {
-    'email': 'mcintyre@corrinbox.com',
-    'password': '25Horses807$',
+    'email': os.environ.get('HOSTINGER_ADDRESS', ''),
+    'password': os.environ.get('HOSTINGER_PASSWORD', ''),
     'imap_host': 'imap.hostinger.com',
     'imap_port': 993,
     'name': 'Test Recipient (Hostinger)'
@@ -59,6 +60,9 @@ class EmailInterceptionTest:
         self.log("=" * 80)
 
         try:
+            if not ACCOUNT_1['email'] or not ACCOUNT_1['password'] or not ACCOUNT_2['email'] or not ACCOUNT_2['password']:
+                self.log("Missing credentials in environment (.env); cannot run live interception test.", "ERROR")
+                return False
             # Create email message
             msg = MIMEMultipart()
             msg['From'] = ACCOUNT_1['email']

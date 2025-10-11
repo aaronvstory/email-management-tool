@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h3 class="text-white">Import Accounts (CSV)</h3>
+  <p class="text-muted">Upload a CSV to add/update accounts. Minimum columns: <code>email_address, imap_password, smtp_password</code>. Optional: <code>account_name, imap_host, imap_port, imap_use_ssl, smtp_host, smtp_port, smtp_use_ssl, imap_username, smtp_username, is_active</code>.</p>
+
+  <form action="{{ url_for('accounts.api_import_accounts') }}" method="post" enctype="multipart/form-data" class="mt-3" style="background: rgba(255,255,255,0.04); padding: 16px; border-radius: 12px;">
+    <div class="mb-3">
+      <label class="form-label text-white">CSV File</label>
+      <input class="form-control" type="file" name="file" accept=".csv" required />
+    </div>
+    <div class="form-check mb-3">
+      <input class="form-check-input" type="checkbox" name="auto_detect" id="auto_detect" checked>
+      <label class="form-check-label text-white" for="auto_detect">Auto-detect server settings when missing</label>
+    </div>
+    <button class="btn btn-primary" type="submit">Import</button>
+    <a class="btn btn-secondary ms-2" href="{{ url_for('accounts.email_accounts') }}">Back</a>
+  </form>
+</div>
+{% endblock %}
