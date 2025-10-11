@@ -12,6 +12,7 @@ import os
 import threading
 import sqlite3
 from app.utils.db import DB_PATH
+from app.utils.crypto import decrypt_credential
 
 
 def start_imap_watchers(monitor_func, thread_registry, app_logger=None):
@@ -41,7 +42,8 @@ def start_imap_watchers(monitor_func, thread_registry, app_logger=None):
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     active_accounts = cursor.execute("""
-        SELECT id, account_name FROM email_accounts WHERE is_active = 1
+        SELECT id, account_name, email_address, imap_username, imap_password
+        FROM email_accounts WHERE is_active = 1
     """).fetchall()
     conn.close()
 
@@ -49,6 +51,17 @@ def start_imap_watchers(monitor_func, thread_registry, app_logger=None):
     started_count = 0
     for account in active_accounts:
         account_id = account['id']
+        # Skip accounts with missing credentials
+        dec_pwd = decrypt_credential(account['imap_password']) if account['imap_password'] else None
+        if not account['imap_username'] or not dec_pwd:
+            if app_logger:
+                app_logger.info(
+                    "Skipping IMAP monitor for %s (ID: %s): credentials missing",
+                    account['account_name'], account_id
+                )
+            print(f"   ⚠️  Skipping monitoring for {account['account_name']} (ID: {account_id}) - missing credentials")
+            continue
+
         thread = threading.Thread(
             target=monitor_func,
             args=(account_id,),

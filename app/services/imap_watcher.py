@@ -12,6 +12,7 @@ This module is intentionally decoupled from Flask; it can be used by a runner sc
 from __future__ import annotations
 
 import logging
+import os
 import socket
 import ssl as sslmod
 import time
@@ -52,7 +53,19 @@ class ImapWatcher:
     def _connect(self):
         log.info("Connecting to IMAP %s:%s (ssl=%s)", self.cfg.imap_host, self.cfg.imap_port, self.cfg.use_ssl)
         ssl_context = sslmod.create_default_context() if self.cfg.use_ssl else None
-        client = IMAPClient(self.cfg.imap_host, port=self.cfg.imap_port, ssl=self.cfg.use_ssl, ssl_context=ssl_context)
+        # Apply connection timeout from env (EMAIL_CONN_TIMEOUT, clamp 5..60, default 15)
+        try:
+            to = int(os.getenv("EMAIL_CONN_TIMEOUT", "15"))
+            to = max(5, min(60, to))
+        except Exception:
+            to = 15
+        client = IMAPClient(
+            self.cfg.imap_host,
+            port=self.cfg.imap_port,
+            ssl=self.cfg.use_ssl,
+            ssl_context=ssl_context,
+            timeout=to
+        )
         client.login(self.cfg.username, self.cfg.password)
         log.info("Logged in as %s", self.cfg.username)
         capabilities = client.capabilities()

@@ -4,9 +4,65 @@ Consolidated email detection and connection testing functions
 Phase 3: Helper Consolidation - Extracted from simple_app.py and app/routes/accounts.py
 """
 
+import os
 import smtplib
 import imaplib
-from typing import Tuple
+import logging
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
+from typing import Tuple, Optional
+
+_LOGGER: Optional[logging.Logger] = None
+
+
+def _get_logger() -> logging.Logger:
+    """Logger configured for console + rotating file under logs/connection_tests.log"""
+    global _LOGGER
+    if _LOGGER is not None:
+        return _LOGGER
+    logger = logging.getLogger("connection_tests")
+    if not logger.handlers:
+        logger.setLevel(logging.INFO)
+        logs_dir = Path("logs")
+        try:
+            logs_dir.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            pass
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.INFO)
+        fh = RotatingFileHandler(str(logs_dir / "connection_tests.log"), maxBytes=512_000, backupCount=3, encoding="utf-8")
+        fh.setLevel(logging.INFO)
+        fmt = logging.Formatter("%(asctime)s %(levelname)s [%(name)s] %(message)s")
+        ch.setFormatter(fmt)
+        fh.setFormatter(fmt)
+        logger.addHandler(ch)
+        logger.addHandler(fh)
+        logger.propagate = False
+    _LOGGER = logger
+    return logger
+
+
+def _get_timeout() -> int:
+    try:
+        t = int(os.getenv("EMAIL_CONN_TIMEOUT", "15"))
+        return max(5, min(60, t))
+    except Exception:
+        return 15
+
+
+def _map_error(msg: str) -> str:
+    lower = (msg or "").lower()
+    if "authenticationfailed" in lower or "535" in lower or "invalid credentials" in lower:
+        return "Incorrect username or password"
+    if "getaddrinfo failed" in lower or "name or service not known" in lower or "nodename nor servname provided" in lower:
+        return "Server not found. Check hostname."
+    if "timed out" in lower or "timeout" in lower:
+        return "Connection timed out. Check firewall or port."
+    if ("ssl" in lower and "wrong version number" in lower) or ("ssl" in lower and "certificate verify failed" in lower):
+        return "SSL/TLS handshake failed. Verify port and TLS settings."
+    if lower.strip() == "none":
+        return "Server returned an error (protocol/port mismatch)."
+    return msg
 
 
 def detect_email_settings(email_address: str) -> dict:
@@ -83,8 +139,8 @@ def detect_email_settings(email_address: str) -> dict:
 
 def test_email_connection(kind: str, host: str, port: int, username: str, password: str, use_ssl: bool) -> Tuple[bool, str]:
     """
-    Lightweight connectivity test for IMAP/SMTP.
-    Returns (success, message). Avoids introducing heavy network timeouts.
+    Production-grade connectivity test for IMAP/SMTP with structured logging.
+    Returns (success, message) and logs all attempts to console and log file.
 
     Args:
         kind: 'imap' or 'smtp'
@@ -97,35 +153,60 @@ def test_email_connection(kind: str, host: str, port: int, username: str, passwo
     Returns:
         Tuple of (success: bool, message: str)
     """
-    if not host or not port or not username:
+    logger = _get_logger()
+    if not host or not port:
+        logger.error("%s Test FAILED: Missing connection parameters", kind.upper())
         return False, "Missing connection parameters"
+    if not username or not password:
+        logger.error("%s Test FAILED: Username and password are required", kind.upper())
+        return False, "Username and password are required"
+
+    logger.info("Testing %s connection to %s:%s (use_ssl=%s, user=%s)", kind.upper(), host, port, use_ssl, username)
 
     try:
         if kind.lower() == 'imap':
             if use_ssl:
-                client = imaplib.IMAP4_SSL(host, int(port))
+                logger.info("  → Connecting via IMAP4_SSL...")
+                client = imaplib.IMAP4_SSL(host, int(port), timeout=_get_timeout())
             else:
-                client = imaplib.IMAP4(host, int(port))
-            if password:
-                client.login(username, password)
+                logger.info("  → Connecting via IMAP4 (plaintext)...")
+                client = imaplib.IMAP4(host, int(port), timeout=_get_timeout())
+
+            logger.info("  → Authenticating as %s...", username)
+            client.login(username, password)
             client.logout()
+            logger.info("✅ IMAP connection successful: %s:%s", host, port)
             return True, f"IMAP OK {host}:{port}"
 
         if kind.lower() == 'smtp':
-            if use_ssl and int(port) in (465, 587):
-                if int(port) == 465:
-                    server = smtplib.SMTP_SSL(host, int(port), timeout=10)
-                else:
-                    server = smtplib.SMTP(host, int(port), timeout=10)
-                    server.starttls()
+            port_int = int(port)
+            timeout = _get_timeout()
+
+            if port_int == 465:
+                logger.info("  → Connecting via SMTP_SSL (port 465 direct SSL)...")
+                server = smtplib.SMTP_SSL(host, port_int, timeout=timeout)
+            elif port_int == 587:
+                logger.info("  → Connecting via SMTP with STARTTLS (port 587)...")
+                server = smtplib.SMTP(host, port_int, timeout=timeout)
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+            elif use_ssl:
+                logger.info("  → Connecting via SMTP_SSL (use_ssl=True)...")
+                server = smtplib.SMTP_SSL(host, port_int, timeout=timeout)
             else:
-                server = smtplib.SMTP(host, int(port), timeout=10)
-            if password:
-                server.login(username, password)
+                logger.info("  → Connecting via SMTP (plaintext)...")
+                server = smtplib.SMTP(host, port_int, timeout=timeout)
+
+            logger.info("  → Authenticating as %s...", username)
+            server.login(username, password)
             server.quit()
+            logger.info("✅ SMTP connection successful: %s:%s", host, port)
             return True, f"SMTP OK {host}:{port}"
 
+        logger.error("❌ Unsupported connection kind: %s", kind)
         return False, f"Unsupported kind {kind}"
 
     except Exception as e:
-        return False, str(e)
+        logger.error("❌ %s connection FAILED: %s: %s", kind.upper(), type(e).__name__, str(e))
+        return False, _map_error(str(e))

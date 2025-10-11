@@ -23,19 +23,51 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
-REM Check if app is already running
-netstat -an | findstr :5000 >nul 2>&1
+REM Check for port conflicts and clean up if needed
+echo [PREFLIGHT] Checking for port conflicts...
+
+REM Check port 5000 (Flask)
+C:\Windows\System32\netstat.exe -ano | findstr :5000 >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
-    echo [INFO] Application appears to be already running!
-    echo.
-    echo Opening dashboard in browser...
-    timeout /t 2 /nobreak >nul
-    start http://localhost:5000
-    echo.
-    echo [OK] Browser launched!
-    timeout /t 3 /nobreak >nul
-    exit /b 0
+    echo [WARNING] Port 5000 is in use. Checking if it's our application...
+
+    REM Try to access health endpoint
+    curl -s http://localhost:5000/healthz >nul 2>&1
+    if %ERRORLEVEL% EQU 0 (
+        echo [INFO] Application is already running and healthy!
+        echo.
+        echo Opening dashboard in browser...
+        timeout /t 2 /nobreak >nul
+        start http://localhost:5000
+        echo.
+        echo [OK] Browser launched!
+        timeout /t 3 /nobreak >nul
+        exit /b 0
+    ) else (
+        echo [WARNING] Port 5000 occupied by unresponsive process.
+        echo [ACTION] Attempting safe cleanup of our own Python process on port 5000...
+        for /f "tokens=5" %%a in ('netstat -ano ^| findstr :5000') do (
+            for /f "usebackq delims=" %%c in (`wmic process where "ProcessId=%%a" get CommandLine ^| findstr /I /C:"Email-Management-Tool"`) do (
+                taskkill /F /PID %%a >nul 2>&1
+            )
+        )
+        timeout /t 2 /nobreak >nul
+    )
 )
+
+REM Check port 8587 (SMTP Proxy)
+C:\Windows\System32\netstat.exe -ano | findstr :8587 >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    echo [WARNING] Port 8587 is in use. Attempting safe cleanup...
+    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8587') do (
+        for /f "usebackq delims=" %%c in (`wmic process where "ProcessId=%%a" get CommandLine ^| findstr /I /C:"Email-Management-Tool"`) do (
+            taskkill /F /PID %%a >nul 2>&1
+        )
+    )
+    timeout /t 2 /nobreak >nul
+)
+
+echo [OK] Ports are clear!
 
 echo [STARTING] Email Management Tool...
 echo.
@@ -49,7 +81,7 @@ echo [2/3] Waiting for services to initialize...
 timeout /t 5 /nobreak >nul
 
 REM Check if app started successfully
-netstat -an | findstr :5000 >nul 2>&1
+C:\Windows\System32\netstat.exe -an | findstr :5000 >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
     echo.
     echo [ERROR] Failed to start application!

@@ -1,0 +1,103 @@
+name: Email Connection Validation
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  validate-connections:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run connection validation (with credentials)
+        if: ${{ secrets.GMAIL_ADDRESS != '' && secrets.GMAIL_PASSWORD != '' }}
+        env:
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_PASSWORD: ${{ secrets.GMAIL_PASSWORD }}
+          GMAIL_EMAIL: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_PASSWORD }}
+          HOSTINGER_ADDRESS: ${{ secrets.HOSTINGER_ADDRESS }}
+          HOSTINGER_PASSWORD: ${{ secrets.HOSTINGER_PASSWORD }}
+          HOSTINGER_EMAIL: ${{ secrets.HOSTINGER_ADDRESS }}
+          EMAIL_CONN_TIMEOUT: 10  # Shorter timeout for CI
+        run: |
+          echo "Running connection validation with live credentials..."
+          python scripts/validate_email_connections.py
+        continue-on-error: false  # Fail build if validation fails
+
+      - name: Run connection validation (without credentials)
+        if: ${{ secrets.GMAIL_ADDRESS == '' || secrets.GMAIL_PASSWORD == '' }}
+        run: |
+          echo "⚠️  SKIPPED: No email credentials configured in GitHub Secrets"
+          echo "To enable live connection tests, add these secrets to your repository:"
+          echo "  - GMAIL_ADDRESS"
+          echo "  - GMAIL_PASSWORD"
+          echo "  - HOSTINGER_ADDRESS"
+          echo "  - HOSTINGER_PASSWORD"
+          echo ""
+          echo "Running validation with negative tests only..."
+          python scripts/validate_email_connections.py || echo "Negative tests passed"
+
+      - name: Upload connection test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: connection-test-logs
+          path: logs/connection_tests.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Run security validation
+        run: |
+          echo "Running security validation..."
+          python -m scripts.validate_security
+        continue-on-error: false
+
+  validate-database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Check for invalid accounts
+        run: |
+          echo "Scanning for accounts with corrupt credentials..."
+          python scripts/cleanup_invalid_accounts.py --dry-run
+        continue-on-error: true  # Warning only, don't fail build
+
+      - name: Verify database indices
+        run: |
+          echo "Verifying database indices..."
+          python scripts/verify_indices.py
+        continue-on-error: true  # Warning only

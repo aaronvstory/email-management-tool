@@ -11,6 +11,7 @@ import json
 from app.utils.db import DB_PATH, get_db
 from datetime import datetime
 from app.utils.crypto import encrypt_credential, decrypt_credential
+from app.extensions import limiter
 
 # Phase 3: Import consolidated email helpers
 from app.utils.email_helpers import detect_email_settings as _detect_email_settings, test_email_connection as _test_email_connection
@@ -102,6 +103,22 @@ def api_account_crud(account_id):
             fields.append('smtp_use_ssl = ?'); values.append(1 if payload['smtp_use_ssl'] else 0)
         if 'imap_use_ssl' in payload:
             fields.append('imap_use_ssl = ?'); values.append(1 if payload['imap_use_ssl'] else 0)
+        if 'is_active' in payload:
+            # Guard: cannot activate without valid (decrypted, non-empty) credentials
+            desired_active = 1 if (payload['is_active'] in (1, True, '1')) else 0
+            if desired_active:
+                existing = cur.execute(
+                    "SELECT imap_username, smtp_username, imap_password, smtp_password FROM email_accounts WHERE id=?",
+                    (account_id,)
+                ).fetchone()
+                if not existing or not existing[0] or not existing[1]:
+                    conn.close(); return jsonify({'error': 'Cannot activate account without credentials'}), 400
+                from app.utils.crypto import decrypt_credential as _dec
+                imap_pwd = _dec(existing[2]) if existing[2] else None
+                smtp_pwd = _dec(existing[3]) if existing[3] else None
+                if not imap_pwd or not smtp_pwd:
+                    conn.close(); return jsonify({'error': 'Cannot activate: credentials invalid or missing'}), 400
+            fields.append('is_active = ?'); values.append(desired_active)
         if fields:
             fields.append('updated_at = CURRENT_TIMESTAMP'); values.append(account_id)
             cur.execute(f"UPDATE email_accounts SET {', '.join(fields)} WHERE id = ?", values); conn.commit()
@@ -116,6 +133,7 @@ def api_account_crud(account_id):
 
 
 @accounts_bp.route('/api/accounts/<account_id>/test', methods=['POST'])
+@limiter.limit("10 per minute")
 @login_required
 def api_test_account(account_id):
     """Test account IMAP/SMTP connectivity and update health fields."""
@@ -127,6 +145,10 @@ def api_test_account(account_id):
         conn.close(); return jsonify({'error': 'Account not found'}), 404
     imap_pwd = decrypt_credential(acc['imap_password'])
     smtp_pwd = decrypt_credential(acc['smtp_password'])
+    if not acc['imap_username'] or not imap_pwd:
+        conn.close(); return jsonify({'success': False, 'imap': {'success': False, 'message': 'IMAP username/password required'}, 'smtp': {'success': False, 'message': 'SMTP test skipped'}}), 400
+    if not acc['smtp_username'] or not smtp_pwd:
+        conn.close(); return jsonify({'success': False, 'imap': {'success': False, 'message': 'IMAP test skipped'}, 'smtp': {'success': False, 'message': 'SMTP username/password required'}}), 400
     imap_ok, imap_msg = _test_email_connection('imap', acc['imap_host'], acc['imap_port'], acc['imap_username'], imap_pwd or '', acc['imap_use_ssl'])
     smtp_ok, smtp_msg = _test_email_connection('smtp', acc['smtp_host'], acc['smtp_port'], acc['smtp_username'], smtp_pwd or '', acc['smtp_use_ssl'])
     cur.execute(
@@ -173,6 +195,7 @@ def api_export_accounts():
 
 
 @accounts_bp.route('/api/test-connection/<connection_type>', methods=['POST'])
+@limiter.limit("10 per minute")
 @login_required
 def api_test_connection(connection_type):
     """Test IMAP/SMTP connectivity to an arbitrary host using provided params."""
@@ -180,8 +203,8 @@ def api_test_connection(connection_type):
     host = data.get('host'); port = int(data.get('port')) if data.get('port') else None
     username = data.get('username'); password = data.get('password') or ''
     use_ssl = bool(data.get('use_ssl', True))
-    if not (host and port and username):
-        return jsonify({'success': False, 'message': 'Missing parameters', 'error': 'Missing parameters'}), 400
+    if not (host and port and username and password):
+        return jsonify({'success': False, 'message': 'Missing parameters (host, port, username, password required)', 'error': 'Missing parameters'}), 400
     ok, msg = _test_email_connection(connection_type, host, port, username, password, use_ssl)
     return jsonify({'success': ok, 'message': msg, 'error': None if ok else msg})
 
