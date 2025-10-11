@@ -1,0 +1,347 @@
+{
+  "timestamp": "2025-10-11T13:28:03.998252",
+  "summary": {
+    "total_accounts": 28,
+    "smtp_success": 2,
+    "imap_success": 2,
+    "all_success": false
+  },
+  "accounts": [
+    {
+      "name": "Gmail Test Account",
+      "email": "test.email.manager@gmail.com",
+      "smtp": {
+        "success": false,
+        "message": "(535, b'5.7.8 Username and Password not accepted. For more information, go to\\n5.7.8  https://support.google.com/mail/?p=BadCredentials d9443c01a7336-29034e39727sm90250805ad.51 - gsmtp')"
+      },
+      "imap": {
+        "success": false,
+        "message": "b'[AUTHENTICATIONFAILED] Invalid credentials (Failure)'"
+      }
+    },
+    {
+      "name": "Hostinger - Corrinbox (Secondary Test)",
+      "email": "mcintyre@corrinbox.com",
+      "smtp": {
+        "success": true,
+        "message": "Connected successfully"
+      },
+      "imap": {
+        "success": true,
+        "message": "Connected, 95 messages in inbox"
+      }
+    },
+    {
+      "name": "Gmail - NDayijecika (Primary Test)",
+      "email": "ndayijecika@gmail.com",
+      "smtp": {
+        "success": true,
+        "message": "Connected successfully"
+      },
+      "imap": {
+        "success": true,
+        "message": "Connected, 152 messages in inbox"
+      }
+    },
+    {
+      "name": "SecTest",
+      "email": "user@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    },
+    {
+      "name": "SecTest_cee46b546703",
+      "email": "user+cee46b546703@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    },
+    {
+      "name": "SecTest_2edf5add0cc4",
+      "email": "user+2edf5add0cc4@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    },
+    {
+      "name": "SecTest_eb005b0c56bc",
+      "email": "user+eb005b0c56bc@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    },
+    {
+      "name": "SecTest_ae1a4f04fe93",
+      "email": "user+ae1a4f04fe93@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    },
+    {
+      "name": "SecTest_db0b563dfff9",
+      "email": "user+db0b563dfff9@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    },
+    {
+      "name": "SecTest_6ca7ba56febf",
+      "email": "user+6ca7ba56febf@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    },
+    {
+      "name": "SecTest_78aa2c8847df",
+      "email": "user+78aa2c8847df@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    },
+    {
+      "name": "TestAcct",
+      "email": "sender@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    },
+    {
+      "name": "SecTest_ac8ba66770a2",
+      "email": "user+ac8ba66770a2@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    },
+    {
+      "name": "SecTest_eeb898623fd3",
+      "email": "user+eeb898623fd3@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    },
+    {
+      "name": "SecTest_5d481b875d75",
+      "email": "user+5d481b875d75@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    },
+    {
+      "name": "SecTest_684e0f0992c7",
+      "email": "user+684e0f0992c7@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    },
+    {
+      "name": "SecTest_f49cc1e01ac9",
+      "email": "user+f49cc1e01ac9@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    },
+    {
+      "name": "TestAcct_c26b59b0",
+      "email": "sender@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    },
+    {
+      "name": "TestAcct_2fbaa9f2",
+      "email": "sender@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    },
+    {
+      "name": "TestAcct_b264fcae",
+      "email": "sender@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    },
+    {
+      "name": "TestAcct_244a80dd",
+      "email": "sender@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    },
+    {
+      "name": "TestAcct_366f11c8",
+      "email": "sender@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    },
+    {
+      "name": "TestAcct_480a407d",
+      "email": "sender@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    },
+    {
+      "name": "TestAcct_00c9cfbb",
+      "email": "sender@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    },
+    {
+      "name": "TestAcct_44a6ce98",
+      "email": "sender@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    },
+    {
+      "name": "TestAcct_2b08d1bd",
+      "email": "sender@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    },
+    {
+      "name": "TestAcct_2211c74f",
+      "email": "sender@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    },
+    {
+      "name": "TestAcct_4955f8d3",
+      "email": "sender@example.com",
+      "smtp": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      },
+      "imap": {
+        "success": false,
+        "message": "[Errno 11001] getaddrinfo failed"
+      }
+    }
+  ]
+}

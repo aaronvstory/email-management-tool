@@ -18,9 +18,11 @@ import os
 import sqlite3
 import tempfile
 from email.message import EmailMessage
+from uuid import uuid4
 from datetime import datetime
 
 import pytest
+import types
 from flask import Flask
 
 DB_PATH = 'email_manager.db'
@@ -29,6 +31,8 @@ DB_PATH = 'email_manager.db'
 def app_client(monkeypatch):
     # Import the app after ensuring DB exists
     import simple_app as sa  # simple_app defines 'app'
+    # Ensure this test uses the same DB file as our inserts
+    os.environ['TEST_DB_PATH'] = DB_PATH
 
     # Monkeypatch imaplib to avoid real network
     import imaplib
@@ -42,10 +46,21 @@ def app_client(monkeypatch):
         def append(self, mailbox, flags, internaldate, msg_bytes):
             # accept all appends
             return 'OK', []
+        def search(self, charset, *criteria):
+            # Always return success for any search (simulates finding the message)
+            # IMAP search returns message sequence numbers as space-separated bytes
+            return ('OK', [b'1'])
         def logout(self):
             return 'BYE', []
     monkeypatch.setattr(imaplib, 'IMAP4_SSL', DummyIMAP)
     monkeypatch.setattr(imaplib, 'IMAP4', DummyIMAP)
+
+    # Bypass login_required by faking an authenticated user
+    monkeypatch.setattr('flask_login.utils._get_user', lambda: types.SimpleNamespace(is_authenticated=True, id=1, role='admin'))
+
+    # Bypass decrypt_credential in release path
+    import app.routes.interception as intr
+    monkeypatch.setattr(intr, 'decrypt_credential', lambda v: 'pass')
 
     sa.app.config['TESTING'] = True
     client = sa.app.test_client()
@@ -74,11 +89,29 @@ def test_edit_then_release(app_client, tmp_path):
     # Insert a synthetic account (if needed) & email row
     conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row; cur = conn.cursor()
     # Minimal account for join in release
-    cur.execute("""
+    acct_name = f"TestAcct_{uuid4().hex[:8]}"
+    cur.execute(
+        """
         INSERT INTO email_accounts (account_name, email_address, imap_host, imap_port, imap_username, imap_password,
             imap_use_ssl, smtp_host, smtp_port, smtp_username, smtp_password, smtp_use_ssl, is_active)
-        VALUES ('TestAcct','sender@example.com','imap.local',993,'sender@example.com','dummy',1,'smtp.local',587,'sender@example.com','dummy',0,1)
-    """)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """,
+        (
+            acct_name,
+            'sender@example.com',
+            'imap.local',
+            993,
+            'sender@example.com',
+            'dummy',
+            1,
+            'smtp.local',
+            587,
+            'sender@example.com',
+            'dummy',
+            0,
+            1,
+        ),
+    )
     account_id = cur.lastrowid
 
     cur.execute("""

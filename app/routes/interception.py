@@ -19,6 +19,10 @@ import imaplib, ssl
 from app.utils.db import get_db, DB_PATH
 from app.utils.crypto import decrypt_credential, encrypt_credential
 from app.utils.imap_helpers import _imap_connect_account, _ensure_quarantine, _move_uid_to_quarantine
+from app.services.audit import log_action
+import socket
+import os
+from app.extensions import csrf
 
 from functools import wraps
 import shutil
@@ -63,6 +67,10 @@ def _db():
 
 WORKER_HEARTBEATS = {}
 _HEALTH_CACHE: Dict[str, Any] = {'ts': 0.0, 'payload': None}
+
+SMTP_HOST = os.environ.get('SMTP_PROXY_HOST', '127.0.0.1')
+SMTP_PORT = int(os.environ.get('SMTP_PROXY_PORT', '8587'))
+
 
 @bp_interception.route('/healthz')
 def healthz():
@@ -112,8 +120,64 @@ def healthz():
         conn.close(); info['db'] = 'ok'
     except Exception as e:
         info['ok'] = False; info['error'] = str(e)
+    # SMTP status
+    smtp_info = {'listening': False, 'last_selfcheck_ts': None, 'last_inbound_ts': None}
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(0.5)
+        err = s.connect_ex((SMTP_HOST, SMTP_PORT))
+        s.close()
+        smtp_info['listening'] = (err == 0)
+    except Exception:
+        smtp_info['listening'] = False
+    try:
+        conn2 = _db(); cur2 = conn2.cursor()
+        try:
+            row = cur2.execute("SELECT value FROM system_status WHERE key='smtp_last_selfcheck' LIMIT 1").fetchone()
+            if row and row['value']:
+                smtp_info['last_selfcheck_ts'] = row['value']
+        except Exception:
+            pass
+        try:
+            r2 = cur2.execute("SELECT MAX(created_at) AS ts FROM email_messages WHERE direction='inbound'").fetchone()
+            smtp_info['last_inbound_ts'] = r2['ts'] if r2 and r2['ts'] else None
+        except Exception:
+            pass
+        conn2.close()
+    except Exception:
+        pass
+    info['smtp'] = smtp_info
     _HEALTH_CACHE['ts'] = now; _HEALTH_CACHE['payload'] = info
     return jsonify(info), 200 if info.get('ok') else 503
+
+@bp_interception.route('/api/smtp-health')
+def api_smtp_health():
+    """Lightweight SMTP health endpoint."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(0.5)
+        ok = (s.connect_ex((SMTP_HOST, SMTP_PORT)) == 0)
+        s.close()
+    except Exception:
+        ok = False
+    last_sc = None; last_in = None
+    try:
+        conn = _db(); cur = conn.cursor()
+        try:
+            row = cur.execute("SELECT value FROM system_status WHERE key='smtp_last_selfcheck' LIMIT 1").fetchone()
+            if row and row['value']:
+                last_sc = row['value']
+        except Exception:
+            pass
+        try:
+            r2 = cur.execute("SELECT MAX(created_at) AS ts FROM email_messages WHERE direction='inbound'").fetchone()
+            last_in = r2['ts'] if r2 and r2['ts'] else None
+        except Exception:
+            pass
+        conn.close()
+    except Exception:
+        pass
+    return jsonify({'ok': ok, 'listening': ok, 'last_selfcheck_ts': last_sc, 'last_inbound_ts': last_in})
 
 @bp_interception.route('/interception')
 @login_required
@@ -182,6 +246,7 @@ def api_interception_get(msg_id:int):
     conn.close(); return jsonify(data)
 
 @bp_interception.route('/api/interception/release/<int:msg_id>', methods=['POST'])
+@csrf.exempt
 @login_required
 def api_interception_release(msg_id:int):
     payload = request.get_json(silent=True) or {}
@@ -307,6 +372,11 @@ def api_interception_release(msg_id:int):
         WHERE id=?
     """, (msg.get('Message-ID'), msg_id))
     conn.commit(); conn.close()
+    # Best-effort audit
+    try:
+        log_action('RELEASE', getattr(current_user, 'id', None), msg_id, f"Released to {target_folder}; edited={bool(edited_subject or edited_body)}; removed={removed}")
+    except Exception:
+        pass
     return jsonify({'ok':True,'released_to':target_folder,'attachments_removed':removed})
 
 @bp_interception.route('/api/interception/discard/<int:msg_id>', methods=['POST'])
@@ -343,8 +413,8 @@ def api_inbox():
     conn.close(); return jsonify({'messages':msgs,'count':len(msgs)})
 
 @bp_interception.route('/api/email/<int:email_id>/edit', methods=['POST'])
+@csrf.exempt
 @login_required
-@simple_rate_limit
 def api_email_edit(email_id:int):
     payload = request.get_json(silent=True) or {}
     subject = payload.get('subject'); body_text = payload.get('body_text'); body_html = payload.get('body_html')
@@ -367,10 +437,16 @@ def api_email_edit(email_id:int):
     if verify:
         result['verified'] = {k: verify[k] for k in verify.keys()}
     conn.close()
+    # Best-effort audit
+    try:
+        log_action('EDIT', getattr(current_user, 'id', None), email_id, f"Updated fields: {', '.join(result.get('updated_fields', []))}")
+    except Exception:
+        pass
     return jsonify(result)
 
 
 @bp_interception.route('/api/email/<int:email_id>/intercept', methods=['POST'])
+@csrf.exempt
 @login_required
 def api_email_intercept(email_id:int):
     """Manually intercept an email with remote MOVE to Quarantine folder (migrated)."""

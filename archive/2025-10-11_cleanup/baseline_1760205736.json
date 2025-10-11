@@ -1,0 +1,34 @@
+{
+  "ts": 1760205736,
+  "healthz_status": 200,
+  "healthz": {
+    "db": "ok",
+    "held_count": 28,
+    "median_latency_ms": 60,
+    "ok": true,
+    "released_24h": 1,
+    "security": {
+      "csrf_enabled": false,
+      "csrf_time_limit": 7200,
+      "secret_key_configured": true,
+      "secret_key_prefix": "e67d8275",
+      "session_cookie_httponly": true,
+      "session_cookie_secure": false
+    },
+    "timestamp": "2025-10-11T18:02:16.909094Z",
+    "workers": [
+      {
+        "last_heartbeat": "2025-10-11 18:02:16",
+        "status": "active",
+        "worker_id": "imap_3"
+      },
+      {
+        "last_heartbeat": "2025-10-11 18:02:16",
+        "status": "active",
+        "worker_id": "imap_2"
+      }
+    ]
+  },
+  "dashboard_noauth_status": 302,
+  "smtp_tcp_listening": true
+}

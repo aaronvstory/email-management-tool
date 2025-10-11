@@ -51,6 +51,57 @@ class ImapWatcher:
         self._client = None  # set in _connect
         self._last_hb = 0.0
 
+    def _record_failure(self, reason: str = "error"):
+        """Increment failure counter and open circuit if threshold exceeded."""
+        try:
+            if not self.cfg.account_id:
+                return
+            conn = sqlite3.connect(self.cfg.db_path)
+            cur = conn.cursor()
+            # Ensure heartbeats table has error_count column
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS worker_heartbeats (
+                    worker_id TEXT PRIMARY KEY,
+                    last_heartbeat TEXT DEFAULT CURRENT_TIMESTAMP,
+                    status TEXT,
+                    error_count INTEGER DEFAULT 0
+                )
+                """
+            )
+            # Backfill column if table existed without error_count
+            try:
+                cols = [r[1] for r in cur.execute("PRAGMA table_info(worker_heartbeats)").fetchall()]
+                if 'error_count' not in cols:
+                    cur.execute("ALTER TABLE worker_heartbeats ADD COLUMN error_count INTEGER DEFAULT 0")
+            except Exception:
+                pass
+            wid = f"imap_{self.cfg.account_id}"
+            # Upsert and increment error_count
+            cur.execute(
+                """
+                INSERT INTO worker_heartbeats(worker_id, last_heartbeat, status, error_count)
+                VALUES(?, datetime('now'), ?, 1)
+                ON CONFLICT(worker_id) DO UPDATE SET
+                  last_heartbeat = excluded.last_heartbeat,
+                  status = excluded.status,
+                  error_count = COALESCE(worker_heartbeats.error_count, 0) + 1
+                """,
+                (wid, reason),
+            )
+            # Check threshold
+            row = cur.execute("SELECT error_count FROM worker_heartbeats WHERE worker_id=?", (wid,)).fetchone()
+            count = int(row[0]) if row and row[0] is not None else 0
+            if count >= int(os.getenv('IMAP_CIRCUIT_THRESHOLD', '5')):
+                # Open circuit: disable account to stop retry loop
+                cur.execute(
+                    "UPDATE email_accounts SET is_active=0, last_error=? WHERE id=?",
+                    (f"circuit_open:{reason}", self.cfg.account_id),
+                )
+            conn.commit(); conn.close()
+        except Exception:
+            pass
+
     def _connect(self):
         try:
             log.info("Connecting to IMAP %s:%s (ssl=%s)", self.cfg.imap_host, self.cfg.imap_port, self.cfg.use_ssl)
@@ -86,6 +137,10 @@ class ImapWatcher:
             return client
         except Exception as e:
             log.error(f"Failed to connect to IMAP for {self.cfg.username}: {e}")
+            # Record failure and possibly trip circuit breaker
+            msg = str(e).lower()
+            reason = 'auth_failed' if ('auth' in msg or 'login' in msg) else 'error'
+            self._record_failure(reason)
             return None
 
     def _supports_uid_move(self) -> bool:
@@ -208,14 +263,22 @@ class ImapWatcher:
                 CREATE TABLE IF NOT EXISTS worker_heartbeats (
                     worker_id TEXT PRIMARY KEY,
                     last_heartbeat TEXT DEFAULT CURRENT_TIMESTAMP,
-                    status TEXT
+                    status TEXT,
+                    error_count INTEGER DEFAULT 0
                 )
                 """
             )
+            # Backfill column if missing
+            try:
+                cols = [r[1] for r in cur.execute("PRAGMA table_info(worker_heartbeats)").fetchall()]
+                if 'error_count' not in cols:
+                    cur.execute("ALTER TABLE worker_heartbeats ADD COLUMN error_count INTEGER DEFAULT 0")
+            except Exception:
+                pass
             wid = f"imap_{self.cfg.account_id}"
             cur.execute(
-                "INSERT OR REPLACE INTO worker_heartbeats(worker_id, last_heartbeat, status) VALUES(?, datetime('now'), ?)",
-                (wid, status),
+                "INSERT OR REPLACE INTO worker_heartbeats(worker_id, last_heartbeat, status, error_count) VALUES(?, datetime('now'), ?, COALESCE((SELECT error_count FROM worker_heartbeats WHERE worker_id=?), 0))",
+                (wid, status, wid),
             )
             conn.commit(); conn.close()
         except Exception:

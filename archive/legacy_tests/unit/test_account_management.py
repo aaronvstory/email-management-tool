@@ -15,7 +15,7 @@ from unittest.mock import Mock, patch, MagicMock
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from simple_app import app, init_database, encrypt_credential, decrypt_credential
-from simple_app import test_email_connection, User
+from app.utils.email_helpers import test_email_connection
 
 class TestAccountManagement(unittest.TestCase):
     """Test suite for account management functionality"""

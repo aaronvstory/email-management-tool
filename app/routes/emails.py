@@ -17,6 +17,7 @@ from email import policy
 from email import message_from_bytes
 from email.utils import parsedate_to_datetime
 from app.utils.db import DB_PATH, get_db, fetch_counts
+from app.extensions import csrf
 from app.utils.crypto import decrypt_credential
 from app.services.audit import log_action
 
@@ -42,10 +43,10 @@ def email_queue():
     ).fetchall()
 
     counts = fetch_counts(account_id=int(account_id) if account_id else None)
-    pending_count = counts.get('pending', 0)
-    approved_count = counts.get('approved', 0)
-    rejected_count = counts.get('rejected', 0)
-    total_count = counts.get('total', 0)
+    pending_count = int(counts.get('pending') or 0)
+    approved_count = int(counts.get('approved') or 0)
+    rejected_count = int(counts.get('rejected') or 0)
+    total_count = int(counts.get('total') or 0)
 
     if account_id:
         if status_filter.upper() == 'ALL':
@@ -179,6 +180,7 @@ def email_action(email_id):
 
 
 @emails_bp.route('/api/fetch-emails', methods=['POST'])
+@csrf.exempt
 @login_required
 def api_fetch_emails():
     """Fetch emails from IMAP server using UID-based fetching (migrated)."""

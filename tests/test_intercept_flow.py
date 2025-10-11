@@ -55,19 +55,20 @@ class FakeIMAP:
         return ('OK', [b'1'])
 
     def uid(self, cmd, *args):
-        if cmd == 'search':
+        cmd_u = (cmd or '').upper()
+        if cmd_u == 'SEARCH':
             return ('OK', [b'101 102'])
-        if cmd == 'fetch':
+        if cmd_u == 'FETCH':
             uid = args[0]
             # INTERNALDATE "01-Oct-2025 12:34:56 +0000"
             meta = f'{uid} (UID {uid} RFC822 {{10}} INTERNALDATE "01-Oct-2025 12:34:56 +0000")'.encode()
             raw = b"Subject: Test\r\nMessage-ID: <uid-"+uid.encode()+b"@test>\r\n\r\nBody"
             return ('OK', [(meta, raw)])
-        if cmd == 'MOVE':
+        if cmd_u == 'MOVE':
             return ('OK', [])
-        if cmd == 'COPY':
+        if cmd_u == 'COPY':
             return ('OK', [])
-        if cmd == 'STORE':
+        if cmd_u == 'STORE':
             return ('OK', [])
         return ('OK', [])
 
@@ -79,8 +80,8 @@ class FakeIMAP:
 
 def test_fetch_stores_uid_and_internaldate(monkeypatch):
     aid = seed_account()
-    # Monkeypatch decrypt_credential to return plaintext
-    monkeypatch.setattr('simple_app.decrypt_credential', lambda v: 'pass')
+    # Monkeypatch decrypt to return plaintext and IMAP behaviors
+    monkeypatch.setattr('app.routes.emails.decrypt_credential', lambda v: 'pass')
     monkeypatch.setattr('imaplib.IMAP4_SSL', lambda host, port: FakeIMAP())
     client = app.test_client()
     # Need login bypass (simulate logged-in user by monkeypatching login_required? simplest: set a session cookie via test login route if exists)
@@ -113,9 +114,10 @@ def test_manual_intercept_moves_and_latency(monkeypatch):
     conn.commit()
     conn.close()
 
-    monkeypatch.setattr('app.utils.imap_helpers._imap_connect_account', lambda row: (FakeIMAP(), True))
-    monkeypatch.setattr('app.utils.imap_helpers._move_uid_to_quarantine', lambda *a, **k: True)
-    monkeypatch.setattr('simple_app.decrypt_credential', lambda v: 'pass')
+    # Use FakeIMAP for intercept path and bypass decrypt
+    monkeypatch.setattr('imaplib.IMAP4_SSL', lambda h,p: FakeIMAP())
+    monkeypatch.setattr('imaplib.IMAP4', lambda h,p: FakeIMAP())
+    monkeypatch.setattr('app.routes.interception.decrypt_credential', lambda v: 'pass')
     from simple_app import app as flask_app
     client = flask_app.test_client()
     monkeypatch.setattr('flask_login.utils._get_user', lambda: types.SimpleNamespace(is_authenticated=True, id=99, role='admin'))
@@ -150,6 +152,13 @@ def test_release_sets_delivered(monkeypatch):
     class FakeReleaseIMAP(FakeIMAP):
         def append(self, folder, flags, internaldate, msg_bytes):
             return ('OK', [])
+        def select(self, mb):
+            return ('OK', [b'1'])
+        def search(self, charset, *criteria):
+            # Simulate finding the message by Message-ID
+            if 'Message-ID' in criteria or any('Message-ID' in str(c) for c in criteria):
+                return ('OK', [b'1'])
+            return ('OK', [b''])
 
     monkeypatch.setattr('imaplib.IMAP4_SSL', lambda h, p: FakeReleaseIMAP())
     monkeypatch.setattr('app.routes.interception.decrypt_credential', lambda v: 'pass')

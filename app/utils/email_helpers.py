@@ -210,3 +210,6 @@ def test_email_connection(kind: str, host: str, port: int, username: str, passwo
     except Exception as e:
         logger.error("❌ %s connection FAILED: %s: %s", kind.upper(), type(e).__name__, str(e))
         return False, _map_error(str(e))
+
+# Prevent pytest from collecting this helper as a test
+test_email_connection.__test__ = False  # type: ignore[attr-defined]

@@ -15,6 +15,7 @@ import ssl
 from typing import Tuple, Optional
 
 from flask import Response  # needed for SSE / events
+from dotenv import load_dotenv
 from email.utils import formatdate, make_msgid, parsedate_to_datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -29,6 +30,8 @@ from app.routes.compose import compose_bp
 from app.routes.inbox import inbox_bp
 from app.routes.accounts import accounts_bp
 from app.routes.emails import emails_bp
+from app.routes.diagnostics import diagnostics_bp
+from app.routes.legacy import legacy_bp
 from datetime import datetime
 from email import policy
 from email import message_from_bytes
@@ -109,6 +112,9 @@ def check_port_available(port, host='localhost'):
 
     return False, None
 
+# Load environment from .env early
+load_dotenv()
+
 app = Flask(__name__)
 
 # Ensure backup directory exists
@@ -116,7 +122,12 @@ import os
 os.makedirs("database_backups", exist_ok=True)
 os.makedirs("emergency_email_backup", exist_ok=True)
 # Security: SECRET_KEY from environment (never hardcode in production)
-app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY') or os.environ.get('SECRET_KEY') or os.environ.get('FLASK_SECRET') or 'dev-secret-change-in-production'
+app.config['SECRET_KEY'] = (
+    os.environ.get('FLASK_SECRET_KEY')
+    or os.environ.get('SECRET_KEY')
+    or os.environ.get('FLASK_SECRET')
+    or 'dev-secret-change-in-production'
+)
 
 # CSRF + Rate Limiting (use shared extension instances)
 try:
@@ -365,6 +376,8 @@ app.register_blueprint(compose_bp)       # Compose: /compose (Phase 1C)
 app.register_blueprint(inbox_bp)         # Inbox: /inbox (Phase 1C)
 app.register_blueprint(accounts_bp)      # Accounts pages: /accounts, /accounts/add (Phase 1C)
 app.register_blueprint(emails_bp)        # Email queue + viewer: /emails, /email/<id> (Phase 1C)
+app.register_blueprint(diagnostics_bp)   # Diagnostics & tests
+app.register_blueprint(legacy_bp)        # Legacy compatibility routes
 
         # (Legacy inline IMAP loop removed during refactor)
 
@@ -602,44 +615,7 @@ def log_security_events(response):
 # Routes: /dashboard, /dashboard/<tab>, /test-dashboard
 # ============================================================================
 
-@app.route('/test/cross-account', methods=['POST'])
-@login_required
-def run_cross_account_test():
-    """Run cross-account email test"""
-    try:
-        import subprocess
-        result = subprocess.run(['python', 'cross_account_test.py'],
-                              capture_output=True, text=True, timeout=60)
-
-        # Parse the output to get test results
-        output = result.stdout
-        success = "TEST PASSED" in output
-
-        return jsonify({
-            'success': success,
-            'output': output,
-            'timestamp': datetime.now().isoformat()
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/test-status')
-@login_required
-def get_test_status():
-    """Get current test status"""
-    try:
-        # Check for latest test results
-        import glob
-        test_files = glob.glob('test_results_*.json')
-        if test_files:
-            latest_file = max(test_files)
-            with open(latest_file, 'r') as f:
-                data = json.load(f)
-                return jsonify(data)
-        else:
-            return jsonify({'status': 'No tests run yet'})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+"""Moved: /test/cross-account and /api/test-status -> diagnostics blueprint"""
 
 """Moved: /emails queue page → app/routes/emails.py (emails_bp)"""
 
@@ -696,92 +672,7 @@ def get_test_status():
 
 # Moved: /diagnostics pages -> accounts blueprint
 
-@app.route('/diagnostics/test', methods=['POST'])
-@login_required
-def test_email_send():
-    """Test sending an email"""
-    # Legacy dependency (email_diagnostics) removed in cleanup phase.
-    flash('Email diagnostics send test temporarily disabled (module deprecated).', 'warning')
-    return redirect(url_for('diagnostics'))
-
-@app.route('/interception-test')
-@login_required
-def interception_test_dashboard():
-    """Display the comprehensive email interception test dashboard"""
-    return render_template('interception_test_dashboard.html', timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-
-@app.route('/api/test/send-email', methods=['POST'])
-@login_required
-def api_test_send_email():
-    """Simplified legacy test send endpoint (non-critical)."""
-    data = request.get_json(silent=True) or {}
-    from_account_id = data.get('from_account_id')
-    to_account_id = data.get('to_account_id')
-    subject = data.get('subject') or 'Test'
-    body = data.get('body') or 'Test body'
-    if not (from_account_id and to_account_id):
-        return jsonify({'success': False, 'error': 'Missing account ids'}), 400
-    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row; cur = conn.cursor()
-    from_account = cur.execute("SELECT * FROM email_accounts WHERE id=?", (from_account_id,)).fetchone()
-    to_account = cur.execute("SELECT * FROM email_accounts WHERE id=?", (to_account_id,)).fetchone(); conn.close()
-    if not from_account or not to_account:
-        return jsonify({'success': False, 'error': 'Invalid account ids'}), 400
-    try:
-        msg = MIMEMultipart(); msg['From'] = from_account['email_address']; msg['To'] = to_account['email_address']
-        msg['Subject'] = subject; msg['Date'] = formatdate(); msg['Message-ID'] = make_msgid(); msg.attach(MIMEText(body, 'plain'))
-        smtp = smtplib.SMTP('localhost', 8587, timeout=5); smtp.send_message(msg); smtp.quit()
-        return jsonify({'success': True})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/api/test/check-interception')
-@login_required
-def api_test_check_interception():
-    """Check if an email was intercepted"""
-    try:
-        subject = request.args.get('subject')
-
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-
-        email = cursor.execute("""
-            SELECT id, subject, status, created_at
-            FROM email_messages
-            WHERE subject = ? AND status = 'PENDING'
-            ORDER BY created_at DESC
-            LIMIT 1
-        """, (subject,)).fetchone()
-
-        conn.close()
-
-        if email:
-            return jsonify({
-                'success': True,
-                'email_id': email['id'],
-                'subject': email['subject'],
-                'status': email['status']
-            })
-        else:
-            return jsonify({'success': False, 'message': 'Email not found'})
-
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/api/test/verify-delivery', methods=['POST'])
-@login_required
-def api_test_verify_delivery():
-    """Simplified legacy verify-delivery: check subject presence in local DB only."""
-    data = request.get_json(silent=True) or {}
-    account_id = data.get('account_id'); subject = (data.get('subject') or '').strip()
-    if not (account_id and subject):
-        return jsonify({'success': False, 'error': 'Missing account_id or subject'}), 400
-    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row; cur = conn.cursor()
-    account = cur.execute("SELECT id FROM email_accounts WHERE id=?", (account_id,)).fetchone(); conn.close()
-    if not account:
-        return jsonify({'success': False, 'error': 'Invalid account ID'}), 400
-    c2 = sqlite3.connect(DB_PATH).cursor(); hit = c2.execute("SELECT 1 FROM email_messages WHERE subject=? LIMIT 1", (subject,)).fetchone(); c2.connection.close()
-    return jsonify({'success': bool(hit), 'source': 'local-db'})
+"""Moved: diagnostics & test routes -> diagnostics blueprint"""
 
 # ===== LEGACY_REMOVED: legacy edit/review endpoints superseded by interception blueprint =====
 # @app.route('/email/<int:email_id>/edit', methods=['GET', 'POST'])
@@ -806,15 +697,49 @@ def run_smtp_proxy():
     try:
         import aiosmtpd.controller
         handler = EmailModerationHandler()
-        controller = aiosmtpd.controller.Controller(handler, hostname='127.0.0.1', port=8587)
+        smtp_host = os.environ.get('SMTP_PROXY_HOST', '127.0.0.1')
+        smtp_port = int(os.environ.get('SMTP_PROXY_PORT', '8587'))
+        controller = aiosmtpd.controller.Controller(handler, hostname=smtp_host, port=smtp_port)
         controller.start()
-        print("📧 SMTP Proxy started on port 8587")
+        print(f"📧 SMTP Proxy started on {smtp_host}:{smtp_port}")
+        # Self-check: send a lightweight message through the proxy to verify accept path
+        try:
+            subj = f"[SC] SMTP Self-Check {int(time.time())}"
+            msg = MIMEText('ok')
+            msg['Subject'] = subj
+            msg['From'] = 'selfcheck@localhost'
+            msg['To'] = 'selfcheck@localhost'
+            s = smtplib.SMTP(smtp_host, smtp_port, timeout=3)
+            s.send_message(msg)
+            try:
+                s.quit()
+            except Exception:
+                pass
+            # Record last successful self-check timestamp
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                cur = conn.cursor()
+                cur.execute("CREATE TABLE IF NOT EXISTS system_status (key TEXT PRIMARY KEY, value TEXT)")
+                cur.execute("INSERT OR REPLACE INTO system_status(key, value) VALUES('smtp_last_selfcheck', datetime('now'))")
+                conn.commit(); conn.close()
+            except Exception:
+                pass
+        except Exception:
+            # Best-effort only; do not crash proxy thread
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                cur = conn.cursor()
+                cur.execute("CREATE TABLE IF NOT EXISTS system_status (key TEXT PRIMARY KEY, value TEXT)")
+                cur.execute("INSERT OR REPLACE INTO system_status(key, value) VALUES('smtp_last_selfcheck', NULL)")
+                conn.commit(); conn.close()
+            except Exception:
+                pass
     except ImportError:
         print("⚠️  SMTP Proxy disabled (aiosmtpd not installed)")
         return
     except OSError as e:
         if "10048" in str(e) or "already in use" in str(e).lower():
-            print("⚠️  SMTP Proxy port 8587 already in use - likely from previous instance")
+            print("⚠️  SMTP Proxy port already in use - likely from previous instance")
         else:
             print(f"❌ SMTP Proxy failed to start: {e}")
         return
@@ -856,20 +781,7 @@ _CACHE: Dict[str, Dict[str, Any]] = {'unified': {'t': 0, 'v': None}, 'lat': {'t'
 # ------------------------------------------------------------------
 # Legacy Compatibility Shims (deprecated endpoints with redirects)
 # ------------------------------------------------------------------
-@app.route('/api/held', methods=['GET'])
-@login_required
-def legacy_api_held():
-    """Deprecated legacy alias -> /api/interception/held"""
-    return redirect(url_for('interception_bp.api_interception_held'), code=307)
-
-@app.route('/api/emails/pending', methods=['GET'])
-def legacy_api_pending():
-    """Deprecated legacy pending messages endpoint guidance"""
-    return jsonify({
-        'deprecated': True,
-        'use': '/api/inbox?status=PENDING',
-        'note': 'Interception (HELD) now separate via /api/interception/held'
-    })
+"""Legacy compatibility routes moved to app/routes/legacy.py"""
 
 # Note: /api/unified-stats, /api/latency-stats, and /stream/stats
 # migrated to app/routes/stats.py (see Phase 1B marker above)
@@ -945,8 +857,12 @@ if __name__ == '__main__':
     print("   EMAIL MANAGEMENT TOOL - MODERN DASHBOARD")
     print("="*60)
     print("\n   🚀 Services Started:")
-    print("   📧 SMTP Proxy: localhost:8587")
-    print("   🌐 Web Dashboard: http://127.0.0.1:5000")
+    smtp_host = os.environ.get('SMTP_PROXY_HOST', '127.0.0.1')
+    smtp_port = int(os.environ.get('SMTP_PROXY_PORT', '8587'))
+    flask_host = os.environ.get('FLASK_HOST', '127.0.0.1')
+    flask_port = int(os.environ.get('FLASK_PORT', '5000'))
+    print(f"   📧 SMTP Proxy: {smtp_host}:{smtp_port}")
+    print(f"   🌐 Web Dashboard: http://{flask_host}:{flask_port}")
     print("   👤 Login: admin / admin123")
     print("\n   ✨ Features:")
     print("   • IMAP/SMTP email interception")
@@ -959,4 +875,7 @@ if __name__ == '__main__':
     print("\n" + "="*60 + "\n")
 
     # Run Flask app
-    app.run(debug=True, use_reloader=False)
+    debug = str(os.environ.get('FLASK_DEBUG', '1')).lower() in ('1', 'true', 'yes')
+    host = os.environ.get('FLASK_HOST', '127.0.0.1')
+    port = int(os.environ.get('FLASK_PORT', '5000'))
+    app.run(debug=debug, use_reloader=False, host=host, port=port)

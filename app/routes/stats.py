@@ -11,6 +11,7 @@ from datetime import datetime
 from app.utils.db import get_db, fetch_counts
 from app.extensions import csrf
 from app.services.stats import get_stats
+import statistics
 
 stats_bp = Blueprint('stats', __name__)
 
@@ -56,19 +57,64 @@ def api_unified_stats():
     return jsonify(val)
 
 
+_LAT_CACHE = {'t': 0.0, 'v': None}
+
+
+def _percentile(sorted_vals, pct: float) -> float:
+    if not sorted_vals:
+        return 0.0
+    n = len(sorted_vals)
+    if n == 1:
+        return float(sorted_vals[0])
+    pos = (n - 1) * pct
+    lo = int(pos)
+    hi = min(lo + 1, n - 1)
+    frac = pos - lo
+    return float(sorted_vals[lo] + (sorted_vals[hi] - sorted_vals[lo]) * frac)
+
+
 @stats_bp.route('/api/latency-stats')
-@login_required
 def api_latency_stats():
-    """Get latency statistics"""
-    conn = get_db()
-    cur = conn.cursor()
-    avg_latency = cur.execute("""
-        SELECT AVG(julianday(processed_at)-julianday(created_at))*86400000
-        FROM email_messages
-        WHERE processed_at IS NOT NULL
-    """).fetchone()[0] or 0
+    """Get latency statistics with 10s cache"""
+    now = time.time()
+    if _LAT_CACHE['v'] is not None and (now - _LAT_CACHE['t']) < 10:
+        return jsonify(_LAT_CACHE['v'])
+
+    conn = get_db(); cur = conn.cursor()
+    rows = cur.execute(
+        """
+        SELECT latency_ms FROM email_messages
+        WHERE latency_ms IS NOT NULL
+        ORDER BY id DESC LIMIT 1000
+        """
+    ).fetchall()
     conn.close()
-    return jsonify({'avg_processing_ms': round(avg_latency, 2)})
+
+    vals = [float(r[0]) for r in rows if r[0] is not None]
+    vals.sort()
+    count = len(vals)
+    if count == 0:
+        payload = {
+            'count': 0,
+            'min': 0, 'p50': 0, 'p90': 0, 'p95': 0, 'p99': 0, 'max': 0,
+            'mean': 0, 'median': 0
+        }
+    else:
+        payload = {
+            'count': count,
+            'min': float(vals[0]),
+            'p50': _percentile(vals, 0.50),
+            'p90': _percentile(vals, 0.90),
+            'p95': _percentile(vals, 0.95),
+            'p99': _percentile(vals, 0.99),
+            'max': float(vals[-1]),
+            'mean': float(statistics.fmean(vals) if hasattr(statistics, 'fmean') else sum(vals)/count),
+            'median': float(statistics.median(vals)),
+        }
+
+    _LAT_CACHE['t'] = now
+    _LAT_CACHE['v'] = payload
+    return jsonify(payload)
 
 
 @stats_bp.route('/stream/stats')

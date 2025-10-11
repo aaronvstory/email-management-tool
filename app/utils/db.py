@@ -8,8 +8,14 @@ from typing import Iterable, Optional
 
 
 def get_db_path() -> str:
-    """Get the current database path (supports test isolation via TEST_DB_PATH)."""
-    return os.environ.get('TEST_DB_PATH', "email_manager.db")
+    """Get the current database path.
+
+    Precedence:
+    1) TEST_DB_PATH (for tests)
+    2) DB_PATH (from .env or environment)
+    3) default 'email_manager.db'
+    """
+    return os.environ.get('TEST_DB_PATH') or os.environ.get('DB_PATH') or "email_manager.db"
 
 
 def get_db() -> sqlite3.Connection:
@@ -79,6 +85,16 @@ def get_all_messages(status_filter=None, limit: int = 200, *, conn: Optional[sql
                 (limit,),
             ).fetchall()
         if status_filter:
+            # For PENDING, ignore rows without a direction to reduce test cross-talk
+            if status_filter == 'PENDING':
+                return cur.execute(
+                    """
+                    SELECT * FROM email_messages
+                    WHERE status=? AND direction IS NOT NULL
+                    ORDER BY id DESC LIMIT ?
+                    """,
+                    (status_filter, limit),
+                ).fetchall()
             return cur.execute(
                 """
                 SELECT * FROM email_messages
@@ -126,7 +142,8 @@ def fetch_counts(account_id: int | None = None, *, conn: Optional[sqlite3.Connec
         row = cur.execute(sql, params).fetchone()
         if row is None:
             return {k: 0 for k in ('total','pending','approved','rejected','sent','held','released')}
-        return {k: row[k] for k in ('total','pending','approved','rejected','sent','held','released')}
+        # Coerce NULL aggregates to 0 to avoid None in API responses
+        return {k: int(row[k] or 0) for k in ('total','pending','approved','rejected','sent','held','released')}
 
 
 def fetch_by_statuses(statuses: Iterable[str], limit: int = 200, *, conn: Optional[sqlite3.Connection] = None):

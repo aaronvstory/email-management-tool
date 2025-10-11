@@ -1,335 +1,146 @@
-"""
-Pytest configuration for Email Management Tool tests
-
-Note: SQLite connection isolation between tests is limited due to:
-- Flask app singleton pattern (single app instance across tests)
-- SQLite connection caching within Flask app context
-- Module-level imports that happen before fixtures run
-
-Tests pass individually, confirming code logic is correct.
-When run together, some tests may see residual data from previous tests.
-
-Workaround: Run problematic tests individually:
-  python -m pytest tests/test_latency_stats.py::test_name -v
-
-Fixtures Added (Phase 2 Test Infrastructure):
-- app: Flask application with test configuration
-- client: Unauthenticated test client
-- authenticated_client: Test client with admin login
-- db_session: Database connection with automatic cleanup
-- temp_db: Temporary isolated database
-"""
 import os
+import re
 import sqlite3
 import tempfile
-from contextlib import contextmanager
-from typing import Generator
-
 import pytest
-from flask import Flask
-from flask.testing import FlaskClient
+from pathlib import Path
 
 
-# ============================================================================
-# Pytest Configuration
-# ============================================================================
-
-def pytest_configure(config):
-    """Register custom markers."""
-    config.addinivalue_line("markers", "unit: Unit tests")
-    config.addinivalue_line("markers", "integration: Integration tests")
-    config.addinivalue_line("markers", "security: Security-focused tests")
-    config.addinivalue_line("markers", "performance: Performance tests")
-    config.addinivalue_line("markers", "slow: Slow-running tests")
-
-
-# ============================================================================
-# Cache Management (Original Fixture)
-# ============================================================================
-
-@pytest.fixture(autouse=True)
-def clear_caches():
-    """Clear application caches before and after each test"""
-    from simple_app import app
-
-    # Clear caches before test
-    if hasattr(app, '_unified_stats_cache'):
-        delattr(app, '_unified_stats_cache')
-    if hasattr(app, '_latency_stats_cache'):
-        delattr(app, '_latency_stats_cache')
-
+@pytest.fixture(scope='session', autouse=True)
+def _setup_test_env():
+    # Ensure strong secret for import-time checks
+    os.environ.setdefault('FLASK_SECRET_KEY', '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef')
     yield
 
-    # Clear caches after test
-    if hasattr(app, '_unified_stats_cache'):
-        delattr(app, '_unified_stats_cache')
-    if hasattr(app, '_latency_stats_cache'):
-        delattr(app, '_latency_stats_cache')
 
+# Per-test DB isolation - creates isolated test database for each test
+@pytest.fixture()
+def isolated_db(tmp_path, monkeypatch):
+    """Provide an isolated test database for each test."""
+    test_db = tmp_path / 'test_email_manager.db'
+    monkeypatch.setenv('TEST_DB_PATH', str(test_db))
 
-# ============================================================================
-# Database Fixtures
-# ============================================================================
-
-@pytest.fixture
-def temp_db() -> Generator[str, None, None]:
-    """
-    Create a temporary isolated database for testing.
-
-    Yields:
-        str: Path to temporary database file
-    """
-    fd, db_path = tempfile.mkstemp(suffix='.db')
-    os.close(fd)
-
-    # Set environment variable for test isolation
-    old_db_path = os.environ.get('TEST_DB_PATH')
-    os.environ['TEST_DB_PATH'] = db_path
-
+    # Initialize schema
     try:
-        # Initialize database schema
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
+        from simple_app import init_database
+        import simple_app
+        # Temporarily override DB_PATH
+        original_db = simple_app.DB_PATH
+        simple_app.DB_PATH = str(test_db)
+        init_database()
+        simple_app.DB_PATH = original_db
+    except Exception as e:
+        pytest.fail(f"Failed to initialize test database: {e}")
 
-        # Create tables (minimal schema for testing)
-        conn.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL,
-                role TEXT DEFAULT 'user',
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
+    yield str(test_db)
 
-        conn.execute('''
-            CREATE TABLE IF NOT EXISTS email_messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                account_id INTEGER,
-                message_id TEXT,
-                sender TEXT,
-                recipients TEXT,
-                subject TEXT,
-                body_text TEXT,
-                body_html TEXT,
-                raw_content TEXT,
-                status TEXT DEFAULT 'PENDING',
-                interception_status TEXT,
-                direction TEXT DEFAULT 'inbound',
-                latency_ms INTEGER,
-                risk_score REAL,
-                keywords_matched TEXT,
-                review_notes TEXT,
-                approved_by INTEGER,
-                original_uid INTEGER,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                processed_at TEXT,
-                action_taken_at TEXT
-            )
-        ''')
+    # Cleanup
+    try:
+        if test_db.exists():
+            test_db.unlink()
+    except Exception:
+        pass
 
-        conn.execute('''
-            CREATE TABLE IF NOT EXISTS email_accounts (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                email_address TEXT UNIQUE NOT NULL,
-                imap_host TEXT,
-                imap_port INTEGER DEFAULT 993,
-                imap_username TEXT,
-                imap_password TEXT,
-                smtp_host TEXT,
-                smtp_port INTEGER DEFAULT 587,
-                smtp_use_ssl INTEGER DEFAULT 0,
-                is_active INTEGER DEFAULT 1,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
 
-        conn.execute('''
-            CREATE TABLE IF NOT EXISTS audit_log (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                action TEXT,
-                user_id INTEGER,
-                target_id INTEGER,
-                details TEXT,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-
-        conn.commit()
-        conn.close()
-
-        yield db_path
-    finally:
-        # Restore original DB path
-        if old_db_path:
-            os.environ['TEST_DB_PATH'] = old_db_path
-        elif 'TEST_DB_PATH' in os.environ:
-            del os.environ['TEST_DB_PATH']
-
-        # Remove temporary database
+# Per-test DB isolation for latency stats tests (they assume isolated DB per test)
+@pytest.fixture(autouse=True)
+def _isolate_db_for_latency_tests(request, tmp_path):
+    fspath = getattr(request.node, 'fspath', None)
+    if fspath and 'test_latency_stats.py' in str(fspath):
+        prev = os.environ.get('TEST_DB_PATH')
+        test_db = tmp_path / 'latency_test.db'
+        os.environ['TEST_DB_PATH'] = str(test_db)
+        # Initialize schema for this fresh DB
         try:
-            os.unlink(db_path)
-        except OSError:
+            from simple_app import init_database
+            init_database()
+        except Exception:
             pass
+        # Reset latency cache to avoid cross-test contamination
+        try:
+            import importlib
+            stats_mod = importlib.import_module('app.routes.stats')
+            if hasattr(stats_mod, '_LAT_CACHE'):
+                stats_mod._LAT_CACHE['t'] = 0.0
+                stats_mod._LAT_CACHE['v'] = None
+        except Exception:
+            pass
+        try:
+            yield
+        finally:
+            # Restore previous TEST_DB_PATH after test
+            if prev is not None:
+                os.environ['TEST_DB_PATH'] = prev
+            else:
+                os.environ.pop('TEST_DB_PATH', None)
+        return
+    yield
 
 
-@pytest.fixture
-def db_session(temp_db: str) -> Generator[sqlite3.Connection, None, None]:
-    """
-    Provide a database session with automatic rollback.
-
-    Args:
-        temp_db: Temporary database path fixture
-
-    Yields:
-        sqlite3.Connection: Database connection with Row factory
-    """
-    conn = sqlite3.connect(temp_db)
-    conn.row_factory = sqlite3.Row
-
-    try:
-        yield conn
-    finally:
-        conn.rollback()
-        conn.close()
+def _parse_hidden_csrf(html: str) -> str:
+    m = re.search(r'name=[\"\']csrf_token[\"\']\s+value=[\"\']([^\"\']+)[\"\']', html, flags=re.IGNORECASE)
+    return m.group(1) if m else ''
 
 
-# ============================================================================
-# Flask App Fixtures
-# ============================================================================
-
-@pytest.fixture
-def app(temp_db: str) -> Flask:
-    """
-    Create Flask application instance with test configuration.
-
-    Args:
-        temp_db: Temporary database path fixture
-
-    Returns:
-        Flask: Configured Flask application
-    """
-    import simple_app
-    from simple_app import app as flask_app
-
-    # CRITICAL: Override DB_PATH at module level for context processors
-    old_db_path = simple_app.DB_PATH
-    simple_app.DB_PATH = temp_db
-
-    # Also set in app.utils.db if it exists
-    try:
-        from app.utils import db as db_module
-        old_utils_db = db_module.DB_PATH if hasattr(db_module, 'DB_PATH') else None
-        if hasattr(db_module, 'DB_PATH'):
-            db_module.DB_PATH = temp_db
-    except ImportError:
-        old_utils_db = None
-
-    # Override config for testing
-    flask_app.config.update({
-        'TESTING': True,
-        'SECRET_KEY': 'test-secret-key',
-        'WTF_CSRF_ENABLED': False,
-        'LOGIN_DISABLED': False,
-        'DB_PATH': temp_db,
-    })
-
-    # Ensure database is initialized
-    with flask_app.app_context():
-        # Create default admin user for testing
-        conn = sqlite3.connect(temp_db)
-        cursor = conn.cursor()
-
-        # Check if admin exists
-        existing = cursor.execute(
-            "SELECT id FROM users WHERE username = 'admin'"
-        ).fetchone()
-
-        if not existing:
-            from werkzeug.security import generate_password_hash
-            cursor.execute(
-                "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
-                ('admin', generate_password_hash('admin123'), 'admin')
-            )
-            conn.commit()
-
-        conn.close()
-
-    yield flask_app
-
-    # Restore original DB_PATH after test
-    simple_app.DB_PATH = old_db_path
-    if old_utils_db is not None:
-        from app.utils import db as db_module
-        db_module.DB_PATH = old_utils_db
+@pytest.fixture()
+def app():
+    """Provide Flask app instance for pytest-flask compatibility."""
+    import simple_app as sa
+    sa.app.config['TESTING'] = True
+    sa.app.config['WTF_CSRF_ENABLED'] = False  # Disable CSRF for tests
+    return sa.app
 
 
-@pytest.fixture
-def client(app: Flask) -> FlaskClient:
-    """
-    Create Flask test client for unauthenticated requests.
-
-    Args:
-        app: Flask application fixture
-
-    Returns:
-        FlaskClient: Test client for making HTTP requests
-    """
+@pytest.fixture()
+def app_client(app):
+    """Provide test client with TESTING enabled."""
     return app.test_client()
 
 
-@pytest.fixture
-def authenticated_client(app: Flask, client: FlaskClient) -> FlaskClient:
-    """
-    Create Flask test client with admin authentication.
+@pytest.fixture()
+def authenticated_client(app_client):
+    """Provide authenticated test client with valid session."""
+    r = app_client.get('/login')
+    html = r.get_data(as_text=True)
+    token = _parse_hidden_csrf(html)
 
-    Args:
-        app: Flask application fixture
-        client: Unauthenticated test client
+    if not token:
+        # If CSRF is disabled, try without token
+        r = app_client.post('/login', data={'username': 'admin', 'password': 'admin123'}, follow_redirects=False)
+    else:
+        r = app_client.post('/login', data={'username': 'admin', 'password': 'admin123', 'csrf_token': token}, follow_redirects=False)
 
-    Returns:
-        FlaskClient: Test client with active admin session
-    """
-    # Login as admin
-    with client:
-        client.post('/login', data={
-            'username': 'admin',
-            'password': 'admin123'
-        }, follow_redirects=True)
-
-    return client
+    return app_client
 
 
-# ============================================================================
-# Utility Fixtures
-# ============================================================================
-
-@pytest.fixture
-def sample_email_data() -> dict:
-    """Provide sample email data for testing."""
-    return {
-        'sender': 'test@example.com',
-        'recipients': 'admin@example.com',
-        'subject': 'Test Email',
-        'body_text': 'This is a test email body.',
-        'body_html': '<p>This is a test email body.</p>',
-        'message_id': '<test@example.com>',
-        'status': 'PENDING',
-        'direction': 'inbound',
-    }
+@pytest.fixture()
+def db_session(isolated_db):
+    """Provide database session with isolated test database."""
+    conn = sqlite3.connect(isolated_db)
+    conn.row_factory = sqlite3.Row
+    yield conn
+    conn.close()
 
 
-@pytest.fixture
-def sample_account_data() -> dict:
-    """Provide sample account data for testing."""
-    return {
-        'email_address': 'test@gmail.com',
-        'imap_host': 'imap.gmail.com',
-        'imap_port': 993,
-        'imap_username': 'test@gmail.com',
-        'imap_password': 'test_password',
-        'smtp_host': 'smtp.gmail.com',
-        'smtp_port': 587,
-        'smtp_use_ssl': 0,
-        'is_active': 1,
-    }
+@pytest.fixture()
+def session(db_session):
+    """Alias for db_session to match test expectations."""
+    return db_session
+
+
+@pytest.fixture()
+def client(app):
+    """Alias for app.test_client() to match pytest-flask expectations."""
+    return app.test_client()
+
+
+# Register custom pytest marks
+def pytest_configure(config):
+    config.addinivalue_line("markers", "unit: mark test as a unit test")
+    config.addinivalue_line("markers", "integration: mark test as an integration test")
+    config.addinivalue_line("markers", "e2e: mark test as an end-to-end test")
+    config.addinivalue_line("markers", "security: mark test as a security test")
+    config.addinivalue_line("markers", "performance: mark test as a performance test")
+    config.addinivalue_line("markers", "slow: mark test as slow running")
+    config.addinivalue_line("markers", "smtp: mark test as requiring SMTP")
+    config.addinivalue_line("markers", "imap: mark test as requiring IMAP")

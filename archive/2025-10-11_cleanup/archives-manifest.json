@@ -1,0 +1,20 @@
+{
+  "archive_date": "2025-10-11",
+  "target": "C:\\claude\\Email-Management-Tool\\archive\\2025-10-11_cleanup",
+  "files_moved": [
+    "app_startup.log",
+    "check_workers.py",
+    "test_interception_proof.py",
+    "test_email_flow.sqlite",
+    "test_edit_persistence_final.py",
+    "test_edit_debug.py",
+    "test_comprehensive_system.py",
+    "test_api_performance.py",
+    "smoke_test.py",
+    "RECOVERY_SUMMARY.md",
+    "api_test_results_1760204381.json",
+    "test_results_1760204299.json",
+    "email_manager.db.backup_1760198555",
+    "email_manager.db.backup_20251011_075810"
+  ]
+}
