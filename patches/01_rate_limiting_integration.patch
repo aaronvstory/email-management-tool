@@ -1,0 +1,69 @@
+--- a/app/routes/interception.py
++++ b/app/routes/interception.py
+@@ -20,6 +20,10 @@ from app.utils.db import get_db, DB_PATH
+ from app.utils.crypto import decrypt_credential, encrypt_credential
+ from app.utils.imap_helpers import _imap_connect_account, _ensure_quarantine, _move_uid_to_quarantine
+
++# Import rate limiter from extensions
++from app.extensions import limiter
++
++# Rate limit storage cleanup thread
+ bp_interception = Blueprint('interception_bp', __name__)
+
+ def _db():
+@@ -28,6 +32,23 @@ def _db():
+
+ WORKER_HEARTBEATS = {}
+ _HEALTH_CACHE: Dict[str, Any] = {'ts': 0.0, 'payload': None}
++
++# Automatic rate limiter cleanup (runs in background thread)
++import threading
++import time as time_module
++
++def _cleanup_rate_limiter():
++    """Background thread to cleanup expired rate limiter entries"""
++    while True:
++        try:
++            time_module.sleep(300)  # Run every 5 minutes
++            limiter.reset()  # This clears expired entries in memory storage
++        except Exception:
++            pass
++
++# Start cleanup thread
++_cleanup_thread = threading.Thread(target=_cleanup_rate_limiter, daemon=True)
++_cleanup_thread.start()
+
+ @bp_interception.route('/healthz')
+ def healthz():
+@@ -146,6 +167,7 @@ def api_interception_get(msg_id:int):
+     conn.close(); return jsonify(data)
+
+ @bp_interception.route('/api/interception/release/<int:msg_id>', methods=['POST'])
++@limiter.limit("10 per minute")  # Rate limit releases to prevent spam
+ @login_required
+ def api_interception_release(msg_id:int):
+     payload = request.get_json(silent=True) or {}
+@@ -275,6 +297,7 @@ def api_interception_release(msg_id:int):
+     return jsonify({'ok':True,'released_to':target_folder,'attachments_removed':removed})
+
+ @bp_interception.route('/api/interception/discard/<int:msg_id>', methods=['POST'])
++@limiter.limit("20 per minute")  # Rate limit discards
+ @login_required
+ def api_interception_discard(msg_id:int):
+     conn = _db(); cur = conn.cursor()
+@@ -308,6 +331,7 @@ def api_inbox():
+     conn.close(); return jsonify({'messages':msgs,'count':len(msgs)})
+
+ @bp_interception.route('/api/email/<int:email_id>/edit', methods=['POST'])
++@limiter.limit("30 per minute")  # Rate limit edits
+ @login_required
+ def api_email_edit(email_id:int):
+     payload = request.get_json(silent=True) or {}
+@@ -335,6 +359,7 @@ def api_email_edit(email_id:int):
+
+
+ @bp_interception.route('/api/email/<int:email_id>/intercept', methods=['POST'])
++@limiter.limit("15 per minute")  # Rate limit manual intercepts
+ @login_required
+ def api_email_intercept(email_id:int):
+     """Manually intercept an email with remote MOVE to Quarantine folder (migrated)."""

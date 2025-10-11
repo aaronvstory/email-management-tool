@@ -1,0 +1,105 @@
+--- a/simple_app.py
++++ b/simple_app.py
+@@ -309,6 +309,10 @@ app.register_blueprint(emails_bp)        # Email queue + viewer: /emails, /emai
+
+         # (Legacy inline IMAP loop removed during refactor)
+
++# SMTP Proxy health monitoring
++SMTP_HEALTH = {'status': 'stopped', 'last_message': None, 'message_count': 0, 'error_count': 0, 'start_time': None}
++SMTP_HEALTH_LOCK = threading.Lock()
++
+ # SMTP Proxy Handler
+ class EmailModerationHandler:
+     """Handle incoming emails through SMTP proxy"""
+@@ -316,6 +320,13 @@ class EmailModerationHandler:
+     async def handle_DATA(self, server, session, envelope):
+         """Process incoming email"""
+         print(f"📨 SMTP Handler: Received message from {envelope.mail_from} to {envelope.rcpt_tos}")
++
++        # Update health status
++        with SMTP_HEALTH_LOCK:
++            SMTP_HEALTH['status'] = 'active'
++            SMTP_HEALTH['last_message'] = datetime.now().isoformat()
++            SMTP_HEALTH['message_count'] += 1
++
+         try:
+             # Parse email
+             email_msg = message_from_bytes(envelope.content, policy=policy.default)
+@@ -416,10 +427,19 @@ class EmailModerationHandler:
+             print(f"📧 Email intercepted: {subject} from {sender}")
+             return '250 Message accepted for delivery'
+
+         except Exception as e:
++            # Update error count
++            with SMTP_HEALTH_LOCK:
++                SMTP_HEALTH['error_count'] += 1
++
+             print(f"Error processing email: {e}")
+             import traceback
+             traceback.print_exc()
+             return f'500 Error: {e}'
+
+     def check_rules(self, subject, body):
+@@ -742,6 +762,11 @@ def run_smtp_proxy():
+     """Run SMTP proxy server"""
+     try:
+         import aiosmtpd.controller
++
++        # Mark SMTP as starting
++        with SMTP_HEALTH_LOCK:
++            SMTP_HEALTH['status'] = 'starting'
++            SMTP_HEALTH['start_time'] = datetime.now().isoformat()
++
+         handler = EmailModerationHandler()
+         controller = aiosmtpd.controller.Controller(handler, hostname='127.0.0.1', port=8587)
+         controller.start()
+         print("📧 SMTP Proxy started on port 8587")
++
++        # Mark as running
++        with SMTP_HEALTH_LOCK:
++            SMTP_HEALTH['status'] = 'running'
++
+     except ImportError:
+         print("⚠️  SMTP Proxy disabled (aiosmtpd not installed)")
++        with SMTP_HEALTH_LOCK:
++            SMTP_HEALTH['status'] = 'disabled'
+         return
+     except OSError as e:
+         if "10048" in str(e) or "already in use" in str(e).lower():
+             print("⚠️  SMTP Proxy port 8587 already in use - likely from previous instance")
++            with SMTP_HEALTH_LOCK:
++                SMTP_HEALTH['status'] = 'port_conflict'
+         else:
+             print(f"❌ SMTP Proxy failed to start: {e}")
++            with SMTP_HEALTH_LOCK:
++                SMTP_HEALTH['status'] = 'error'
++                SMTP_HEALTH['error_count'] += 1
+         return
+
+@@ -800,6 +837,25 @@ def legacy_api_held():
+     """Deprecated legacy alias -> /api/interception/held"""
+     return redirect(url_for('interception_bp.api_interception_held'), code=307)
+
++@app.route('/api/smtp/health')
++def smtp_health():
++    """SMTP proxy health status endpoint"""
++    with SMTP_HEALTH_LOCK:
++        health = dict(SMTP_HEALTH)
++
++    # Calculate uptime if running
++    if health['start_time'] and health['status'] == 'running':
++        from datetime import datetime as dt
++        start = dt.fromisoformat(health['start_time'])
++        uptime_seconds = (dt.now() - start).total_seconds()
++        health['uptime_seconds'] = int(uptime_seconds)
++        health['uptime_human'] = f"{int(uptime_seconds // 3600)}h {int((uptime_seconds % 3600) // 60)}m"
++
++    # Add error rate
++    if health['message_count'] > 0:
++        health['error_rate'] = health['error_count'] / health['message_count']
++
++    return jsonify(health)
++
+ @app.route('/api/emails/pending', methods=['GET'])
+ def legacy_api_pending():
+     """Deprecated legacy pending messages endpoint guidance"""

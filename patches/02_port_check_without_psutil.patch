@@ -1,0 +1,33 @@
+--- a/simple_app.py
++++ b/simple_app.py
+@@ -742,6 +742,30 @@ def run_smtp_proxy():
+     """Run SMTP proxy server"""
+     try:
+         import aiosmtpd.controller
++
++        # Check if port is already in use (without psutil dependency)
++        def is_port_in_use(port):
++            """Check if port is in use using socket"""
++            import socket
++            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
++            sock.settimeout(1)
++            try:
++                result = sock.connect_ex(('127.0.0.1', port))
++                sock.close()
++                return result == 0  # 0 means connection successful (port in use)
++            except Exception:
++                sock.close()
++                return False
++
++        # Pre-check port availability
++        if is_port_in_use(8587):
++            print("⚠️  SMTP Proxy port 8587 already in use")
++            print("    This is likely from a previous instance.")
++            print("    Use 'python cleanup_and_start.py' to restart cleanly.")
++            print("    Or run: tasklist | findstr python.exe")
++            print("           taskkill /F /PID <pid>")
++            return
++
+         handler = EmailModerationHandler()
+         controller = aiosmtpd.controller.Controller(handler, hostname='127.0.0.1', port=8587)
+         controller.start()

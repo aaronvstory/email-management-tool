@@ -20,41 +20,6 @@ from app.utils.db import get_db, DB_PATH
 from app.utils.crypto import decrypt_credential, encrypt_credential
 from app.utils.imap_helpers import _imap_connect_account, _ensure_quarantine, _move_uid_to_quarantine
 
-from functools import wraps
-import shutil
-import threading
-from collections import defaultdict
-from contextlib import contextmanager
-
-
-# Simple rate limiter for API protection
-_rate_limit_buckets = defaultdict(lambda: {'count': 0, 'reset_time': 0})
-
-def simple_rate_limit(f):
-    """Basic rate limiting decorator - 30 requests per minute"""
-    @wraps(f)
-    def wrapped(*args, **kwargs):
-        import time
-        from flask import request, jsonify
-
-        client_id = request.remote_addr
-        now = time.time()
-        bucket = _rate_limit_buckets[client_id]
-
-        # Reset bucket if time window passed (60 seconds)
-        if now > bucket['reset_time']:
-            bucket['count'] = 0
-            bucket['reset_time'] = now + 60
-
-        # Check rate limit
-        if bucket['count'] >= 30:
-            wait_time = int(bucket['reset_time'] - now)
-            return jsonify({'error': 'Rate limit exceeded', 'retry_after': wait_time}), 429
-
-        bucket['count'] += 1
-        return f(*args, **kwargs)
-    return wrapped
-
 bp_interception = Blueprint('interception_bp', __name__)
 
 def _db():
@@ -344,7 +309,6 @@ def api_inbox():
 
 @bp_interception.route('/api/email/<int:email_id>/edit', methods=['POST'])
 @login_required
-@simple_rate_limit
 def api_email_edit(email_id:int):
     payload = request.get_json(silent=True) or {}
     subject = payload.get('subject'); body_text = payload.get('body_text'); body_html = payload.get('body_html')

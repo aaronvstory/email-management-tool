@@ -321,3 +321,10 @@ def get_full_email(email_id):
     if not row:
         return jsonify({'error': 'Email not found'}), 404
     return jsonify({k: row[k] for k in row.keys()})
+
+
+@emails_bp.route('/email/<int:email_id>/edit', methods=['GET'])
+@login_required
+def get_email_for_edit(email_id: int):
+    """Thin alias to /email/<id>/full for edit modal compatibility."""
+    return get_full_email(email_id)

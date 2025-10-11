@@ -1,0 +1,55 @@
+--- a/app/routes/interception.py
++++ b/app/routes/interception.py
+@@ -148,20 +148,22 @@ def api_interception_get(msg_id:int):
+
+ @bp_interception.route('/api/interception/release/<int:msg_id>', methods=['POST'])
+ @login_required
+-def api_interception_release(msg_id:int):
++def api_interception_release(email_id:int):
++    """
++    Release email to inbox.
++    NOTE: Parameter is email_id (database ID), not msg_id (Message-ID header).
++    This was a critical bug that caused confusion.
++    """
+     payload = request.get_json(silent=True) or {}
+     edited_subject = payload.get('edited_subject'); edited_body = payload.get('edited_body')
+     target_folder = payload.get('target_folder','INBOX')
+     strip_attachments = bool(payload.get('strip_attachments'))
+     conn = _db(); cur = conn.cursor()
++
++    # CRITICAL FIX: Use email_id (database primary key), not msg_id
+     row = cur.execute("""
+         SELECT em.*, ea.imap_host, ea.imap_port, ea.imap_username, ea.imap_password, ea.imap_use_ssl
+         FROM email_messages em JOIN email_accounts ea ON em.account_id = ea.id
+-        WHERE em.id=? AND em.direction='inbound' AND em.interception_status='HELD'
+-    """, (msg_id,)).fetchone()
++        WHERE em.id=? AND em.direction='inbound' AND em.interception_status='HELD'
++    """, (email_id,)).fetchone()
++
+     if not row:
+         conn.close(); return jsonify({'ok':False,'reason':'not-held'}), 409
+
+@@ -273,7 +275,7 @@ def api_interception_release(msg_id:int):
+             processed_at=datetime('now'),
+             action_taken_at=datetime('now')
+         WHERE id=?
+-    """, (msg.get('Message-ID'), msg_id))
++    """, (msg.get('Message-ID'), email_id))
+     conn.commit(); conn.close()
+     return jsonify({'ok':True,'released_to':target_folder,'attachments_removed':removed})
+
+@@ -281,7 +283,12 @@ def api_interception_release(msg_id:int):
+ @bp_interception.route('/api/interception/discard/<int:msg_id>', methods=['POST'])
+ @login_required
+-def api_interception_discard(msg_id:int):
++def api_interception_discard(email_id:int):
++    """
++    Discard held email.
++    NOTE: Parameter is email_id (database ID), not msg_id.
++    """
+     conn = _db(); cur = conn.cursor()
+-    cur.execute("UPDATE email_messages SET interception_status='DISCARDED', action_taken_at=datetime('now') WHERE id=? AND interception_status='HELD'", (msg_id,))
++    cur.execute("UPDATE email_messages SET interception_status='DISCARDED', action_taken_at=datetime('now') WHERE id=? AND interception_status='HELD'", (email_id,))
+     changed = cur.rowcount; conn.commit(); conn.close()
+     if changed == 0: return jsonify({'ok':False,'reason':'not-held'}), 409
+     return jsonify({'ok':True})

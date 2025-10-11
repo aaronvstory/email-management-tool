@@ -1,0 +1,72 @@
+--- /dev/null
++++ b/scripts/migrations/20251011_add_notifications_table.py
+@@ -0,0 +1,65 @@
++#!/usr/bin/env python3
++"""
++Migration: Add email_notifications table for bounce/reject tracking
++Date: 2025-10-11
++"""
++import sqlite3
++import os
++import sys
++
++# Add parent directory to path for imports
++sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
++
++from app.utils.db import DB_PATH
++
++def migrate():
++    """Add notifications table and bounce_reason column"""
++    print("Starting migration: add_notifications_table")
++
++    conn = sqlite3.connect(DB_PATH)
++    cursor = conn.cursor()
++
++    try:
++        # Check if table already exists
++        cursor.execute("""
++            SELECT name FROM sqlite_master
++            WHERE type='table' AND name='email_notifications'
++        """)
++
++        if cursor.fetchone():
++            print("✓ email_notifications table already exists")
++        else:
++            # Create notifications table
++            cursor.execute("""
++                CREATE TABLE email_notifications (
++                    id INTEGER PRIMARY KEY AUTOINCREMENT,
++                    email_id INTEGER,
++                    notification_type TEXT,
++                    severity TEXT,
++                    message TEXT,
++                    user_id INTEGER,
++                    acknowledged BOOLEAN DEFAULT 0,
++                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
++                    FOREIGN KEY (email_id) REFERENCES email_messages(id)
++                )
++            """)
++            print("✓ Created email_notifications table")
++
++        # Check if bounce_reason column exists
++        cursor.execute("PRAGMA table_info(email_messages)")
++        columns = [col[1] for col in cursor.fetchall()]
++
++        if 'bounce_reason' not in columns:
++            cursor.execute("ALTER TABLE email_messages ADD COLUMN bounce_reason TEXT")
++            print("✓ Added bounce_reason column to email_messages")
++        else:
++            print("✓ bounce_reason column already exists")
++
++        conn.commit()
++        print("✅ Migration completed successfully")
++
++    except Exception as e:
++        print(f"❌ Migration failed: {e}")
++        conn.rollback()
++        raise
++    finally:
++        conn.close()
++
++if __name__ == "__main__":
++    migrate()

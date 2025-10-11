@@ -1,0 +1,108 @@
+--- a/app/routes/interception.py
++++ b/app/routes/interception.py
+@@ -169,6 +169,9 @@ def api_interception_get(msg_id:int):
+ @bp_interception.route('/api/interception/release/<int:msg_id>', methods=['POST'])
+ @login_required
+ def api_interception_release(msg_id:int):
++    """
++    Release email to inbox with idempotent and transactional guarantees.
++    """
+     payload = request.get_json(silent=True) or {}
+     edited_subject = payload.get('edited_subject'); edited_body = payload.get('edited_body')
+     target_folder = payload.get('target_folder','INBOX')
+@@ -180,7 +183,18 @@ def api_interception_release(msg_id:int):
+         WHERE em.id=? AND em.direction='inbound' AND em.interception_status='HELD'
+     """, (msg_id,)).fetchone()
+     if not row:
+-        conn.close(); return jsonify({'ok':False,'reason':'not-held'}), 409
++        # Check if already released (idempotent behavior)
++        check_row = cur.execute("""
++            SELECT interception_status, status
++            FROM email_messages
++            WHERE id=? AND direction='inbound'
++        """, (msg_id,)).fetchone()
++        conn.close()
++
++        if check_row and check_row['interception_status'] == 'RELEASED':
++            # Already released - return success (idempotent)
++            return jsonify({'ok':True,'already_released':True,'status':check_row['status']})
++        return jsonify({'ok':False,'reason':'not-held'}), 409
+
+     # Load email from raw_path (legacy) or raw_content (new UID-based fetch)
+     raw_path = row['raw_path']
+@@ -240,7 +254,7 @@ def api_interception_release(msg_id:int):
+         # Append the (possibly edited) message
+         imap.append(target_folder, '', date_param, msg.as_bytes())
+
+-        # Verify delivery using Message-ID header
++        # CRITICAL: Verify delivery using Message-ID header (prevents silent failures)
+         message_id_hdr = (msg.get('Message-ID') or '').strip()
+         verify_ok = True
+         try:
+@@ -254,19 +268,44 @@ def api_interception_release(msg_id:int):
+             # If verification fails unexpectedly, mark as failed
+             verify_ok = False
+
++        # Close IMAP connection
++        try:
++            imap.logout()
++        except Exception:
++            pass
++
+         if not verify_ok:
+-            try: imap.logout()
+-            except Exception: pass
+             conn.close(); return jsonify({'ok': False, 'reason': 'verify-failed'}), 502
+
+-        # All good; close IMAP
+-        imap.logout()
+     except Exception as e:
+         import traceback
+         traceback.print_exc()
+         conn.close(); return jsonify({'ok':False,'reason':'append-failed','error':str(e)}), 500
+-    cur.execute("""
++
++    # TRANSACTIONAL UPDATE: Only commit if IMAP append succeeded
++    try:
++        # Use a transaction to ensure atomicity
++        conn.isolation_level = None  # Autocommit off
++        cur.execute("BEGIN TRANSACTION")
++
++        # Update status
++        cur.execute("""
++            UPDATE email_messages
++            SET interception_status='RELEASED',
++                status='DELIVERED',
++                edited_message_id=?,
++                processed_at=datetime('now'),
++                action_taken_at=datetime('now')
++            WHERE id=? AND interception_status='HELD'
++        """, (msg.get('Message-ID'), msg_id))
++
++        # Verify update affected exactly 1 row
++        if cur.rowcount != 1:
++            conn.rollback()
++            conn.close()
++            return jsonify({'ok':False,'reason':'concurrent-modification'}), 409
++
++        conn.commit()
++
++        """
+         UPDATE email_messages
+         SET interception_status='RELEASED',
+             status='DELIVERED',
+@@ -274,8 +313,12 @@ def api_interception_release(msg_id:int):
+             processed_at=datetime('now'),
+             action_taken_at=datetime('now')
+         WHERE id=?
+-    """, (msg.get('Message-ID'), msg_id))
+-    conn.commit(); conn.close()
++        """
++        conn.close()
++    except Exception as e:
++        conn.rollback()
++        conn.close()
++        return jsonify({'ok':False,'reason':'db-update-failed','error':str(e)}), 500
+     return jsonify({'ok':True,'released_to':target_folder,'attachments_removed':removed})
+
+ @bp_interception.route('/api/interception/discard/<int:msg_id>', methods=['POST'])

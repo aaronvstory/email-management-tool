@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="IjU4YTA0NDgwZjk5MjRjMWRmYjk3MTIxYmM1ZjY1OTE0YTFjNDVjYWYi.aOqCgg.-Alari7I_vZHnwYFMCQaUVefcyE">
+    <title>Dashboard - Email Management Tool</title>
+
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- Dark theme stylesheet -->
+    <link rel="stylesheet" href="/static/css/theme-dark.css">
+
+    <style>
+        :root {
+            --primary-color: #dc2626;
+            --secondary-color: #991b1b;
+            --success-color: #10b981;
+            --danger-color: #dc2626;
+            --warning-color: #f59e0b;
+            --dark-bg: #0a0a0a;
+            --card-bg: #1a1a1a;
+            --text-light: #ffffff;
+        }
+
+        body {
+            background: radial-gradient(circle at 20% 20%, #1a1a1a 0%, #121212 35%, #0d0d0d 70%, #0a0a0a 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        .sidebar {
+            background: rgba(26, 26, 26, 0.95);
+            backdrop-filter: blur(10px);
+            min-height: 100vh;
+            box-shadow: 4px 0 10px rgba(0,0,0,0.3);
+        }
+
+        .sidebar .nav-link {
+            color: #9ca3af;
+            padding: 12px 20px;
+            margin: 5px 10px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar .nav-link:hover {
+            background: rgba(220, 38, 38, 0.15);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .sidebar .nav-link.active {
+            background: linear-gradient(90deg,rgba(220,38,38,.25),rgba(153,27,27,.15));
+            color: white;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .main-content {
+            padding: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 2px 4px -1px rgba(0,0,0,.6),0 1px 2px rgba(0,0,0,.4);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px -2px rgba(0,0,0,.75),0 2px 6px rgba(0,0,0,.5);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg,#dc2626 0%,#991b1b 50%,#7f1d1d 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-label {
+            color: #9ca3af;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .table-modern {
+            background: #1a1a1a;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px -1px rgba(0,0,0,.6),0 1px 2px rgba(0,0,0,.4);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        /* Override Bootstrap table defaults for dark theme */
+        .table-modern .table,
+        .table-modern table {
+            background: #1a1a1a !important;
+            color: #ffffff !important;
+        }
+
+        .table-modern .table thead,
+        .table-modern thead {
+            background: linear-gradient(135deg,#dc2626 0%,#991b1b 50%,#7f1d1d 100%) !important;
+            color: white !important;
+        }
+
+        .table-modern .table th,
+        .table-modern th {
+            border: none !important;
+            padding: 15px !important;
+            font-weight: 600 !important;
+            background-color: transparent !important;
+            color: #ffffff !important;
+        }
+
+        .table-modern .table td,
+        .table-modern td {
+            padding: 20px 15px !important;
+            vertical-align: middle !important;
+            border-color: rgba(255,255,255,0.06) !important;
+            color: #ffffff !important;
+            background-color: #242424 !important;
+        }
+
+        .table-modern .table tbody tr,
+        .table-modern tbody tr {
+            background: #242424 !important;
+        }
+
+        .table-modern .table tbody tr:hover,
+        .table-modern tbody tr:hover {
+            background: rgba(220,38,38,.08) !important;
+            box-shadow: 0 0 0 1px rgba(220,38,38,.2);
+        }
+
+        /* Additional Bootstrap overrides for all tables in dark sections */
+        .table-modern .table tbody tr td {
+            background-color: #242424 !important;
+            color: #ffffff !important;
+        }
+
+        /* ========================================
+           GLOBAL DARK THEME OVERRIDES FOR MODALS AND FORMS
+           ======================================== */
+
+        /* Modal Backgrounds - Override Bootstrap defaults */
+        .modal-content,
+        .modal .modal-content,
+        .modal-dialog .modal-content {
+            background: linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%) !important;
+            border: 1px solid rgba(255,255,255,0.06) !important;
+            color: #ffffff !important;
+        }
+        
+        /* Ensure modals are properly sized */
+        .modal-dialog {
+            max-width: 90% !important;
+            width: 800px !important;
+        }
+        
+        .modal-dialog-lg {
+            max-width: 90% !important;
+            width: 1200px !important;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg,#dc2626 0%,#991b1b 50%,#7f1d1d 100%) !important;
+            border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+            color: #ffffff !important;
+        }
+
+        .modal-header .btn-close {
+            filter: invert(1) brightness(200%) !important;
+        }
+
+        .modal-title {
+            color: #ffffff !important;
+        }
+
+        .modal-body {
+            background: #1a1a1a !important;
+            color: #ffffff !important;
+        }
+
+        .modal-footer {
+            background: #1a1a1a !important;
+            border-top: 1px solid rgba(255,255,255,0.06) !important;
+        }
+
+        /* Form Controls - DARK GRAY BACKGROUND, WHITE TEXT */
+        .form-control,
+        .form-select,
+        textarea.form-control,
+        input.form-control,
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        input[type="number"],
+        input[type="search"],
+        input[type="tel"],
+        input[type="url"],
+        textarea,
+        select {
+            background: #2a2a2a !important;
+            border: 1px solid #3a3a3a !important;
+            color: #ffffff !important;
+            padding: 10px 15px !important;
+            border-radius: 4px !important;
+            margin-bottom: 15px !important;
+        }
+
+        .form-control::placeholder {
+            color: #888888 !important;
+            opacity: 1 !important;
+        }
+
+        .form-control:focus,
+        .form-select:focus,
+        input:focus,
+        textarea:focus,
+        select:focus {
+            background: #333333 !important;
+            border-color: #4a4a4a !important;
+            color: #ffffff !important;
+            box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2) !important;
+            outline: none !important;
+        }
+
+        .form-control:disabled,
+        .form-select:disabled {
+            background: rgba(255,255,255,0.03) !important;
+            color: #6b7280 !important;
+            opacity: 0.7 !important;
+        }
+
+        .form-select option {
+            background: #1a1a1a !important;
+            color: #ffffff !important;
+        }
+
+        /* Form Labels */
+        .form-label,
+        label {
+            color: #ffffff !important;
+            font-weight: 600 !important;
+        }
+
+        /* Form Text / Help Text */
+        .form-text,
+        .help-text,
+        small.text-muted,
+        .text-muted {
+            color: #9ca3af !important;
+        }
+        
+        /* ALL text in modals and forms - comprehensive override */
+        .modal-body p,
+        .modal-body span:not(.input-group-text),
+        .modal-body div,
+        .modal-body li,
+        form p,
+        form span:not(.input-group-text),
+        form div {
+            color: #ffffff !important;
+        }
+        
+        /* Headers in modals and forms */
+        .modal-body h1, .modal-body h2, .modal-body h3,
+        .modal-body h4, .modal-body h5, .modal-body h6,
+        form h1, form h2, form h3,
+        form h4, form h5, form h6 {
+            color: #ffffff !important;
+        }
+        
+        /* Fix provider buttons and custom buttons */
+        .provider-btn {
+            background: rgba(255,255,255,0.06) !important;
+            border: 2px solid rgba(255,255,255,0.12) !important;
+            color: #ffffff !important;
+        }
+        
+        .provider-btn:hover,
+        .provider-btn.active {
+            background: rgba(220, 38, 38, 0.2) !important;
+            border-color: #dc2626 !important;
+            color: #ffffff !important;
+        }
+
+        /* Alerts - Dark Theme Variants */
+        .alert {
+            border-width: 1px !important;
+            border-radius: 8px !important;
+        }
+
+        .alert-info {
+            background: rgba(59,130,246,0.1) !important;
+            border-color: rgba(59,130,246,0.3) !important;
+            color: #60a5fa !important;
+        }
+
+        .alert-success {
+            background: rgba(34,197,94,0.1) !important;
+            border-color: rgba(34,197,94,0.3) !important;
+            color: #4ade80 !important;
+        }
+
+        .alert-warning {
+            background: rgba(251,191,36,0.1) !important;
+            border-color: rgba(251,191,36,0.3) !important;
+            color: #fbbf24 !important;
+        }
+
+        .alert-danger {
+            background: rgba(239,68,68,0.1) !important;
+            border-color: rgba(239,68,68,0.3) !important;
+            color: #f87171 !important;
+        }
+
+        /* Buttons in Dark Theme */
+        .btn-secondary {
+            background: rgba(255,255,255,0.06) !important;
+            border: 1px solid rgba(255,255,255,0.12) !important;
+            color: #ffffff !important;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.12) !important;
+            color: #ffffff !important;
+        }
+
+        /* Input Groups */
+        .input-group-text {
+            background: rgba(255,255,255,0.06) !important;
+            border: 1px solid rgba(255,255,255,0.12) !important;
+            color: #ffffff !important;
+        }
+
+        /* Checkboxes and Radio Buttons */
+        .form-check-input {
+            background-color: rgba(255,255,255,0.06) !important;
+            border: 1px solid rgba(255,255,255,0.12) !important;
+        }
+
+        .form-check-input:checked {
+            background-color: #dc2626 !important;
+            border-color: #dc2626 !important;
+        }
+
+        .form-check-label {
+            color: #ffffff !important;
+        }
+
+        /* Validation States */
+        .is-invalid {
+            border-color: #ef4444 !important;
+        }
+
+        .is-valid {
+            border-color: #22c55e !important;
+        }
+
+        .invalid-feedback,
+        .valid-feedback {
+            color: #ffffff !important;
+        }
+
+        /* Dropdown Menus */
+        .dropdown-menu {
+            background: #1a1a1a !important;
+            border: 1px solid rgba(255,255,255,0.06) !important;
+        }
+
+        .dropdown-item {
+            color: #ffffff !important;
+        }
+
+        .dropdown-item:hover {
+            background: rgba(220,38,38,0.15) !important;
+            color: #ffffff !important;
+        }
+
+        /* CONSISTENT BUTTON SIZING - All buttons same height and padding */
+        .btn,
+        button[type="submit"],
+        button[type="button"],
+        .btn-primary,
+        .btn-secondary,
+        .btn-success,
+        .btn-danger,
+        .btn-warning,
+        .btn-info,
+        .btn-light,
+        .btn-dark,
+        .btn-outline-primary,
+        .btn-outline-secondary,
+        .btn-outline-success,
+        .btn-outline-danger,
+        .btn-outline-warning,
+        .btn-outline-info,
+        .btn-modern,
+        .btn-primary-modern,
+        .btn-login,
+        .btn-send,
+        .btn-cancel,
+        .toolbar-btn,
+        .provider-btn,
+        .btn-action {
+            height: 42px !important;
+            padding: 8px 20px !important;
+            font-size: 15px !important;
+            font-weight: 500 !important;
+            border-radius: 6px !important;
+            line-height: 1.5 !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            white-space: nowrap !important;
+            min-width: 100px !important;
+        }
+
+        /* Small buttons - consistent smaller size */
+        .btn-sm,
+        .btn-group-sm > .btn {
+            height: 34px !important;
+            padding: 5px 15px !important;
+            font-size: 14px !important;
+            min-width: 80px !important;
+        }
+
+        /* Large buttons - consistent larger size */
+        .btn-lg,
+        .btn-group-lg > .btn {
+            height: 50px !important;
+            padding: 12px 30px !important;
+            font-size: 18px !important;
+            min-width: 120px !important;
+        }
+
+        /* Icon-only buttons */
+        .btn-icon-only {
+            min-width: 42px !important;
+            width: 42px !important;
+            padding: 8px !important;
+        }
+
+        /* Button groups should align properly */
+        .btn-group {
+            display: inline-flex !important;
+            gap: 5px !important;
+        }
+
+        /* Toolbar buttons same height */
+        .toolbar-btn {
+            min-width: auto !important;
+            padding: 8px 15px !important;
+        }
+
+        /* REMOVE ALL PILL/BADGE STYLING - MAKE RECTANGULAR */
+        .badge,
+        .pill,
+        .status-badge,
+        .rounded-pill,
+        .badge-pill {
+            border-radius: 4px !important;
+            padding: 4px 10px !important;
+            font-weight: 500 !important;
+            font-size: 0.875rem !important;
+            background: rgba(255,255,255,0.1) !important;
+            border: 1px solid rgba(255,255,255,0.2) !important;
+            color: #ffffff !important;
+        }
+
+        /* FULL WIDTH LAYOUT - Remove max-width constraints */
+        .container,
+        .container-fluid,
+        .container-xl,
+        .container-lg,
+        .container-md,
+        .container-sm {
+            max-width: 100% !important;
+            width: 100% !important;
+            padding: 20px 30px !important;
+        }
+
+        /* Main content should use full viewport */
+        .main-content,
+        .content-area,
+        .page-content,
+        main {
+            max-width: 100% !important;
+            width: 100% !important;
+        }
+
+        /* Remove centered constraints */
+        .mx-auto {
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+        }
+
+        /* IMPROVED SPACING THROUGHOUT */
+        .row {
+            margin-bottom: 25px !important;
+            margin-left: -15px !important;
+            margin-right: -15px !important;
+        }
+
+        .col, [class*="col-"] {
+            padding: 15px !important;
+        }
+
+        /* Consistent margin classes */
+        .mb-0 { margin-bottom: 0 !important; }
+        .mb-1 { margin-bottom: 8px !important; }
+        .mb-2 { margin-bottom: 15px !important; }
+        .mb-3 { margin-bottom: 25px !important; }
+        .mb-4 { margin-bottom: 35px !important; }
+        .mb-5 { margin-bottom: 50px !important; }
+
+        .mt-0 { margin-top: 0 !important; }
+        .mt-1 { margin-top: 8px !important; }
+        .mt-2 { margin-top: 15px !important; }
+        .mt-3 { margin-top: 25px !important; }
+        .mt-4 { margin-top: 35px !important; }
+        .mt-5 { margin-top: 50px !important; }
+
+        /* Compact cards to save vertical space */
+        .card {
+            margin-bottom: 20px !important;
+            padding: 0 !important;
+            border-radius: 10px !important;
+            overflow: hidden !important;
+        }
+
+        .card-body {
+            padding: 15px 20px !important;
+        }
+
+        .card-header {
+            padding: 12px 20px !important;
+        }
+
+        .card-footer {
+            padding: 12px 20px !important;
+        }
+
+        /* Compact headers to save space */
+        h1 { font-size: 1.8rem !important; margin-bottom: 15px !important; margin-top: 0 !important; }
+        h2 { font-size: 1.5rem !important; margin-bottom: 12px !important; margin-top: 0 !important; }
+        h3 { font-size: 1.3rem !important; margin-bottom: 10px !important; margin-top: 0 !important; }
+        h4 { font-size: 1.15rem !important; margin-bottom: 8px !important; margin-top: 0 !important; }
+        h5 { font-size: 1.05rem !important; margin-bottom: 8px !important; margin-top: 0 !important; }
+        h6 { font-size: 0.95rem !important; margin-bottom: 6px !important; margin-top: 0 !important; }
+
+        p {
+            margin-bottom: 20px !important;
+            line-height: 1.6 !important;
+        }
+
+        /* Tables with proper spacing */
+        .table {
+            margin-bottom: 30px !important;
+        }
+
+        .table th,
+        .table td {
+            padding: 15px 20px !important;
+        }
+
+        /* Forms with better spacing */
+        .form-group {
+            margin-bottom: 25px !important;
+        }
+
+        /* Sections with breathing room */
+        section {
+            padding: 40px 0 !important;
+        }
+
+        /* Card Components */
+        .card {
+            background: linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%) !important;
+            border: 1px solid rgba(255,255,255,0.06) !important;
+            color: #ffffff !important;
+        }
+
+        .card-header {
+            background: rgba(220,38,38,0.1) !important;
+            border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+            color: #ffffff !important;
+        }
+
+        .card-body {
+            background: transparent !important;
+            color: #ffffff !important;
+        }
+
+        .card-footer {
+            background: rgba(255,255,255,0.03) !important;
+            border-top: 1px solid rgba(255,255,255,0.06) !important;
+            color: #9ca3af !important;
+        }
+
+        /* List Groups */
+        .list-group-item {
+            background: #242424 !important;
+            border: 1px solid rgba(255,255,255,0.06) !important;
+            color: #ffffff !important;
+        }
+
+        .list-group-item:hover {
+            background: rgba(220,38,38,0.08) !important;
+        }
+
+        .badge-status {
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .badge-pending { background: #fff3cd; color: #856404; }
+        .badge-approved { background: #d4edda; color: #155724; }
+        .badge-rejected { background: #f8d7da; color: #721c24; }
+        .badge-sent { background: #cce5ff; color: #004085; }
+
+        .risk-indicator {
+            width: 60px;
+            height: 6px;
+            border-radius: 3px;
+            background: #e0e0e0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .risk-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .risk-low { background: #28a745; }
+        .risk-medium { background: #ffc107; }
+        .risk-high { background: #dc3545; }
+
+        .btn-modern {
+            padding: 10px 25px;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .btn-primary-modern {
+            background: linear-gradient(135deg,#dc2626 0%,#991b1b 50%,#7f1d1d 100%);
+            color: white;
+        }
+
+        .btn-primary-modern:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(220,38,38,0.5);
+            filter: brightness(1.1);
+        }
+
+        .search-box {
+            background: rgba(255,255,255,0.06);
+            border-radius: 15px;
+            padding: 10px 20px;
+            border: 2px solid rgba(255,255,255,0.06);
+            transition: all 0.3s ease;
+            color: #ffffff;
+        }
+
+        .search-box:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+            outline: none;
+        }
+
+        /* Input Modern - consistent dark styling for all modern inputs */
+        .input-modern {
+            background: rgba(255,255,255,0.06) !important;
+            border: 1px solid rgba(255,255,255,0.12) !important;
+            color: #ffffff !important;
+            padding: 10px 15px !important;
+            border-radius: 8px !important;
+        }
+
+        .input-modern:focus {
+            background: rgba(255,255,255,0.08) !important;
+            border-color: rgba(220, 38, 38, 0.5) !important;
+            box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2) !important;
+            outline: none !important;
+        }
+
+        .input-modern::placeholder {
+            color: #888888 !important;
+            opacity: 1 !important;
+        }
+
+        .notification-dot {
+            width: 10px;
+            height: 10px;
+            background: #ff006e;
+            border-radius: 50%;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .chart-container {
+            background: linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.06);
+            position: relative;
+            height: 400px;
+        }
+
+        .chart-container canvas {
+            max-height: 350px;
+        }
+
+        .alert-modern {
+            border-radius: 15px;
+            border: none;
+            padding: 15px 20px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+
+    
+<style>
+    .account-selector {
+        background: rgba(26,26,26,0.9);
+        border-radius: 15px;
+        padding: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px -1px rgba(0,0,0,.6),0 1px 2px rgba(0,0,0,.4);
+        border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .account-selector label {
+        color: #ffffff;
+    }
+
+    .account-selector select {
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.12);
+        color: #ffffff;
+    }
+
+    .nav-tabs {
+        border-bottom: 2px solid rgba(255,255,255,0.06);
+        margin-bottom: 25px;
+    }
+
+    .nav-tabs .nav-link {
+        color: #9ca3af;
+        border: 2px solid transparent;
+        padding: 12px 25px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        background: rgba(26,26,26,0.5);
+        margin-right: 5px;
+        border-radius: 10px 10px 0 0;
+        position: relative;
+    }
+
+    .nav-tabs .nav-link:hover {
+        color: #ffffff;
+        background: rgba(220,38,38,0.15);
+        border-color: rgba(220,38,38,0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(220,38,38,0.2);
+    }
+
+    .nav-tabs .nav-link.active {
+        color: white;
+        background: linear-gradient(135deg,#dc2626 0%,#991b1b 50%,#7f1d1d 100%);
+        font-weight: 600;
+        border-color: transparent;
+        box-shadow: 0 4px 12px rgba(220,38,38,0.4);
+    }
+
+    .nav-tabs .nav-link.active:hover {
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(220,38,38,0.5);
+        filter: brightness(1.1);
+    }
+
+    .nav-tabs .nav-link .badge {
+        margin-left: 8px;
+        font-size: 0.75rem;
+        background: #dc2626;
+        color: #fff;
+    }
+
+    /* Unified Stats Grid */
+    .stats-grid {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        margin-bottom: 24px;
+    }
+
+    .stat-card-unified {
+        background: linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%);
+        padding: 14px 16px;
+        border-radius: 14px;
+        position: relative;
+        box-shadow: 0 2px 4px -1px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.06);
+        overflow: hidden;
+        border: 1px solid rgba(220,38,38,.15);
+    }
+
+    .stat-card-unified:before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 85% 15%, rgba(220,38,38,.18), transparent 60%);
+        opacity: .6;
+        pointer-events: none;
+    }
+
+    .stat-card-unified .stat-label {
+        font-size: .70rem;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        color: #9ca3af;
+        margin-bottom: 4px;
+        font-weight: 600;
+    }
+
+    .stat-card-unified .stat-value {
+        font-size: 1.9rem;
+        font-weight: 600;
+        line-height: 1.1;
+        color: #ffffff;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .stat-card-unified.updating {
+        animation: pulseStat 0.8s ease;
+    }
+
+    @keyframes pulseStat {
+        0% {
+            box-shadow: 0 0 0 0 rgba(220,38,38,0.5);
+        }
+        100% {
+            box-shadow: 0 0 0 12px rgba(220,38,38,0);
+        }
+    }
+</style>
+
+</head>
+<body class="dark-enabled">
+    <!-- Slim top navigation bar -->
+    <header class="navbar-main" style="display:flex;align-items:center;gap:1rem;padding:.7rem 1.25rem;background:rgba(26,26,26,0.95);backdrop-filter:blur(10px);border-bottom:1px solid #2a2a2a;position:sticky;top:0;z-index:1000;">
+        <a href="/" style="text-decoration:none;font-weight:600;color:#fff;letter-spacing:.5px;font-size:.9rem;">MAIL OPS</a>
+        <nav style="display:flex;gap:.4rem;flex-wrap:wrap;">
+            <a href="/inbox" class="nav-mini-link ">Inbox</a>
+            <a href="/interception" class="nav-mini-link ">Held</a>
+            <a href="/compose" class="nav-mini-link ">Compose</a>
+            <a href="/healthz" class="nav-mini-link ">Health</a>
+            
+            <a href="/accounts" class="nav-mini-link ">Accounts</a>
+            
+        </nav>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:.6rem;">
+            <span style="background:#ff006e;padding:.25rem .55rem;border-radius:999px;font-size:.6rem;font-weight:600;">43</span>
+            
+              <span style="font-size:.65rem;opacity:.75;">admin</span>
+              <a href="/logout" style="text-decoration:none;font-size:.6rem;padding:.3rem .55rem;border:1px solid rgba(255,255,255,0.25);border-radius:6px;color:#fff;">Logout</a>
+            
+        </div>
+        <style>
+          .nav-mini-link{color:rgba(255,255,255,0.7);text-decoration:none;font-size:.6rem;padding:.35rem .65rem;border-radius:6px;font-weight:600;letter-spacing:.5px;transition:background .2s,color .2s;}
+          .nav-mini-link:hover,.nav-mini-link.active{background:rgba(255,255,255,0.12);color:#fff;}
+        </style>
+    </header>
+    <div class="dark-app-shell">
+        <!-- Modern Sidebar (kept original nav for fallback) -->
+        <aside class="sidebar-modern">
+            <div class="brand">
+                <i class="bi bi-envelope-heart"></i>
+                <span>Email Manager</span>
+            </div>
+            <nav>
+                <span class="nav-group-label">Core</span>
+                <a class="nav-item-link active" href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                <a class="nav-item-link " href="/emails"><i class="bi bi-inbox-fill"></i> Queue <span class="badge">43</span></a>
+                <a class="nav-item-link " href="/inbox"><i class="bi bi-envelope"></i> Inbox</a>
+                <a class="nav-item-link " href="/compose"><i class="bi bi-pencil-square"></i> Compose</a>
+                <span class="nav-group-label">Management</span>
+                <a class="nav-item-link " href="/rules"><i class="bi bi-shield-check"></i> Rules</a>
+                <a class="nav-item-link " href="/accounts"><i class="bi bi-envelope-at"></i> Accounts</a>
+                <a class="nav-item-link " href="/diagnostics"><i class="bi bi-heart-pulse"></i> Diagnostics</a>
+                <a class="nav-item-link " href="/interception-test"><i class="bi bi-flask"></i> Test Suite</a>
+            </nav>
+            <div class="footer">
+                <div>
+                    admin
+                </div>
+                <div>
+                    <a href="/logout" class="btn-ghost">Logout</a>
+                </div>
+            </div>
+        </aside>
+        <div class="main-modern">
+            <div class="topbar">
+                <button class="toggle-nav" onclick="document.querySelector('.sidebar-modern').classList.toggle('open')"><i class="bi bi-list"></i></button>
+                <div class="search-inline">
+                    <input type="text" placeholder="Search mail, accounts, rules..." aria-label="Search">
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span class="inline-badge badge-accent">Inbound Intercept Active</span>
+                </div>
+            </div>
+            <div class="content-scroll">
+                
+                    
+                
+                
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-speedometer2"></i> Unified Dashboard</h1>
+    <button class="btn btn-modern btn-primary-modern" onclick="location.reload()">
+        <i class="bi bi-arrow-clockwise"></i> Refresh
+    </button>
+</div>
+
+<!-- Account Selector -->
+<div class="account-selector">
+    <div class="row align-items-center">
+        <div class="col-md-6">
+            <label class="form-label fw-bold">Select Account:</label>
+            <select class="form-select" id="accountSelector" onchange="switchAccount(this.value)">
+                <option value="">All Accounts (Overview)</option>
+                
+                <option value="3" >
+                    Gmail - NDayijecika (Primary Test) (ndayijecika@gmail.com)
+                </option>
+                
+                <option value="1" >
+                    Gmail Test Account (test.email.manager@gmail.com)
+                </option>
+                
+                <option value="2" >
+                    Hostinger - Corrinbox (Secondary Test) (mcintyre@corrinbox.com)
+                </option>
+                
+            </select>
+        </div>
+        <div class="col-md-6 text-end">
+            
+        </div>
+    </div>
+</div>
+
+<!-- Navigation Tabs -->
+<ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item">
+        <a class="nav-link active"
+           href="/dashboard/overview">
+            <i class="bi bi-grid-3x3-gap"></i> Overview
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link "
+           href="/dashboard/emails">
+            <i class="bi bi-envelope"></i> Emails
+            
+            <span class="badge bg-danger">43</span>
+            
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link "
+           href="/dashboard/accounts">
+            <i class="bi bi-person-lines-fill"></i> Accounts
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link "
+           href="/dashboard/diagnostics">
+            <i class="bi bi-heart-pulse"></i> Diagnostics
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link "
+           href="/dashboard/rules">
+            <i class="bi bi-shield-check"></i> Rules
+        </a>
+    </li>
+</ul>
+
+<!-- Tab Content -->
+<div class="tab-content">
+    
+    <!-- Overview Tab -->
+    <div class="tab-pane fade show active">
+        <!-- Statistics Cards (Auto-refresh from /api/unified-stats or SSE stream) -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card-unified">
+                <div class="stat-label">Total</div>
+                <div class="stat-value" id="statTotal">-</div>
+            </div>
+            <div class="stat-card-unified">
+                <div class="stat-label">Pending (Outbound)</div>
+                <div class="stat-value" id="statPending">-</div>
+            </div>
+            <div class="stat-card-unified">
+                <div class="stat-label">Held (Inbound)</div>
+                <div class="stat-value" id="statHeld">-</div>
+            </div>
+            <div class="stat-card-unified">
+                <div class="stat-label">Released / Delivered</div>
+                <div class="stat-value" id="statReleased">-</div>
+            </div>
+            <div class="stat-card-unified">
+                <div class="stat-label" title="Email processing speed: p50 (median), p95 (95% processed within), max (slowest)">
+                    Latency <i class="bi bi-info-circle" style="font-size:0.7rem;opacity:0.7;cursor:help;"></i>
+                </div>
+                <div class="stat-value" id="latencyBucket" style="font-size: 0.9rem;">—</div>
+            </div>
+        </div>
+        
+        <!-- Recent Emails -->
+        <div class="card table-modern" style="background:#1a1a1a !important;border:1px solid rgba(255,255,255,0.06) !important;">
+            <div class="card-header py-3" style="background:linear-gradient(135deg,#dc2626 0%,#991b1b 50%,#7f1d1d 100%) !important;border-bottom:1px solid rgba(255,255,255,0.06) !important;">
+                <h5 class="mb-0" style="color:#fff !important;"><i class="bi bi-clock-history"></i> Recent Emails</h5>
+            </div>
+            <div class="card-body p-0" style="background:#1a1a1a !important;">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" style="color:#fff !important;background:#1a1a1a !important;">
+                        <thead style="background:#1a1a1a !important;">
+                            <tr style="background:#1a1a1a !important;">
+                                <th style="color:#9ca3af !important;background:#1a1a1a !important;border-color:rgba(255,255,255,0.06) !important;">From</th>
+                                <th style="color:#9ca3af !important;background:#1a1a1a !important;border-color:rgba(255,255,255,0.06) !important;">To</th>
+                                <th style="color:#9ca3af !important;background:#1a1a1a !important;border-color:rgba(255,255,255,0.06) !important;">Subject</th>
+                                <th style="color:#9ca3af !important;background:#1a1a1a !important;border-color:rgba(255,255,255,0.06) !important;">Status</th>
+                                <th style="color:#9ca3af !important;background:#1a1a1a !important;border-color:rgba(255,255,255,0.06) !important;">Risk</th>
+                                <th style="color:#9ca3af !important;background:#1a1a1a !important;border-color:rgba(255,255,255,0.06) !important;">Time</th>
+                                <th style="color:#9ca3af !important;background:#1a1a1a !important;border-color:rgba(255,255,255,0.06) !important;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            
+                            <tr style="background:#242424 !important;border-bottom:1px solid rgba(255,255,255,0.06) !important;">
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">ndayijecika@gmail.com</td>
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">[&#34;mcintyre@corrinbox.com&#34;]</td>
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">Test Email 10/11/2025, 4:16:32 AM</td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <span class="badge" style="background:#f59e0b !important;color:#fff !important;">
+                                        PENDING
+                                    </span>
+                                </td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <span class="badge" style="background:#10b981 !important;color:#fff !important;">
+                                        7
+                                    </span>
+                                </td>
+                                <td style="color:#9ca3af !important;border-color:rgba(255,255,255,0.06) !important;">2025-10-11 11:16:40</td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <a href="/emails/286" class="btn btn-sm" style="background:rgba(220,38,38,0.15) !important;color:#fff !important;border:1px solid rgba(220,38,38,0.3) !important;">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            
+                            <tr style="background:#242424 !important;border-bottom:1px solid rgba(255,255,255,0.06) !important;">
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">test@example.com</td>
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">[&#34;recipient@example.com&#34;]</td>
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">Direct SMTP Test - 09:13:37</td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <span class="badge" style="background:#f59e0b !important;color:#fff !important;">
+                                        PENDING
+                                    </span>
+                                </td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <span class="badge" style="background:#10b981 !important;color:#fff !important;">
+                                        13
+                                    </span>
+                                </td>
+                                <td style="color:#9ca3af !important;border-color:rgba(255,255,255,0.06) !important;">2025-10-01 16:13:37</td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <a href="/emails/280" class="btn btn-sm" style="background:rgba(220,38,38,0.15) !important;color:#fff !important;border:1px solid rgba(220,38,38,0.3) !important;">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            
+                            <tr style="background:#242424 !important;border-bottom:1px solid rgba(255,255,255,0.06) !important;">
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">ndayijecika@gmail.com</td>
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">[&#34;test@example.com&#34;]</td>
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">Proxy Interception Test - 09:13:35</td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <span class="badge" style="background:#f59e0b !important;color:#fff !important;">
+                                        PENDING
+                                    </span>
+                                </td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <span class="badge" style="background:#10b981 !important;color:#fff !important;">
+                                        33
+                                    </span>
+                                </td>
+                                <td style="color:#9ca3af !important;border-color:rgba(255,255,255,0.06) !important;">2025-10-01 16:13:35</td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <a href="/emails/279" class="btn btn-sm" style="background:rgba(220,38,38,0.15) !important;color:#fff !important;border:1px solid rgba(220,38,38,0.3) !important;">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            
+                            <tr style="background:#242424 !important;border-bottom:1px solid rgba(255,255,255,0.06) !important;">
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">test@example.com</td>
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">[&#34;recipient@example.com&#34;]</td>
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">Local Proxy Test - 09:13:29</td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <span class="badge" style="background:#f59e0b !important;color:#fff !important;">
+                                        PENDING
+                                    </span>
+                                </td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <span class="badge" style="background:#10b981 !important;color:#fff !important;">
+                                        43
+                                    </span>
+                                </td>
+                                <td style="color:#9ca3af !important;border-color:rgba(255,255,255,0.06) !important;">2025-10-01 16:13:29</td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <a href="/emails/278" class="btn btn-sm" style="background:rgba(220,38,38,0.15) !important;color:#fff !important;border:1px solid rgba(220,38,38,0.3) !important;">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            
+                            <tr style="background:#242424 !important;border-bottom:1px solid rgba(255,255,255,0.06) !important;">
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">sender@test.com</td>
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">[&#34;recipient@test.com&#34;]</td>
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">Workflow Test #20251001_091327</td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <span class="badge" style="background:#f59e0b !important;color:#fff !important;">
+                                        PENDING
+                                    </span>
+                                </td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <span class="badge" style="background:#10b981 !important;color:#fff !important;">
+                                        13
+                                    </span>
+                                </td>
+                                <td style="color:#9ca3af !important;border-color:rgba(255,255,255,0.06) !important;">2025-10-01 16:13:27</td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <a href="/emails/277" class="btn btn-sm" style="background:rgba(220,38,38,0.15) !important;color:#fff !important;border:1px solid rgba(220,38,38,0.3) !important;">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            
+                            <tr style="background:#242424 !important;border-bottom:1px solid rgba(255,255,255,0.06) !important;">
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">sender@example.com</td>
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">[&#34;recipient@example.com&#34;]</td>
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">HeldTest 2025-10-01T16:13:14.396443</td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <span class="badge" style="background:#f59e0b !important;color:#fff !important;">
+                                        PENDING
+                                    </span>
+                                </td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <span class="badge" style="background:#10b981 !important;color:#fff !important;">
+                                        0
+                                    </span>
+                                </td>
+                                <td style="color:#9ca3af !important;border-color:rgba(255,255,255,0.06) !important;">2025-10-01 16:13:14</td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <a href="/emails/276" class="btn btn-sm" style="background:rgba(220,38,38,0.15) !important;color:#fff !important;border:1px solid rgba(220,38,38,0.3) !important;">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            
+                            <tr style="background:#242424 !important;border-bottom:1px solid rgba(255,255,255,0.06) !important;">
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">Google &lt;no-reply@accounts.google.com&gt;</td>
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">[&#34;ndayijecika@gmail.com&#34;]</td>
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">Security alert</td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <span class="badge" style="background:#f59e0b !important;color:#fff !important;">
+                                        PENDING
+                                    </span>
+                                </td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <span class="badge" style="background:#10b981 !important;color:#fff !important;">
+                                        0
+                                    </span>
+                                </td>
+                                <td style="color:#9ca3af !important;border-color:rgba(255,255,255,0.06) !important;">2025-10-01 11:11:53</td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <a href="/emails/274" class="btn btn-sm" style="background:rgba(220,38,38,0.15) !important;color:#fff !important;border:1px solid rgba(220,38,38,0.3) !important;">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            
+                            <tr style="background:#242424 !important;border-bottom:1px solid rgba(255,255,255,0.06) !important;">
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">Google AI Studio &lt;googleaistudio-noreply@google.com&gt;</td>
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">[&#34;ndayijecika@gmail.com&#34;]</td>
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">Check out nano-banana: our newest image generation...</td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <span class="badge" style="background:#f59e0b !important;color:#fff !important;">
+                                        PENDING
+                                    </span>
+                                </td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <span class="badge" style="background:#10b981 !important;color:#fff !important;">
+                                        0
+                                    </span>
+                                </td>
+                                <td style="color:#9ca3af !important;border-color:rgba(255,255,255,0.06) !important;">2025-10-01 11:11:53</td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <a href="/emails/275" class="btn btn-sm" style="background:rgba(220,38,38,0.15) !important;color:#fff !important;border:1px solid rgba(220,38,38,0.3) !important;">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            
+                            <tr style="background:#242424 !important;border-bottom:1px solid rgba(255,255,255,0.06) !important;">
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">Google &lt;no-reply@accounts.google.com&gt;</td>
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">[&#34;ndayijecika@gmail.com&#34;]</td>
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">2-Step Verification turned on</td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <span class="badge" style="background:#f59e0b !important;color:#fff !important;">
+                                        PENDING
+                                    </span>
+                                </td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <span class="badge" style="background:#10b981 !important;color:#fff !important;">
+                                        0
+                                    </span>
+                                </td>
+                                <td style="color:#9ca3af !important;border-color:rgba(255,255,255,0.06) !important;">2025-10-01 11:11:52</td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <a href="/emails/272" class="btn btn-sm" style="background:rgba(220,38,38,0.15) !important;color:#fff !important;border:1px solid rgba(220,38,38,0.3) !important;">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            
+                            <tr style="background:#242424 !important;border-bottom:1px solid rgba(255,255,255,0.06) !important;">
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">Google &lt;no-reply@accounts.google.com&gt;</td>
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">[&#34;ndayijecika@gmail.com&#34;]</td>
+                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">Security alert</td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <span class="badge" style="background:#f59e0b !important;color:#fff !important;">
+                                        PENDING
+                                    </span>
+                                </td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <span class="badge" style="background:#10b981 !important;color:#fff !important;">
+                                        0
+                                    </span>
+                                </td>
+                                <td style="color:#9ca3af !important;border-color:rgba(255,255,255,0.06) !important;">2025-10-01 11:11:52</td>
+                                <td style="border-color:rgba(255,255,255,0.06) !important;">
+                                    <a href="/emails/273" class="btn btn-sm" style="background:rgba(220,38,38,0.15) !important;color:#fff !important;border:1px solid rgba(220,38,38,0.3) !important;">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    
+</div>
+
+<script>
+function switchAccount(accountId) {
+    const currentTab = 'overview';
+    let url = `/dashboard/${currentTab}`;
+    if (accountId) {
+        url += `?account_id=${accountId}`;
+    }
+    window.location.href = url;
+}
+
+let useSSE = true;
+
+// Apply stats to UI (works for both polling and SSE)
+function applyStats(j) {
+    const m = (id, v) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = v;
+    };
+    const u = j.unified || j;
+    m('statTotal', u.total ?? 0);
+    m('statPending', u.pending ?? 0);
+    m('statHeld', u.held ?? 0);
+    m('statReleased', u.released ?? 0);
+
+    // Update latency if available
+    if (j.latency) {
+        const l = j.latency;
+        const el = document.getElementById('latencyBucket');
+        if (el) {
+            if (!l.count) {
+                el.textContent = '—';
+            } else {
+                el.textContent = `${l.p50}ms p50 • ${l.p95}ms p95 • ${l.max}ms max`;
+            }
+        }
+    }
+}
+
+// Load unified stats from API (fallback for non-SSE)
+async function loadUnifiedStats() {
+    try {
+        const r = await fetch('/api/unified-stats');
+        if (!r.ok) return;
+        applyStats(await r.json());
+    } catch(e) {
+        console.warn('Stats error:', e);
+    }
+}
+
+// Start SSE connection for live updates
+function startSSE() {
+    try {
+        const es = new EventSource('/stream/stats');
+        es.addEventListener('stats', e => {
+            try {
+                applyStats(JSON.parse(e.data));
+            } catch(err) {
+                console.warn('SSE parse error:', err);
+            }
+        });
+        es.onerror = () => {
+            console.warn('SSE connection failed, falling back to polling');
+            es.close();
+            useSSE = false;
+            setInterval(loadUnifiedStats, 10000);
+        };
+    } catch(e) {
+        console.warn('SSE not supported, using polling');
+        useSSE = false;
+        setInterval(loadUnifiedStats, 10000);
+    }
+}
+
+// Initialize stats loading on page load
+if (document.getElementById('statsGrid')) {
+    startSSE();
+    if (!useSSE) {
+        loadUnifiedStats();
+    }
+}
+
+function runDiagnostics(accountId) {
+    const resultsDiv = document.getElementById('diagnosticsResults');
+    resultsDiv.innerHTML = '<div class="spinner-border" role="status"><span class="visually-hidden">Running diagnostics...</span></div>';
+    
+    fetch(`/api/diagnostics/${accountId}`)
+        .then(response => response.json())
+        .then(data => {
+            let html = '<div class="mt-3">';
+            
+            // SMTP Test
+            html += '<div class="alert ' + (data.smtp_test.success ? 'alert-success' : 'alert-danger') + '">';
+            html += '<strong>SMTP:</strong> ' + data.smtp_test.message;
+            html += '</div>';
+            
+            // IMAP Test
+            html += '<div class="alert ' + (data.imap_test.success ? 'alert-success' : 'alert-danger') + '">';
+            html += '<strong>IMAP:</strong> ' + data.imap_test.message;
+            html += '</div>';
+            
+            html += '</div>';
+            resultsDiv.innerHTML = html;
+        })
+        .catch(error => {
+            resultsDiv.innerHTML = '<div class="alert alert-danger">Error running diagnostics: ' + error + '</div>';
+        });
+}
+
+function testAccount(accountId) {
+    alert('Testing account ' + accountId);
+    // Add test logic here
+}
+
+function editAccount(accountId) {
+    window.location.href = `/accounts/edit/${accountId}`;
+}
+</script>
+
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Global toast notification system -->
+    <script src="/static/js/app.js"></script>
+
+    
+</body>
+</html>

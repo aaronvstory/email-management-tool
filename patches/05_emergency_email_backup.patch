@@ -1,0 +1,97 @@
+--- a/simple_app.py
++++ b/simple_app.py
+@@ -309,6 +309,8 @@ app.register_blueprint(emails_bp)        # Email queue + viewer: /emails, /emai
+
+         # (Legacy inline IMAP loop removed during refactor)
+
++EMERGENCY_BACKUP_DIR = "emergency_email_backup"
++
+ # SMTP Proxy Handler
+ class EmailModerationHandler:
+     """Handle incoming emails through SMTP proxy"""
+@@ -316,6 +318,32 @@ class EmailModerationHandler:
+     async def handle_DATA(self, server, session, envelope):
+         """Process incoming email"""
+         print(f"📨 SMTP Handler: Received message from {envelope.mail_from} to {envelope.rcpt_tos}")
++
++        # CRITICAL: Create emergency backup FIRST (before any processing)
++        emergency_file = None
++        try:
++            os.makedirs(EMERGENCY_BACKUP_DIR, exist_ok=True)
++            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
++            emergency_file = os.path.join(EMERGENCY_BACKUP_DIR, f"email_{timestamp}.eml")
++
++            # Save raw email immediately
++            with open(emergency_file, 'wb') as f:
++                f.write(envelope.content)
++
++            # Also save metadata as JSON
++            metadata_file = emergency_file.replace('.eml', '.json')
++            import json as json_lib
++            with open(metadata_file, 'w') as f:
++                json_lib.dump({
++                    'from': envelope.mail_from,
++                    'to': [str(r) for r in envelope.rcpt_tos],
++                    'timestamp': timestamp,
++                    'size': len(envelope.content)
++                }, f, indent=2)
++
++        except Exception as e:
++            print(f"⚠️  Emergency backup failed: {e}")
++
+         try:
+             # Parse email
+             email_msg = message_from_bytes(envelope.content, policy=policy.default)
+@@ -401,9 +429,34 @@ class EmailModerationHandler:
+                     ))
+                     conn.commit()
+                     print(f"📨 SMTP Handler: Database commit successful - Row ID: {cursor.lastrowid}")
++
++                    # Success! Remove emergency backup
++                    if emergency_file and os.path.exists(emergency_file):
++                        try:
++                            os.remove(emergency_file)
++                            metadata_file = emergency_file.replace('.eml', '.json')
++                            if os.path.exists(metadata_file):
++                                os.remove(metadata_file)
++                        except Exception:
++                            pass
++
+                     conn.close()
+                     break
+                 except sqlite3.OperationalError as e:
+                     if "locked" in str(e) and attempt < max_retries - 1:
+                         print(f"📨 SMTP Handler: Database locked, retrying... (attempt {attempt + 1}/{max_retries})")
+                         time.sleep(0.5)
++                    elif attempt == max_retries - 1:
++                        # Final retry failed - keep emergency backup
++                        print(f"❌ CRITICAL: Database write failed after {max_retries} attempts!")
++                        print(f"📧 Email preserved in emergency backup: {emergency_file}")
++                        raise
+                     else:
+                         raise
+
++            # Clean up old emergency backups (keep last 100 for recovery)
++            try:
++                backups = sorted([f for f in os.listdir(EMERGENCY_BACKUP_DIR) if f.endswith('.eml')])
++                if len(backups) > 100:
++                    for old_backup in backups[:-100]:
++                        os.remove(os.path.join(EMERGENCY_BACKUP_DIR, old_backup))
++                        json_file = old_backup.replace('.eml', '.json')
++                        if os.path.exists(os.path.join(EMERGENCY_BACKUP_DIR, json_file)):
++                            os.remove(os.path.join(EMERGENCY_BACKUP_DIR, json_file))
++            except Exception:
++                pass
++
+             print(f"📧 Email intercepted: {subject} from {sender}")
+             return '250 Message accepted for delivery'
+
+         except Exception as e:
+             print(f"Error processing email: {e}")
+             import traceback
+             traceback.print_exc()
++            if emergency_file:
++                print(f"📧 Email preserved in emergency backup: {emergency_file}")
+             return f'500 Error: {e}'
+
+     def check_rules(self, subject, body):

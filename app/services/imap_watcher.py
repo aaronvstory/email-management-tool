@@ -49,39 +49,44 @@ class ImapWatcher:
     def __init__(self, cfg: AccountConfig):
         self.cfg = cfg
         self._client = None  # set in _connect
+        self._last_hb = 0.0
 
     def _connect(self):
-        log.info("Connecting to IMAP %s:%s (ssl=%s)", self.cfg.imap_host, self.cfg.imap_port, self.cfg.use_ssl)
-        ssl_context = sslmod.create_default_context() if self.cfg.use_ssl else None
-        # Apply connection timeout from env (EMAIL_CONN_TIMEOUT, clamp 5..60, default 15)
         try:
-            to = int(os.getenv("EMAIL_CONN_TIMEOUT", "15"))
-            to = max(5, min(60, to))
-        except Exception:
-            to = 15
-        client = IMAPClient(
-            self.cfg.imap_host,
-            port=self.cfg.imap_port,
-            ssl=self.cfg.use_ssl,
-            ssl_context=ssl_context,
-            timeout=to
-        )
-        client.login(self.cfg.username, self.cfg.password)
-        log.info("Logged in as %s", self.cfg.username)
-        capabilities = client.capabilities()
-        log.debug("Server capabilities: %s", capabilities)
-        # Ensure folders
-        for folder in (self.cfg.inbox, self.cfg.quarantine):
+            log.info("Connecting to IMAP %s:%s (ssl=%s)", self.cfg.imap_host, self.cfg.imap_port, self.cfg.use_ssl)
+            ssl_context = sslmod.create_default_context() if self.cfg.use_ssl else None
+            # Apply connection timeout from env (EMAIL_CONN_TIMEOUT, clamp 5..60, default 15)
             try:
-                client.select_folder(folder, readonly=False)
+                to = int(os.getenv("EMAIL_CONN_TIMEOUT", "15"))
+                to = max(5, min(60, to))
             except Exception:
+                to = 15
+            client = IMAPClient(
+                self.cfg.imap_host,
+                port=self.cfg.imap_port,
+                ssl=self.cfg.use_ssl,
+                ssl_context=ssl_context,
+                timeout=to
+            )
+            client.login(self.cfg.username, self.cfg.password)
+            log.info("Logged in as %s", self.cfg.username)
+            capabilities = client.capabilities()
+            log.debug("Server capabilities: %s", capabilities)
+            # Ensure folders
+            for folder in (self.cfg.inbox, self.cfg.quarantine):
                 try:
-                    client.create_folder(folder)
-                    log.info("Created folder %s", folder)
+                    client.select_folder(folder, readonly=False)
                 except Exception:
-                    log.debug("Folder %s may already exist", folder)
-        client.select_folder(self.cfg.inbox, readonly=False)
-        return client
+                    try:
+                        client.create_folder(folder)
+                        log.info("Created folder %s", folder)
+                    except Exception:
+                        log.debug("Folder %s may already exist", folder)
+            client.select_folder(self.cfg.inbox, readonly=False)
+            return client
+        except Exception as e:
+            log.error(f"Failed to connect to IMAP for {self.cfg.username}: {e}")
+            return None
 
     def _supports_uid_move(self) -> bool:
         try:
@@ -191,6 +196,31 @@ class ImapWatcher:
         except Exception as e:
             log.error(f"Failed to store emails in database: {e}")
 
+    def _update_heartbeat(self, status: str = "active"):
+        """Best-effort upsert of a heartbeat record for /healthz."""
+        try:
+            if not self.cfg.account_id:
+                return
+            conn = sqlite3.connect(self.cfg.db_path)
+            cur = conn.cursor()
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS worker_heartbeats (
+                    worker_id TEXT PRIMARY KEY,
+                    last_heartbeat TEXT DEFAULT CURRENT_TIMESTAMP,
+                    status TEXT
+                )
+                """
+            )
+            wid = f"imap_{self.cfg.account_id}"
+            cur.execute(
+                "INSERT OR REPLACE INTO worker_heartbeats(worker_id, last_heartbeat, status) VALUES(?, datetime('now'), ?)",
+                (wid, status),
+            )
+            conn.commit(); conn.close()
+        except Exception:
+            pass
+
     def _handle_new_messages(self, client, changed):
         # changed example: {b'EXISTS': 12}
         try:
@@ -216,33 +246,69 @@ class ImapWatcher:
     def run_forever(self):
         self._client = self._connect()
         client = self._client
+
+        # Check if connection failed
+        if not client:
+            log.error("Failed to establish IMAP connection")
+            time.sleep(10)  # Wait before retry
+            return  # Let backoff handle retry
+
         last_idle_break = time.time()
+        # initial heartbeat
+        self._update_heartbeat("active"); self._last_hb = time.time()
         while True:
+            # Ensure client is still connected
+            if not client:
+                log.error("IMAP client disconnected, attempting reconnect")
+                self._client = self._connect()
+                client = self._client
+                if not client:
+                    time.sleep(10)
+                    continue
+
             # Check IDLE support
-            can_idle = b"IDLE" in (client.capabilities() or [])
+            try:
+                can_idle = b"IDLE" in (client.capabilities() or [])
+            except Exception:
+                can_idle = False
             if not can_idle:
                 # Poll fallback every few seconds
                 time.sleep(5)
                 client.select_folder(self.cfg.inbox, readonly=False)
                 self._handle_new_messages(client, {})
+                if time.time() - self._last_hb > 30:
+                    self._update_heartbeat("active"); self._last_hb = time.time()
                 continue
 
-            with client.idle():
-                log.debug("Entered IDLE")
-                start = time.time()
-                while True:
-                    responses = client.idle_check(timeout=30)
-                    # Break and process on EXISTS/RECENT
-                    changed = {k: v for (k, v) in responses} if responses else {}
-                    if responses:
-                        self._handle_new_messages(client, changed)
-                    # Keep alive / break idle periodically
-                    now = time.time()
-                    if (now - start) > self.cfg.idle_timeout or (now - last_idle_break) > self.cfg.idle_ping_interval:
-                        client.idle_done()
-                        client.noop()
-                        last_idle_break = now
-                        break
+            # Double-check client before IDLE
+            if not client:
+                log.error("Client lost before IDLE, restarting")
+                break
+
+            try:
+                with client.idle():
+                    log.debug("Entered IDLE")
+                    start = time.time()
+                    while True:
+                        responses = client.idle_check(timeout=30)
+                        # Break and process on EXISTS/RECENT
+                        changed = {k: v for (k, v) in responses} if responses else {}
+                        if responses:
+                            self._handle_new_messages(client, changed)
+                        # periodic heartbeat
+                        if time.time() - self._last_hb > 30:
+                            self._update_heartbeat("active"); self._last_hb = time.time()
+                        # Keep alive / break idle periodically
+                        now = time.time()
+                        if (now - start) > self.cfg.idle_timeout or (now - last_idle_break) > self.cfg.idle_ping_interval:
+                            client.idle_done()
+                            client.noop()
+                            last_idle_break = now
+                            break
+            except Exception as e:
+                log.error(f"IDLE failed: {e}, reconnecting...")
+                self._client = None
+                break  # Exit inner loop to reconnect
 
     def close(self):
         try:

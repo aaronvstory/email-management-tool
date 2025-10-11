@@ -1,0 +1,102 @@
+--- a/app/routes/interception.py
++++ b/app/routes/interception.py
+@@ -5,6 +5,8 @@ Diff and attachment scrubbing supported.
+ """
+ import os
+ import time
++import shutil
++from datetime import datetime as dt
+ import statistics
+ from datetime import datetime
+ import sqlite3
+@@ -30,6 +32,39 @@ def _db():
+
+ WORKER_HEARTBEATS = {}
+ _HEALTH_CACHE: Dict[str, Any] = {'ts': 0.0, 'payload': None}
++
++# Database backup utilities
++BACKUP_DIR = "database_backups"
++
++def _create_backup(operation_name="operation"):
++    """Create timestamped database backup before critical operations"""
++    try:
++        os.makedirs(BACKUP_DIR, exist_ok=True)
++        timestamp = dt.now().strftime("%Y%m%d_%H%M%S")
++        backup_path = os.path.join(BACKUP_DIR, f"backup_{operation_name}_{timestamp}.db")
++        shutil.copy2(DB_PATH, backup_path)
++
++        # Clean old backups (keep last 10)
++        backups = sorted([f for f in os.listdir(BACKUP_DIR) if f.endswith('.db')])
++        if len(backups) > 10:
++            for old_backup in backups[:-10]:
++                try:
++                    os.remove(os.path.join(BACKUP_DIR, old_backup))
++                except Exception:
++                    pass
++
++        return backup_path
++    except Exception as e:
++        # Non-critical failure, log and continue
++        try:
++            from flask import current_app
++            current_app.logger.warning(f"Database backup failed: {e}")
++        except Exception:
++            pass
++        return None
++
++def _restore_backup(backup_path):
++    """Restore database from backup"""
++    shutil.copy2(backup_path, DB_PATH)
+
+ @bp_interception.route('/healthz')
+ def healthz():
+@@ -169,6 +204,9 @@ def api_interception_get(msg_id:int):
+ @bp_interception.route('/api/interception/release/<int:msg_id>', methods=['POST'])
+ @login_required
+ def api_interception_release(msg_id:int):
++    # Create backup before critical operation
++    backup_path = _create_backup(f"release_{msg_id}")
++
+     payload = request.get_json(silent=True) or {}
+     edited_subject = payload.get('edited_subject'); edited_body = payload.get('edited_body')
+     target_folder = payload.get('target_folder','INBOX')
+@@ -180,7 +218,14 @@ def api_interception_release(msg_id:int):
+         WHERE em.id=? AND em.direction='inbound' AND em.interception_status='HELD'
+     """, (msg_id,)).fetchone()
+     if not row:
+-        conn.close(); return jsonify({'ok':False,'reason':'not-held'}), 409
++        conn.close()
++        # Restore backup on failure
++        if backup_path:
++            try:
++                _restore_backup(backup_path)
++            except Exception:
++                pass
++        return jsonify({'ok':False,'reason':'not-held'}), 409
+
+     # Load email from raw_path (legacy) or raw_content (new UID-based fetch)
+     raw_path = row['raw_path']
+@@ -190,7 +235,14 @@ def api_interception_release(msg_id:int):
+     elif raw_content:
+         original_bytes = raw_content.encode('utf-8') if isinstance(raw_content, str) else raw_content
+     else:
+-        conn.close(); return jsonify({'ok':False,'reason':'raw-missing'}), 500
++        conn.close()
++        # Restore backup on failure
++        if backup_path:
++            try:
++                _restore_backup(backup_path)
++            except Exception:
++                pass
++        return jsonify({'ok':False,'reason':'raw-missing'}), 500
+
+     msg = BytesParser(policy=default_policy).parsebytes(original_bytes)
+     if edited_subject:
+@@ -277,6 +329,7 @@ def api_interception_release(msg_id:int):
+ @bp_interception.route('/api/interception/discard/<int:msg_id>', methods=['POST'])
+ @login_required
+ def api_interception_discard(msg_id:int):
++    backup_path = _create_backup(f"discard_{msg_id}")
+     conn = _db(); cur = conn.cursor()
+     cur.execute("UPDATE email_messages SET interception_status='DISCARDED', action_taken_at=datetime('now') WHERE id=? AND interception_status='HELD'", (msg_id,))
+     changed = cur.rowcount; conn.commit(); conn.close()

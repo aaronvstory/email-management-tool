@@ -193,6 +193,11 @@
           {{ email.interception_status or email.status or 'UNKNOWN' }}
         </span>
       </div>
+      {% if (email.interception_status or '') == 'HELD' %}
+      <div class="alert alert-warning mt-2" role="alert">
+        <strong>HELD</strong> — Not visible in recipient's mailbox until release
+      </div>
+      {% endif %}
       {% if email.account_id %}
       <div class="meta-row">
         <span class="meta-label">Account:</span>
@@ -443,7 +448,7 @@ function editEmail(emailId) {
             document.getElementById('editEmailFrom').textContent = data.sender;
             document.getElementById('editEmailTo').textContent = data.recipients;
             document.getElementById('editEmailSubject').value = data.subject || '';
-            document.getElementById('editEmailBody').value = data.body || '';
+            document.getElementById('editEmailBody').value = data.body_text || '';
 
             // Show modal
             const modal = new bootstrap.Modal(modalElement);
@@ -474,14 +479,14 @@ function saveEmailEdit() {
     saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
 
     // Send update request
-    fetch(`/email/${emailId}/edit`, {
+    fetch(`/api/email/${emailId}/edit`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
             subject: subject,
-            body: body
+            body_text: body
         })
     })
     .then(response => {

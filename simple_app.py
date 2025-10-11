@@ -54,7 +54,67 @@ from app.services.imap_watcher import ImapWatcher, AccountConfig
 # Minimal re-initialization (original file trimmed during refactor)
 # -----------------------------------------------------------------------------
 
+
+def check_port_available(port, host='localhost'):
+    """Check if a port is available without psutil"""
+    import socket
+    import subprocess
+    import platform
+
+    # First check if port is in use
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(1)
+    result = sock.connect_ex((host, port))
+    sock.close()
+
+    if result != 0:  # Port is free
+        return True, None
+
+    # Port is in use, try to find and kill the process
+    if platform.system() == 'Windows':
+        # Windows: use netstat
+        try:
+            output = subprocess.check_output(f'netstat -ano | findstr :{port}', shell=True, text=True)
+            for line in output.split('\n'):
+                if f':{port}' in line and 'LISTENING' in line:
+                    parts = line.split()
+                    pid = parts[-1]
+                    try:
+                        subprocess.run(f'taskkill /F /PID {pid}', shell=True, check=True)
+                        print(f"Killed process {pid} using port {port}")
+                        time.sleep(2)
+                        return True, pid
+                    except:
+                        pass
+        except:
+            pass
+    else:
+        # Linux/Mac: use lsof
+        try:
+            output = subprocess.check_output(f'lsof -i :{port}', shell=True, text=True)
+            lines = output.split('\n')
+            if len(lines) > 1:
+                parts = lines[1].split()
+                if len(parts) > 1:
+                    pid = parts[1]
+                    try:
+                        subprocess.run(f'kill -9 {pid}', shell=True, check=True)
+                        print(f"Killed process {pid} using port {port}")
+                        time.sleep(2)
+                        return True, pid
+                    except:
+                        pass
+        except:
+            pass
+
+    return False, None
+
 app = Flask(__name__)
+
+# Ensure backup directory exists
+import os
+os.makedirs("database_backups", exist_ok=True)
+os.makedirs("emergency_email_backup", exist_ok=True)
 # Security: SECRET_KEY from environment (never hardcode in production)
 app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY') or os.environ.get('SECRET_KEY') or os.environ.get('FLASK_SECRET') or 'dev-secret-change-in-production'
 
@@ -223,6 +283,13 @@ def init_database():
         target_id INTEGER,
         details TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )""")
+
+    # Worker heartbeats (observability)
+    cur.execute("""CREATE TABLE IF NOT EXISTS worker_heartbeats(
+        worker_id TEXT PRIMARY KEY,
+        last_heartbeat TEXT DEFAULT CURRENT_TIMESTAMP,
+        status TEXT
     )""")
 
     # Create default admin user if not exists
@@ -810,6 +877,43 @@ def legacy_api_pending():
 # End of routes - remaining duplicate routes removed (handled by blueprint)
 
 # (All remaining duplicate interception routes deleted - see blueprint)
+
+
+
+def cleanup_emergency_backups(days_to_keep=7):
+    """Clean up old emergency email backups"""
+    import os
+    import time
+    import json
+    from datetime import datetime, timedelta
+
+    emergency_dir = "emergency_email_backup"
+    if not os.path.exists(emergency_dir):
+        return
+
+    cutoff_time = time.time() - (days_to_keep * 86400)
+
+    for filename in os.listdir(emergency_dir):
+        if filename.endswith('.json'):
+            filepath = os.path.join(emergency_dir, filename)
+            if os.path.getmtime(filepath) < cutoff_time:
+                try:
+                    os.remove(filepath)
+                    print(f"Cleaned up old backup: {filename}")
+                except:
+                    pass
+
+# Schedule cleanup to run periodically
+def schedule_cleanup():
+    import threading
+    def run_cleanup():
+        while True:
+            cleanup_emergency_backups()
+            time.sleep(86400)  # Run daily
+
+    cleanup_thread = threading.Thread(target=run_cleanup, daemon=True)
+    cleanup_thread.start()
+
 
 if __name__ == '__main__':
     # Thread registry for IMAP monitoring
