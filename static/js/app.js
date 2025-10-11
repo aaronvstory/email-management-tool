@@ -29,13 +29,16 @@ window.fetch = function(url, options = {}) {
 
     if (needsCSRF) {
         const csrfToken = getCSRFToken();
-        if (csrfToken) {
+        if (!csrfToken) {
+            console.warn('[CSRF] Token meta tag not found - request may fail:', method, url);
+        } else {
             options.headers = options.headers || {};
             if (options.headers instanceof Headers) {
                 options.headers.set('X-CSRFToken', csrfToken);
             } else if (typeof options.headers === 'object') {
                 options.headers['X-CSRFToken'] = csrfToken;
             }
+            try { console.debug('[CSRF] Added token to request:', method, url); } catch (_) {}
         }
     }
 

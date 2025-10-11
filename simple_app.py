@@ -66,6 +66,10 @@ from app.extensions import csrf, limiter
 csrf.init_app(app)
 limiter.init_app(app)
 
+# CSRF configuration - align token lifetime with session and allow HTTP in dev
+app.config['WTF_CSRF_TIME_LIMIT'] = None  # Don't expire tokens during long sessions
+app.config['WTF_CSRF_SSL_STRICT'] = False  # True in production when HTTPS is enforced
+
 login_manager = LoginManager(app)
 login_manager.login_view = 'auth.login'  # type: ignore[reportAttributeAccessIssue]
 
@@ -454,6 +458,42 @@ def inject_template_context():
     context['csrf_token'] = generate_csrf
 
     return context
+
+# User-friendly error handlers for security events
+@app.errorhandler(400)
+def csrf_error(e):
+    """Handle CSRF validation failures with user-friendly message"""
+    error_str = str(e)
+    if 'CSRF' in error_str or 'token' in error_str.lower():
+        if request.is_json:
+            return jsonify({'error': 'Security token expired. Please refresh the page.'}), 400
+        flash('Your session has expired. Please try again.', 'error')
+        return redirect(request.referrer or url_for('auth.login'))
+    return jsonify({'error': error_str}), 400
+
+
+@app.errorhandler(429)
+def ratelimit_error(e):
+    """Handle rate limit exceeded with user-friendly message"""
+    if request.is_json:
+        return jsonify({'error': 'Too many requests. Please wait a moment and try again.'}), 429
+    flash('Too many login attempts. Please wait a minute and try again.', 'warning')
+    return redirect(request.referrer or url_for('auth.login'))
+
+
+@app.after_request
+def log_security_events(response):
+    """Log CSRF failures and rate limit violations for security monitoring"""
+    try:
+        if response.status_code == 400:
+            response_text = response.get_data(as_text=True)
+            if 'CSRF' in response_text or 'token' in response_text.lower():
+                app.logger.warning(f"CSRF validation failed: {request.method} {request.url} from {request.remote_addr}")
+        elif response.status_code == 429:
+            app.logger.warning(f"Rate limit exceeded: {request.method} {request.url} from {request.remote_addr}")
+    except Exception:
+        pass
+    return response
 
 # Routes
 # ============================================================================
