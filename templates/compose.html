@@ -151,6 +151,7 @@
     </div>
     
     <form method="POST" action="/compose" id="composeForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <!-- From Account and To Address in same row -->
         <div class="form-row">
             <div>

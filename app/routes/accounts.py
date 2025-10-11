@@ -2,76 +2,20 @@
 
 Extracted from simple_app.py lines 877-1760
 Routes: /accounts, /accounts/add, /api/accounts/*, /api/detect-email-settings, /api/test-connection
+Phase 3: Consolidated email helpers - using app.utils.email_helpers
 """
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 import sqlite3
-import imaplib
-import smtplib
 import json
 from app.utils.db import DB_PATH, get_db
 from datetime import datetime
 from app.utils.crypto import encrypt_credential, decrypt_credential
 
+# Phase 3: Import consolidated email helpers
+from app.utils.email_helpers import detect_email_settings as _detect_email_settings, test_email_connection as _test_email_connection
+
 accounts_bp = Blueprint('accounts', __name__)
-
-def _detect_email_settings(email_address: str) -> dict:
-    """Smart detection of SMTP/IMAP settings based on email domain."""
-    domain = email_address.split('@')[-1].lower() if '@' in email_address else ''
-    providers = {
-        'gmail.com': {
-            'smtp_host': 'smtp.gmail.com', 'smtp_port': 587, 'smtp_use_ssl': False,
-            'imap_host': 'imap.gmail.com', 'imap_port': 993, 'imap_use_ssl': True
-        },
-        'corrinbox.com': {
-            'smtp_host': 'smtp.hostinger.com', 'smtp_port': 465, 'smtp_use_ssl': True,
-            'imap_host': 'imap.hostinger.com', 'imap_port': 993, 'imap_use_ssl': True
-        },
-        'outlook.com': {
-            'smtp_host': 'smtp-mail.outlook.com', 'smtp_port': 587, 'smtp_use_ssl': False,
-            'imap_host': 'outlook.office365.com', 'imap_port': 993, 'imap_use_ssl': True
-        },
-        'hotmail.com': {
-            'smtp_host': 'smtp-mail.outlook.com', 'smtp_port': 587, 'smtp_use_ssl': False,
-            'imap_host': 'outlook.office365.com', 'imap_port': 993, 'imap_use_ssl': True
-        },
-        'yahoo.com': {
-            'smtp_host': 'smtp.mail.yahoo.com', 'smtp_port': 465, 'smtp_use_ssl': True,
-            'imap_host': 'imap.mail.yahoo.com', 'imap_port': 993, 'imap_use_ssl': True
-        },
-    }
-    if domain in providers:
-        return providers[domain]
-    return {
-        'smtp_host': f'smtp.{domain}', 'smtp_port': 587, 'smtp_use_ssl': False,
-        'imap_host': f'imap.{domain}', 'imap_port': 993, 'imap_use_ssl': True,
-    }
-
-
-def _test_email_connection(kind: str, host: str, port: int, username: str, password: str, use_ssl: bool):
-    """Lightweight connectivity test for IMAP/SMTP."""
-    if not host or not port or not username:
-        return False, "Missing connection parameters"
-    try:
-        if kind.lower() == 'imap':
-            client = imaplib.IMAP4_SSL(host, int(port)) if use_ssl else imaplib.IMAP4(host, int(port))
-            if password:
-                client.login(username, password)
-            client.logout()
-            return True, f"IMAP OK {host}:{port}"
-        if kind.lower() == 'smtp':
-            if use_ssl and int(port) == 465:
-                server = smtplib.SMTP_SSL(host, int(port), timeout=10)
-            else:
-                server = smtplib.SMTP(host, int(port), timeout=10)
-                server.starttls()
-            if password:
-                server.login(username, password)
-            server.quit()
-            return True, f"SMTP OK {host}:{port}"
-        return False, f"Unsupported kind {kind}"
-    except Exception as e:
-        return False, str(e)
 
 
 @accounts_bp.route('/api/accounts')

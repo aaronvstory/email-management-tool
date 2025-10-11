@@ -141,6 +141,7 @@
     <h2><i class="bi bi-envelope-plus"></i> Add Email Account</h2>
     
     <form method="POST" id="addAccountForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <!-- Provider Selection -->
         <div class="provider-buttons">
             <button type="button" class="provider-btn" onclick="setProvider('gmail')">

@@ -1,8 +1,50 @@
 /**
  * Email Management Tool - Global JavaScript Utilities
  * Modern toast notification system using Bootstrap 5.3
+ * CSRF protection for all AJAX requests
  * Follows STYLEGUIDE.md dark theme principles
  */
+
+// ============================================================================
+// CSRF Protection - Global Fetch Wrapper
+// ============================================================================
+
+/**
+ * Get CSRF token from meta tag
+ */
+function getCSRFToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : null;
+}
+
+/**
+ * Wrap native fetch to automatically include CSRF token for same-origin requests
+ */
+const originalFetch = window.fetch;
+window.fetch = function(url, options = {}) {
+    // Only add CSRF for same-origin requests and non-GET/HEAD methods
+    const isSameOrigin = !url.startsWith('http') || url.startsWith(window.location.origin);
+    const method = (options.method || 'GET').toUpperCase();
+    const needsCSRF = isSameOrigin && !['GET', 'HEAD', 'OPTIONS'].includes(method);
+
+    if (needsCSRF) {
+        const csrfToken = getCSRFToken();
+        if (csrfToken) {
+            options.headers = options.headers || {};
+            if (options.headers instanceof Headers) {
+                options.headers.set('X-CSRFToken', csrfToken);
+            } else if (typeof options.headers === 'object') {
+                options.headers['X-CSRFToken'] = csrfToken;
+            }
+        }
+    }
+
+    return originalFetch(url, options);
+};
+
+// ============================================================================
+// Toast Notification System
+// ============================================================================
 
 // Toast container - auto-created on first use
 let toastContainer = null;

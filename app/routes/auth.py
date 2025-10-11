@@ -2,6 +2,7 @@
 
 Extracted from simple_app.py lines 567-607
 Routes: /, /login, /logout
+Phase 2: Added rate limiting for security hardening
 """
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
@@ -10,6 +11,9 @@ import sqlite3
 from app.utils.db import DB_PATH
 from app.models.simple_user import SimpleUser
 from app.services.audit import log_action
+
+# Import limiter from extensions
+from app import extensions
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -23,6 +27,7 @@ def index():
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
+@extensions.limiter.limit("5 per minute; 20 per hour", methods=["POST"])
 def login():
     """Login page"""
     if request.method == 'POST':
