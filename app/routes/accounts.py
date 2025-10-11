@@ -18,6 +18,15 @@ from app.utils.email_helpers import detect_email_settings as _detect_email_setti
 
 accounts_bp = Blueprint('accounts', __name__)
 
+# Safe int conversion helper
+_def = object()
+
+def _to_int(val, default=None):
+    try:
+        return int(val)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return default
+
 
 @accounts_bp.route('/api/accounts')
 @login_required
@@ -149,8 +158,8 @@ def api_test_account(account_id):
         conn.close(); return jsonify({'success': False, 'imap': {'success': False, 'message': 'IMAP username/password required'}, 'smtp': {'success': False, 'message': 'SMTP test skipped'}}), 400
     if not acc['smtp_username'] or not smtp_pwd:
         conn.close(); return jsonify({'success': False, 'imap': {'success': False, 'message': 'IMAP test skipped'}, 'smtp': {'success': False, 'message': 'SMTP username/password required'}}), 400
-    imap_ok, imap_msg = _test_email_connection('imap', acc['imap_host'], acc['imap_port'], acc['imap_username'], imap_pwd or '', acc['imap_use_ssl'])
-    smtp_ok, smtp_msg = _test_email_connection('smtp', acc['smtp_host'], acc['smtp_port'], acc['smtp_username'], smtp_pwd or '', acc['smtp_use_ssl'])
+    imap_ok, imap_msg = _test_email_connection('imap', str(acc['imap_host'] or ''), _to_int(acc['imap_port'], 993), str(acc['imap_username'] or ''), imap_pwd or '', bool(acc['imap_use_ssl']))
+    smtp_ok, smtp_msg = _test_email_connection('smtp', str(acc['smtp_host'] or ''), _to_int(acc['smtp_port'], 465), str(acc['smtp_username'] or ''), smtp_pwd or '', bool(acc['smtp_use_ssl']))
     cur.execute(
         """
         UPDATE email_accounts
@@ -200,12 +209,12 @@ def api_export_accounts():
 def api_test_connection(connection_type):
     """Test IMAP/SMTP connectivity to an arbitrary host using provided params."""
     data = request.get_json(silent=True) or {}
-    host = data.get('host'); port = int(data.get('port')) if data.get('port') else None
-    username = data.get('username'); password = data.get('password') or ''
+    host = str(data.get('host') or '').strip(); port = _to_int(data.get('port'), None)
+    username = str(data.get('username') or '').strip(); password = str(data.get('password') or '')
     use_ssl = bool(data.get('use_ssl', True))
     if not (host and port and username and password):
         return jsonify({'success': False, 'message': 'Missing parameters (host, port, username, password required)', 'error': 'Missing parameters'}), 400
-    ok, msg = _test_email_connection(connection_type, host, port, username, password, use_ssl)
+    ok, msg = _test_email_connection(connection_type, host, int(port), username, password, use_ssl)
     return jsonify({'success': ok, 'message': msg, 'error': None if ok else msg})
 
 
@@ -246,7 +255,8 @@ def email_accounts():
     conn.close()
 
     import os
-    template_path = os.path.join(current_app.template_folder, 'accounts_simple.html')
+    base_templates = getattr(current_app, 'template_folder', None) or os.path.join(current_app.root_path, 'templates')
+    template_path = os.path.join(base_templates, 'accounts_simple.html')
     if os.path.exists(template_path):
         return render_template('accounts_simple.html', accounts=accounts)
     else:
@@ -275,19 +285,19 @@ def add_email_account():
             imap_password = request.form.get('imap_password'); smtp_password = request.form.get('smtp_password')
         else:
             imap_host = request.form.get('imap_host')
-            imap_port = int(request.form.get('imap_port', 993))
+            imap_port = _to_int(request.form.get('imap_port'), 993)
             imap_username = request.form.get('imap_username')
             imap_password = request.form.get('imap_password')
             imap_use_ssl = request.form.get('imap_use_ssl') == 'on'
 
             smtp_host = request.form.get('smtp_host')
-            smtp_port = int(request.form.get('smtp_port', 465))
+            smtp_port = _to_int(request.form.get('smtp_port'), 465)
             smtp_username = request.form.get('smtp_username')
             smtp_password = request.form.get('smtp_password')
             smtp_use_ssl = request.form.get('smtp_use_ssl') == 'on'
 
-        imap_ok, imap_msg = _test_email_connection('imap', imap_host, imap_port, imap_username, imap_password, imap_use_ssl)
-        smtp_ok, smtp_msg = _test_email_connection('smtp', smtp_host, smtp_port, smtp_username, smtp_password, smtp_use_ssl)
+        imap_ok, imap_msg = _test_email_connection('imap', str(imap_host or ''), _to_int(imap_port, 993), str(imap_username or ''), imap_password or '', bool(imap_use_ssl))
+        smtp_ok, smtp_msg = _test_email_connection('smtp', str(smtp_host or ''), _to_int(smtp_port, 465), str(smtp_username or ''), smtp_password or '', bool(smtp_use_ssl))
 
         if not imap_ok:
             flash(f'IMAP connection failed: {imap_msg}', 'error')

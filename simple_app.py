@@ -59,7 +59,13 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY') or os.environ.get('SECRET_KEY') or os.environ.get('FLASK_SECRET') or 'dev-secret-change-in-production'
 
 # CSRF + Rate Limiting (use shared extension instances)
-from flask_wtf.csrf import generate_csrf, CSRFError
+try:
+    from flask_wtf.csrf import generate_csrf, CSRFError  # type: ignore[import]
+except Exception:
+    def generate_csrf() -> str:  # type: ignore[misc]
+        return ""
+    class CSRFError(Exception):  # type: ignore[misc]
+        pass
 from app.extensions import csrf, limiter
 
 # Bind extensions to app
@@ -452,7 +458,8 @@ class EmailModerationHandler:
 @app.context_processor
 def inject_template_context():
     """Inject pending_count and csrf_token into all templates"""
-    context = {'pending_count': 0}
+    from typing import Dict, Any
+    context: Dict[str, Any] = {'pending_count': 0}
 
     # Add pending count for authenticated users
     try:

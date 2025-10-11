@@ -207,9 +207,23 @@ def api_interception_release(msg_id:int):
         imap.login(row['imap_username'], decrypted_pass)
         status,_ = imap.select(target_folder)
         if status != 'OK': imap.select('INBOX')
-        # Pass None for date (current time) or original internaldate if available
-        internaldate = row['original_internaldate'] if row['original_internaldate'] else None
-        imap.append(target_folder, '', internaldate, msg.as_bytes()); imap.logout()
+        # Use internaldate if available; else use current time; format via IMAP internal date
+        date_param = None
+        try:
+            if row['original_internaldate']:
+                from datetime import datetime as _dt
+                try:
+                    dt = _dt.fromisoformat(str(row['original_internaldate']))
+                    date_param = imaplib.Time2Internaldate(dt.timetuple())
+                except Exception:
+                    date_param = None
+            if not date_param:
+                import time as _t
+                date_param = imaplib.Time2Internaldate(_t.localtime())
+        except Exception:
+            import time as _t
+            date_param = imaplib.Time2Internaldate(_t.localtime())
+        imap.append(target_folder, '', date_param, msg.as_bytes()); imap.logout()
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -314,13 +328,13 @@ def api_email_intercept(email_id:int):
             uid = row['original_uid']
             if not uid and row['message_id']:
                 crit = f'(HEADER Message-ID "{row["message_id"]}")'
-                typ, data = imap_obj.uid('search', None, crit)
+                typ, data = imap_obj.uid('SEARCH', crit)
                 if typ == 'OK' and data and data[0]:
                     found = data[0].split();
                     if found: uid = found[-1].decode()
             if not uid and row['subject']:
                 subj = (row['subject'] or '').replace('"', '')
-                typ, data = imap_obj.uid('search', None, f'(HEADER Subject "{subj}")')
+                typ, data = imap_obj.uid('SEARCH', f'(HEADER Subject "{subj}")')
                 if typ == 'OK' and data and data[0]:
                     found = data[0].split();
                     if found: uid = found[-1].decode()

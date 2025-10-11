@@ -202,7 +202,7 @@ def api_fetch_emails():
             try: mail.starttls()
             except Exception: pass
         mail.login(acct['imap_username'], password); mail.select('INBOX')
-        typ, data_uids = mail.uid('search', None, 'ALL')
+        typ, data_uids = mail.uid('SEARCH', 'ALL')
         if typ != 'OK':
             return jsonify({'success': False, 'error': 'UID SEARCH failed'}), 500
         uid_bytes = data_uids[0].split() if data_uids and data_uids[0] else []
@@ -241,11 +241,16 @@ def api_fetch_emails():
                 for part in msg.walk():
                     ctype = part.get_content_type(); payload = part.get_payload(decode=True)
                     if not payload: continue
-                    if ctype == 'text/plain': body_text = payload.decode('utf-8', errors='ignore')
-                    elif ctype == 'text/html': body_html = payload.decode('utf-8', errors='ignore')
+                    if ctype == 'text/plain' and isinstance(payload, (bytes, bytearray)):
+                        body_text = payload.decode('utf-8', errors='ignore')
+                    elif ctype == 'text/html' and isinstance(payload, (bytes, bytearray)):
+                        body_html = payload.decode('utf-8', errors='ignore')
             else:
                 payload = msg.get_payload(decode=True)
-                if payload: body_text = payload.decode('utf-8', errors='ignore')
+                if isinstance(payload, (bytes, bytearray)):
+                    body_text = payload.decode('utf-8', errors='ignore')
+                elif isinstance(payload, str):
+                    body_text = payload
             cur.execute(
                 """
                 INSERT OR IGNORE INTO email_messages

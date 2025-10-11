@@ -172,3 +172,8 @@ simple_app.py.backup*
 
 # Development
 .claude-session
+
+# Temporary files
+email_manager.db-shm
+email_manager.db-wal
+nul
