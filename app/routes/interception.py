@@ -18,6 +18,7 @@ import imaplib, ssl
 
 from app.utils.db import get_db, DB_PATH
 from app.utils.crypto import decrypt_credential, encrypt_credential
+from app.utils.imap_helpers import _imap_connect_account, _ensure_quarantine, _move_uid_to_quarantine
 
 bp_interception = Blueprint('interception_bp', __name__)
 

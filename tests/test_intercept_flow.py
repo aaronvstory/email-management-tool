@@ -113,8 +113,8 @@ def test_manual_intercept_moves_and_latency(monkeypatch):
     conn.commit()
     conn.close()
 
-    monkeypatch.setattr('simple_app._imap_connect_account', lambda row: (FakeIMAP(), True))
-    monkeypatch.setattr('simple_app._move_uid_to_quarantine', lambda *a, **k: True)
+    monkeypatch.setattr('app.utils.imap_helpers._imap_connect_account', lambda row: (FakeIMAP(), True))
+    monkeypatch.setattr('app.utils.imap_helpers._move_uid_to_quarantine', lambda *a, **k: True)
     monkeypatch.setattr('simple_app.decrypt_credential', lambda v: 'pass')
     from simple_app import app as flask_app
     client = flask_app.test_client()
