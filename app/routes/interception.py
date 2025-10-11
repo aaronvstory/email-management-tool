@@ -31,11 +31,28 @@ _HEALTH_CACHE: Dict[str, Any] = {'ts': 0.0, 'payload': None}
 
 @bp_interception.route('/healthz')
 def healthz():
+    """Health check endpoint with security configuration status (without exposing secrets)."""
     now = time.time()
     if _HEALTH_CACHE['payload'] and now - _HEALTH_CACHE['ts'] < 5:
         cached = dict(_HEALTH_CACHE['payload']); cached['cached'] = True
         return jsonify(cached), 200 if cached.get('ok') else 503
     info = {'ok': True,'db': None,'held_count':0,'released_24h':0,'median_latency_ms':None,'workers':[], 'timestamp': datetime.utcnow().isoformat()+'Z'}
+
+    # Add security configuration status (without exposing secret values)
+    try:
+        from flask import current_app
+        secret_key = current_app.config.get('SECRET_KEY', '')
+        info['security'] = {
+            'secret_key_configured': bool(secret_key and len(secret_key) >= 32),
+            'secret_key_prefix': secret_key[:8] if secret_key else '',  # Only first 8 chars for verification
+            'csrf_enabled': current_app.config.get('WTF_CSRF_ENABLED', False),
+            'csrf_time_limit': current_app.config.get('WTF_CSRF_TIME_LIMIT'),
+            'session_cookie_secure': current_app.config.get('SESSION_COOKIE_SECURE', False),
+            'session_cookie_httponly': current_app.config.get('SESSION_COOKIE_HTTPONLY', True),
+        }
+    except Exception:
+        info['security'] = {'status': 'unavailable'}
+
     try:
         conn = _db(); cur = conn.cursor()
         info['held_count'] = cur.execute("SELECT COUNT(*) FROM email_messages WHERE direction='inbound' AND interception_status='HELD'").fetchone()[0]
