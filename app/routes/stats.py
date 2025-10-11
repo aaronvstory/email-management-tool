@@ -9,6 +9,7 @@ import time
 import json
 from datetime import datetime
 from app.utils.db import get_db, fetch_counts
+from app.extensions import csrf
 from app.services.stats import get_stats
 
 stats_bp = Blueprint('stats', __name__)
@@ -71,6 +72,7 @@ def api_latency_stats():
 
 
 @stats_bp.route('/stream/stats')
+@csrf.exempt
 @login_required
 def stream_stats():
     """Server-sent events stream for real-time statistics"""
@@ -87,6 +89,7 @@ def stream_stats():
 
 
 @stats_bp.route('/api/events')
+@csrf.exempt
 @login_required
 def api_events():
     """Legacy SSE endpoint for real-time updates (migrated from monolith)."""

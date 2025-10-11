@@ -59,16 +59,27 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY') or os.environ.get('SECRET_KEY') or os.environ.get('FLASK_SECRET') or 'dev-secret-change-in-production'
 
 # CSRF + Rate Limiting (use shared extension instances)
-from flask_wtf.csrf import generate_csrf
+from flask_wtf.csrf import generate_csrf, CSRFError
 from app.extensions import csrf, limiter
 
 # Bind extensions to app
 csrf.init_app(app)
 limiter.init_app(app)
 
-# CSRF configuration - align token lifetime with session and allow HTTP in dev
-app.config['WTF_CSRF_TIME_LIMIT'] = None  # Don't expire tokens during long sessions
-app.config['WTF_CSRF_SSL_STRICT'] = False  # True in production when HTTPS is enforced
+# CSRF configuration - time-limited tokens and allow HTTP in dev
+app.config['WTF_CSRF_TIME_LIMIT'] = 7200  # 2 hours; rotate token periodically
+app.config['WTF_CSRF_SSL_STRICT'] = False  # Set True in production when HTTPS is enforced
+
+# SECRET_KEY validation: prevent accidental weak/default secret in production
+_default_secret = 'dev-secret-change-in-production'
+secret = app.config.get('SECRET_KEY')
+if (not app.debug) and (not secret or secret == _default_secret or len(str(secret)) < 32):
+    raise RuntimeError("SECURITY: A strong SECRET_KEY is required in production. Set FLASK_SECRET_KEY.")
+if app.debug and (not secret or secret == _default_secret):
+    try:
+        app.logger.warning("SECURITY: Using development SECRET_KEY; do not use in production.")
+    except Exception:
+        pass
 
 login_manager = LoginManager(app)
 login_manager.login_view = 'auth.login'  # type: ignore[reportAttributeAccessIssue]
@@ -460,6 +471,14 @@ def inject_template_context():
     return context
 
 # User-friendly error handlers for security events
+@app.errorhandler(CSRFError)
+def handle_csrf_exception(e):
+    """Explicit Flask-WTF CSRF error handler"""
+    if request.is_json:
+        return jsonify({'error': 'Security token expired. Please refresh the page.'}), 400
+    flash('Your session has expired. Please try again.', 'error')
+    return redirect(url_for('auth.login'))
+
 @app.errorhandler(400)
 def csrf_error(e):
     """Handle CSRF validation failures with user-friendly message"""
@@ -468,7 +487,7 @@ def csrf_error(e):
         if request.is_json:
             return jsonify({'error': 'Security token expired. Please refresh the page.'}), 400
         flash('Your session has expired. Please try again.', 'error')
-        return redirect(request.referrer or url_for('auth.login'))
+        return redirect(url_for('auth.login'))
     return jsonify({'error': error_str}), 400
 
 
@@ -478,7 +497,7 @@ def ratelimit_error(e):
     if request.is_json:
         return jsonify({'error': 'Too many requests. Please wait a moment and try again.'}), 429
     flash('Too many login attempts. Please wait a minute and try again.', 'warning')
-    return redirect(request.referrer or url_for('auth.login'))
+    return redirect(url_for('auth.login'))
 
 
 @app.after_request
@@ -492,7 +511,10 @@ def log_security_events(response):
         elif response.status_code == 429:
             app.logger.warning(f"Rate limit exceeded: {request.method} {request.url} from {request.remote_addr}")
     except Exception:
-        pass
+        try:
+            app.logger.exception("Security event logging failed")
+        except Exception:
+            pass
     return response
 
 # Routes

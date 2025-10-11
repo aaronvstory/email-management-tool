@@ -7,15 +7,17 @@ reference them in decorators. The actual app binding happens in
 simple_app.py via .init_app(app).
 """
 
+import os
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_wtf import CSRFProtect
 
 # Global extension instances (configured in simple_app.py)
+_storage_uri = os.environ.get('RATELIMIT_STORAGE_URL', 'memory://')
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["200 per day", "50 per hour"],
-    storage_uri="memory://",
+    storage_uri=_storage_uri,
 )
 
 csrf = CSRFProtect()
