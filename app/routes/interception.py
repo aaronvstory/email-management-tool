@@ -264,13 +264,23 @@ def api_interception_release(msg_id:int):
     target_folder = payload.get('target_folder','INBOX')
     strip_attachments = bool(payload.get('strip_attachments'))
     conn = _db(); cur = conn.cursor()
+    # Fetch regardless of current interception_status to support idempotency
     row = cur.execute("""
         SELECT em.*, ea.imap_host, ea.imap_port, ea.imap_username, ea.imap_password, ea.imap_use_ssl
         FROM email_messages em JOIN email_accounts ea ON em.account_id = ea.id
-        WHERE em.id=? AND em.direction='inbound' AND em.interception_status='HELD'
+        WHERE em.id=? AND em.direction='inbound'
     """, (msg_id,)).fetchone()
     if not row:
-        conn.close(); return jsonify({'ok':False,'reason':'not-held'}), 409
+        conn.close(); return jsonify({'ok':False,'reason':'not-found'}), 404
+    # Idempotent success if already released
+    if str(row.get('interception_status') or '').upper() == 'RELEASED':
+        conn.close(); return jsonify({'ok': True, 'reason': 'already-released'})
+    # Discarded items cannot be released via this endpoint
+    if str(row.get('interception_status') or '').upper() == 'DISCARDED':
+        conn.close(); return jsonify({'ok': False, 'reason': 'discarded'}), 409
+    # Require HELD for a release action
+    if str(row.get('interception_status') or '').upper() != 'HELD':
+        conn.close(); return jsonify({'ok': False, 'reason': 'not-held'}), 409
 
     # Default to persisted edits when payload doesn't include them
     if edited_subject is None:

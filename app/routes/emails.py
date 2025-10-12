@@ -95,6 +95,9 @@ def api_emails_unified():
         else:
             query += " AND (interception_status = ? OR status = ?)"
             params.extend([status_filter, status_filter])
+    else:
+        # Default ALL view hides DISCARDED items
+        query += " AND (interception_status IS NULL OR interception_status != 'DISCARDED')"
 
     query += " ORDER BY created_at DESC LIMIT 200"
 
@@ -123,10 +126,12 @@ def api_emails_unified():
 
     conn.close()
 
+    # Keep counts consistent with current filter for the UI badges
+    total_for_ui = len(email_list) if (status_filter is None or status_filter == 'ALL') else counts.get('total', 0)
     return jsonify({
         'emails': email_list,
         'counts': {
-            'total': counts.get('total', 0),
+            'total': total_for_ui,
             'held': counts.get('held', 0),
             'pending': counts.get('pending', 0),
             'approved': counts.get('approved', 0),
