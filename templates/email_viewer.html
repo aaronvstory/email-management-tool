@@ -74,7 +74,7 @@
   }
 
   .action-btn.primary {
-    background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+    background: linear-gradient(135deg,#dc2626 0%,#991b1b 100%);
     border: none;
   }
 
@@ -112,9 +112,9 @@
   }
 
   .toggle-btn.active {
-    background: rgba(103,126,234,0.2);
-    border-color: #667eea;
-    color: #667eea;
+    background: rgba(220,38,38,0.15);
+    border-color: #dc2626;
+    color: #dc2626;
   }
 
   .email-content {
@@ -148,19 +148,8 @@
     margin: 5px 0;
   }
 
-  .status-badge {
-    display: inline-block;
-    padding: 5px 12px;
-    border-radius: 999px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    text-transform: uppercase;
-  }
-
-  .status-HELD { background: #ffb34733; color: #ffb347; }
-  .status-RELEASED { background: #4ade8033; color: #4ade80; }
-  .status-FETCHED { background: #6366f133; color: #818cf8; }
-  .status-PENDING { background: #f59e0b33; color: #f59e0b; }
+  /* Status chip styles are unified in main.css */
+  /* .status-badge and .status-* colors applied globally */
 </style>
 {% endblock %}
 

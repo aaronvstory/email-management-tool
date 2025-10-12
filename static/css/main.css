@@ -885,10 +885,10 @@ button[type="button"],
 
 /* BUTTON STYLES - Consistent appearance */
 
-/* Primary buttons */
+/* Primary buttons — brand red */
 .btn-primary,
 .btn-primary-modern {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%) !important;
   color: #ffffff !important;
   border: 2px solid transparent !important;
 }
@@ -897,9 +897,9 @@ button[type="button"],
 .btn-primary-modern:hover,
 .btn-primary:focus,
 .btn-primary-modern:focus {
-  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%) !important;
+  background: linear-gradient(135deg, #dc2626 0%, #7f1d1d 100%) !important;
   transform: translateY(-1px) !important;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35) !important;
   color: #ffffff !important;
 }
 
@@ -978,15 +978,15 @@ button[type="button"],
 /* Outline buttons */
 .btn-outline-primary {
   background: transparent !important;
-  color: #667eea !important;
-  border: 2px solid #667eea !important;
+  color: #dc2626 !important;
+  border: 2px solid #dc2626 !important;
 }
 
 .btn-outline-primary:hover,
 .btn-outline-primary:focus {
-  background: #667eea !important;
+  background: #dc2626 !important;
   color: #ffffff !important;
-  border-color: #667eea !important;
+  border-color: #dc2626 !important;
 }
 
 .btn-outline-secondary {
@@ -1081,7 +1081,7 @@ button[disabled] {
 
 /* FOCUS STATES - Accessible and consistent */
 .btn:focus {
-  outline: 2px solid #667eea !important;
+  outline: 2px solid #dc2626 !important;
   outline-offset: 2px !important;
 }
 
@@ -1199,3 +1199,35 @@ button[disabled] {
     background: rgba(255,255,255,0.08) !important;
     color: #fff !important;
 }
+
+/* =============================
+   STATUS CHIPS — UNIFIED SIZING/COLORS
+   Ensure identical size/position across pages
+   ============================= */
+.status-chip,
+.status-badge,
+.badge.status-chip,
+.badge.status-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 28px !important;
+    padding: 0 12px !important;
+    border-radius: 8px !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.04em !important;
+    text-transform: uppercase !important;
+    line-height: 1 !important;
+    border: 1px solid rgba(255,255,255,0.18) !important;
+    min-width: 96px !important;
+    text-align: center !important;
+}
+
+.status-HELD { background: rgba(251,191,36,0.15) !important; color: #fbbf24 !important; border-color: rgba(251,191,36,0.35) !important; }
+.status-PENDING { background: rgba(245,158,11,0.15) !important; color: #f59e0b !important; border-color: rgba(245,158,11,0.35) !important; }
+.status-APPROVED, .status-RELEASED, .status-DELIVERED { background: rgba(16,185,129,0.15) !important; color: #10b981 !important; border-color: rgba(16,185,129,0.35) !important; }
+.status-REJECTED, .status-DISCARDED { background: rgba(239,68,68,0.15) !important; color: #f87171 !important; border-color: rgba(239,68,68,0.35) !important; }
+.status-SENT { background: rgba(107,114,128,0.22) !important; color: #e5e7eb !important; border-color: rgba(107,114,128,0.35) !important; }
+
+.status-cell { display:flex !important; align-items:center !important; gap:6px !important; flex-wrap:nowrap !important; }

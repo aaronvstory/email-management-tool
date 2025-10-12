@@ -261,9 +261,7 @@
                                 <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">{{ email.recipients }}</td>
                                 <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;">{{ email.subject[:50] }}{% if email.subject|length > 50 %}...{% endif %}</td>
                                 <td style="border-color:rgba(255,255,255,0.06) !important;">
-                                    <span class="badge" style="background:{% if email.status == 'PENDING' %}#f59e0b{% elif email.status == 'APPROVED' %}#10b981{% elif email.status == 'REJECTED' %}#dc2626{% else %}#6b7280{% endif %} !important;color:#fff !important;">
-                                        {{ email.status }}
-                                    </span>
+                                    <span class="status-badge status-{{ email.status }}">{{ email.status }}</span>
                                 </td>
                                 <td style="color:#9ca3af !important;border-color:rgba(255,255,255,0.06) !important;">{{ email.created_at }}</td>
                                 <td style="border-color:rgba(255,255,255,0.06) !important;">

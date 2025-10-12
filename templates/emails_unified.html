@@ -167,45 +167,7 @@
     max-width: 400px;
   }
 
-  /* Status Badges */
-  .status-badge {
-    display: inline-block;
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .status-HELD {
-    background: rgba(251,191,36,0.15);
-    color: #fbbf24;
-    border: 1px solid rgba(251,191,36,0.3);
-  }
-
-  .status-PENDING {
-    background: rgba(99,102,241,0.15);
-    color: #818cf8;
-    border: 1px solid rgba(99,102,241,0.3);
-  }
-
-  .status-APPROVED, .status-RELEASED {
-    background: rgba(16,185,129,0.15);
-    color: #10b981;
-    border: 1px solid rgba(16,185,129,0.3);
-  }
-  .status-DELIVERED {
-    background: rgba(16,185,129,0.15);
-    color: #10b981;
-    border: 1px solid rgba(16,185,129,0.3);
-  }
-
-  .status-REJECTED, .status-DISCARDED {
-    background: rgba(239,68,68,0.15);
-    color: #f87171;
-    border: 1px solid rgba(239,68,68,0.3);
-  }
+  /* Status badge styling unified in main.css (.status-badge/.status-chip + .status-*) */
 
   .status-FETCHED {
     background: rgba(59,130,246,0.15);
@@ -236,7 +198,7 @@
   }
 
   .action-btn.primary {
-    background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+    background: linear-gradient(135deg,#dc2626 0%,#991b1b 100%);
     border: none;
   }
 
@@ -765,7 +727,7 @@ function renderEmails(emails) {
         ${email.preview_snippet ? `<div class="email-preview">${email.preview_snippet.substring(0, 100)}...</div>` : ''}
       </td>
       <td>
-        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <div class="status-cell">
           <span class="status-badge status-${status}">${status}</span>
           ${watcherBadge}
           <button class="btn btn-sm btn-secondary" title="Restart watcher" onclick="restartWatcherFor(${email.account_id})"><i class="bi bi-arrow-repeat"></i></button>
