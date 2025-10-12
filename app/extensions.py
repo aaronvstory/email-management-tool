@@ -13,11 +13,28 @@ from flask_limiter.util import get_remote_address
 
 # Global extension instances (configured in simple_app.py)
 _storage_uri = os.environ.get('RATELIMIT_STORAGE_URL', 'memory://')
-limiter = Limiter(
-    key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"],
-    storage_uri=_storage_uri,
-)
+
+# Allow hard disable via env (requested by user for heavy local usage)
+_disable_limits = str(os.environ.get('DISABLE_RATE_LIMITS', '1')).lower() in ('1','true','yes','on')
+
+if _disable_limits:
+    # No-op limiter compatible with .init_app(), .limit and .exempt decorators
+    class _NoopLimiter:
+        def init_app(self, app):
+            app.config['RATELIMIT_ENABLED'] = False
+        def limit(self, *args, **kwargs):
+            def _deco(f):
+                return f
+            return _deco
+        def exempt(self, f):
+            return f
+    limiter = _NoopLimiter()
+else:
+    limiter = Limiter(
+        key_func=get_remote_address,
+        default_limits=[],  # no global defaults; opt-in per-route only
+        storage_uri=_storage_uri,
+    )
 
 # CSRF Protection with fallback for missing Flask-WTF
 try:

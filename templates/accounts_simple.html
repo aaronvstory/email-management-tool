@@ -142,13 +142,23 @@
         transform: translateY(-2px);
         box-shadow: 0 5px 20px rgba(220, 38, 38, 0.4);
     }
+
+    /* Toolbar sizing/padding consistency */
+    .accounts-toolbar .btn,
+    .accounts-toolbar .add-account-btn { height: 42px; display: inline-flex; align-items: center; }
+    .accounts-toolbar .input-modern { height: 42px; }
+    .accounts-toolbar .form-check { margin: 0; }
+    .accounts-toolbar .form-check-input { width: 1.1rem; height: 1.1rem; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="bi bi-envelope-at-fill"></i> Email Account Management</h1>
-    <div class="d-flex align-items-center gap-2">
+    <h1 class="d-flex align-items-center gap-2">
+      <i class="bi bi-envelope-at-fill"></i> Email Account Management
+      <span class="badge bg-secondary" id="account-total">Total: {{ accounts|length }}</span>
+    </h1>
+    <div class="d-flex align-items-center gap-2 accounts-toolbar">
         <input id="accounts-search" class="input-modern" placeholder="Search accounts..." style="min-width:240px;" oninput="filterAccounts()" />
         <div class="form-check" title="Select all">
           <input class="form-check-input" type="checkbox" id="select-all" onclick="toggleSelectAll(this)">
@@ -595,19 +605,39 @@ async function bulkDeleteSelected(){
       if (btn){ btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deleting...'; }
       const r = await fetch('/api/accounts/bulk-delete', {
         method:'POST',
-        headers:{'Content-Type':'application/json'},
+        headers:{
+          'Content-Type':'application/json',
+          'Accept':'application/json'
+        },
+        credentials: 'same-origin',
         body: JSON.stringify({ ids })
       });
-      const j = await r.json();
+      let j;
+      const ct = (r.headers.get('content-type')||'').toLowerCase();
+      if (ct.includes('application/json')){
+        j = await r.json();
+      } else {
+        const t = await r.text();
+        throw new Error(t && t.trim() ? t.trim().slice(0,200) : `HTTP ${r.status}`);
+      }
       if (!r.ok || j.success === false){ throw new Error(j.error || `HTTP ${r.status}`); }
       // Remove deleted cards from DOM
       (j.ids || ids).forEach(id => {
         const wrap = document.getElementById('account-card-'+id);
         if (wrap) wrap.remove();
       });
+      // Update total badge
+      try{
+        const badge = document.getElementById('account-total');
+        if (badge){
+          const current = parseInt((badge.textContent||'').replace(/[^0-9]/g,''),10);
+          const next = isFinite(current) ? Math.max(0, current - (j.deleted||ids.length)) : undefined;
+          if (typeof next !== 'undefined') badge.textContent = `Total: ${next}`;
+        }
+      }catch(e){}
       onSelectionChanged();
       if (window.showSuccess) showSuccess(`Deleted ${j.deleted||ids.length} account(s)`);
-    }catch(e){ if (window.showError) showError('Bulk delete failed: '+e.message); }
+    }catch(e){ if (window.showError) showError('Bulk delete failed: '+(e && e.message ? e.message : 'Unknown error')); }
     finally{ if (btn){ btn.disabled = false; btn.innerHTML = original || '<i class="bi bi-trash3"></i> Delete Selected'; } }
   };
 
