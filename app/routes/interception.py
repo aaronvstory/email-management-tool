@@ -272,6 +272,12 @@ def api_interception_release(msg_id:int):
     if not row:
         conn.close(); return jsonify({'ok':False,'reason':'not-held'}), 409
 
+    # Default to persisted edits when payload doesn't include them
+    if edited_subject is None:
+        edited_subject = row['subject']
+    if edited_body is None:
+        edited_body = row['body_text'] or None
+
     # Load email from raw_path (legacy) or raw_content (new UID-based fetch)
     raw_path = row['raw_path']
     raw_content = row['raw_content']
@@ -287,15 +293,34 @@ def api_interception_release(msg_id:int):
         msg.replace_header('Subject', edited_subject) if msg['Subject'] else msg.add_header('Subject', edited_subject)
     if edited_body:
         if msg.is_multipart():
+            # Update both text/plain and text/html parts to ensure clients display edits
+            updated_plain = False; updated_html = False
+            html_body = edited_body.replace('\n', '<br>')
             for part in msg.walk():
-                if part.get_content_type()=='text/plain':
-                    part.set_content(edited_body); break
+                if part.is_multipart():
+                    continue
+                ctype = (part.get_content_type() or '').lower()
+                try:
+                    if ctype == 'text/plain' and not updated_plain:
+                        part.set_content(edited_body)
+                        updated_plain = True
+                    elif ctype == 'text/html' and not updated_html:
+                        part.set_content(f"<div>{html_body}</div>", subtype='html')
+                        updated_html = True
+                except Exception:
+                    pass
         else:
             from email.message import EmailMessage
             new_msg = EmailMessage();
             for k,v in msg.items():
                 if k.lower() != 'content-type': new_msg[k] = v
-            new_msg.set_content(edited_body); msg = new_msg
+            # Provide both plain and basic HTML alternatives
+            new_msg.set_content(edited_body)
+            try:
+                new_msg.add_alternative(f"<div>{edited_body.replace('\n','<br>')}</div>", subtype='html')
+            except Exception:
+                pass
+            msg = new_msg
     removed = []
     if strip_attachments and msg.is_multipart():
         from email.message import EmailMessage

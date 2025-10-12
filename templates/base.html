@@ -32,9 +32,9 @@
 </head>
 <body class="dark-enabled">
     <!-- Slim top navigation bar -->
-    <header class="navbar-main" style="display:flex;align-items:center;gap:1rem;padding:.7rem 1.25rem;background:rgba(26,26,26,0.95);backdrop-filter:blur(10px);border-bottom:1px solid #2a2a2a;position:sticky;top:0;z-index:1000;">
-        <a href="/" style="text-decoration:none;font-weight:600;color:#fff;letter-spacing:.5px;font-size:.9rem;">MAIL OPS</a>
-        <nav style="display:flex;gap:.4rem;flex-wrap:wrap;">
+    <header class="navbar-main">
+        <a href="/" class="navbar-brand-mini">MAIL OPS</a>
+        <nav class="nav-mini">
             <a href="/emails-unified" class="nav-mini-link {% if request.path.startswith('/emails') or request.path.startswith('/inbox') or request.path.startswith('/interception') %}active{% endif %}">Emails</a>
             <a href="/compose" class="nav-mini-link {% if request.path.startswith('/compose') %}active{% endif %}">Compose</a>
             <a href="/diagnostics" class="nav-mini-link {% if request.path.startswith('/diagnostics') %}active{% endif %}">Diagnostics</a>
@@ -42,17 +42,13 @@
             <a href="/accounts" class="nav-mini-link {% if request.path.startswith('/accounts') %}active{% endif %}">Accounts</a>
             {% endif %}
         </nav>
-        <div style="margin-left:auto;display:flex;align-items:center;gap:.6rem;">
-            <span style="background:#ff006e;padding:.25rem .55rem;border-radius:999px;font-size:.6rem;font-weight:600;">{{ pending_count }}</span>
+        <div class="navbar-right">
+            <span class="badge badge-soft-danger" title="Pending">{{ pending_count }}</span>
             {% if current_user.is_authenticated %}
               <span style="font-size:.65rem;opacity:.75;">{{ current_user.username }}</span>
-              <a href="/logout" style="text-decoration:none;font-size:.6rem;padding:.3rem .55rem;border:1px solid rgba(255,255,255,0.25);border-radius:6px;color:#fff;">Logout</a>
+              <a href="/logout" class="btn-ghost btn-sm">Logout</a>
             {% endif %}
         </div>
-        <style>
-          .nav-mini-link{color:rgba(255,255,255,0.7);text-decoration:none;font-size:.6rem;padding:.35rem .65rem;border-radius:6px;font-weight:600;letter-spacing:.5px;transition:background .2s,color .2s;}
-          .nav-mini-link:hover,.nav-mini-link.active{background:rgba(255,255,255,0.12);color:#fff;}
-        </style>
     </header>
     <div class="dark-app-shell">
         <!-- Modern Sidebar (kept original nav for fallback) -->
@@ -90,8 +86,8 @@
                     <input type="text" placeholder="Search mail, accounts, rules..." aria-label="Search">
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;">
-                    <span id="nav-smtp" class="badge" title="SMTP Proxy">SMTP</span>
-                    <span id="nav-watchers" class="badge" title="Active IMAP watchers">Watchers: --</span>
+                    <span id="nav-smtp" class="badge badge-soft-muted" title="SMTP Proxy">SMTP</span>
+                    <span id="nav-watchers" class="badge badge-soft-muted" title="Active IMAP watchers">Watchers: --</span>
                 </div>
             </div>
             <div class="content-scroll">
@@ -126,15 +122,16 @@
             if(!r.ok) return;
             const j = await r.json();
             const smtp = document.getElementById('nav-smtp');
-            smtp.textContent = j.smtp && j.smtp.listening ? 'SMTP: OK' : 'SMTP: DOWN';
-            smtp.style.borderColor = (j.smtp && j.smtp.listening) ? '#10b981' : '#dc2626';
-            smtp.style.background = (j.smtp && j.smtp.listening) ? 'rgba(16,185,129,0.15)' : 'rgba(220,38,38,0.15)';
+            const ok = j.smtp && j.smtp.listening;
+            smtp.textContent = ok ? 'SMTP: OK' : 'SMTP: DOWN';
+            smtp.classList.remove('badge-soft-success','badge-soft-danger','badge-soft-muted');
+            smtp.classList.add(ok ? 'badge-soft-success' : 'badge-soft-danger');
+
             const w = document.getElementById('nav-watchers');
             const count = Array.isArray(j.workers) ? j.workers.length : 0;
             w.textContent = 'Watchers: ' + count;
-            w.style.borderColor = count > 0 ? '#10b981' : 'rgba(255,255,255,0.25)';
-            w.style.background = count > 0 ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.08)';
-            w.style.color = '#fff';
+            w.classList.remove('badge-soft-success','badge-soft-danger','badge-soft-muted');
+            w.classList.add(count > 0 ? 'badge-soft-success' : 'badge-soft-muted');
         }catch(e){/* ignore */}
     }
     refreshTopbarHealth(); setInterval(refreshTopbarHealth, 10000);

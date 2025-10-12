@@ -1131,3 +1131,71 @@ button[disabled] {
     border-radius: 6px !important;
   }
 }
+
+/* =============================
+   HEADER/NAV (moved from inline)
+   ============================= */
+.navbar-main {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: .7rem 1.25rem;
+    background: rgba(26,26,26,0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid #2a2a2a;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+.navbar-brand-mini {
+    text-decoration: none;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: .5px;
+    font-size: .9rem;
+}
+.nav-mini {
+    display: flex;
+    gap: .4rem;
+    flex-wrap: wrap;
+}
+.nav-mini-link{
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    font-size: .6rem;
+    padding: .35rem .65rem;
+    border-radius: 6px;
+    font-weight: 600;
+    letter-spacing: .5px;
+    transition: background .2s,color .2s;
+}
+.nav-mini-link:hover,
+.nav-mini-link.active{
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+}
+.navbar-right{
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+}
+
+/* =============================
+   SOFT BADGES FOR STATUS CHIPS
+   ============================= */
+.badge-soft-success{
+    border-color: var(--success-color) !important;
+    background: rgba(16,185,129,0.15) !important;
+    color: #fff !important;
+}
+.badge-soft-danger{
+    border-color: var(--danger-color) !important;
+    background: rgba(220,38,38,0.15) !important;
+    color: #fff !important;
+}
+.badge-soft-muted{
+    border-color: rgba(255,255,255,0.25) !important;
+    background: rgba(255,255,255,0.08) !important;
+    color: #fff !important;
+}

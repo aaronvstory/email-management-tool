@@ -59,6 +59,7 @@ def emails_unified():
         pending_count=counts.get('pending', 0),
         approved_count=counts.get('approved', 0),
         rejected_count=counts.get('rejected', 0),
+        released_count=counts.get('released', 0),
     )
 
 
@@ -88,8 +89,12 @@ def api_emails_unified():
         params.append(account_id)
 
     if status_filter and status_filter != 'ALL':
-        query += " AND (interception_status = ? OR status = ?)"
-        params.extend([status_filter, status_filter])
+        if status_filter == 'RELEASED':
+            # Treat released as either interception_status=RELEASED or legacy delivered/sent/approved
+            query += " AND (interception_status='RELEASED' OR status IN ('SENT','APPROVED','DELIVERED'))"
+        else:
+            query += " AND (interception_status = ? OR status = ?)"
+            params.extend([status_filter, status_filter])
 
     query += " ORDER BY created_at DESC LIMIT 200"
 
@@ -126,6 +131,7 @@ def api_emails_unified():
             'pending': counts.get('pending', 0),
             'approved': counts.get('approved', 0),
             'rejected': counts.get('rejected', 0),
+            'released': counts.get('released', 0),
         }
     })
 
