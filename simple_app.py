@@ -116,6 +116,26 @@ def check_port_available(port, host='localhost'):
 # Load environment from .env early
 load_dotenv()
 
+# Hard preflight: require live credentials present in environment
+def _require_live_env():
+    require_flag = str(os.environ.get('REQUIRE_LIVE_CREDENTIALS', '1')).lower() in ('1','true','yes')
+    if not require_flag:
+        return
+    required = [
+        'GMAIL_ADDRESS', 'GMAIL_PASSWORD',
+        'HOSTINGER_ADDRESS', 'HOSTINGER_PASSWORD',
+    ]
+    missing = [k for k in required if not os.environ.get(k)]
+    if missing:
+        msg = (
+            "Live credentials required. Missing: " + ", ".join(missing) +
+            "\nSet them in .env (do not paste here). To bypass (not recommended), set REQUIRE_LIVE_CREDENTIALS=0."
+        )
+        print(msg)
+        raise SystemExit(2)
+
+_require_live_env()
+
 app = Flask(__name__)
 from app.utils.logging import setup_app_logging
 setup_app_logging(app)
