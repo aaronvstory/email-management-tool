@@ -122,7 +122,7 @@
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    table-layout: fixed;
+    table-layout: auto; /* was fixed */
   }
 
   .email-table thead th {
@@ -282,9 +282,9 @@
     border: 1px solid rgba(255,255,255,0.12) !important;
   }
 
-  /* Density tweaks */
-  .email-table thead th { padding: 8px 10px; }
-  .email-table tbody td { padding: 8px 10px; }
+  /* Header/row density */
+  .email-table thead th { padding: 6px 10px; }
+  .email-table tbody td { padding: 6px 10px; }
   .chip, .status-badge, .status-chip {
     min-height: 22px; padding: 3px 8px; font-size: 12px; font-weight: 700;
   }
@@ -292,21 +292,27 @@
   .action-btn { padding: 4px 8px; font-size: 12px; border-radius: 6px; }
   .email-table tbody tr:hover { background: rgba(255,255,255,0.04); }
 
-  /* Subject column: flex and ellipsis */
-  .email-table .col-subject { width: auto; }
+  /* Lock widths for non-flex columns so Subject can take the rest */
+  .email-table th:nth-child(2), .email-table td:nth-child(2) { width: 120px; }
+  .email-table th:nth-child(3), .email-table td:nth-child(3) { width: 14rem; }
+  .email-table th:nth-child(4), .email-table td:nth-child(4) { width: 14rem; }
+  .email-table th:nth-child(6), .email-table td:nth-child(6) { width: 160px; }
+  .email-table th:nth-child(7), .email-table td:nth-child(7) { width: 100px; }
+
+  /* Subject: fill remaining width and ellipsis nicely */
+  .email-table th:nth-child(5), .email-table td:nth-child(5) { width: auto; }
+  .email-table td:nth-child(5) .subject-cell { display:block; width:100%; }
   .email-table td:nth-child(5) .email-preview,
   .email-table td:nth-child(5) .email-subject,
   .email-table td:nth-child(5) .subject-cell {
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
   }
 
   /* Compact info cards in modal */
   .content-section.compact { padding: 14px 16px; }
 
-  /* Subject actually fills the cell + lock action/status widths */
-  .email-table td .subject-cell { display:block; width:100%; }
-  .email-table td[data-label="Actions"] { width:160px; }
-  .email-table td[data-label="Status"]  { width:100px; }
+  /* Actions cell: compact and right-aligned */
+  .email-table td[data-label="Actions"] .actions { display:inline-flex; gap:4px; justify-content:flex-end; width:100%; }
 
   /* Modal sizing to prevent cut-off */
   #emailDetailModal .modal-dialog { max-width: min(1200px, 96vw); }
@@ -314,6 +320,10 @@
   #emailDetailModal .modal-header,
   #emailDetailModal .modal-footer { flex: 0 0 auto; }
   #emailDetailModal .modal-body { flex: 1 1 auto; overflow: auto; }
+
+  /* Email Detail modal sizing and scrolling (viewport-aware) */
+  #emailDetailModal .modal-dialog { max-width: min(1100px, 95vw); margin: 2vh auto; }
+  #emailDetailModal .modal-body { max-height: calc(100vh - 200px); overflow: auto; }
 
   /* Icon buttons hitbox (match Dashboard) */
   .btn-icon { padding: 4px 6px !important; border-radius: 6px !important; }
@@ -426,7 +436,7 @@
           <th style="width:14rem">To</th>
           <th class="col-subject">Subject</th>
           <th style="width:160px">Actions</th>
-          <th style="width:100px">Status</th>
+          <th style="width:140px">Status</th>
         </tr>
       </thead>
       <tbody id="emailTableBody" aria-live="polite">
