@@ -47,48 +47,10 @@
     </div>
 </div>
 
-<!-- Navigation Tabs -->
-<ul class="nav nav-tabs" role="tablist">
-    <li class="nav-item">
-        <a class="nav-link {% if active_tab == 'overview' %}active{% endif %}"
-           href="{{ url_for('dashboard.dashboard', tab='overview') }}{% if selected_account_id %}?account_id={{ selected_account_id }}{% endif %}">
-            <i class="bi bi-grid-3x3-gap"></i> Overview
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link {% if active_tab == 'emails' %}active{% endif %}"
-           href="{{ url_for('dashboard.dashboard', tab='emails') }}{% if selected_account_id %}?account_id={{ selected_account_id }}{% endif %}">
-            <i class="bi bi-envelope"></i> Emails
-            {% if stats.pending > 0 %}
-            <span class="badge bg-danger">{{ stats.pending }}</span>
-            {% endif %}
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link {% if active_tab == 'accounts' %}active{% endif %}"
-           href="{{ url_for('dashboard.dashboard', tab='accounts') }}">
-            <i class="bi bi-person-lines-fill"></i> Accounts
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link {% if active_tab == 'diagnostics' %}active{% endif %}"
-           href="{{ url_for('dashboard.dashboard', tab='diagnostics') }}{% if selected_account_id %}?account_id={{ selected_account_id }}{% endif %}">
-            <i class="bi bi-heart-pulse"></i> Diagnostics
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link {% if active_tab == 'rules' %}active{% endif %}"
-           href="{{ url_for('dashboard.dashboard', tab='rules') }}">
-            <i class="bi bi-shield-check"></i> Rules
-        </a>
-    </li>
-</ul>
+<!-- Tabs removed: the Dashboard is a single view -->
 
-<!-- Tab Content -->
-<div class="tab-content">
-    {% if active_tab == 'overview' %}
-    <!-- Overview Tab -->
-    <div class="tab-pane fade show active">
+<!-- Single Dashboard view -->
+<div>
       <div class="content-section">
         <div class="content-section-header">
           <div class="section-title">System Stats</div>
@@ -160,176 +122,12 @@
           </table>
         </div>
       </div>
-    </div>
-    
-    {% elif active_tab == 'accounts' %}
-    <!-- Accounts Tab (cards-grid) -->
-    <div class="tab-pane fade show active">
-      <div class="content-section">
-        <div class="content-section-header">
-          <div class="section-title">Accounts</div>
-          <div class="btn-group-unified">
-            <a href="/accounts/add" class="btn btn-primary-modern btn-sm" role="button"><i class="bi bi-plus-circle"></i> Add Account</a>
-          </div>
-        </div>
-        <div class="cards-grid">
-          {% for account in accounts %}
-          <article class="watcher-card">
-            <div class="d-flex justify-content-between align-items-start">
-              <div class="fw-semibold">{{ account.account_name }}</div>
-              <span class="chip {% if account.is_active %}chip-ok{% else %}chip-bad{% endif %}">
-                {% if account.is_active %}active{% else %}inactive{% endif %}
-              </span>
-            </div>
-            <div class="small email-clip">{{ account.email_address }}</div>
-            <div class="small" style="opacity:.8">
-              IMAP: {{ account.imap_host }}:{{ account.imap_port }} · SMTP: {{ account.smtp_host }}:{{ account.smtp_port }}
-            </div>
-            <div class="btn-group-unified">
-              <button class="btn btn-secondary btn-sm" onclick="testAccount('{{ account.id }}')"><i class="bi bi-play-circle"></i> Test</button>
-              <button class="btn btn-secondary btn-sm" onclick="editAccount('{{ account.id }}')"><i class="bi bi-pencil"></i> Edit</button>
-              <a class="btn btn-secondary btn-sm" href="{{ url_for('dashboard.dashboard', tab='diagnostics') }}?account_id={{ account.id }}"><i class="bi bi-heart-pulse"></i> Diagnostics</a>
-            </div>
-          </article>
-          {% endfor %}
-        </div>
-      </div>
-    </div>
-    
-    {% elif active_tab == 'diagnostics' %}
-    <!-- Diagnostics Tab -->
-    <div class="tab-pane fade show active">
-      {% if selected_account_id %}
-      <div class="content-section">
-        <div class="content-section-header">
-          <div class="section-title">Diagnostics</div>
-        </div>
-        <div class="btn-group-unified mb-2">
-          <button class="btn btn-secondary btn-sm" onclick="runDiagnostics('{{ selected_account_id }}')"><i class="bi bi-play-circle"></i> Run Diagnostics</button>
-        </div>
-        <div id="diagnosticsResults" class="mt-2"></div>
-      </div>
-      {% else %}
-      <div class="content-section">
-        <div class="content-section-header"><div class="section-title">Diagnostics</div></div>
-        <div class="subtle"><i class="bi bi-info-circle"></i> Please select an account from the dropdown above to run diagnostics.</div>
-      </div>
-      {% endif %}
-    </div>
-    
-    {% elif active_tab == 'emails' %}
-    <!-- Emails Tab -->
-    <div class="tab-pane fade show active">
-      <div class="content-section">
-        <div class="content-section-header">
-          <div class="section-title">Email Queue</div>
-        </div>
-        <div class="table-responsive">
-          <table class="table-modern">
-            <thead><tr><th>UID</th><th>From</th><th>To</th><th>Subject</th><th>Status</th><th></th></tr></thead>
-            <tbody><!-- dynamic --></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-    
-    {% elif active_tab == 'rules' %}
-    <!-- Rules Tab -->
-    <div class="tab-pane fade show active">
-        <div class="card" style="background:linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%);border:1px solid rgba(255,255,255,0.06);">
-            <div class="card-header" style="background:linear-gradient(135deg,#dc2626 0%,#991b1b 50%,#7f1d1d 100%);border-bottom:1px solid rgba(255,255,255,0.06);">
-                <h5 style="color:#fff;margin:0;"><i class="bi bi-shield-check"></i> Moderation Rules</h5>
-            </div>
-            <div class="card-body" style="padding:0;">
-                <div style="padding:20px;border-bottom:1px solid rgba(255,255,255,0.06);">
-                    <p style="color:#fff;margin:0;">Active Rules: <span style="color:#dc2626;font-weight:600;">{{ active_rules }}</span></p>
-                    <p style="color:#9ca3af;font-size:0.9rem;margin:8px 0 0 0;">These rules automatically filter incoming emails based on keywords and conditions.</p>
-                </div>
-
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0" style="color:#fff !important;background:#1a1a1a !important;">
-                        <thead style="background:rgba(220,38,38,0.1) !important;border-bottom:2px solid rgba(220,38,38,0.3) !important;">
-                            <tr>
-                                <th style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;">Rule Name</th>
-                                <th style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;">Type</th>
-                                <th style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;">Condition</th>
-                                <th style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;">Keywords</th>
-                                <th style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;">Action</th>
-                                <th style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;">Priority</th>
-                                <th style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for rule in rules %}
-                            <tr style="background:#242424 !important;border-bottom:1px solid rgba(255,255,255,0.06) !important;">
-                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;font-weight:600;">
-                                    {{ rule.rule_name }}
-                                </td>
-                                <td style="color:#9ca3af !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;">
-                                    <span class="badge" style="background:rgba(102,126,234,0.2);color:#6b7ef1;font-size:0.75rem;padding:4px 8px;">
-                                        {{ rule.rule_type|upper }}
-                                    </span>
-                                </td>
-                                <td style="color:#9ca3af !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;">
-                                    {{ rule.condition_field }} {{ rule.condition_operator }}
-                                </td>
-                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;max-width:300px;">
-                                    <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                                        {% for keyword in rule.condition_value.split(',')[:3] %}
-                                        <span class="badge" style="background:rgba(220,38,38,0.2);color:#ef4444;margin:2px;font-size:0.7rem;padding:3px 6px;">
-                                            {{ keyword.strip() }}
-                                        </span>
-                                        {% endfor %}
-                                        {% if rule.condition_value.split(',')|length > 3 %}
-                                        <span style="color:#9ca3af;font-size:0.8rem;">+{{ rule.condition_value.split(',')|length - 3 }} more</span>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;">
-                                    <span class="badge" style="background:{% if rule.action == 'HOLD' %}rgba(251,191,36,0.2);color:#fbbf24{% elif rule.action == 'REJECT' %}rgba(239,68,68,0.2);color:#ef4444{% else %}rgba(34,197,94,0.2);color:#22c55e{% endif %};font-size:0.75rem;padding:4px 10px;font-weight:600;">
-                                        {{ rule.action }}
-                                    </span>
-                                </td>
-                                <td style="color:#9ca3af !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;">
-                                    {{ rule.priority }}
-                                </td>
-                                <td style="color:#fff !important;border-color:rgba(255,255,255,0.06) !important;padding:12px;">
-                                    {% if rule.is_active %}
-                                    <span class="badge" style="background:rgba(34,197,94,0.2);color:#22c55e;font-size:0.75rem;padding:4px 10px;">
-                                        <i class="bi bi-check-circle"></i> Active
-                                    </span>
-                                    {% else %}
-                                    <span class="badge" style="background:rgba(107,114,128,0.2);color:#6b7280;font-size:0.75rem;padding:4px 10px;">
-                                        <i class="bi bi-x-circle"></i> Inactive
-                                    </span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr style="background:#242424 !important;">
-                                <td colspan="7" style="color:#9ca3af !important;text-align:center;padding:40px;border-color:rgba(255,255,255,0.06) !important;">
-                                    <i class="bi bi-shield-x" style="font-size:3rem;opacity:0.3;"></i>
-                                    <p style="margin-top:10px;">No moderation rules configured yet.</p>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
 </div>
 
 <script>
 function switchAccount(accountId) {
-    const currentTab = '{{ active_tab }}';
-    let url = `/dashboard/${currentTab}`;
-    if (accountId) {
-        url += `?account_id=${accountId}`;
-    }
-    window.location.href = url;
+  const url = accountId ? `/dashboard?account_id=${accountId}` : '/dashboard';
+  window.location.href = url;
 }
 
 let useSSE = true;
