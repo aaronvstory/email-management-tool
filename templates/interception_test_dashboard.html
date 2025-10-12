@@ -952,7 +952,7 @@ async function editEmail(testData) {
     
     const result = await response.json();
     
-    if (result.success) {
+    if (result.ok || result.success) {
         addTimelineItem('success', 'Email Edited', `New subject: ${testData.edited_subject}`);
         showEmailPreview(testData, 'edited');
     } else {

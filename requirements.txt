@@ -60,3 +60,6 @@ pre-commit==3.6.0
 imapclient==3.0.0
 backoff==2.2.1
 dnspython==2.6.1
+
+# MCP (Model Context Protocol) Server
+mcp==1.0.0

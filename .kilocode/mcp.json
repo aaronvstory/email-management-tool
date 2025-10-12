@@ -1,1 +1,10 @@
-{"mcpServers":{}}
+{
+    "mcpServers": {
+        "memory-bank": {
+            "command": "python",
+            "args": [".kilocode/memory_bank_server.py"],
+            "cwd": ".",
+            "env": {}
+        }
+    }
+}

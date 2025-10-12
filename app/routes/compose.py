@@ -12,6 +12,7 @@ from flask import Blueprint, request, render_template, redirect, url_for, flash,
 from flask_login import login_required
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.utils import make_msgid
 
 from app.utils.db import DB_PATH
 from app.utils.crypto import decrypt_credential
@@ -84,6 +85,9 @@ def compose_email():
             smtp_host = account['smtp_host']
             smtp_port = int(account['smtp_port']) if account['smtp_port'] else 587
             smtp_username = account['smtp_username']
+            # Ensure a Message-ID for tracking
+            if not msg.get('Message-ID'):
+                msg['Message-ID'] = make_msgid()
             if account['smtp_use_ssl']:
                 context = ssl.create_default_context()
                 server = smtplib.SMTP_SSL(smtp_host, smtp_port, context=context)
@@ -94,6 +98,31 @@ def compose_email():
             recipients_all = [to_address] + ([cc_address] if cc_address else [])
             server.sendmail(account['email_address'], recipients_all, msg.as_string())
             server.quit()
+            # Record outbound message in DB for dashboard visibility
+            try:
+                cur = conn.cursor()
+                import json as _json
+                cur.execute(
+                    """
+                    INSERT INTO email_messages
+                    (message_id, sender, recipients, subject, body_text, body_html, raw_content,
+                     account_id, direction, status, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'outbound', 'SENT', datetime('now'))
+                    """,
+                    (
+                        msg['Message-ID'],
+                        account['email_address'],
+                        _json.dumps(recipients_all),
+                        subject,
+                        body,
+                        '',
+                        msg.as_string(),
+                        int(from_account_id),
+                    ),
+                )
+                conn.commit()
+            except Exception:
+                pass
         except Exception as e:
             if request.is_json:
                 conn.close(); return jsonify({'ok': False, 'error': str(e)}), 500

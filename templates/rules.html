@@ -124,11 +124,30 @@
 
 {% block extra_js %}
 <script>
-function saveRule() {
-    // Implement save rule functionality
-    if (window.showSuccess) showSuccess('Rule saved successfully!');
-    $('#addRuleModal').modal('hide');
-    location.reload();
+async function saveRule(){
+  try{
+    const name = document.getElementById('ruleName').value.trim();
+    const type = document.getElementById('ruleType').value;
+    const pattern = document.getElementById('pattern').value.trim();
+    const action = document.getElementById('action').value;
+    const priority = parseInt(document.getElementById('priority').value||'50',10);
+    if(!name || !pattern){ if(window.showError) showError('Rule name and pattern are required'); return; }
+    const r = await fetch('/api/rules',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ rule_name:name, rule_type:type, pattern, action, priority })
+    });
+    const data = await r.json();
+    if(!r.ok || !data.success){
+      const msg = data && (data.error || data.message) || 'Failed to save rule';
+      if(window.showError) showError(msg); return;
+    }
+    if(window.showSuccess) showSuccess('Rule saved successfully');
+    const modalEl = document.getElementById('addRuleModal');
+    const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+    modal.hide();
+    setTimeout(()=>window.location.reload(), 500);
+  }catch(e){ if(window.showError) showError('Error: '+e.message); }
 }
 </script>
 {% endblock %}

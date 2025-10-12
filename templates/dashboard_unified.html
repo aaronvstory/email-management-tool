@@ -273,7 +273,7 @@
                                 </td>
                                 <td style="color:#9ca3af !important;border-color:rgba(255,255,255,0.06) !important;">{{ email.created_at }}</td>
                                 <td style="border-color:rgba(255,255,255,0.06) !important;">
-                                    <a href="/emails/{{ email.id }}" class="btn btn-sm" style="background:rgba(220,38,38,0.15) !important;color:#fff !important;border:1px solid rgba(220,38,38,0.3) !important;">
+                                    <a href="/email/{{ email.id }}" class="btn btn-sm" style="background:rgba(220,38,38,0.15) !important;color:#fff !important;border:1px solid rgba(220,38,38,0.3) !important;">
                                         <i class="bi bi-eye"></i>
                                     </a>
                                 </td>
@@ -576,7 +576,17 @@ function runDiagnostics(accountId) {
 
 function testAccount(accountId) {
     if (window.showInfo) showInfo('Testing account ' + accountId);
-    // Add test logic here
+    fetch('/api/accounts/' + accountId + '/test', { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        if (data && data.success) {
+          if (window.showSuccess) showSuccess('Account test successful');
+        } else {
+          const msg = (data && (data.error || (data.smtp && data.smtp.message) || (data.imap && data.imap.message))) || 'Test failed';
+          if (window.showError) showError('Account test failed: ' + msg);
+        }
+      })
+      .catch(err => { if (window.showError) showError('Error testing account: ' + err.message); });
 }
 
 function editAccount(accountId) {

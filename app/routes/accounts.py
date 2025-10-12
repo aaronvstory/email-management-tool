@@ -460,6 +460,50 @@ def api_import_accounts():
         conn.close()
     return jsonify({'success': True, 'inserted': inserted, 'updated': updated, 'errors': errors})
 
+@accounts_bp.route('/api/accounts/<int:account_id>/monitor/start', methods=['POST'])
+@csrf.exempt
+@login_required
+def api_start_monitor(account_id: int):
+    """Activate and start IMAP monitoring for a specific account."""
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Admin access required'}), 403
+    # Validate credentials present
+    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    acc = cur.execute("SELECT * FROM email_accounts WHERE id=?", (account_id,)).fetchone()
+    if not acc:
+        conn.close(); return jsonify({'success': False, 'error': 'Account not found'}), 404
+    imap_user = acc['imap_username'] or acc['email_address']
+    imap_pwd = decrypt_credential(acc['imap_password']) if acc['imap_password'] else None
+    if not imap_user or not imap_pwd:
+        conn.close(); return jsonify({'success': False, 'error': 'IMAP credentials missing'}), 400
+    # Set active and start watcher via simple_app helper
+    cur.execute("UPDATE email_accounts SET is_active=1 WHERE id=?", (account_id,)); conn.commit(); conn.close()
+    try:
+        from simple_app import start_imap_watcher_for_account
+        ok = start_imap_watcher_for_account(account_id)
+    except Exception as e:
+        ok = False
+    return jsonify({'success': bool(ok)})
+
+@accounts_bp.route('/api/accounts/<int:account_id>/monitor/stop', methods=['POST'])
+@csrf.exempt
+@login_required
+def api_stop_monitor(account_id: int):
+    """Deactivate and stop IMAP monitoring for a specific account."""
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Admin access required'}), 403
+    # Deactivate and signal stop
+    try:
+        from simple_app import stop_imap_watcher_for_account
+        stop_imap_watcher_for_account(account_id)
+    except Exception:
+        pass
+    # Confirm deactivation
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("UPDATE email_accounts SET is_active=0 WHERE id=?", (account_id,)); conn.commit(); conn.close()
+    return jsonify({'success': True})
+
 @accounts_bp.route('/api/detect-email-settings', methods=['POST'])
 @login_required
 def api_detect_email_settings():

@@ -50,6 +50,23 @@ class ImapWatcher:
         self.cfg = cfg
         self._client = None  # set in _connect
         self._last_hb = 0.0
+        
+    def _should_stop(self) -> bool:
+        """Return True if the account is deactivated in DB (is_active=0)."""
+        try:
+            if not self.cfg.account_id:
+                return False
+            conn = sqlite3.connect(self.cfg.db_path)
+            cur = conn.cursor()
+            row = cur.execute("SELECT is_active FROM email_accounts WHERE id=?", (self.cfg.account_id,)).fetchone()
+            conn.close()
+            if not row:
+                return True
+            is_active = int(row[0]) if row[0] is not None else 0
+            return is_active == 0
+        except Exception:
+            # On DB error, do not force stop
+            return False
 
     def _record_failure(self, reason: str = "error"):
         """Increment failure counter and open circuit if threshold exceeded."""
@@ -307,6 +324,13 @@ class ImapWatcher:
 
     @backoff.on_exception(backoff.expo, (socket.error, OSError, Exception), max_time=60 * 60)
     def run_forever(self):
+        # Early stop if account disabled
+        if self._should_stop():
+            try:
+                self._update_heartbeat("stopped")
+            except Exception:
+                pass
+            return
         self._client = self._connect()
         client = self._client
 
@@ -320,6 +344,18 @@ class ImapWatcher:
         # initial heartbeat
         self._update_heartbeat("active"); self._last_hb = time.time()
         while True:
+            # Stop if account was deactivated while running
+            if self._should_stop():
+                try:
+                    self._update_heartbeat("stopped")
+                except Exception:
+                    pass
+                try:
+                    if client:
+                        client.logout()
+                except Exception:
+                    pass
+                return
             # Ensure client is still connected
             if not client:
                 log.error("IMAP client disconnected, attempting reconnect")
@@ -361,6 +397,21 @@ class ImapWatcher:
                         # periodic heartbeat
                         if time.time() - self._last_hb > 30:
                             self._update_heartbeat("active"); self._last_hb = time.time()
+                        # Check stop request periodically during IDLE
+                        if self._should_stop():
+                            try:
+                                client.idle_done()
+                            except Exception:
+                                pass
+                            try:
+                                client.logout()
+                            except Exception:
+                                pass
+                            try:
+                                self._update_heartbeat("stopped")
+                            except Exception:
+                                pass
+                            return
                         # Keep alive / break idle periodically
                         now = time.time()
                         if (now - start) > self.cfg.idle_timeout or (now - last_idle_break) > self.cfg.idle_ping_interval:

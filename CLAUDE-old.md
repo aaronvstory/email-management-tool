@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Email Management Tool** is a Python Flask application for local email interception, moderation, and management. Dev-focused; not production-validated. Runs entirely on localhost with SQLite—no cloud services, no Docker required.
+**Email Management Tool** is a **fully functional, production-ready** Python Flask application for local email interception, moderation, and management. It runs entirely on localhost with SQLite—no cloud services, no Docker required.
 
-**Current Status**: ⚠️ PARTIALLY FUNCTIONAL — requires SMTP proxy running and valid IMAP credentials stored in DB
-**Version**: 2.8
-**Last Updated**: October 12, 2025
+**Current Status**: ✅ **WORKING AND DEPLOYED**
+**Version**: 2.7 (Security Hardening Complete + Production Ready)
+**Last Updated**: October 10, 2025
 **Recent Updates**:
 
 - ✅ **Security Hardening (Phase 2+3)** - CSRF protection, rate limiting, strong SECRET_KEY generation
@@ -41,24 +41,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ✅ Phase 1 Structural Split: Extracted IMAP workers, stats service, unified COUNT query cleanup (transitional modular layout)
 - ✅ Phase 1B Route Modularization: Core routes extracted to blueprints (auth, dashboard, stats, moderation) - See "Registered Blueprints" section
 - ✅ Environment Configuration: .env.example with live test toggles and credential placeholders
-- ✅ NEW: Per‑account IMAP monitoring controls (start/stop) via API/UI; watchers self‑terminate on deactivate
-- ✅ NEW: Live E2E interception tests (scripts/live_interception_e2e.py) using real provider SMTP/IMAP with hold→edit→release verification
 
-## Current State Assessment (Oct 12, 2025)
+## Current State Assessment (Oct 10, 2025)
 
-**Overall**: 🟡 Partially functional — SMTP proxy must be running; IMAP watchers failing for accounts with invalid DB creds; core UI accessible.
+**Overall Grade**: B+ (7.5/10) - Production-ready with clear path to excellence
 
 ### Key Metrics
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| **Monolith Size** | ~918 lines | 🟢 OK |
-| **Blueprint Coverage** | 9 active blueprints | 🟢 OK |
-| **Test Pass Rate** | 96.7% (29/30 pass); 1 failed; 6 errors (Windows file locks) | 🟡 Mixed |
-| **Critical Path** | Interception endpoints healthy when proxy is listening | 🟡 Requires proxy |
-| **SMTP Proxy** | must be running (check /api/smtp-health) | 🟡 Depends on runtime |
-| **IMAP Watchers** | Controllable per account (start/stop); require valid DB creds | 🟡 Config-dependent |
-| **Security (CSRF/Rate Limit)** | Enabled and validated | 🟢 OK |
+| **Monolith Size** | 918 lines (↓46% from 1,700) | 🟢 Excellent |
+| **Blueprint Coverage** | 100% (9 active blueprints) | 🟢 Excellent |
+| **Test Pass Rate** | 43.6% (48/110 tests) | 🔴 Needs Fix |
+| **Critical Tests** | 100% (interception, stats) | 🟢 Excellent |
+| **Circular Dependencies** | 2 (with lazy imports) | 🟡 Fair |
+| **Code Duplication** | 130 LOC (helper functions) | 🟡 Fair |
+| **Security CSRF** | ✅ Enabled + Validated | 🟢 Excellent |
 
 ### Architecture Health
 
@@ -156,14 +154,14 @@ python simple_app.py
 
 - **Email**: ndayijecika@gmail.com
 - **Password**: [REDACTED – set via .env GMAIL_PASSWORD]
-- **SMTP**: smtp.gmail.com:587 (STARTTLS)
+- **SMTP**: smtp.gmail.com:587 (STARTTLS, not SSL)
 - **IMAP**: imap.gmail.com:993 (SSL)
 - **Username**: ndayijecika@gmail.com (same as email)
 - **Database ID**: 3
-- **Status**: ✅ Live checks OK; IMAP watcher uses DB-stored password — update via Accounts if failing
-- **Last Live Check**: 2025-10-12 (scripts/live_check.py)
-  - IMAP: ✅ Connected
-  - SMTP: ✅ Authenticated
+- **Status**: ✅ FULLY OPERATIONAL
+- **Last Tested**: 2025-09-30 09:47:44
+  - IMAP: ✅ Connected (9 folders found)
+  - SMTP: ✅ Authenticated successfully
 
 ### Account 2: Hostinger - Corrinbox (Secondary Test Account)
 
@@ -173,10 +171,10 @@ python simple_app.py
 - **IMAP**: imap.hostinger.com:993 (SSL)
 - **Username**: mcintyre@corrinbox.com (same as email)
 - **Database ID**: 2
-- **Status**: ❌ Live checks failing (IMAP/SMTP auth); verify credentials and app password
-- **Last Live Check**: 2025-10-12 (scripts/live_check.py)
-  - IMAP: ❌ Authentication failed
-  - SMTP: ❌ Authentication failed
+- **Status**: ✅ FULLY OPERATIONAL
+- **Last Tested**: 2025-09-30 09:47:44
+  - IMAP: ✅ Connected (5 folders found)
+  - SMTP: ✅ Authenticated successfully
 
 ### SMTP/IMAP Smart Detection Rules
 
@@ -223,12 +221,8 @@ python simple_app.py
 # Test permanent account connections (no DB modification)
 python scripts/test_permanent_accounts.py
 
-# Live end-to-end REAL provider test (hold → edit → release → verify in INBOX)
-# Requires: app running, ENABLE_LIVE_EMAIL_TESTS=1, .env creds set for both accounts
-python scripts/live_interception_e2e.py
-
 # Setup/update permanent accounts in database
-# Use the Accounts page (Edit) to update credentials stored in DB (watchers use DB, not .env)
+python scripts/setup_test_accounts.py
 
 # Verify account configuration in database
 python scripts/verify_accounts.py
@@ -242,7 +236,7 @@ scripts\check_status.bat
 ### Running Tests
 
 ```bash
-# Full test suite (approx. 96.7% pass on current run; some errors due to Windows file locks)
+# Full test suite (43.6% pass rate - see Test Status below)
 python -m pytest tests/ -v
 
 # Recommended: Test working modules only
@@ -361,8 +355,8 @@ python scripts/verify_accounts.py         # Check DB config
 - Features: Queue, viewer, reply/forward helpers, .eml download, IMAP UID fetch
 
 **`app/routes/accounts.py`** - Accounts blueprint (Phase 1C):
-- Routes: `/accounts`, `/accounts/add`, `/api/accounts`, `/api/accounts/<id>` (GET/PUT/DELETE), `/api/accounts/<id>/health`, `/api/accounts/<id>/test`, `/api/accounts/export`, `/api/test-connection/<type>`, `/api/accounts/<id>/monitor/start`, `/api/accounts/<id>/monitor/stop`, `/diagnostics[/<id>]`
-- Features: Smart detection API, connectivity tests, export, diagnostics redirect, per‑account IMAP watcher control (start/stop)
+- Routes: `/accounts`, `/accounts/add`, `/api/accounts`, `/api/accounts/<id>` (GET/PUT/DELETE), `/api/accounts/<id>/health`, `/api/accounts/<id>/test`, `/api/accounts/export`, `/api/test-connection/<type>`, `/diagnostics[/<id>]`
+- Features: Smart detection API, connectivity tests, export, diagnostics redirect
 
 **`app/routes/inbox.py`** - Inbox blueprint (Phase 1C):
 - Route: `/inbox`
@@ -1501,176 +1495,6 @@ python -m pytest tests/test_complete_application.py::TestEmailDiagnostics -v
 # Exclude broken imports until Phase 1 fixes complete
 python -m pytest tests/ --ignore=tests/integration --ignore=tests/unit/frontend
 ```
-
-## Deep Dive Addendum (v2.8) — Architecture, State Machines, and Troubleshooting Playbooks
-
-This addendum expands on the practical internals, state transitions, failure modes, and provider nuances of the Email Management Tool. It complements docs/INTERCEPTION_IMPLEMENTATION.md and serves as an operational guide for engineers.
-
-### 1) End-to-End Dataflows (Detailed)
-
-- SMTP Interception Path (port 8587):
-  1. aiosmtpd accepts DATA → parse MIME → normalize headers
-  2. Risk evaluation (keywords + rule engine) → initial risk_score
-  3. Persist to SQLite (email_messages: raw_content, body_text/html, status=PENDING, interception_status=HELD when auto-hold)
-  4. Emit audit log (INTERCEPT) and stats cache invalidation
-  5. UI lists HELD/PENDING; actions via POST endpoints
-
-- IMAP Watch Path (per active account):
-  1. Connect (SSL 993 or STARTTLS 143) → select INBOX → IDLE loop with backoff
-  2. On new UID: FETCH INTERNALDATE, FLAGS, ENVELOPE; capture server timestamp
-  3. MOVE to Quarantine (or COPY+DELETE when MOVE unsupported) → record HELD
-  4. Persist/update row: original_uid, interception_status=HELD, latency_ms computed if applicable
-
-- Release Path:
-  1. Rebuild MIME (edited subject/body respected)
-  2. APPEND → INBOX on provider → set interception_status=RELEASED, status=DELIVERED
-  3. Audit (RELEASE) + stats cache invalidation
-
-- Compose/Outbound Path:
-  1. Client POST /compose → resolve SMTP settings
-  2. Connect (STARTTLS 587 or SSL 465) → AUTH LOGIN/PLAIN
-  3. Send DATA → Server 250 → Persist SENT row (direction=outbound)
-  4. Optionally store raw for audit/troubleshooting
-
-### 2) State Machines
-
-- Interception Status (email_messages.interception_status):
-  - NEW → (intercept) → HELD → (release) → RELEASED
-  - NEW/HELD → (discard) → DISCARDED
-
-- Message Status (email_messages.status):
-  - PENDING → APPROVED/REJECTED → (on release) DELIVERED
-  - SENT for outbound via composer
-
-Legal transitions are enforced at the API handlers; invalid transitions respond 409/400.
-
-### 3) Credential Sources & Precedence
-
-- .env: Used by dev scripts (live_check.py, test_permanent_accounts.py) and optional startup preflight.
-- Database (email_accounts): Source of truth for runtime workers and web actions (IMAP watchers, health checks, compose send).
-- Encryption: passwords stored Fernet-encrypted using key.txt; never log plaintext.
-- Precedence rule: Runtime → DB; Scripts → .env; Update DB via Accounts → Edit modal.
-
-### 4) Provider Matrix & Connection Strategy
-
-- Gmail: SMTP 587 STARTTLS, IMAP 993 SSL, App Password required (with spaces). Username=email.
-- Hostinger: SMTP 465 SSL, IMAP 993 SSL. Username=email.
-- Outlook: SMTP 587 STARTTLS, IMAP 993 SSL (App Password for 2FA).
-- Yahoo: SMTP 465 SSL, IMAP 993 SSL.
-- Rules of thumb:
-  - 587 → STARTTLS (smtp_use_ssl=0, starttls=True)
-  - 465 → SSL (smtp_use_ssl=1, no STARTTLS)
-  - 993 → SSL (imap_use_ssl=1)
-
-### 5) IMAP Watcher Lifecycle & Backoff
-
-1. Load account config from DB → prefer imap_username else email_address
-2. Establish connection:
-   - SSL: imaplib.IMAP4_SSL(host, port=993)
-   - STARTTLS: IMAP4(host, port=143) → starttls()
-3. LOGIN user/pass; SELECT INBOX; IDLE (or noop polling fallback)
-4. On new message signal: search new UIDs, FETCH metadata, MOVE to Quarantine
-5. Persist HELD row (or update existing)
-6. Heartbeat every N minutes; on errors: exponential backoff (e.g., 1s→2s→4s→... cap 5 min)
-7. Always close gracefully on thread stop
-
-Common auth failures:
-- Wrong imap_username → fix via Edit modal (set to full email)
-- STARTTLS vs SSL mismatch → ensure imap_use_ssl matches port
-- Provider lockouts → ensure App Passwords / IMAP enabled
-
-### 6) SMTP Send Pipeline Details
-
-1. Resolve settings (smtp_host/port/use_ssl/username)
-2. SSL (465): smtplib.SMTP_SSL; STARTTLS (587): smtplib.SMTP → ehlo → starttls → ehlo
-3. AUTH (LOGIN/PLAIN via smtplib.login)
-4. sendmail(from, to_list, data)
-5. On success: INSERT SENT record; log audit SEND
-6. On failure: map smtplib exceptions to user-facing messages; never log creds
-
-### 7) Rule Engine (Keywords → Risk)
-
-- Source: moderation_rules table (active rules)
-- Keyword rules: comma-separated; case-insensitive match in subject/body
-- Priority weighting → cumulative risk_score; threshold may auto-hold
-- Fallback: default keyword set when DB rules absent
-
-### 8) Error Taxonomy & Retries
-
-- IMAP
-  - AUTHENTICATIONFAILED → Immediate user action (update creds)
-  - TIMEOUT/connection reset → Backoff and retry
-  - MOVE unsupported → COPY+STORE + EXPUNGE fallback
-
-- SMTP
-  - SMTPAuthenticationError → user action (password/app password)
-  - SMTPServerDisconnected / timeout → retry once after reconnect
-  - STARTTLS failure on port 587 → ensure no SSL wrapper used
-
-- DB/SQLite
-  - database is locked → WAL mode + busy_timeout mitigate; retry after short sleep
-
-### 9) Observability & Health
-
-- app.log: structured logs for SMTP/IMAP events, auth failures, actions
-- /healthz: DB OK, counts, worker heartbeats, security flags (no secrets)
-- Stats cache: 2s TTL (unified counts), 10s TTL (latency percentiles)
-- SSE: /stream/stats for live dashboard updates; fallback polling implemented
-
-### 10) Security Model (Operational View)
-
-- CSRF: Flask-WTF; all forms include token; AJAX injects X-CSRFToken
-- Rate limiting: 5/min on login; returns 429 with Retry-After
-- Secrets: FLASK_SECRET_KEY in .env (64 hex); no plaintext secrets in logs
-- Credential storage: Fernet (key.txt); rotate by re-encrypting after generating new key (plan)
-
-### 11) Data Retention & Storage
-
-- Raw email retention: configurable; large payloads can grow DB; consider offloading raw to filesystem with path pointer in DB for very large deployments
-- Indices ensure queue views and counts stay fast (<20ms) on thousands of rows
-
-### 12) Troubleshooting Playbooks
-
-- Nothing works; /api/test/send-email 500:
-  - Check SMTP proxy thread running (restart app); verify port 8587 not blocked
-
-- IMAP auth failures for all accounts:
-  - Verify DB-stored password (Edit modal), imap_use_ssl flag, username=email
-  - Try scripts/live_check.py to validate provider outside watchers
-
-- Gmail works, Hostinger fails:
-  - Ensure SMTP 465 SSL (not 587), IMAP 993 SSL; confirm exact username
-
-- Browser JS errors ($ is not defined):
-  - Remove jQuery; use Bootstrap 5 Modal API only
-
-### 13) From-Scratch Minimal Blueprint (If Rewriting)
-
-- Core choices:
-  - API: FastAPI or Flask (typed pydantic models if FastAPI)
-  - SMTP proxy: aiosmtpd (async) + structured middleware; separate process/service
-  - IMAP watcher: separate worker process with asyncio + imapclient/imaplib2
-  - DB: SQLite initially; abstract via repository pattern for testability
-  - Settings: pydantic-settings or dynaconf; single source of truth
-
-- Modules:
-  - accounts (CRUD, encrypted creds, health)
-  - messages (store, edit, release, audit)
-  - rules (CRUD, engine, scoring)
-  - workers (smtp, imap)
-  - web (dashboard UI) isolated from core libraries
-
-- Principles:
-  - Clear contracts between layers; no global DB_PATH
-  - Pure functions where possible; dependency injection for IO
-  - End-to-end integration tests behind dotenv-gated flag for live providers
-
-- Migration path from current app:
-  - Carve out standalone libs (db access, email parsing, rules)
-  - Replace Flask route internals to call new libs
-  - Port UI gradually; keep endpoints backward compatible
-
-See docs/TECHNICAL_DEEP_DIVE.md for an exhaustive design and build guide.
 
 ## Additional Documentation
 

@@ -222,6 +222,57 @@ def decrypt_password(val: Optional[str]) -> Optional[str]:
 # Import email helper functions (Phase 3: Helper Consolidation)
 from app.utils.email_helpers import detect_email_settings, test_email_connection
 
+# Global registries for IMAP watcher control (per-account)
+from typing import Dict as _Dict, Optional as _Optional
+imap_threads: _Dict[int, threading.Thread] = {}
+imap_watchers: _Dict[int, ImapWatcher] = {}
+
+def start_imap_watcher_for_account(account_id: int) -> bool:
+    """Start IMAP watcher thread for a specific account if not running.
+    Returns True if a thread is running (existing or newly started)."""
+    # Already running?
+    th = imap_threads.get(account_id)
+    if th and th.is_alive():
+        return True
+    # Flip is_active=1 in DB (if not already) and verify credentials exist
+    with get_db() as conn:
+        cur = conn.cursor()
+        acc = cur.execute(
+            "SELECT id, imap_username, imap_password FROM email_accounts WHERE id=?",
+            (account_id,)
+        ).fetchone()
+        if not acc:
+            return False
+        from app.utils.crypto import decrypt_credential as _dec
+        if not acc['imap_username'] or not _dec(acc['imap_password'] or ''):
+            return False
+        cur.execute("UPDATE email_accounts SET is_active=1 WHERE id=?", (account_id,))
+        conn.commit()
+    # Start thread
+    t = threading.Thread(target=monitor_imap_account, args=(account_id,), daemon=True)
+    imap_threads[account_id] = t
+    t.start()
+    return True
+
+def stop_imap_watcher_for_account(account_id: int) -> bool:
+    """Request stop for a specific account watcher and deactivate account.
+    Returns True if a stop was signaled (thread may take a moment to exit)."""
+    # Deactivate account so watcher will self-terminate
+    try:
+        with get_db() as conn:
+            conn.execute("UPDATE email_accounts SET is_active=0 WHERE id=?", (account_id,))
+            conn.commit()
+    except Exception:
+        pass
+    # Close active watcher client if present to break out of IDLE promptly
+    try:
+        watcher = imap_watchers.get(account_id)
+        if watcher:
+            watcher.close()
+    except Exception:
+        pass
+    return True
+
 def init_database():
     """
     Initialize SQLite database with all required tables (idempotent).
@@ -350,7 +401,10 @@ def monitor_imap_account(account_id: int):
             with get_db() as conn:
                 cursor = conn.cursor()
                 row = cursor.execute(
-                    "SELECT imap_host, imap_port, imap_username, imap_password FROM email_accounts WHERE id=? AND is_active=1",
+                    """
+                    SELECT email_address, imap_host, imap_port, imap_username, imap_password, imap_use_ssl
+                    FROM email_accounts WHERE id=? AND is_active=1
+                    """,
                     (account_id,)
                 ).fetchone()
 
@@ -364,14 +418,23 @@ def monitor_imap_account(account_id: int):
                 if not password:
                     raise RuntimeError("Missing decrypted IMAP password for account")
 
+                # Normalize username and SSL options
+                username = row['imap_username'] or row['email_address']
+                use_ssl = bool(row['imap_use_ssl']) if row['imap_use_ssl'] is not None else True
+                port = int(row['imap_port'] or 993)
+
+                app.logger.info(
+                    f"IMAP config for acct {account_id}: host={row['imap_host']} port={port} ssl={use_ssl} user={username}"
+                )
+
                 # Create account configuration with account_id and db_path
                 pwd: str = password  # type: ignore[assignment]
                 cfg = AccountConfig(
                     imap_host=row['imap_host'],
-                    imap_port=row['imap_port'] or 993,
-                    username=row['imap_username'],
+                    imap_port=port,
+                    username=username,
                     password=pwd,
-                    use_ssl=True,
+                    use_ssl=use_ssl,
                     inbox="INBOX",
                     quarantine="Quarantine",
                     idle_timeout=25 * 60,  # 25 minutes
@@ -384,7 +447,17 @@ def monitor_imap_account(account_id: int):
             # Start ImapWatcher - runs forever with auto-reconnect
             app.logger.info(f"Connecting ImapWatcher for {cfg.username} at {cfg.imap_host}:{cfg.imap_port}")
             watcher = ImapWatcher(cfg)
+            # Register watcher reference for external stop control
+            try:
+                imap_watchers[account_id] = watcher
+            except Exception:
+                pass
             watcher.run_forever()  # Blocks with backoff retry on errors
+            # Cleanup on exit
+            try:
+                imap_watchers.pop(account_id, None)
+            except Exception:
+                pass
 
         except Exception as e:
             app.logger.error(f"IMAP monitor for account {account_id} failed: {e}", exc_info=True)
@@ -519,36 +592,63 @@ class EmailModerationHandler:
             return f'500 Error: {e}'
 
     def check_rules(self, subject, body):
-        """Check moderation rules"""
+        """Check moderation rules from DB (fallback to defaults)."""
         keywords = []
         risk_score = 0
-
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        # Check for simple keywords in the email content
-        # Using simplified logic since table structure is different
         content = f"{subject} {body}".lower()
 
-        # Default keywords to check
-        default_keywords = {
-            'urgent': 5,
-            'confidential': 10,
-            'payment': 8,
-            'password': 10,
-            'account': 5,
-            'verify': 7,
-            'suspended': 9,
-            'click here': 8,
-            'act now': 7,
-            'limited time': 6
-        }
+        # 1) Load active rules from DB (supports legacy and extended schemas)
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            cols = [r[1] for r in cur.execute("PRAGMA table_info(moderation_rules)").fetchall()]
+            rows = cur.execute("SELECT * FROM moderation_rules WHERE is_active = 1 ORDER BY priority DESC").fetchall()
+            for r in rows:
+                d = dict(r)
+                # Extract pattern(s)
+                pattern = None
+                if 'condition_value' in cols:
+                    pattern = (d.get('condition_value') or '').strip()
+                elif 'keyword' in cols:
+                    pattern = (d.get('keyword') or '').strip()
+                if not pattern:
+                    continue
+                # Support comma-separated list
+                parts = [p.strip() for p in pattern.split(',') if p.strip()]
+                prio = int(d.get('priority') or 5)
+                for p in parts:
+                    p_l = p.lower()
+                    if p_l and p_l in content:
+                        keywords.append(p)
+                        risk_score += max(1, prio)
+        except Exception:
+            # Silent fallback — see defaults below
+            pass
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
-        for keyword, priority in default_keywords.items():
-            if keyword.lower() in content:
-                keywords.append(keyword)
-                risk_score += priority
-
-        conn.close()
+        # 2) Fallback defaults if no matches and no rules configured
+        if not keywords:
+            default_keywords = {
+                'urgent': 5,
+                'confidential': 10,
+                'payment': 8,
+                'password': 10,
+                'account': 5,
+                'verify': 7,
+                'suspended': 9,
+                'click here': 8,
+                'act now': 7,
+                'limited time': 6
+            }
+            for k, pr in default_keywords.items():
+                if k in content:
+                    keywords.append(k)
+                    risk_score += pr
 
         return keywords, min(risk_score, 100)
 
@@ -860,8 +960,7 @@ def schedule_cleanup():
 
 
 if __name__ == '__main__':
-    # Thread registry for IMAP monitoring
-    imap_threads = {}
+    # Thread registry for IMAP monitoring (use global imap_threads)
 
     # Graceful SMTP proxy fallback
     try:
