@@ -50,6 +50,8 @@ class ImapWatcher:
         self.cfg = cfg
         self._client = None  # set in _connect
         self._last_hb = 0.0
+        self._last_uidnext = 1
+        self._last_uidnext = 1
         
     def _should_stop(self) -> bool:
         """Return True if the account is deactivated in DB (is_active=0)."""
@@ -151,6 +153,12 @@ class ImapWatcher:
                     except Exception:
                         log.debug("Folder %s may already exist", folder)
             client.select_folder(self.cfg.inbox, readonly=False)
+            # Initialize UIDNEXT tracking for fast delta scans
+            try:
+                status = client.folder_status(self.cfg.inbox, [b'UIDNEXT'])
+                self._last_uidnext = int(status.get(b'UIDNEXT') or 1)
+            except Exception:
+                self._last_uidnext = 1
             return client
         except Exception as e:
             log.error(f"Failed to connect to IMAP for {self.cfg.username}: {e}")
@@ -364,10 +372,29 @@ class ImapWatcher:
 
     def _handle_new_messages(self, client, changed):
         # changed example: {b'EXISTS': 12}
+        # Prefer UIDNEXT-based delta to avoid missing messages marked as SEEN
+        uids = []
         try:
-            # Fetch new UIDs quickly: search for messages without a custom marker
-            # Simpler: use 'RECENT' or last UID state; here we just fetch last N
-            uids = client.search('UNSEEN')
+            client.select_folder(self.cfg.inbox, readonly=False)
+            try:
+                st = client.folder_status(self.cfg.inbox, [b'UIDNEXT'])
+                uidnext_now = int(st.get(b'UIDNEXT') or self._last_uidnext)
+            except Exception:
+                uidnext_now = self._last_uidnext
+            if uidnext_now > self._last_uidnext:
+                try:
+                    rng = f"UID {self._last_uidnext}:{uidnext_now-1}"
+                    uids = client.search(rng)
+                except Exception:
+                    uids = []
+            # Fallback to UNSEEN if range search returns nothing
+            if not uids:
+                try:
+                    uids = client.search('UNSEEN')
+                except Exception:
+                    uids = []
+            # Advance tracker
+            self._last_uidnext = max(self._last_uidnext, uidnext_now)
         except Exception:
             uids = []
         if not uids:
@@ -405,9 +432,9 @@ class ImapWatcher:
         # Track UIDNEXT to reduce duplicate scans
         try:
             status = client.folder_status(self.cfg.inbox, [b'UIDNEXT'])
-            last_uidnext = int(status.get(b'UIDNEXT') or 1)
+            self._last_uidnext = int(status.get(b'UIDNEXT') or 1)
         except Exception:
-            last_uidnext = 1
+            self._last_uidnext = 1
         # initial heartbeat
         self._update_heartbeat("active"); self._last_hb = time.time()
         while True:
@@ -498,13 +525,13 @@ class ImapWatcher:
                             client.select_folder(self.cfg.inbox, readonly=False)
                             try:
                                 st2 = client.folder_status(self.cfg.inbox, [b'UIDNEXT'])
-                                uidnext2 = int(st2.get(b'UIDNEXT') or last_uidnext)
+                                uidnext2 = int(st2.get(b'UIDNEXT') or self._last_uidnext)
                             except Exception:
-                                uidnext2 = last_uidnext
+                                uidnext2 = self._last_uidnext
                             new_uids = []
-                            if uidnext2 > last_uidnext:
+                            if uidnext2 > self._last_uidnext:
                                 try:
-                                    rng = f"UID {last_uidnext}:{uidnext2-1}"
+                                    rng = f"UID {self._last_uidnext}:{uidnext2-1}"
                                     new_uids = client.search(rng)
                                 except Exception:
                                     new_uids = []
@@ -521,7 +548,7 @@ class ImapWatcher:
                                     self._move(new_uids)
                                 else:
                                     self._copy_purge(new_uids)
-                            last_uidnext = uidnext2
+                            self._last_uidnext = uidnext2
                         except Exception:
                             pass
                         last_idle_break = now
