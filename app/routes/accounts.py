@@ -49,6 +49,54 @@ def api_get_accounts():
     return jsonify({'success': True, 'accounts': [dict(r) for r in rows]})
 
 
+@accounts_bp.route('/api/accounts/bulk-delete', methods=['POST'])
+@csrf.exempt
+@login_required
+def api_accounts_bulk_delete():
+    """Bulk delete email accounts by ids.
+    Body: {"ids": [1,2,3]}
+    """
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Admin access required'}), 403
+    data = request.get_json(silent=True) or {}
+    ids = data.get('ids') or []
+    if not isinstance(ids, list) or not ids:
+        return jsonify({'success': False, 'error': 'No ids provided'}), 400
+    # Normalize to ints and filter invalid
+    try:
+        id_list = [int(i) for i in ids if str(i).isdigit()]
+    except Exception:
+        id_list = []
+    if not id_list:
+        return jsonify({'success': False, 'error': 'No valid ids provided'}), 400
+    # Best-effort: stop watchers and clear heartbeats first
+    try:
+        from simple_app import stop_imap_watcher_for_account
+        for aid in id_list:
+            try:
+                stop_imap_watcher_for_account(aid)
+            except Exception:
+                pass
+    except Exception:
+        pass
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    try:
+        # Remove heartbeats for these accounts
+        try:
+            cur.executemany("DELETE FROM worker_heartbeats WHERE worker_id=?", [(f"imap_{aid}",) for aid in id_list])
+        except Exception:
+            pass
+        # Delete accounts
+        qmarks = ",".join(["?"] * len(id_list))
+        cur.execute(f"DELETE FROM email_accounts WHERE id IN ({qmarks})", id_list)
+        conn.commit()
+        deleted = cur.rowcount if cur.rowcount is not None else len(id_list)
+    finally:
+        conn.close()
+    return jsonify({'success': True, 'deleted': deleted, 'ids': id_list})
+
+
 @accounts_bp.route('/api/accounts/<account_id>/health')
 @login_required
 def api_account_health(account_id):

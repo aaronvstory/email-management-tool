@@ -150,6 +150,13 @@
     <h1><i class="bi bi-envelope-at-fill"></i> Email Account Management</h1>
     <div class="d-flex align-items-center gap-2">
         <input id="accounts-search" class="input-modern" placeholder="Search accounts..." style="min-width:240px;" oninput="filterAccounts()" />
+        <div class="form-check" title="Select all">
+          <input class="form-check-input" type="checkbox" id="select-all" onclick="toggleSelectAll(this)">
+          <label class="form-check-label" for="select-all">Select all</label>
+        </div>
+        <button class="btn btn-danger" id="bulk-delete-btn" onclick="bulkDeleteSelected()" disabled>
+          <i class="bi bi-trash3"></i> Delete Selected
+        </button>
         <a href="/accounts/import" class="btn btn-secondary"><i class="bi bi-upload"></i> Import</a>
         <button class="btn btn-secondary" onclick="exportAccounts()"><i class="bi bi-download"></i> Export</button>
         <button class="btn btn-secondary" onclick="testAllAccounts()"><i class="bi bi-activity"></i> Test All</button>
@@ -165,7 +172,8 @@
         <div class="col-12 account-card-wrap" id="account-card-{{ account.id }}">
             <div class="account-card">
                 <div class="account-header">
-                    <div>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <input class="form-check-input account-select" type="checkbox" value="{{ account.id }}" onchange="onSelectionChanged()">
                         <div class="account-title">{{ account.account_name }}</div>
                         <div style="color: #9ca3af; font-size: 0.9rem;">{{ account.email_address }}</div>
                     </div>
@@ -549,5 +557,68 @@ function filterAccounts(){
     card.style.display = (!q || text.includes(q)) ? '' : 'none';
   });
 }
+</script>
+<script>
+// Bulk selection helpers
+function getSelectedAccountIds(){
+  return Array.from(document.querySelectorAll('.account-select:checked'))
+    .map(cb => parseInt(cb.value, 10))
+    .filter(Number.isFinite);
+}
+
+function onSelectionChanged(){
+  const ids = getSelectedAccountIds();
+  const btn = document.getElementById('bulk-delete-btn');
+  if (btn) btn.disabled = ids.length === 0;
+  const all = document.querySelectorAll('.account-select');
+  const selAll = document.getElementById('select-all');
+  if (selAll) {
+    selAll.checked = ids.length > 0 && ids.length === all.length;
+    selAll.indeterminate = ids.length > 0 && ids.length < all.length;
+  }
+}
+
+function toggleSelectAll(el){
+  const checked = !!(el && el.checked);
+  document.querySelectorAll('.account-select').forEach(cb => { cb.checked = checked; });
+  onSelectionChanged();
+}
+
+async function bulkDeleteSelected(){
+  const ids = getSelectedAccountIds();
+  if (!ids.length){ if (window.showWarning) showWarning('No accounts selected'); return; }
+
+  const doDelete = async () => {
+    const btn = document.getElementById('bulk-delete-btn');
+    const original = btn ? btn.innerHTML : '';
+    try{
+      if (btn){ btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deleting...'; }
+      const r = await fetch('/api/accounts/bulk-delete', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ ids })
+      });
+      const j = await r.json();
+      if (!r.ok || j.success === false){ throw new Error(j.error || `HTTP ${r.status}`); }
+      // Remove deleted cards from DOM
+      (j.ids || ids).forEach(id => {
+        const wrap = document.getElementById('account-card-'+id);
+        if (wrap) wrap.remove();
+      });
+      onSelectionChanged();
+      if (window.showSuccess) showSuccess(`Deleted ${j.deleted||ids.length} account(s)`);
+    }catch(e){ if (window.showError) showError('Bulk delete failed: '+e.message); }
+    finally{ if (btn){ btn.disabled = false; btn.innerHTML = original || '<i class="bi bi-trash3"></i> Delete Selected'; } }
+  };
+
+  if (window.confirmToast){
+    confirmToast(`Permanently delete ${ids.length} account(s)?`, doDelete);
+  } else if (confirm('Permanently delete selected accounts?')){
+    await doDelete();
+  }
+}
+
+// Initialize selection state on load
+document.addEventListener('DOMContentLoaded', onSelectionChanged);
 </script>
 {% endblock %}

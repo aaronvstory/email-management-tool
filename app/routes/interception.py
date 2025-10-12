@@ -428,11 +428,27 @@ def api_interception_release(msg_id:int):
 @bp_interception.route('/api/interception/discard/<int:msg_id>', methods=['POST'])
 @login_required
 def api_interception_discard(msg_id:int):
+    """Idempotent discard: if already DISCARDED (or not HELD), respond ok with no-op.
+    Returns JSON: { ok: true, status: <current|DISCARDED>, changed: 0|1 }
+    """
     conn = _db(); cur = conn.cursor()
-    cur.execute("UPDATE email_messages SET interception_status='DISCARDED', action_taken_at=datetime('now') WHERE id=? AND interception_status='HELD'", (msg_id,))
-    changed = cur.rowcount; conn.commit(); conn.close()
-    if changed == 0: return jsonify({'ok':False,'reason':'not-held'}), 409
-    return jsonify({'ok':True})
+    row = cur.execute("SELECT interception_status FROM email_messages WHERE id=?", (msg_id,)).fetchone()
+    if not row:
+        conn.close();
+        return jsonify({'ok': False, 'reason': 'not-found'}), 404
+    status = row['interception_status']
+    if status == 'DISCARDED':
+        conn.close();
+        return jsonify({'ok': True, 'status': 'DISCARDED', 'changed': 0, 'already': True})
+    if status != 'HELD':
+        # No state change needed; treat as idempotent no-op
+        conn.close();
+        return jsonify({'ok': True, 'status': status, 'changed': 0, 'noop': True})
+    # Transition HELD -> DISCARDED
+    cur.execute("UPDATE email_messages SET interception_status='DISCARDED', action_taken_at=datetime('now') WHERE id=?", (msg_id,))
+    changed = cur.rowcount or 0
+    conn.commit(); conn.close()
+    return jsonify({'ok': True, 'status': 'DISCARDED', 'changed': int(changed)})
 
 @bp_interception.route('/api/inbox')
 @login_required
