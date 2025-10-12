@@ -96,7 +96,7 @@
     '<': '<',
     '>': '>',
     '"': '"',
-    "'": '&#39;'
+    "'": '''
   };
   const escapeHtml = (value) => {
     return String(value ?? '').replace(/[&<>"']/g, (char) => htmlEntities[char] || char);
@@ -121,7 +121,7 @@
         smtpStatusEl.textContent = listening ? 'OK' : 'DOWN';
         smtpStatusEl.classList.toggle('status-ok', listening)
         smtpStatusEl.classList.toggle('status-down', !listening)
-
+        
         if (smtpMetaEl) {
           const host = payload.smtp.host ?? '127.0.0.1';
           const port = payload.smtp.port ?? '8587';
@@ -198,7 +198,7 @@
         const hasAccounts = accounts.length > 0;
         if(grid) grid.classList.toggle('d-none', !hasAccounts);
         if(emptyState) emptyState.classList.toggle('d-none', hasAccounts);
-
+        
         if (watchersCountEl) {
           watchersCountEl.textContent = activeCount;
           watchersCountEl.dataset.totalAccounts = String(accounts.length);

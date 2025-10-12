@@ -1,6 +1,6 @@
 # Repository Guidelines
 
-Use this quick reference alongside in-repo docs to keep updates consistent and production-ready.
+Use this quick reference with in-repo docs to keep updates consistent and production-ready.
 
 ## Project Structure & Module Organization
 - Core Flask code lives in `app/`; feature logic sits under `models/`, `routes/`, `services/`, `utils/`, and background `workers/`.
@@ -16,7 +16,7 @@ Use this quick reference alongside in-repo docs to keep updates consistent and p
 - `python start.py` — validate environment wiring after setup changes.
 
 ## Coding Style & Naming Conventions
-- Format Python with `black` (88-character line cap) and standard 4-space indentation.
+- Format Python with `black` (88-character line cap) and 4-space indentation.
 - Lint with `pylint app tests` and type-check with `mypy app`; fix warnings before committing.
 - Keep modules, packages, and tests in `snake_case`; expose Flask blueprints via PascalCase classes but keep endpoint functions snake_case.
 
