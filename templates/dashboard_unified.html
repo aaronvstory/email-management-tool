@@ -499,12 +499,17 @@ function applyStats(j) {
     }
 }
 
-// Load unified stats from API (fallback for non-SSE)
+// Load unified stats + latency from API (fallback for non-SSE)
 async function loadUnifiedStats() {
     try {
-        const r = await fetch('/api/unified-stats');
-        if (!r.ok) return;
-        applyStats(await r.json());
+        const [uResp, lResp] = await Promise.all([
+            fetch('/api/unified-stats'),
+            fetch('/api/latency-stats')
+        ]);
+        if (!uResp.ok) return;
+        const unified = await uResp.json();
+        const latency = lResp.ok ? await lResp.json() : null;
+        applyStats({ unified, latency });
     } catch(e) {
         console.warn('Stats error:', e);
     }
@@ -514,13 +519,13 @@ async function loadUnifiedStats() {
 function startSSE() {
     try {
         const es = new EventSource('/stream/stats');
-        es.addEventListener('stats', e => {
+        es.onmessage = (e) => {
             try {
                 applyStats(JSON.parse(e.data));
             } catch(err) {
                 console.warn('SSE parse error:', err);
             }
-        });
+        };
         es.onerror = () => {
             console.warn('SSE connection failed, falling back to polling');
             es.close();

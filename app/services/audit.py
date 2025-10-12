@@ -7,7 +7,7 @@ Best-effort logging - failures are silently caught to preserve
 application functionality (matches original monolith behavior).
 """
 import sqlite3
-from datetime import datetime
+from datetime import datetime, UTC
 from app.utils.db import DB_PATH
 
 
@@ -44,10 +44,13 @@ def log_action(action_type, user_id, email_id, message):
         """)
 
         # Insert audit record
-        cur.execute("""
+        cur.execute(
+            """
             INSERT INTO audit_log (action_type, user_id, email_id, message, created_at)
             VALUES (?, ?, ?, ?, ?)
-        """, (action_type, user_id, email_id, message, datetime.utcnow().isoformat()))
+            """,
+            (action_type, user_id, email_id, message, datetime.now(UTC).isoformat()),
+        )
 
         conn.commit()
         conn.close()
