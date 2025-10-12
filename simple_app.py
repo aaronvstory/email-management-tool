@@ -474,6 +474,11 @@ def monitor_imap_account(account_id: int):
                     idle_ping_env = int(os.getenv('IMAP_IDLE_PING_INTERVAL', str(14 * 60)))
                 except Exception:
                     idle_ping_env = 14 * 60
+                # Mark-seen behavior configurable via env
+                try:
+                    _mark_seen = str(os.getenv('IMAP_MARK_SEEN_QUARANTINE','1')).lower() in ('1','true','yes','on')
+                except Exception:
+                    _mark_seen = True
                 cfg = AccountConfig(
                     imap_host=eff_host,
                     imap_port=eff_port,
@@ -484,7 +489,7 @@ def monitor_imap_account(account_id: int):
                     quarantine="Quarantine",
                     idle_timeout=idle_timeout_env,
                     idle_ping_interval=idle_ping_env,
-                    mark_seen_quarantine=True,
+                    mark_seen_quarantine=_mark_seen,
                     account_id=account_id,  # Pass account ID for database storage
                     db_path=DB_PATH  # Pass database path
                 )

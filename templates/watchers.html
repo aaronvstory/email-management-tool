@@ -7,6 +7,7 @@
   <div class="d-flex" style="gap:.5rem">
     <a href="/settings" class="btn-ghost btn-sm"><i class="bi bi-sliders"></i> Settings</a>
     <button class="btn-secondary btn-sm" onclick="refreshAll()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+    <button class="btn-secondary btn-sm" onclick="validateCounts()"><i class="bi bi-check2-circle"></i> Validate Counts</button>
   </div>
   </div>
 
@@ -118,5 +119,15 @@ async function checkSmtp(){ try{ const r=await fetch('/api/smtp-health'); const 
 function refreshAll(){ loadOverview(); }
 
 document.addEventListener('DOMContentLoaded', ()=>{ loadOverview(); setInterval(loadOverview, 10000); });
+
+async function validateCounts(){
+  try{
+    const r = await fetch('/api/stats-quick-validate');
+    const j = await r.json();
+    if(!j.success) throw new Error(j.error||'Failed');
+    const c = j.counts;
+    if(window.showInfo) showInfo(`Counts → total:${c.total} held:${c.held} pending:${c.pending} released:${c.released} rejected:${c.rejected}`);
+  }catch(e){ if(window.showError) showError('Validation failed'); }
+}
 </script>
 {% endblock %}

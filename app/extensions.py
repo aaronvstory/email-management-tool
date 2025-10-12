@@ -50,8 +50,9 @@ except ImportError:
                         token_data = f"{remote_addr}:{timestamp}"
                         token = hashlib.sha256(token_data.encode()).hexdigest()[:32]
 
-                        # Store in app context for this request
-                        request.csrf_token = token
+                        # Store in g context for this request (not on request object directly)
+                        from flask import g
+                        g.csrf_token = token
                 except (RuntimeError, ImportError, AttributeError):
                     # Request context not available
                     pass
@@ -60,9 +61,9 @@ except ImportError:
             def inject_csrf_token():
                 """Inject CSRF token into templates"""
                 try:
-                    from flask import request, has_request_context
-                    if has_request_context() and request:
-                        token = getattr(request, 'csrf_token', '')
+                    from flask import g, has_request_context
+                    if has_request_context():
+                        token = getattr(g, 'csrf_token', '')
                         return {'csrf_token': lambda: token}
                     else:
                         return {'csrf_token': lambda: ''}

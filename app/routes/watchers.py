@@ -106,6 +106,30 @@ def api_watchers_overview():
     return jsonify({'success': True, 'smtp': _smtp_health(), 'accounts': accounts})
 
 
+@watchers_bp.route('/api/stats-quick-validate')
+@login_required
+def api_stats_quick_validate():
+    """Quick E2E counts check against DB to compare with UI displayed stats."""
+    try:
+        conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        row = cur.execute(
+            """
+            SELECT
+              COUNT(*) AS total,
+              SUM(CASE WHEN status='PENDING' THEN 1 ELSE 0 END) AS pending,
+              SUM(CASE WHEN interception_status='HELD' THEN 1 ELSE 0 END) AS held,
+              SUM(CASE WHEN interception_status='RELEASED' OR status IN ('SENT','APPROVED','DELIVERED') THEN 1 ELSE 0 END) AS released,
+              SUM(CASE WHEN status='REJECTED' THEN 1 ELSE 0 END) AS rejected
+            FROM email_messages
+            """
+        ).fetchone()
+        conn.close()
+        return jsonify({'success': True, 'counts': {k: int(row[k] or 0) for k in row.keys()}})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 # ------------------- Settings -------------------
 
 _KNOWN_FLAGS: Dict[str, Dict[str, Any]] = {
@@ -132,6 +156,18 @@ _KNOWN_FLAGS: Dict[str, Dict[str, Any]] = {
     'IMAP_SWEEP_LAST_N': {
         'type': 'int', 'default': 50,
         'desc': 'During scans, also inspect the last N UIDs for missed messages.'
+    },
+    'IMAP_MARK_SEEN_QUARANTINE': {
+        'type': 'bool', 'default': True,
+        'desc': 'Mark messages as Seen in Quarantine to reduce unread badges.'
+    },
+    'IMAP_QUARANTINE_PREFERENCE': {
+        'type': 'str', 'default': 'auto',
+        'desc': 'Prefer quarantine folder naming: auto | inbox | plain.'
+    },
+    'IMAP_LOG_VERBOSE': {
+        'type': 'bool', 'default': False,
+        'desc': 'Increase watcher logs for troubleshooting (more INFO logs).'
     },
     'IMAP_CIRCUIT_THRESHOLD': {
         'type': 'int', 'default': 5,

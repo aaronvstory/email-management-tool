@@ -21,6 +21,7 @@ import sqlite3
 import json
 from datetime import datetime
 from email import message_from_bytes, policy
+from typing import Optional
 
 import backoff
 from imapclient import IMAPClient
@@ -41,18 +42,17 @@ class AccountConfig:
     idle_timeout: int = 25 * 60  # 25 minutes typical server limit < 30m
     idle_ping_interval: int = 14 * 60  # break idle to keep alive
     mark_seen_quarantine: bool = True
-    account_id: int = None  # Database account ID for storing emails
+    account_id: Optional[int] = None  # Database account ID for storing emails
     db_path: str = "email_manager.db"  # Path to database
 
 
 class ImapWatcher:
     def __init__(self, cfg: AccountConfig):
         self.cfg = cfg
-        self._client = None  # set in _connect
+        self._client: Optional[IMAPClient] = None  # set in _connect
         self._last_hb = 0.0
         self._last_uidnext = 1
-        self._last_uidnext = 1
-        
+
     def _should_stop(self) -> bool:
         """Return True if the account is deactivated in DB (is_active=0)."""
         try:
@@ -121,7 +121,7 @@ class ImapWatcher:
         except Exception:
             pass
 
-    def _connect(self):
+    def _connect(self) -> Optional[IMAPClient]:
         try:
             log.info("Connecting to IMAP %s:%s (ssl=%s)", self.cfg.imap_host, self.cfg.imap_port, self.cfg.use_ssl)
             ssl_context = sslmod.create_default_context() if self.cfg.use_ssl else None
@@ -165,10 +165,17 @@ class ImapWatcher:
             except Exception:
                 delim = None
 
-            # Try to ensure quarantine folder with several candidates
-            q_candidates = [self.cfg.quarantine]
-            # Always try common INBOX-prefixed variants regardless of delim detection
-            q_candidates.extend(["INBOX/" + self.cfg.quarantine, "INBOX." + self.cfg.quarantine])
+            # Try to ensure quarantine folder with several candidates (ordered by preference)
+            pref = str(os.getenv('IMAP_QUARANTINE_PREFERENCE', 'auto')).lower()
+            base_name = self.cfg.quarantine
+            inbox_slash = f"INBOX/{base_name}"
+            inbox_dot = f"INBOX.{base_name}"
+            if pref == 'inbox':
+                q_candidates = [inbox_slash, inbox_dot, base_name]
+            elif pref == 'plain':
+                q_candidates = [base_name, inbox_slash, inbox_dot]
+            else:
+                q_candidates = [base_name, inbox_slash, inbox_dot]
             # If we detected a delimiter we trust, add that specific variant too
             try:
                 if delim in ("/", "."):
@@ -182,6 +189,8 @@ class ImapWatcher:
                     client.select_folder(qname, readonly=False)
                     self.cfg.quarantine = qname
                     ensured = True
+                    if str(os.getenv('IMAP_LOG_VERBOSE','0')).lower() in ('1','true','yes'):
+                        log.info("Using quarantine folder: %s", qname)
                     break
                 except Exception:
                     try:
@@ -245,7 +254,10 @@ class ImapWatcher:
         client = self._client
         if client is None:
             return
-        log.debug("Copying %s to %s", uids, self.cfg.quarantine)
+        if str(os.getenv('IMAP_LOG_VERBOSE','0')).lower() in ('1','true','yes'):
+            log.info("Copying %s to %s", uids, self.cfg.quarantine)
+        else:
+            log.debug("Copying %s to %s", uids, self.cfg.quarantine)
         # Attempt copy, retrying with alternate folder names on namespace errors
         copy_ok = False
         last_err = None
@@ -297,7 +309,10 @@ class ImapWatcher:
                 log.debug("Could not set Seen in quarantine; continuing")
             finally:
                 client.select_folder(self.cfg.inbox, readonly=False)
-        log.debug("Purging from INBOX")
+        if str(os.getenv('IMAP_LOG_VERBOSE','0')).lower() in ('1','true','yes'):
+            log.info("Purging from INBOX")
+        else:
+            log.debug("Purging from INBOX")
         # Ensure we're operating on INBOX
         try:
             client.select_folder(self.cfg.inbox, readonly=False)
@@ -387,16 +402,22 @@ class ImapWatcher:
                         for part in email_msg.walk():
                             if part.get_content_type() == "text/plain":
                                 payload = part.get_payload(decode=True)
-                                if payload:
+                                if isinstance(payload, bytes):
                                     body_text = payload.decode('utf-8', errors='ignore')
+                                elif isinstance(payload, str):
+                                    body_text = payload
                             elif part.get_content_type() == "text/html":
                                 payload = part.get_payload(decode=True)
-                                if payload:
+                                if isinstance(payload, bytes):
                                     body_html = payload.decode('utf-8', errors='ignore')
+                                elif isinstance(payload, str):
+                                    body_html = payload
                     else:
                         content = email_msg.get_payload(decode=True)
-                        if content:
+                        if isinstance(content, bytes):
                             body_text = content.decode('utf-8', errors='ignore')
+                        elif isinstance(content, str):
+                            body_text = content
 
                     # Idempotency: skip if Message-ID already stored
                     try:
@@ -750,79 +771,3 @@ class ImapWatcher:
 
 
 __all__ = ["AccountConfig", "ImapWatcher"]
-import time
-import threading
-from typing import List
-
-try:
-    from imapclient import IMAPClient, exceptions as imap_exc
-except Exception as e:  # pragma: no cover - import-time fallback
-    IMAPClient = None  # type: ignore
-    imap_exc = None  # type: ignore
-
-
-class IMAPRapidInterceptor(threading.Thread):
-    daemon = True
-
-    def __init__(self, imap_host: str, username: str, password: str, quarantine_folder: str = "Quarantine"):
-        super().__init__(name=f"imap-rapid-{username}")
-        self.imap_host = imap_host
-        self.username = username
-        self.password = password
-        self.quarantine = quarantine_folder
-        self._stop = threading.Event()
-
-    def stop(self):
-        self._stop.set()
-
-    def _connect(self):
-        if IMAPClient is None:
-            raise RuntimeError("imapclient is not installed")
-        c = IMAPClient(self.imap_host, ssl=True)
-        c.login(self.username, self.password)
-        # Ensure Quarantine exists
-        try:
-            c.select_folder(self.quarantine)
-        except Exception:
-            c.create_folder(self.quarantine)
-        return c
-
-    def _move_atomic(self, c, uids: List[int]):
-        try:
-            # UID MOVE if supported
-            c.move(uids, self.quarantine)
-        except Exception:
-            # Fallback: COPY + DELETE + EXPUNGE
-            c.copy(uids, self.quarantine)
-            c.add_flags(uids, [b'\\Deleted'])
-            c.expunge()
-
-    def run(self):
-        while not self._stop.is_set():
-            c = None
-            try:
-                c = self._connect()
-                c.select_folder("INBOX")
-                status = c.folder_status("INBOX", [b'UIDNEXT'])
-                last_uidnext = status[b'UIDNEXT']
-                while not self._stop.is_set():
-                    # IDLE wait
-                    with c.idle():
-                        _ = c.idle_check(timeout=60)
-                    # On exit from IDLE, check for new messages
-                    status2 = c.folder_status("INBOX", [b'UIDNEXT'])
-                    uidnext2 = status2[b'UIDNEXT']
-                    if uidnext2 > last_uidnext:
-                        new_uid_first = last_uidnext
-                        new_uids = c.search(f'UID {new_uid_first}:{uidnext2 - 1}')
-                        if new_uids:
-                            self._move_atomic(c, new_uids)
-                        last_uidnext = uidnext2
-            except Exception:
-                time.sleep(2.0)
-            finally:
-                if c:
-                    try:
-                        c.logout()
-                    except Exception:
-                        pass

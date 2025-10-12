@@ -76,8 +76,8 @@ def api_emails_unified():
 
     # Build query based on filters
     query = """
-        SELECT id, sender, recipients, subject, body_text, 
-               interception_status, status, created_at, 
+        SELECT id, account_id, sender, recipients, subject, body_text,
+               interception_status, status, created_at,
                latency_ms, risk_score, keywords_matched
         FROM email_messages
         WHERE 1=1

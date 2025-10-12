@@ -499,6 +499,7 @@ let currentStatus = '{{ current_filter }}' || 'ALL';
 let fetchOffset = 0;
 let autoRefreshTimer = null;
 let currentEmails = [];
+let watchersMap = {};
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', function() {
@@ -507,6 +508,8 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Load emails
   reloadEmails();
+  // Load watcher overview (for per-row chips)
+  loadWatchersMap();
   
   // Setup search debounce
   let searchTimeout;
@@ -531,6 +534,16 @@ function updateActiveTab(status) {
       tab.classList.remove('active');
     }
   });
+}
+
+async function loadWatchersMap(){
+  try{
+    const r = await fetch('/api/watchers/overview');
+    if(!r.ok) return;
+    const j = await r.json();
+    watchersMap = {};
+    (j.accounts||[]).forEach(a=>{ watchersMap[a.id] = (a.watcher && a.watcher.state) || (a.is_active?'active':'stopped'); });
+  }catch(e){ /* ignore */ }
 }
 
 function switchStatus(status) {
@@ -723,6 +736,8 @@ function renderEmails(emails) {
       `;
     }
     
+    const watcherState = watchersMap[email.account_id] || 'unknown';
+    const watcherBadge = `<span class="badge ${watcherState==='active' ? 'badge-soft-success' : (watcherState==='stopped' ? 'badge-soft-danger' : 'badge-soft-muted')}" title="Watcher state">${watcherState}</span>`;
     tr.innerHTML = `
       <td>
         <input type="checkbox" class="form-check-input email-checkbox" value="${email.id}">
@@ -750,7 +765,11 @@ function renderEmails(emails) {
         ${email.preview_snippet ? `<div class="email-preview">${email.preview_snippet.substring(0, 100)}...</div>` : ''}
       </td>
       <td>
-        <span class="status-badge status-${status}">${status}</span>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <span class="status-badge status-${status}">${status}</span>
+          ${watcherBadge}
+          <button class="btn btn-sm btn-secondary" title="Restart watcher" onclick="restartWatcherFor(${email.account_id})"><i class="bi bi-arrow-repeat"></i></button>
+        </div>
       </td>
       <td>
         <div class="action-buttons">
@@ -763,6 +782,17 @@ function renderEmails(emails) {
   });
   
   updateBulkActionsVisibility();
+}
+
+async function restartWatcherFor(accountId){
+  try{
+    const r = await fetch(`/api/accounts/${accountId}/monitor/restart`, {method:'POST'});
+    const j = await r.json();
+    if(!j.success){ throw new Error(j.error||'Failed'); }
+    if(window.showSuccess) showSuccess('Watcher restarted');
+    await loadWatchersMap();
+    renderEmails(currentEmails);
+  }catch(e){ if(window.showError) showError('Restart failed (admin required?)'); }
 }
 
 function filterEmails() {
