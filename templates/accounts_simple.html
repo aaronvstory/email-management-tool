@@ -148,7 +148,8 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1><i class="bi bi-envelope-at-fill"></i> Email Account Management</h1>
-    <div class="d-flex gap-2">
+    <div class="d-flex align-items-center gap-2">
+        <input id="accounts-search" class="input-modern" placeholder="Search accounts..." style="min-width:240px;" oninput="filterAccounts()" />
         <a href="/accounts/import" class="btn btn-secondary"><i class="bi bi-upload"></i> Import</a>
         <button class="btn btn-secondary" onclick="exportAccounts()"><i class="bi bi-download"></i> Export</button>
         <button class="btn btn-secondary" onclick="testAllAccounts()"><i class="bi bi-activity"></i> Test All</button>
@@ -161,16 +162,19 @@
 {% if accounts %}
     <div class="row">
         {% for account in accounts %}
-        <div class="col-12">
+        <div class="col-12 account-card-wrap" id="account-card-{{ account.id }}">
             <div class="account-card">
                 <div class="account-header">
                     <div>
                         <div class="account-title">{{ account.account_name }}</div>
                         <div style="color: #9ca3af; font-size: 0.9rem;">{{ account.email_address }}</div>
                     </div>
-                    <span class="account-status {% if account.is_active %}status-active{% else %}status-inactive{% endif %}">
-                        {% if account.is_active %}Active{% else %}Inactive{% endif %}
-                    </span>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span id="watcher-dot-{{ account.id }}" title="Watcher status" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#6b7280;border:1px solid rgba(255,255,255,0.25);"></span>
+                        <span class="account-status {% if account.is_active %}status-active{% else %}status-inactive{% endif %}">
+                            {% if account.is_active %}Active{% else %}Inactive{% endif %}
+                        </span>
+                    </div>
                 </div>
                 
                 <div class="account-details">
@@ -202,18 +206,21 @@
                 </div>
                 
                 <div class="account-actions">
-                    <button class="btn-test" onclick="testConnection({{ account.id }}, 'imap')">
+                    <button class="btn-test" onclick="testConnection({{ account.id }}, 'imap', this)">
                         <i class="bi bi-play-circle"></i> Test IMAP
                     </button>
-                    <button class="btn-test" onclick="testConnection({{ account.id }}, 'smtp')">
+                    <button class="btn-test" onclick="testConnection({{ account.id }}, 'smtp', this)">
                         <i class="bi bi-play-circle"></i> Test SMTP
                     </button>
                     {% if account.is_active %}
-                    <button class="btn btn-secondary btn-sm" onclick="stopMonitoring({{ account.id }})">
+                    <button class="btn btn-secondary btn-sm" onclick="stopMonitoring({{ account.id }}, this)">
                         <i class="bi bi-pause-circle"></i> Stop Monitoring
                     </button>
+                    <button class="btn btn-outline-light btn-sm" onclick="restartMonitoring({{ account.id }}, this)">
+                        <i class="bi bi-arrow-repeat"></i> Restart
+                    </button>
                     {% else %}
-                    <button class="btn btn-success btn-sm" onclick="startMonitoring({{ account.id }})">
+                    <button class="btn btn-success btn-sm" onclick="startMonitoring({{ account.id }}, this)">
                         <i class="bi bi-play-fill"></i> Start Monitoring
                     </button>
                     {% endif %}
@@ -322,11 +329,14 @@
 
 {% block extra_js %}
 <script>
-function testConnection(accountId, connectionType) {
+function testConnection(accountId, connectionType, btn) {
     const resultDiv = document.getElementById(`test-result-${accountId}`);
     resultDiv.style.display = 'block';
     resultDiv.className = 'test-result';
     resultDiv.innerHTML = '<i class="bi bi-hourglass-split"></i> Testing connection...';
+
+    // Disable clicked button and show spinner
+    if (btn) { btn.disabled = true; const ico = btn.querySelector('i'); if (ico) ico.className = 'bi bi-hourglass-split'; }
 
     // Use secure server-side test (no secrets in browser)
     fetch(`/api/accounts/${accountId}/test`, { method: 'POST' })
@@ -356,7 +366,8 @@ function testConnection(accountId, connectionType) {
             resultDiv.className = 'test-result test-error';
             resultDiv.innerHTML = `<i class="bi bi-x-circle"></i> Test failed: ${error.message}`;
             if (window.showError) showError('Test error: ' + error.message);
-        });
+        })
+        .finally(()=>{ if (btn) { btn.disabled = false; const ico = btn.querySelector('i'); if (ico) ico.className = 'bi bi-play-circle'; }});
 
     // Hide result after 10 seconds
     setTimeout(() => {
@@ -475,26 +486,68 @@ async function saveAccountEdit(){
   } catch(e){ if (window.showError) showError('Update failed: '+e.message); }
 }
 // Start/Stop monitoring controls
-async function startMonitoring(accountId){
+async function startMonitoring(accountId, btn){
   try{
+    if (btn) btn.disabled = true;
     const r = await fetch(`/api/accounts/${accountId}/monitor/start`, {method:'POST'});
     const j = await r.json();
     if (!r.ok || j.success === false){ throw new Error(j.error || `HTTP ${r.status}`); }
     if (window.showSuccess) showSuccess('Monitoring started');
     setTimeout(()=> window.location.reload(), 500);
   }catch(e){ if (window.showError) showError('Start failed: '+e.message); }
+  finally { if (btn) btn.disabled = false; }
 }
-async function stopMonitoring(accountId){
+async function stopMonitoring(accountId, btn){
   try{
+    if (btn) btn.disabled = true;
     const r = await fetch(`/api/accounts/${accountId}/monitor/stop`, {method:'POST'});
     const j = await r.json();
     if (!r.ok || j.success === false){ throw new Error(j.error || `HTTP ${r.status}`); }
     if (window.showSuccess) showSuccess('Monitoring stopped');
     setTimeout(()=> window.location.reload(), 500);
   }catch(e){ if (window.showError) showError('Stop failed: '+e.message); }
+  finally { if (btn) btn.disabled = false; }
+}
+
+async function restartMonitoring(accountId, btn){
+  try{
+    if (btn) btn.disabled = true;
+    const r = await fetch(`/api/accounts/${accountId}/monitor/restart`, {method:'POST'});
+    const j = await r.json();
+    if (!r.ok || j.success === false){ throw new Error(j.error || `HTTP ${r.status}`); }
+    if (window.showSuccess) showSuccess('Watcher restarting');
+    setTimeout(()=> window.location.reload(), 700);
+  }catch(e){ if (window.showError) showError('Restart failed: '+e.message); }
+  finally { if (btn) btn.disabled = false; }
 }
 
 // Auto-open if /accounts?edit=<id>
+
 (function(){ const id = getQueryParam('edit'); if (id) openEditModal(id); })();
+
+// Annotate watcher status per account using /api/watchers/status
+async function annotateWatchers(){
+  try{
+    const r = await fetch('/api/watchers/status');
+    if(!r.ok) return; const j = await r.json();
+    const ids = (j.workers||[]).map(w=>String(w.worker_id||'').replace('imap_',''));
+    document.querySelectorAll('[id^="watcher-dot-"]').forEach(el=>{
+      const accId = el.id.replace('watcher-dot-','');
+      const active = ids.includes(accId);
+      el.style.background = active ? '#22c55e' : '#6b7280';
+      el.style.borderColor = active ? '#22c55e' : 'rgba(255,255,255,0.25)';
+    });
+  }catch(e){}
+}
+annotateWatchers();
+setInterval(annotateWatchers, 10000);
+
+function filterAccounts(){
+  const q = (document.getElementById('accounts-search')?.value || '').toLowerCase();
+  document.querySelectorAll('.account-card-wrap').forEach(card => {
+    const text = (card.textContent||'').toLowerCase();
+    card.style.display = (!q || text.includes(q)) ? '' : 'none';
+  });
+}
 </script>
 {% endblock %}

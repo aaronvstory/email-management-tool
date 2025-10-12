@@ -84,7 +84,13 @@ curl http://localhost:5000/healthz
 
 ## Worklog
 - <yyyy-mm-dd> Init PLAN.md and live E2E; per‑account watcher controls online — status: In Progress
-- <yyyy-mm-dd> Hardening watchers and diagnostics UI — status: Planned
+- 2025-10-12 Gmail E2E (Gmail→Gmail) PASS; IMAP watcher stabilized (explicit IDLE start/stop + opportunistic poll); Hostinger deferred — status: Gmail baseline complete
+- 2025-10-12 Environment bootstrapped: ensured pip via ensurepip, upgraded pip, installed requirements; started app; /healthz and /api/smtp-health OK
+- 2025-10-12 Gmail-only E2E script: added scripts/live_gmail_e2e.py with E2E_SKIP_ACCOUNT_UPDATE; hold→edit→release PASS on Gmail
+- 2025-10-12 Storage idempotency + schema: skip duplicates by Message-ID; store original_uid/internaldate/message_id; UNIQUE INDEX on email_messages.message_id
+- 2025-10-12 Watcher improvements: UIDNEXT-based delta polling; error taxonomy (auth_failed/tls_failed/timeout/error); endpoints POST /api/accounts/<id>/monitor/restart and GET /api/watchers/status
+- 2025-10-12 UI polish R1–R3: 42px uniform buttons; held table selection+keyboard nav; busy states; filter with persistence + auto-refresh + diff toggle; inline release controls (target folder, strip attachments); accounts search + spinners; topbar SMTP/watcher badges; keyboard shortcuts (R/D/S/Esc/Arrows); clipboard copy/paste
+- 2025-10-12 Tests: pytest tests/test_unified_stats.py passed (2/2); Gmail E2E still PASS after polish
 
 ## Next Actions (Week 1)
 - [ ] Phase 1: Run live_interception_e2e.py and capture results

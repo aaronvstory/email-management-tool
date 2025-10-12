@@ -117,7 +117,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1><i class="bi bi-inbox-fill"></i> Email Queue</h1>
     <div>
-        <input type="text" class="search-box" placeholder="Search emails..." style="width: 300px; display: inline-block;">
+        <input id="queue-search" type="text" class="search-box" placeholder="Search emails..." style="width: 300px; display: inline-block;" oninput="filterQueue()">
         <button class="btn btn-modern btn-primary-modern ms-2">
             <i class="bi bi-funnel"></i> Filter
         </button>
@@ -248,6 +248,7 @@
             {% endfor %}
         </tbody>
     </table>
+    <div id="queue-no-results" class="text-center py-3" style="display:none; color:#9ca3af;">No matching emails</div>
     
     {% if not emails %}
     <div class="text-center py-5">
@@ -412,7 +413,7 @@ function editEmail(emailId) {
             document.getElementById('editEmailFrom').textContent = data.sender;
             document.getElementById('editEmailTo').textContent = data.recipients;
             document.getElementById('editEmailSubject').value = data.subject || '';
-            document.getElementById('editEmailBody').value = data.body || '';
+            document.getElementById('editEmailBody').value = data.body_text || '';
 
             // Show modal
             const modal = new bootstrap.Modal(modalElement);
@@ -450,7 +451,7 @@ function saveEmailEdit() {
         },
         body: JSON.stringify({
             subject: subject,
-            body: body
+            body_text: body
         })
     })
     .then(response => {
@@ -480,6 +481,22 @@ function saveEmailEdit() {
         saveBtn.disabled = false;
         saveBtn.innerHTML = originalText;
     });
+}
+
+function filterQueue(){
+    const input = document.getElementById('queue-search');
+    if(!input) return;
+    const q = (input.value || '').toLowerCase();
+    const rows = Array.from(document.querySelectorAll('table tbody tr'));
+    let shown = 0;
+    rows.forEach(tr => {
+        const txt = (tr.textContent || '').toLowerCase();
+        const vis = (!q || txt.includes(q));
+        tr.style.display = vis ? '' : 'none';
+        if (vis) shown++;
+    });
+    const empty = document.getElementById('queue-no-results');
+    if (empty) empty.style.display = shown === 0 ? 'block' : 'none';
 }
 </script>
 {% endblock %}

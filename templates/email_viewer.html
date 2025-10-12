@@ -181,7 +181,15 @@
       </div>
       <div class="meta-row">
         <span class="meta-label">To:</span>
-        <span class="meta-value">{{ email.recipients }}</span>
+        <span class="meta-value">
+          {% if email.recipients is string %}
+            {{ email.recipients }}
+          {% elif email.recipients %}
+            {{ email.recipients|join(', ') }}
+          {% else %}
+            (none)
+          {% endif %}
+        </span>
       </div>
       <div class="meta-row">
         <span class="meta-label">Date:</span>

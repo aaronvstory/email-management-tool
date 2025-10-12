@@ -504,6 +504,43 @@ def api_stop_monitor(account_id: int):
     conn.execute("UPDATE email_accounts SET is_active=0 WHERE id=?", (account_id,)); conn.commit(); conn.close()
     return jsonify({'success': True})
 
+@accounts_bp.route('/api/accounts/<int:account_id>/monitor/restart', methods=['POST'])
+@csrf.exempt
+@login_required
+def api_restart_monitor(account_id: int):
+    """Quick restart for an IMAP watcher: stop then start (best-effort)."""
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Admin access required'}), 403
+    try:
+        from simple_app import stop_imap_watcher_for_account, start_imap_watcher_for_account
+        stop_imap_watcher_for_account(account_id)
+        ok = start_imap_watcher_for_account(account_id)
+        return jsonify({'success': bool(ok)})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@accounts_bp.route('/api/watchers/status')
+@login_required
+def api_watchers_status():
+    """Return recent IMAP watcher heartbeats for UI badges/diagnostics."""
+    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    try:
+        # Ensure column existence detection for error_count
+        cols = [r[1] for r in cur.execute("PRAGMA table_info(worker_heartbeats)").fetchall()]
+        has_err = 'error_count' in cols
+        query = (
+            "SELECT worker_id, last_heartbeat, status" + (", error_count" if has_err else "") +
+            " FROM worker_heartbeats WHERE datetime(last_heartbeat) > datetime('now','-2 minutes') ORDER BY last_heartbeat DESC"
+        )
+        rows = cur.execute(query).fetchall()
+        payload = [dict(r) for r in rows]
+    except Exception:
+        payload = []
+    finally:
+        conn.close()
+    return jsonify({'success': True, 'workers': payload})
+
 @accounts_bp.route('/api/detect-email-settings', methods=['POST'])
 @login_required
 def api_detect_email_settings():

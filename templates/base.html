@@ -435,7 +435,11 @@
         .btn-cancel,
         .toolbar-btn,
         .provider-btn,
-        .btn-action {
+        .btn-action,
+        .action-btn,
+        .btn-test,
+        .btn-accent,
+        .btn-ghost {
             height: 42px !important;
             padding: 8px 20px !important;
             font-size: 15px !important;
@@ -843,7 +847,10 @@
                 <div class="search-inline">
                     <input type="text" placeholder="Search mail, accounts, rules..." aria-label="Search">
                 </div>
-                <div style="display:flex;align-items:center;gap:10px;"></div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span id="nav-smtp" class="badge" title="SMTP Proxy">SMTP</span>
+                    <span id="nav-watchers" class="badge" title="Active IMAP watchers">Watchers: --</span>
+                </div>
             </div>
             <div class="content-scroll">
                 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -869,5 +876,26 @@
     <script src="/static/js/app.js"></script>
 
     {% block extra_js %}{% endblock %}
+    <script>
+    // Topbar health badges
+    async function refreshTopbarHealth(){
+        try{
+            const r = await fetch('/healthz');
+            if(!r.ok) return;
+            const j = await r.json();
+            const smtp = document.getElementById('nav-smtp');
+            smtp.textContent = j.smtp && j.smtp.listening ? 'SMTP: OK' : 'SMTP: DOWN';
+            smtp.style.borderColor = (j.smtp && j.smtp.listening) ? '#10b981' : '#dc2626';
+            smtp.style.background = (j.smtp && j.smtp.listening) ? 'rgba(16,185,129,0.15)' : 'rgba(220,38,38,0.15)';
+            const w = document.getElementById('nav-watchers');
+            const count = Array.isArray(j.workers) ? j.workers.length : 0;
+            w.textContent = 'Watchers: ' + count;
+            w.style.borderColor = count > 0 ? '#10b981' : 'rgba(255,255,255,0.25)';
+            w.style.background = count > 0 ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.08)';
+            w.style.color = '#fff';
+        }catch(e){/* ignore */}
+    }
+    refreshTopbarHealth(); setInterval(refreshTopbarHealth, 10000);
+    </script>
 </body>
 </html>

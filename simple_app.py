@@ -350,6 +350,12 @@ def init_database():
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     )""")
 
+    # Idempotency: avoid duplicate rows by Message-ID when present
+    try:
+        cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_email_messages_msgid_unique ON email_messages(message_id) WHERE message_id IS NOT NULL")
+    except Exception:
+        pass
+
     # Moderation rules table
     cur.execute("""CREATE TABLE IF NOT EXISTS moderation_rules(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -429,6 +435,15 @@ def monitor_imap_account(account_id: int):
 
                 # Create account configuration with account_id and db_path
                 pwd: str = password  # type: ignore[assignment]
+                # Allow environment overrides for faster dev/test cycles
+                try:
+                    idle_timeout_env = int(os.getenv('IMAP_IDLE_TIMEOUT', str(25 * 60)))
+                except Exception:
+                    idle_timeout_env = 25 * 60
+                try:
+                    idle_ping_env = int(os.getenv('IMAP_IDLE_PING_INTERVAL', str(14 * 60)))
+                except Exception:
+                    idle_ping_env = 14 * 60
                 cfg = AccountConfig(
                     imap_host=row['imap_host'],
                     imap_port=port,
@@ -437,8 +452,8 @@ def monitor_imap_account(account_id: int):
                     use_ssl=use_ssl,
                     inbox="INBOX",
                     quarantine="Quarantine",
-                    idle_timeout=25 * 60,  # 25 minutes
-                    idle_ping_interval=14 * 60,  # 14 minutes
+                    idle_timeout=idle_timeout_env,
+                    idle_ping_interval=idle_ping_env,
                     mark_seen_quarantine=True,
                     account_id=account_id,  # Pass account ID for database storage
                     db_path=DB_PATH  # Pass database path
