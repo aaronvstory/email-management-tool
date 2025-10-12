@@ -346,9 +346,17 @@ class ImapWatcher:
             except Exception:
                 pass
             wid = f"imap_{self.cfg.account_id}"
+            # Reset error_count to 0 on healthy heartbeat; otherwise preserve
             cur.execute(
-                "INSERT OR REPLACE INTO worker_heartbeats(worker_id, last_heartbeat, status, error_count) VALUES(?, datetime('now'), ?, COALESCE((SELECT error_count FROM worker_heartbeats WHERE worker_id=?), 0))",
-                (wid, status, wid),
+                """
+                INSERT INTO worker_heartbeats(worker_id, last_heartbeat, status, error_count)
+                VALUES(?, datetime('now'), ?, CASE WHEN ?='active' THEN 0 ELSE 0 END)
+                ON CONFLICT(worker_id) DO UPDATE SET
+                  last_heartbeat = excluded.last_heartbeat,
+                  status = excluded.status,
+                  error_count = CASE WHEN excluded.status='active' THEN 0 ELSE COALESCE(worker_heartbeats.error_count, 0) END
+                """,
+                (wid, status, status),
             )
             conn.commit(); conn.close()
         except Exception:

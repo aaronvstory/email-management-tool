@@ -335,11 +335,22 @@ def api_interception_release(msg_id:int):
         except Exception:
             import time as _t
             date_param = imaplib.Time2Internaldate(_t.localtime())
-        # Append the (possibly edited) message
-        imap.append(target_folder, '', date_param, msg.as_bytes())
+        # Idempotency guard: if a message with same Message-ID already exists, skip APPEND
+        message_id_hdr = (msg.get('Message-ID') or '').strip()
+        already_present = False
+        try:
+            if message_id_hdr:
+                imap.select(target_folder)
+                typ0, data0 = imap.search(None, 'HEADER', 'Message-ID', f"{message_id_hdr}")
+                already_present = bool(data0 and data0[0] and len(data0[0].split()) > 0)
+        except Exception:
+            already_present = False
+
+        if not already_present:
+            # Append the (possibly edited) message
+            imap.append(target_folder, '', date_param, msg.as_bytes())
 
         # Verify delivery using Message-ID header
-        message_id_hdr = (msg.get('Message-ID') or '').strip()
         verify_ok = True
         try:
             if message_id_hdr:

@@ -401,6 +401,10 @@ def monitor_imap_account(account_id: int):
     """
     app.logger.info(f"Starting IMAP monitor for account {account_id}")
 
+    # Jittered backoff parameters for resilience
+    backoff_sec = 5
+    max_backoff = 30
+    import random
     while True:
         try:
             # Fetch account details from database
@@ -424,13 +428,38 @@ def monitor_imap_account(account_id: int):
                 if not password:
                     raise RuntimeError("Missing decrypted IMAP password for account")
 
-                # Normalize username and SSL options
-                username = row['imap_username'] or row['email_address']
-                use_ssl = bool(row['imap_use_ssl']) if row['imap_use_ssl'] is not None else True
-                port = int(row['imap_port'] or 993)
+                # Provider-aware normalization with Hostinger parity overrides
+                email_addr = row['email_address'] or ''
+                domain = email_addr.split('@')[-1].lower() if '@' in email_addr else ''
+                detected = {}
+                try:
+                    detected = detect_email_settings(email_addr) if email_addr else {}
+                except Exception:
+                    detected = {}
+
+                # Start with DB values or detected defaults
+                eff_host = row['imap_host'] or detected.get('imap_host') or 'imap.' + domain if domain else (row['imap_host'] or '')
+                eff_port = int(row['imap_port'] or detected.get('imap_port') or 993)
+                eff_ssl = bool(row['imap_use_ssl']) if row['imap_use_ssl'] is not None else bool(detected.get('imap_use_ssl', True))
+                username = row['imap_username'] or email_addr
+
+                # Enforce Hostinger parity strictly (corrinbox.com or hostinger hostnames)
+                host_lower = (eff_host or '').lower()
+                if domain == 'corrinbox.com' or 'hostinger' in host_lower:
+                    if detected:
+                        eff_host = detected.get('imap_host', eff_host)
+                        eff_port = int(detected.get('imap_port', eff_port))
+                        eff_ssl = bool(detected.get('imap_use_ssl', True))
+                    else:
+                        eff_host = 'imap.hostinger.com'
+                        eff_port = 993
+                        eff_ssl = True
+                    # Username should be full email for Hostinger
+                    if email_addr:
+                        username = email_addr
 
                 app.logger.info(
-                    f"IMAP config for acct {account_id}: host={row['imap_host']} port={port} ssl={use_ssl} user={username}"
+                    f"IMAP config for acct {account_id}: host={eff_host} port={eff_port} ssl={eff_ssl} user={username}"
                 )
 
                 # Create account configuration with account_id and db_path
@@ -445,11 +474,11 @@ def monitor_imap_account(account_id: int):
                 except Exception:
                     idle_ping_env = 14 * 60
                 cfg = AccountConfig(
-                    imap_host=row['imap_host'],
-                    imap_port=port,
+                    imap_host=eff_host,
+                    imap_port=eff_port,
                     username=username,
                     password=pwd,
-                    use_ssl=use_ssl,
+                    use_ssl=eff_ssl,
                     inbox="INBOX",
                     quarantine="Quarantine",
                     idle_timeout=idle_timeout_env,
@@ -467,16 +496,32 @@ def monitor_imap_account(account_id: int):
                 imap_watchers[account_id] = watcher
             except Exception:
                 pass
-            watcher.run_forever()  # Blocks with backoff retry on errors
+            watcher.run_forever()  # Blocks; returns on stop or reconnect failure
             # Cleanup on exit
             try:
                 imap_watchers.pop(account_id, None)
             except Exception:
                 pass
+            # If account deactivated, stop permanently
+            try:
+                with get_db() as _conn:
+                    _cur = _conn.cursor()
+                    row = _cur.execute("SELECT is_active FROM email_accounts WHERE id=?", (account_id,)).fetchone()
+                    if not row or int(row[0] or 0) == 0:
+                        app.logger.info(f"IMAP monitor for account {account_id} stopped (inactive)")
+                        return
+            except Exception:
+                pass
+            # Successful cycle: reset backoff and short pause to avoid tight loop
+            backoff_sec = 5
+            time.sleep(1)
 
         except Exception as e:
             app.logger.error(f"IMAP monitor for account {account_id} failed: {e}", exc_info=True)
-            time.sleep(30)  # Wait before retry
+            delay = min(max_backoff, backoff_sec)
+            jitter = random.uniform(0, delay * 0.5)
+            time.sleep(delay + jitter)
+            backoff_sec = min(max_backoff, backoff_sec * 2)
 
 # Register blueprints (Phase 1B modularization)
 app.register_blueprint(auth_bp)          # Auth routes: /, /login, /logout
