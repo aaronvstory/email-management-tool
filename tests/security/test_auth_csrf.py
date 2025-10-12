@@ -13,6 +13,13 @@ def app_client():
     client = sa.app.test_client()
     return client
 
+def _csrf_enabled():
+    """Check if CSRF protection is enabled"""
+    try:
+        from flask_wtf.csrf import generate_csrf
+        return True
+    except ImportError:
+        return False
 
 def _parse_hidden_csrf(html: str) -> str:
     # Accept any non-quote token value (Flask-WTF tokens may include non-hex chars)
