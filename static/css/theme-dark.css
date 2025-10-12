@@ -138,8 +138,40 @@ body{color:var(--color-text);}
 .btn-group-unified{display:flex;flex-wrap:wrap;gap:8px}
 
 /* Icon-only button */
-.btn-icon{width:34px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+.btn-icon{width:34px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--color-border);background:rgba(255,255,255,.06);border-radius:10px}
 .btn-icon i{line-height:0}
+
+/* Ghost/neutral buttons */
+.btn-ghost{background:rgba(255,255,255,.06);border:1px solid var(--color-border);color:#fff}
+.btn-ghost:hover{background:rgba(255,255,255,.10)}
+
+/* Inline counters */
+.inline-counter{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,.06);border:1px solid var(--color-border);font-weight:600}
+.inline-counter .count{padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.10)}
+
+/* Table tweaks */
+.table-modern table{border-collapse:separate;border-spacing:0 10px}
+.table-modern thead th{padding:10px 14px}
+.table-modern tbody td{padding:12px 14px;vertical-align:middle}
+.table-modern tbody tr{background:rgba(255,255,255,.03);border:1px solid var(--color-border)}
+.table-modern tbody tr:hover{background:rgba(255,255,255,.06)}
+.table-modern .actions{display:flex;gap:8px;justify-content:flex-end}
+
+/* Small tags */
+.tag{display:inline-flex;align-items:center;justify-content:center;padding:4px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.12);font-size:.70rem;line-height:1;min-height:22px}
+.tag-ok{background:rgba(16,185,129,.12);color:#9af5cf}
+.tag-warn{background:rgba(245,158,11,.14);color:#ffdca6}
+.tag-bad{background:rgba(220,38,38,.14);color:#ffb4b4}
+.tag-neutral{background:rgba(255,255,255,.10);color:#d1d5db}
+
+/* Mobile-friendly email table */
+@media (max-width: 900px){
+  .email-table thead{display:none}
+  .email-table tbody tr{display:grid;grid-template-columns:1fr;gap:8px;padding:12px;border-radius:12px}
+  .email-table tbody td{display:flex;justify-content:space-between;gap:12px;border:none !important}
+  .email-table tbody td::before{content:attr(data-label);color:var(--color-text-dim);font-weight:600}
+  .email-table .actions{justify-content:flex-start}
+}
 
 /* ---------- Chips / status pills ---------- */
 .chip{display:inline-flex;align-items:center;justify-content:center;gap:6px;

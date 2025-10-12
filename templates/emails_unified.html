@@ -356,7 +356,7 @@
 
   <!-- Email Table -->
   <div style="overflow-x: auto;">
-    <table class="email-table" role="table" aria-label="Emails">
+    <table class="email-table table-modern" role="table" aria-label="Emails">
       <thead>
         <tr>
           <th style="width: 40px;">
@@ -662,6 +662,11 @@ function populateDetailModal(email){
   // ----- Edit tab visibility & wiring (editable only) -----
   const editableStatuses = new Set(['HELD','PENDING','QUEUED','APPROVED']);
   const isEditable = editableStatuses.has(s);
+  // Footer actions visibility hint
+  document.getElementById('detailEditBtn').hidden    = !isEditable;
+  document.getElementById('detailReleaseBtn').hidden = !isEditable;
+  const note = document.getElementById('detailStatusNote');
+  if(note){ note.textContent = isEditable ? 'Editable (not yet released)' : 'Read-only: already released/delivered'; }
   const editTabBtn  = document.getElementById('detail-edit-tab');
   const editTabPane = document.getElementById('detail-edit');
 
@@ -869,62 +874,48 @@ function renderEmails(emails) {
     let actions = '';
     if (status === 'HELD') {
       actions = `
-        <button class="action-btn primary" onclick="editEmail(${email.id})" title="Edit">
-          <i class="bi bi-pencil"></i>
-        </button>
-        <button class="action-btn success" onclick="releaseEmail(${email.id})" title="Release">
-          <i class="bi bi-unlock"></i>
-        </button>
-        <button class="action-btn danger" onclick="discardEmail(${email.id})" title="Discard">
-          <i class="bi bi-trash"></i>
-        </button>
+        <button class="btn-icon" onclick="event.stopPropagation(); editEmail(${email.id})" title="Edit" aria-label="Edit"><i class="bi bi-pencil"></i></button>
+        <button class="btn-icon" onclick="event.stopPropagation(); releaseEmail(${email.id})" title="Release" aria-label="Release"><i class="bi bi-unlock"></i></button>
+        <button class="btn-icon" onclick="event.stopPropagation(); discardEmail(${email.id})" title="Discard" aria-label="Discard"><i class="bi bi-trash"></i></button>
       `;
     } else if (status === 'PENDING') {
       actions = `
-        <button class="action-btn primary" onclick="editEmail(${email.id})" title="Edit">
-          <i class="bi bi-pencil"></i>
-        </button>
-        <button class="action-btn success" onclick="approveEmail(${email.id})" title="Approve">
-          <i class="bi bi-check"></i>
-        </button>
-        <button class="action-btn danger" onclick="rejectEmail(${email.id})" title="Reject">
-          <i class="bi bi-x"></i>
-        </button>
+        <button class="btn-icon" onclick="event.stopPropagation(); editEmail(${email.id})" title="Edit" aria-label="Edit"><i class="bi bi-pencil"></i></button>
+        <button class="btn-icon" onclick="event.stopPropagation(); approveEmail(${email.id})" title="Approve" aria-label="Approve"><i class="bi bi-check"></i></button>
+        <button class="btn-icon" onclick="event.stopPropagation(); rejectEmail(${email.id})" title="Reject" aria-label="Reject"><i class="bi bi-x"></i></button>
       `;
     } else {
       actions = `
-        <button class="action-btn primary" onclick="viewEmail(${email.id})" title="View">
-          <i class="bi bi-eye"></i>
-        </button>
+        <button class="btn-icon" onclick="event.stopPropagation(); openEmailDetail(${email.id})" title="View" aria-label="View"><i class="bi bi-eye"></i></button>
       `;
     }
     
     const watcherState = watchersMap[email.account_id] || 'unknown';
     const watcherBadge = `<span class="badge ${watcherState==='active' ? 'badge-soft-success' : (watcherState==='stopped' ? 'badge-soft-danger' : 'badge-soft-muted')}" title="Watcher state">${watcherState}</span>`;
     tr.innerHTML = `
-      <td>
+      <td data-label="Select">
         <input type="checkbox" class="form-check-input email-checkbox" value="${email.id}">
       </td>
-      <td><span class="time-cell">${email.created_at ? new Date(email.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }) : 'N/A'}</span></td>
-      <td>
+      <td data-label="Time"><span class="time-cell">${email.created_at ? new Date(email.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }) : 'N/A'}</span></td>
+      <td data-label="From">
         <div class="email-addr-cell ellipsis" style="max-width: 220px;">${email.sender || 'Unknown'}</div>
       </td>
-      <td>
+      <td data-label="To">
         <div class="email-addr-cell ellipsis" style="max-width: 220px;">${recipients}</div>
       </td>
-      <td style="cursor: pointer;">
+      <td data-label="Subject" style="cursor: pointer;">
         <div class="subject-cell ellipsis">${email.subject || '(No Subject)'}</div>
         ${email.preview_snippet ? `<div class="email-preview">${email.preview_snippet.substring(0, 100)}...</div>` : ''}
       </td>
-      <td>
+      <td data-label="Status">
         <div class="status-cell">
           <span class="status-badge status-${status}">${status}</span>
           ${watcherBadge}
-          <button class="btn btn-sm btn-secondary" title="Restart watcher" onclick="restartWatcherFor(${email.account_id})"><i class="bi bi-arrow-repeat"></i></button>
+          <button class="btn-icon" title="Restart watcher" onclick="event.stopPropagation(); restartWatcherFor(${email.account_id})"><i class="bi bi-arrow-repeat"></i></button>
         </div>
       </td>
-      <td>
-        <div class="action-buttons">
+      <td data-label="Actions">
+        <div class="actions">
           ${actions}
         </div>
       </td>
