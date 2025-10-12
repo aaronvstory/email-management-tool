@@ -62,17 +62,18 @@ async function loadOverview(){
     grid.innerHTML='';
     let activeCount = 0;
     (j.accounts||[]).forEach(acc =>{
-      const isActive = !!(acc.watcher && (acc.watcher.state==='active' || acc.watcher.is_active));
+      const state = (acc.watcher && acc.watcher.state) || (acc.is_active ? 'unknown' : 'stopped');
+      const isActive = (state === 'active'); // count only true active (heartbeat-present) watchers
       if(isActive) activeCount++;
       const card = document.createElement('div');
-      card.className = 'stat-card-modern';
+      card.className = 'stat-card-modern watcher-card';
       card.innerHTML = `
         <div class="stat-label">${acc.account_name || ''}</div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-          <div>
-            <div style="font-weight:600">${acc.email_address || ''}</div>
-            <div style="font-size:.8rem;color:#9ca3af">State: <span class="${isActive ? 'text-success' : 'text-danger'}">${acc.watcher.state || (acc.is_active?'active':'stopped')}</span></div>
-            <div style="font-size:.8rem;color:#9ca3af">Heartbeat: ${acc.watcher.last_heartbeat || '—'}</div>
+          <div class="info" style="min-width:0;">
+            <div class="email-clip" style="font-weight:600">${acc.email_address || ''}</div>
+            <div style="font-size:.8rem;color:#9ca3af">State: <span class="${isActive ? 'text-success' : 'text-danger'}">${state}</span></div>
+            <div style="font-size:.8rem;color:#9ca3af">Heartbeat: ${(acc.watcher && acc.watcher.last_heartbeat) || '—'}</div>
           </div>
           <div class="btn-group">
             <button class="btn-secondary btn-sm" onclick="startWatcher(${acc.id}, this)"><i class="bi bi-play-fill"></i> Start</button>
