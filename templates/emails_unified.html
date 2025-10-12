@@ -162,10 +162,12 @@
     font-size: 0.8rem;
     color: #9ca3af;
     margin-top: 4px;
-    white-space: nowrap;
+    /* two-line clamp for preview below subject */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
+    line-height: 1.25;
   }
 
   /* Status badge styling unified in main.css (.status-badge/.status-chip + .status-*) */
@@ -275,6 +277,9 @@
   .btn-group-unified .btn:hover {
     background: rgba(255,255,255,0.12) !important;
   }
+  /* keyboard focus ring */
+  .btn-icon:focus-visible,
+  .action-btn:focus-visible { outline:2px solid rgba(255,255,255,0.35); outline-offset:2px; border-color:transparent; }
   .action-btn.primary,
   .action-btn.success,
   .action-btn.danger {
@@ -320,6 +325,8 @@
   #emailDetailModal .modal-header,
   #emailDetailModal .modal-footer { flex: 0 0 auto; }
   #emailDetailModal .modal-body { flex: 1 1 auto; overflow: auto; }
+  #emailDetailModal .content-section { padding: 14px 16px; }
+  #emailDetailModal .nav-tabs .nav-link { padding: 6px 12px; }
 
   /* Email Detail modal sizing and scrolling (viewport-aware) */
   #emailDetailModal .modal-dialog { max-width: min(1100px, 95vw); margin: 2vh auto; }
@@ -426,6 +433,15 @@
   <!-- Email Table -->
   <div style="overflow-x: auto;">
     <table class="email-table table-modern" role="table" aria-label="Emails">
+      <colgroup>
+        <col style="width:40px">      
+        <col style="width:120px">     
+        <col style="width:14rem">     
+        <col style="width:14rem">     
+        <col>                          
+        <col style="width:160px">     
+        <col style="width:100px">     
+      </colgroup>
       <thead>
         <tr>
           <th style="width: 40px;">
