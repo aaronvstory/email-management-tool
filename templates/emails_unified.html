@@ -704,26 +704,15 @@ function renderEmails(emails) {
       <td>
         <input type="checkbox" class="form-check-input email-checkbox" value="${email.id}">
       </td>
-      <td style="font-size: 0.85rem; color: #9ca3af;">
-        ${email.created_at ? new Date(email.created_at).toLocaleString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        }) : 'N/A'}
+      <td><span class="time-cell">${email.created_at ? new Date(email.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }) : 'N/A'}</span></td>
+      <td>
+        <div class="email-addr-cell ellipsis" style="max-width: 220px;">${email.sender || 'Unknown'}</div>
       </td>
       <td>
-        <div style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-          ${email.sender || 'Unknown'}
-        </div>
-      </td>
-      <td>
-        <div style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-          ${recipients.substring(0, 50)}${recipients.length > 50 ? '...' : ''}
-        </div>
+        <div class="email-addr-cell ellipsis" style="max-width: 220px;">${recipients}</div>
       </td>
       <td onclick="viewEmail(${email.id})" style="cursor: pointer;">
-        <div class="email-subject">${email.subject || '(No Subject)'}</div>
+        <div class="subject-cell ellipsis">${email.subject || '(No Subject)'}</div>
         ${email.preview_snippet ? `<div class="email-preview">${email.preview_snippet.substring(0, 100)}...</div>` : ''}
       </td>
       <td>

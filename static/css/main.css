@@ -1231,3 +1231,14 @@ button[disabled] {
 .status-SENT { background: rgba(107,114,128,0.22) !important; color: #e5e7eb !important; border-color: rgba(107,114,128,0.35) !important; }
 
 .status-cell { display:flex !important; align-items:center !important; gap:6px !important; flex-wrap:nowrap !important; }
+
+/* =============================
+   UTILITIES FOR TABLE CELLS / TYPOGRAPHY
+   ============================= */
+.nowrap { white-space: nowrap !important; }
+.tabular-nums { font-variant-numeric: tabular-nums !important; }
+.ellipsis { overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
+
+.time-cell { white-space: nowrap !important; font-variant-numeric: tabular-nums !important; font-size: 0.9rem !important; color: #9ca3af !important; }
+.email-addr-cell { font-size: 0.94rem !important; color: #e5e7eb !important; }
+.subject-cell { font-size: 1rem !important; font-weight: 600 !important; color: #ffffff !important; }

@@ -245,14 +245,14 @@ function renderInbox(msgs){
             indicators += `<span style="color:#3b82f6;font-size:0.7rem;" title="Email is being held for review">🔒 Held</span>`;
         }
 
-        div.innerHTML=`<div><div class='status-chip status-${status}'>${status||'—'}</div></div>
+        div.innerHTML=`<div><div class='status-badge status-${status}'>${status||'—'}</div></div>
             <div>
                 <div style='font-weight:600;'>${m.sender||''}</div>
                 <div>${m.subject||'(No Subject)'}</div>
                 <div class='preview-snippet'>${(m.preview_snippet||'').slice(0,120)}</div>
                 ${indicators ? `<div style="margin-top:5px;">${indicators}</div>` : ''}
             </div>
-            <div style='font-size:.7rem;opacity:.7;'>${m.created_at||''}</div>
+            <div class='time-cell'>${m.created_at||''}</div>
             <div style='font-size:.7rem;opacity:.7;text-align:right;'>${m.latency_ms ? m.latency_ms + 'ms' : ''}</div>`;
         container.appendChild(div);
     });
