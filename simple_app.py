@@ -613,6 +613,7 @@ class EmailModerationHandler:
         content = f"{subject} {body}".lower()
 
         # 1) Load active rules from DB (supports legacy and extended schemas)
+        conn = None
         try:
             conn = sqlite3.connect(DB_PATH)
             conn.row_factory = sqlite3.Row
@@ -641,10 +642,11 @@ class EmailModerationHandler:
             # Silent fallback — see defaults below
             pass
         finally:
-            try:
-                conn.close()
-            except Exception:
-                pass
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
         # 2) Fallback defaults if no matches and no rules configured
         if not keywords:

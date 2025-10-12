@@ -338,12 +338,17 @@ def add_email_account():
         conn.commit()
         conn.close()
 
+        # Validate account_id is not None (shouldn't happen for successful INSERT)
+        if account_id is None:
+            flash('Failed to create account: database error', 'error')
+            return redirect(url_for('accounts.email_accounts'))
+
         # Try to start IMAP watcher for the new account (best effort)
         try:
             from simple_app import monitor_imap_account, imap_threads  # lazy import to avoid circular at import time
             import threading
             thread = threading.Thread(target=monitor_imap_account, args=(account_id,), daemon=True)
-            imap_threads[account_id] = thread
+            imap_threads[account_id] = thread  # account_id is now guaranteed to be int
             thread.start()
         except Exception as e:
             # Silent failure pattern as in original; log for visibility
@@ -553,4 +558,3 @@ def api_detect_email_settings():
 
     settings = _detect_email_settings(email)
     return jsonify(settings)
-
