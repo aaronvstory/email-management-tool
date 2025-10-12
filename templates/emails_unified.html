@@ -609,9 +609,13 @@ async function openEmailDetail(id, triggerEl){
     modalEl.addEventListener('hidden.bs.modal', ()=>{ if(lastFocusedTrigger){ lastFocusedTrigger.focus(); }}, {once:true});
     const m = new bootstrap.Modal(modalEl,{backdrop:'static'});
     m.show();
-    // If caller requested edit tab, switch
+    // If caller requested Edit, only switch when editable/visible
     if(window._openTargetTab === 'edit'){
-      setTimeout(()=>{ const t=document.getElementById('detail-edit-tab'); if(t){ t.click(); } window._openTargetTab=null; }, 0);
+      setTimeout(()=>{
+        const t=document.getElementById('detail-edit-tab');
+        if(t && !t.classList.contains('d-none')){ t.click(); }
+        window._openTargetTab=null;
+      }, 0);
     }
   }catch(e){
     window.location.href = `/email/${id}`; // fallback to legacy page
@@ -655,15 +659,29 @@ function populateDetailModal(email){
   document.getElementById('detailReleaseBtn').onclick = ()=> releaseEmail(email.id);
   document.getElementById('detailRejectBtn').onclick  = ()=> rejectEmail(email.id);
   document.getElementById('detailDeleteBtn').onclick  = ()=> discardEmail(email.id);
-  // Prefill edit tab and bind handlers
-  const idField = document.getElementById('editEmailId');
-  if(idField){
-    idField.value = email.id;
-    const subj = document.getElementById('editEmailSubject');
-    const body = document.getElementById('editEmailBody');
-    if(subj) subj.value = email.subject || '';
-    if(body) body.value = email.body_text || '';
-    bindEditHandlers();
+  // ----- Edit tab visibility & wiring (editable only) -----
+  const editableStatuses = new Set(['HELD','PENDING','QUEUED','APPROVED']);
+  const isEditable = editableStatuses.has(s);
+  const editTabBtn  = document.getElementById('detail-edit-tab');
+  const editTabPane = document.getElementById('detail-edit');
+
+  if(!isEditable){
+    editTabBtn?.classList.add('d-none'); editTabBtn?.setAttribute('aria-hidden','true'); editTabBtn?.setAttribute('tabindex','-1');
+    editTabPane?.classList.add('d-none'); editTabPane?.setAttribute('aria-hidden','true');
+    const isEditActive = editTabPane?.classList.contains('active');
+    if(isEditActive){ document.getElementById('detail-text-tab')?.click(); }
+  } else {
+    editTabBtn?.classList.remove('d-none'); editTabBtn?.removeAttribute('aria-hidden'); editTabBtn?.removeAttribute('tabindex');
+    editTabPane?.classList.remove('d-none'); editTabPane?.removeAttribute('aria-hidden');
+    const idField = document.getElementById('editEmailId');
+    if(idField){
+      idField.value = email.id;
+      const subj = document.getElementById('editEmailSubject');
+      const body = document.getElementById('editEmailBody');
+      if(subj) subj.value = email.subject || '';
+      if(body) body.value = email.body_text || '';
+      bindEditHandlers();
+    }
   }
 }
 
