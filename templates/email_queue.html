@@ -183,7 +183,6 @@
                 <th>From</th>
                 <th>To</th>
                 <th>Subject</th>
-                <th>Risk Score</th>
                 <th>Status</th>
                 <th>Actions</th>
             </tr>
@@ -211,15 +210,6 @@
                         </small>
                     </div>
                     {% endif %}
-                </td>
-                <td>
-                    <div class="d-flex align-items-center">
-                        <div class="risk-indicator me-2">
-                            <div class="risk-fill {% if email.risk_score < 40 %}risk-low{% elif email.risk_score < 70 %}risk-medium{% else %}risk-high{% endif %}" 
-                                 style="width: {{ email.risk_score }}%"></div>
-                        </div>
-                        <small>{{ email.risk_score }}%</small>
-                    </div>
                 </td>
                 <td>
                     <span class="badge badge-status badge-{{ email.status|lower }}">

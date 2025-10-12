@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Watchers - Email Management Tool{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 style="font-size:1.4rem"><i class="bi bi-activity"></i> Watchers</h1>
+  <div class="d-flex" style="gap:.5rem">
+    <a href="/settings" class="btn-ghost btn-sm"><i class="bi bi-sliders"></i> Settings</a>
+    <button class="btn-secondary btn-sm" onclick="refreshAll()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+  </div>
+  </div>
+
+<!-- System overview -->
+<div class="cards-grid">
+  <div class="stat-card-modern">
+    <div class="stat-label">SMTP Proxy</div>
+    <div id="smtpStatus" class="stat-value">--</div>
+    <div id="smtpMeta" class="stat-delta"></div>
+    <div class="panel-actions"><button class="btn-ghost btn-sm" onclick="checkSmtp()"><i class="bi bi-heart-pulse"></i> Self-check</button></div>
+  </div>
+  <div class="stat-card-modern">
+    <div class="stat-label">IMAP Watchers Active</div>
+    <div id="watchersCount" class="stat-value">0</div>
+    <div class="stat-delta">Across all accounts</div>
+  </div>
+</div>
+
+<div class="panel mt-3">
+  <div class="panel-header">
+    <div class="panel-title">Per-Account Watchers</div>
+    <div class="panel-actions">
+      <button class="btn-secondary btn-sm" onclick="restartAll()"><i class="bi bi-arrow-repeat"></i> Restart All</button>
+    </div>
+  </div>
+  <div id="accountsGrid" class="cards-grid"></div>
+</div>
+
+<div class="panel">
+  <div class="panel-title">How it works</div>
+  <div class="text-muted" style="font-size:.9rem">
+    Each added mailbox has an IMAP watcher that monitors INBOX in real time. The watcher moves new mail to Quarantine for review. The SMTP proxy accepts incoming messages locally for interception and auditing. Use the controls above to start, stop, or restart watchers.
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function loadOverview(){
+  try{
+    const r = await fetch('/api/watchers/overview');
+    if(!r.ok) throw new Error('Failed to load');
+    const j = await r.json();
+    // SMTP
+    const smtpOk = j.smtp && j.smtp.listening;
+    document.getElementById('smtpStatus').textContent = smtpOk ? 'OK' : 'DOWN';
+    document.getElementById('smtpStatus').style.webkitTextFillColor = 'initial';
+    document.getElementById('smtpMeta').textContent = `${j.smtp.host}:${j.smtp.port}` + (j.smtp.last_selfcheck_ts ? ` • last self-check ${j.smtp.last_selfcheck_ts}` : '');
+    // Accounts
+    const grid = document.getElementById('accountsGrid');
+    grid.innerHTML='';
+    let activeCount = 0;
+    (j.accounts||[]).forEach(acc =>{
+      const isActive = !!(acc.watcher && (acc.watcher.state==='active' || acc.watcher.is_active));
+      if(isActive) activeCount++;
+      const card = document.createElement('div');
+      card.className = 'stat-card-modern';
+      card.innerHTML = `
+        <div class="stat-label">${acc.account_name || ''}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <div>
+            <div style="font-weight:600">${acc.email_address || ''}</div>
+            <div style="font-size:.8rem;color:#9ca3af">State: <span class="${isActive ? 'text-success' : 'text-danger'}">${acc.watcher.state || (acc.is_active?'active':'stopped')}</span></div>
+            <div style="font-size:.8rem;color:#9ca3af">Heartbeat: ${acc.watcher.last_heartbeat || '—'}</div>
+          </div>
+          <div class="btn-group">
+            <button class="btn-secondary btn-sm" onclick="startWatcher(${acc.id}, this)"><i class="bi bi-play-fill"></i> Start</button>
+            <button class="btn-secondary btn-sm" onclick="stopWatcher(${acc.id}, this)"><i class="bi bi-stop-fill"></i> Stop</button>
+            <button class="btn-secondary btn-sm" onclick="restartWatcher(${acc.id}, this)"><i class="bi bi-arrow-repeat"></i> Restart</button>
+          </div>
+        </div>`;
+      grid.appendChild(card);
+    });
+    document.getElementById('watchersCount').textContent = activeCount;
+  }catch(e){
+    if(window.showError) showError('Failed to load watchers overview');
+  }
+}
+
+async function startWatcher(id, btn){ await controlWatcher(id, 'start', btn); }
+async function stopWatcher(id, btn){ await controlWatcher(id, 'stop', btn); }
+async function restartWatcher(id, btn){ await controlWatcher(id, 'restart', btn); }
+
+async function controlWatcher(id, action, btn){
+  try{
+    if(btn){ btn.disabled = true; const t=btn.innerHTML; btn._t=t; btn.innerHTML='<span class="spinner-border spinner-border-sm me-2"></span>'+t; }
+    const r = await fetch(`/api/accounts/${id}/monitor/${action}`, {method:'POST'});
+    const j = await r.json();
+    if(!j.success){ throw new Error(j.error || 'Failed'); }
+    if(window.showSuccess) showSuccess(`Watcher ${action}ed`);
+  }catch(e){ if(window.showError) showError(`Failed to ${action} watcher: ${e.message}`); }
+  finally{ if(btn){ btn.innerHTML=btn._t; btn.disabled=false; } loadOverview(); }
+}
+
+async function restartAll(){
+  try{
+    const r = await fetch('/api/accounts');
+    const j = await r.json();
+    const ids = (j.accounts||[]).map(a=>a.id);
+    for(const id of ids){ try{ await fetch(`/api/accounts/${id}/monitor/restart`, {method:'POST'}); }catch(e){} }
+    if(window.showInfo) showInfo('Restarting all watchers...');
+    setTimeout(loadOverview, 1500);
+  }catch(e){ if(window.showError) showError('Failed to restart all'); }
+}
+
+async function checkSmtp(){ try{ const r=await fetch('/api/smtp-health'); const j=await r.json(); if(window.showInfo) showInfo(j.listening? 'SMTP OK' : 'SMTP DOWN'); loadOverview(); }catch(e){ if(window.showError) showError('SMTP health check failed'); } }
+
+function refreshAll(){ loadOverview(); }
+
+document.addEventListener('DOMContentLoaded', ()=>{ loadOverview(); setInterval(loadOverview, 10000); });
+</script>
+{% endblock %}

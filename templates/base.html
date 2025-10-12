@@ -63,10 +63,12 @@
                 <a class="nav-item-link {% if request.endpoint == 'emails.emails_unified' or request.endpoint == 'emails.email_queue' %}active{% endif %}" href="/emails-unified"><i class="bi bi-inbox-fill"></i> Emails {% if pending_count > 0 %}<span class="badge">{{ pending_count }}</span>{% endif %}</a>
                 <a class="nav-item-link {% if request.endpoint == 'compose.compose_email' %}active{% endif %}" href="/compose"><i class="bi bi-pencil-square"></i> Compose</a>
                 <span class="nav-group-label">Management</span>
+                <a class="nav-item-link {% if request.endpoint == 'watchers.watchers_page' %}active{% endif %}" href="/watchers"><i class="bi bi-activity"></i> Watchers</a>
                 <a class="nav-item-link {% if request.endpoint == 'moderation.rules' %}active{% endif %}" href="/rules"><i class="bi bi-shield-check"></i> Rules</a>
                 <a class="nav-item-link {% if request.endpoint == 'accounts.email_accounts' or request.endpoint == 'accounts.add_email_account' %}active{% endif %}" href="/accounts"><i class="bi bi-envelope-at"></i> Accounts</a>
                 <a class="nav-item-link {% if request.endpoint == 'accounts.accounts_import_page' %}active{% endif %}" href="/accounts/import"><i class="bi bi-upload"></i> Import Accounts</a>
                 <a class="nav-item-link {% if request.endpoint == 'diagnostics' %}active{% endif %}" href="/diagnostics"><i class="bi bi-heart-pulse"></i> Diagnostics</a>
+                <a class="nav-item-link {% if request.endpoint == 'watchers.settings_page' %}active{% endif %}" href="/settings"><i class="bi bi-sliders"></i> Settings</a>
 <a class="nav-item-link {% if request.endpoint == 'styleguide.styleguide' %}active{% endif %}" href="/styleguide"><i class="bi bi-palette2"></i> Style Guide</a>
                 <a class="nav-item-link {% if request.endpoint == 'diagnostics.interception_test_dashboard' %}active{% endif %}" href="/interception-test"><i class="bi bi-flask"></i> Test Suite</a>
             </nav>

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Settings - Email Management Tool{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 style="font-size:1.4rem"><i class="bi bi-sliders"></i> Settings</h1>
+  <div class="btn-group">
+    <button class="btn-secondary btn-sm" onclick="saveSettings()"><i class="bi bi-save"></i> Save</button>
+    <a href="/watchers" class="btn-ghost btn-sm"><i class="bi bi-activity"></i> Watchers</a>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-title">Watcher & Service Flags</div>
+  <div class="table-responsive">
+    <table class="table">
+      <thead><tr><th>Flag</th><th>Description</th><th style="width:220px">Value</th></tr></thead>
+      <tbody id="settingsBody"></tbody>
+    </table>
+  </div>
+  <div class="text-muted" style="font-size:.9rem">Changes apply to new connections; restart watchers to apply runtime parameters.</div>
+  <div class="mt-2">
+    <a class="btn-secondary btn-sm" href="/watchers" onclick="setTimeout(()=>restartAllViaWatchers(), 0)"><i class="bi bi-arrow-repeat"></i> Apply & Restart Watchers</a>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const META = {{ meta|tojson }};
+const CURRENT = {{ settings|tojson }};
+
+function renderSettings(){
+  const tbody = document.getElementById('settingsBody');
+  tbody.innerHTML = '';
+  Object.keys(META).forEach(key =>{
+    const m = META[key];
+    const val = CURRENT[key];
+    const tr = document.createElement('tr');
+    const input = (m.type==='bool')
+      ? `<select class="form-select form-select-sm" data-key="${key}"><option value="true" ${val? 'selected':''}>true</option><option value="false" ${!val? 'selected':''}>false</option></select>`
+      : `<input type="${m.type==='int'?'number':'text'}" class="form-control form-control-sm" data-key="${key}" value="${val}">`;
+    tr.innerHTML = `
+      <td><code>${key}</code></td>
+      <td style="color:#9ca3af">${m.desc}</td>
+      <td>${input}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+async function saveSettings(){
+  const updates = {};
+  document.querySelectorAll('[data-key]').forEach(el=>{
+    const k = el.getAttribute('data-key');
+    let v = el.value;
+    if(META[k].type==='bool') v = (v==='true');
+    if(META[k].type==='int') v = parseInt(v||'0',10);
+    updates[k]=v;
+  });
+  try{
+    const r = await fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({settings: updates})});
+    const j = await r.json();
+    if(!j.success) throw new Error(j.error||'Save failed');
+    if(window.showSuccess) showSuccess('Settings saved');
+  }catch(e){ if(window.showError) showError(e.message); }
+}
+
+async function restartAllViaWatchers(){
+  try{
+    const r = await fetch('/api/accounts'); const j = await r.json();
+    for(const acc of (j.accounts||[])){
+      try{ await fetch(`/api/accounts/${acc.id}/monitor/restart`, {method:'POST'}); }catch(e){}
+    }
+  }catch(e){}
+}
+
+document.addEventListener('DOMContentLoaded', renderSettings);
+</script>
+{% endblock %}
