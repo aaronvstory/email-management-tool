@@ -29,12 +29,48 @@
 
       <h5 class="mt-2">1) Design Tokens</h5>
       <div class="row token-grid">
-        <div class="col-6 col-md-4 col-lg-2"><div class="token"><div class="swatch" style="background:#dc2626"></div><small>--primary-color<br>#dc2626</small></div></div>
-        <div class="col-6 col-md-4 col-lg-2"><div class="token"><div class="swatch" style="background:#991b1b"></div><small>--secondary-color<br>#991b1b</small></div></div>
+        <div class="col-6 col-md-4 col-lg-2"><div class="token"><div class="swatch" style="background:var(--color-accent)"></div><small>--color-accent</small></div></div>
+        <div class="col-6 col-md-4 col-lg-2"><div class="token"><div class="swatch" style="background:var(--color-accent-deep)"></div><small>--color-accent-deep</small></div></div>
         <div class="col-6 col-md-4 col-lg-2"><div class="token"><div class="swatch" style="background:#10b981"></div><small>--success-color<br>#10b981</small></div></div>
         <div class="col-6 col-md-4 col-lg-2"><div class="token"><div class="swatch" style="background:#f59e0b"></div><small>--warning-color<br>#f59e0b</small></div></div>
-        <div class="col-6 col-md-4 col-lg-2"><div class="token"><div class="swatch" style="background:#1a1a1a"></div><small>--card-bg<br>#1a1a1a</small></div></div>
-        <div class="col-6 col-md-4 col-lg-2"><div class="token"><div class="swatch" style="background:#0a0a0a"></div><small>--dark-bg<br>#0a0a0a</small></div></div>
+        <div class="col-6 col-md-4 col-lg-2"><div class="token"><div class="swatch" style="background:var(--color-bg-panel)"></div><small>--color-bg-panel</small></div></div>
+        <div class="col-6 col-md-4 col-lg-2"><div class="token"><div class="swatch" style="background:var(--color-bg)"></div><small>--color-bg</small></div></div>
+      </div>
+      
+      <h5 class="mt-4">New) Watchers-style Components</h5>
+      <div class="content-section">
+        <div class="content-section-header">
+          <div class="section-title">Per-Account Watchers</div>
+          <div class="btn-group-unified">
+            <button class="btn btn-secondary btn-sm">Refresh</button>
+            <button class="btn btn-primary-modern btn-sm">Validate</button>
+          </div>
+        </div>
+        <div class="cards-grid">
+          <div class="watcher-card">
+            <div class="d-flex justify-content-between align-items-start">
+              <div class="fw-semibold">Gmail — Demo</div>
+              <span class="chip chip-ok">active</span>
+            </div>
+            <div class="email-clip small">user.long.email@example.com</div>
+            <div class="btn-group-unified">
+              <button class="btn btn-secondary btn-sm"><i class="bi bi-play-fill"></i>Start</button>
+              <button class="btn btn-secondary btn-sm"><i class="bi bi-stop-fill"></i>Stop</button>
+              <button class="btn btn-secondary btn-sm"><i class="bi bi-arrow-repeat"></i>Restart</button>
+            </div>
+          </div>
+          <div class="watcher-card">
+            <div class="d-flex justify-content-between align-items-start">
+              <div class="fw-semibold">IMAP — Demo</div>
+              <span class="chip chip-bad">stopped</span>
+            </div>
+            <div class="email-clip small">user+alias@very-long-domain-name-that-wraps.tld</div>
+            <div class="btn-group-unified">
+              <button class="btn btn-secondary btn-sm"><i class="bi bi-play-fill"></i>Start</button>
+              <button class="btn btn-secondary btn-sm"><i class="bi bi-arrow-repeat"></i>Restart</button>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="row mt-2">
         <div class="col-md-6">

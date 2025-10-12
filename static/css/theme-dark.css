@@ -7,7 +7,11 @@
   --color-text: #ffffff;
   --color-text-dim: #9ca3af;
   --color-accent: #dc2626;
+  --color-accent-deep: #991b1b;
   --color-accent-alt: #ef4444;
+  --color-bg: #0a0a0a;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
   --color-positive: #10b981;
   --color-warn: #f59e0b;
   --color-danger: #dc2626;
@@ -16,9 +20,9 @@
   --shadow-elev-1: 0 2px 4px -1px rgba(0,0,0,.6),0 1px 2px rgba(0,0,0,.4);
   --shadow-elev-2: 0 4px 12px -2px rgba(0,0,0,.75),0 2px 6px rgba(0,0,0,.5);
   --shadow-focus: 0 0 0 2px rgba(220,38,38,.5);
-  --radius-sm: 6px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
   --transition: 140ms cubic-bezier(.4,.2,.2,1);
   --font-sans: 'Inter', system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial,sans-serif;
   --font-mono: 'JetBrains Mono','SFMono-Regular',Menlo,Consolas,monospace;
@@ -32,6 +36,27 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
+
+/* ---------- Global building blocks ---------- */
+body{color:var(--color-text);}
+.content-section{
+  background:var(--grad-card);
+  border:1px solid var(--color-border);
+  border-radius:var(--radius-lg);
+  padding:22px;
+  box-shadow:var(--shadow-elev-1);
+}
+.content-section + .content-section{margin-top:24px;}
+.content-section-header{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:10px;
+}
+.section-title{font-size:0.9rem;text-transform:uppercase;letter-spacing:1.4px;color:var(--color-text-dim);font-weight:700}
+
+/* 12-col responsive content grid */
+.content-grid{display:grid;gap:20px;grid-template-columns:repeat(12,1fr)}
+@media (max-width: 1100px){ .content-grid{grid-template-columns:repeat(6,1fr)} }
+@media (max-width: 768px){ .content-grid{grid-template-columns:repeat(1,1fr)} }
 
 .dark-app-shell {display:flex;min-height:100vh;}
 
@@ -57,7 +82,7 @@ body {
 .search-inline input:focus {border-color:var(--color-accent);box-shadow:var(--shadow-focus);}
 
 .content-scroll {flex:1;overflow:auto;padding:28px 36px;display:flex;flex-direction:column;gap:28px;}
-.cards-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:20px;}
+.cards-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px;}
 .stat-card-modern {position:relative;padding:18px 18px 20px;border-radius:var(--radius-lg);background:var(--grad-card);border:1px solid var(--color-border);box-shadow:var(--shadow-elev-1);display:flex;flex-direction:column;gap:10px;min-height:140px;overflow:hidden;}
 .stat-card-modern:before {content:"";position:absolute;inset:0;background:radial-gradient(circle at 75% 15%,rgba(255,79,139,.18),transparent 60%);opacity:.7;pointer-events:none;}
 .stat-card-modern:hover {box-shadow:var(--shadow-elev-2);transform:translateY(-3px);}
@@ -66,10 +91,13 @@ body {
 .stat-delta {font-size:.7rem;font-weight:500;color:var(--color-positive);}
 
 /* Watchers page: ensure long emails/IDs wrap inside cards instead of clipping */
-.watcher-card{min-width:0;}
+.watcher-card{min-width:0; background:var(--grad-card);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:18px;box-shadow:var(--shadow-elev-1);display:flex;flex-direction:column;gap:10px}
 .watcher-card .info{min-width:0;}
 .watcher-card .email-clip{white-space:normal;overflow-wrap:anywhere;word-break:break-word;line-height:1.25;}
 .watcher-card .btn-group{flex-shrink:0;}
+
+/* Generic “cards-grid” for account/watchers cards everywhere */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px}
 
 .panel {background:var(--color-bg-panel);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:20px 22px;position:relative;box-shadow:var(--shadow-elev-1);display:flex;flex-direction:column;gap:16px;}
 .panel-header {display:flex;align-items:center;justify-content:space-between;gap:12px;}
@@ -77,9 +105,9 @@ body {
 .panel-actions {display:flex;align-items:center;gap:10px;}
 
 .table-modern {width:100%;border-collapse:separate;border-spacing:0 6px;}
-.table-modern thead th {font-size:.65rem;text-transform:uppercase;letter-spacing:1.4px;font-weight:600;color:var(--color-text-dim);padding:0 10px 6px;text-align:left;}
+.table-modern thead th {font-size:.75rem;text-transform:uppercase;letter-spacing:1.2px;font-weight:700;color:var(--color-text-dim);padding:0 10px 8px;text-align:left;}
 .table-modern tbody tr {background:var(--color-bg-panel-alt);box-shadow:0 1px 0 0 var(--color-border);}
-.table-modern tbody tr td {padding:15px 10px;font-size:.8rem;color:var(--color-text);}
+.table-modern tbody tr td {padding:15px 10px;font-size:.9rem;color:var(--color-text);}
 .table-modern tbody tr:hover {background:rgba(220,38,38,.08);box-shadow:0 0 0 1px rgba(220,38,38,.2);}
 .status-pill {display:inline-flex;align-items:center;gap:6px;font-size:.55rem;font-weight:600;padding:5px 10px;border-radius:30px;letter-spacing:.5px;text-transform:uppercase;box-shadow:0 0 0 1px rgba(255,255,255,.08);}
 .status-HELD {background:linear-gradient(90deg,rgba(220,38,38,.3),rgba(220,38,38,.15));color:#fca5a5;}
@@ -90,6 +118,21 @@ body {
 .btn-ghost:hover {background:rgba(220,38,38,.15);border-color:var(--color-accent);}
 .btn-accent {background:var(--grad-accent);color:#ffffff;padding:10px 18px;border-radius:var(--radius-md);font-weight:600;font-size:.75rem;letter-spacing:.8px;text-transform:uppercase;border:none;box-shadow:0 2px 10px -2px rgba(220,38,38,.5);}
 .btn-accent:hover {filter:brightness(1.15);transform:translateY(-1px);}
+
+/* ---------- Buttons (match Watchers) ---------- */
+.btn{height:42px;padding:8px 16px;display:inline-flex;align-items:center;gap:8px;border-radius:10px;font-weight:600}
+.btn-sm{height:34px;padding:5px 12px;font-size:.875rem}
+.btn-lg{height:50px;padding:12px 22px;font-size:1rem}
+.btn-primary-modern{background:var(--grad-accent);color:#fff;border:none;box-shadow:0 2px 10px -2px rgba(220,38,38,.5);transition:var(--transition)}
+.btn-primary-modern:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.btn-secondary{background:rgba(255,255,255,.06);border:1px solid var(--color-border);color:#fff}
+.btn-group-unified{display:flex;flex-wrap:wrap;gap:8px}
+
+/* ---------- Chips / status pills ---------- */
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:.75rem;font-weight:600;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.12)}
+.chip-ok{background:rgba(16,185,129,.15);color:#86f1c8}
+.chip-warn{background:rgba(245,158,11,.18);color:#ffd089}
+.chip-bad{background:rgba(220,38,38,.18);color:#fca5a5}
 
 .inline-badge {display:inline-flex;align-items:center;gap:4px;padding:4px 8px;font-size:.55rem;border-radius:14px;background:rgba(255,255,255,.08);color:var(--color-text-dim);}
 .badge-accent {background:var(--grad-accent);color:#fff;}
