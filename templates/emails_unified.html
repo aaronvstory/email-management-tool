@@ -165,7 +165,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 400px;
+    max-width: 100%;
   }
 
   /* Status badge styling unified in main.css (.status-badge/.status-chip + .status-*) */
@@ -265,21 +265,21 @@
   .btn.btn-secondary.btn-sm,
   .action-btn,
   .btn-group-unified .btn {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.12);
-    color: #fff;
+    background: rgba(255,255,255,0.06) !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+    color: #fff !important;
   }
   .btn-icon:hover,
   .btn.btn-secondary.btn-sm:hover,
   .action-btn:hover,
   .btn-group-unified .btn:hover {
-    background: rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.12) !important;
   }
   .action-btn.primary,
   .action-btn.success,
   .action-btn.danger {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.06) !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
   }
 
   /* Density tweaks */
@@ -299,6 +299,9 @@
   .email-table td:nth-child(5) .subject-cell {
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
+
+  /* Compact info cards in modal */
+  .content-section.compact { padding: 14px 16px; }
 </style>
 {% endblock %}
 
@@ -403,12 +406,12 @@
           <th style="width: 40px;">
             <input type="checkbox" class="form-check-input" id="selectAll" onchange="toggleSelectAll(this.checked)">
           </th>
-          <th style="width: 120px;">Time</th>
-          <th style="width: 16rem;">From</th>
-          <th style="width: 16rem;">To</th>
+          <th style="width:120px">Time</th>
+          <th style="width:15rem">From</th>
+          <th style="width:15rem">To</th>
           <th class="col-subject">Subject</th>
-          <th style="width: 220px;">Actions</th>
-          <th style="width: 110px;">Status</th>
+          <th style="width:190px">Actions</th>
+          <th style="width:100px">Status</th>
         </tr>
       </thead>
       <tbody id="emailTableBody" aria-live="polite">
@@ -504,7 +507,7 @@
         </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body" id="emailDetailBody" style="max-height:70vh;overflow:auto">
+      <div class="modal-body" id="emailDetailBody" style="max-height:calc(90vh - 120px);overflow:auto">
         <div class="row g-3 mb-3">
           <div class="col-md-6">
             <div class="content-section compact">
@@ -545,7 +548,7 @@
               <div id="detailText" class="email-content"></div>
             </div>
             <div class="tab-pane fade" id="detail-html" role="tabpanel" aria-labelledby="detail-html-tab">
-              <iframe id="detailHtml" style="width:100%;height:420px;border:none;"></iframe>
+              <iframe id="detailHtml" style="width:100%;min-height:280px;height:50vh;border:none;"></iframe>
             </div>
             <div class="tab-pane fade" id="detail-raw" role="tabpanel" aria-labelledby="detail-raw-tab">
               <pre id="detailRaw" class="email-content" style="white-space:pre-wrap"></pre>
