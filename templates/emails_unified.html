@@ -122,6 +122,7 @@
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
+    table-layout: fixed;
   }
 
   .email-table thead th {
@@ -258,6 +259,46 @@
     border-color: rgba(255,255,255,0.12);
     color: #9ca3af;
   }
+
+  /* Dashboard-style calm buttons */
+  .btn-icon,
+  .btn.btn-secondary.btn-sm,
+  .action-btn,
+  .btn-group-unified .btn {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: #fff;
+  }
+  .btn-icon:hover,
+  .btn.btn-secondary.btn-sm:hover,
+  .action-btn:hover,
+  .btn-group-unified .btn:hover {
+    background: rgba(255,255,255,0.12);
+  }
+  .action-btn.primary,
+  .action-btn.success,
+  .action-btn.danger {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+
+  /* Density tweaks */
+  .email-table thead th { padding: 8px 10px; }
+  .email-table tbody td { padding: 8px 10px; }
+  .chip, .status-badge, .status-chip {
+    min-height: 22px; padding: 3px 8px; font-size: 12px; font-weight: 700;
+  }
+  .actions { display: flex; gap: 4px; }
+  .action-btn { padding: 4px 8px; font-size: 12px; border-radius: 6px; }
+  .email-table tbody tr:hover { background: rgba(255,255,255,0.04); }
+
+  /* Subject column: flex and ellipsis */
+  .email-table .col-subject { width: auto; }
+  .email-table td:nth-child(5) .email-preview,
+  .email-table td:nth-child(5) .email-subject,
+  .email-table td:nth-child(5) .subject-cell {
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
 </style>
 {% endblock %}
 
@@ -363,11 +404,11 @@
             <input type="checkbox" class="form-check-input" id="selectAll" onchange="toggleSelectAll(this.checked)">
           </th>
           <th style="width: 120px;">Time</th>
-          <th>From</th>
-          <th>To</th>
-          <th>Subject</th>
-          <th style="width: 100px;">Status</th>
-          <th style="width: 200px;">Actions</th>
+          <th style="width: 16rem;">From</th>
+          <th style="width: 16rem;">To</th>
+          <th class="col-subject">Subject</th>
+          <th style="width: 220px;">Actions</th>
+          <th style="width: 110px;">Status</th>
         </tr>
       </thead>
       <tbody id="emailTableBody" aria-live="polite">
@@ -601,8 +642,11 @@ function enhanceEmailRow(tr, email){
 async function openEmailDetail(id, triggerEl){
   lastFocusedTrigger = triggerEl || null;
   try{
-    const r = await fetch(`/api/emails/${id}`);
-    if(!r.ok) throw new Error('HTTP '+r.status);
+    // Try modern JSON detail endpoints, then fall back
+    let r = await fetch(`/email/${id}/full`, { headers: { 'Accept': 'application/json' } });
+    if (!r.ok) r = await fetch(`/email/${id}/edit`, { headers: { 'Accept': 'application/json' } });
+    if (!r.ok) r = await fetch(`/api/interception/held/${id}?include_diff=1`);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     const email = await r.json();
     populateDetailModal(email);
     const modalEl = document.getElementById('emailDetailModal');
@@ -666,7 +710,7 @@ function populateDetailModal(email){
   document.getElementById('detailEditBtn').hidden    = !isEditable;
   document.getElementById('detailReleaseBtn').hidden = !isEditable;
   const note = document.getElementById('detailStatusNote');
-  if(note){ note.textContent = isEditable ? 'Editable (not yet released)' : 'Read-only: already released/delivered'; }
+  if (note) { note.textContent = isEditable ? 'Editable (not yet released)' : 'Read-only: already released/delivered'; }
   const editTabBtn  = document.getElementById('detail-edit-tab');
   const editTabPane = document.getElementById('detail-edit');
 
@@ -907,16 +951,16 @@ function renderEmails(emails) {
         <div class="subject-cell ellipsis">${email.subject || '(No Subject)'}</div>
         ${email.preview_snippet ? `<div class="email-preview">${email.preview_snippet.substring(0, 100)}...</div>` : ''}
       </td>
+      <td data-label="Actions">
+        <div class="actions">
+          ${actions}
+        </div>
+      </td>
       <td data-label="Status">
         <div class="status-cell">
           <span class="status-badge status-${status}">${status}</span>
           ${watcherBadge}
           <button class="btn-icon" title="Restart watcher" onclick="event.stopPropagation(); restartWatcherFor(${email.account_id})"><i class="bi bi-arrow-repeat"></i></button>
-        </div>
-      </td>
-      <td data-label="Actions">
-        <div class="actions">
-          ${actions}
         </div>
       </td>
     `;
@@ -1006,8 +1050,8 @@ function toggleAutoRefresh(enabled) {
   localStorage.setItem('email_auto_refresh', enabled ? 'true' : 'false');
 }
 
-function viewEmail(emailId) {
-  window.location.href = `/email/${emailId}`;
+function viewEmail(emailId, el) {
+  return openEmailDetail(emailId, el);
 }
 
 function editEmail(emailId) {
