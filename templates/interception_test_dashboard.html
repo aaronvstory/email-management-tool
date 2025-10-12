@@ -780,7 +780,7 @@ function updateTimestamp() {
 // Start the test
 async function startTest() {
     if (testInProgress) {
-        alert('Test already in progress!');
+        if (window.showWarning) showWarning('Test already in progress!'); else alert('Test already in progress!');
         return;
     }
     
@@ -789,12 +789,12 @@ async function startTest() {
     const toAccount = document.getElementById('toAccount').value;
     
     if (!fromAccount || !toAccount) {
-        alert('Please select both sender and recipient accounts');
+        if (window.showWarning) showWarning('Please select both sender and recipient accounts'); else alert('Please select both sender and recipient accounts');
         return;
     }
     
     if (fromAccount === toAccount) {
-        alert('Please select different accounts for sender and recipient');
+        if (window.showWarning) showWarning('Please select different accounts for sender and recipient'); else alert('Please select different accounts for sender and recipient');
         return;
     }
     

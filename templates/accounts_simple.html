@@ -208,7 +208,7 @@
                     <button class="btn-test" onclick="testConnection({{ account.id }}, 'smtp')">
                         <i class="bi bi-play-circle"></i> Test SMTP
                     </button>
-                    <a href="/accounts/edit/{{ account.id }}" class="btn btn-warning btn-sm">
+                    <a href="/accounts?edit={{ account.id }}" class="btn btn-warning btn-sm">
                         <i class="bi bi-pencil"></i> Edit
                     </a>
                     <button class="btn btn-danger btn-sm" onclick="deleteAccount({{ account.id }})">
@@ -282,23 +282,24 @@ function exportAccounts(){
     window.location = '/api/accounts/export';
 }
 
-function testAllAccounts(){
+async function testAllAccounts(){
     const cards = document.querySelectorAll('[id^="test-result-"]');
-    let tested = 0, ok = 0, failed = 0;
     const ids = Array.from(cards).map(el => parseInt(el.id.replace('test-result-',''),10)).filter(Boolean);
-    const run = async () => {
-        for (const id of ids){
-            try {
-                const r = await fetch(`/api/accounts/${id}/test`, { method: 'POST' });
-                const data = await r.json();
-                tested++;
-                if (data && data.success) ok++; else failed++;
-            } catch (e){ failed++; }
-        }
-        const summary = `Tested ${tested} — OK: ${ok}, Failed: ${failed}`;
-        if (window.showSuccess) showSuccess(summary);
-    };
-    run();
+    if (!ids.length) { if (window.showInfo) showInfo('No accounts to test'); return; }
+    let tested = 0, ok = 0, failed = 0;
+    if (window.showInfo) showInfo(`Starting tests for ${ids.length} accounts...`);
+    for (const id of ids){
+        try {
+            const r = await fetch(`/api/accounts/${id}/test`, { method: 'POST' });
+            const data = await r.json();
+            tested++;
+            if (data && data.success) ok++; else failed++;
+        } catch (e){ tested++; failed++; }
+        // Small delay to avoid rate limits
+        await new Promise(res => setTimeout(res, 400));
+    }
+    const summary = `Tested ${tested} — OK: ${ok}, Failed: ${failed}`;
+    if (window.showSuccess) showSuccess(summary);
 }
 
 function deleteAccount(accountId) {

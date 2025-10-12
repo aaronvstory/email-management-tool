@@ -570,7 +570,7 @@ function runDiagnostics(accountId) {
 }
 
 function testAccount(accountId) {
-    alert('Testing account ' + accountId);
+    if (window.showInfo) showInfo('Testing account ' + accountId);
     // Add test logic here
 }
 
