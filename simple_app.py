@@ -116,9 +116,10 @@ def check_port_available(port, host='localhost'):
 # Load environment from .env early
 load_dotenv()
 
-# Hard preflight: require live credentials present in environment
+# Hard preflight (optional): require live credentials present in environment
 def _require_live_env():
-    require_flag = str(os.environ.get('REQUIRE_LIVE_CREDENTIALS', '1')).lower() in ('1','true','yes')
+    # Default OFF to avoid blocking local/dev — enable by setting REQUIRE_LIVE_CREDENTIALS=1
+    require_flag = str(os.environ.get('REQUIRE_LIVE_CREDENTIALS', '0')).lower() in ('1','true','yes')
     if not require_flag:
         return
     required = [
