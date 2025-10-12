@@ -22,7 +22,7 @@ from app.utils.imap_helpers import _imap_connect_account, _ensure_quarantine, _m
 from app.services.audit import log_action
 import socket
 import os
-from app.extensions import csrf
+from app.extensions import csrf, limiter
 
 from functools import wraps
 import shutil
@@ -73,6 +73,7 @@ SMTP_PORT = int(os.environ.get('SMTP_PROXY_PORT', '8587'))
 
 
 @bp_interception.route('/healthz')
+@limiter.exempt
 def healthz():
     """Health check endpoint with security configuration status (without exposing secrets)."""
     now = time.time()
@@ -151,6 +152,7 @@ def healthz():
     return jsonify(info), 200 if info.get('ok') else 503
 
 @bp_interception.route('/api/smtp-health')
+@limiter.exempt
 def api_smtp_health():
     """Lightweight SMTP health endpoint."""
     try:

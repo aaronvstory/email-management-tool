@@ -461,7 +461,7 @@ def get_full_email(email_id):
     row = cur.execute(
         """
         SELECT id, message_id, sender, recipients, subject,
-               body_text, body_html, raw_content, status,
+               body_text, body_html, status,
                risk_score, keywords_matched, review_notes,
                created_at, processed_at
         FROM email_messages
@@ -471,7 +471,10 @@ def get_full_email(email_id):
     ).fetchone(); conn.close()
     if not row:
         return jsonify({'error': 'Email not found'}), 404
-    return jsonify({k: row[k] for k in row.keys()})
+    data = {k: row[k] for k in row.keys()}
+    # Indicate presence of raw content without serializing it (prevents JSON 500)
+    data['has_raw'] = True
+    return jsonify(data)
 
 
 @emails_bp.route('/email/<int:email_id>/edit', methods=['GET'])
