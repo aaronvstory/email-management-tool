@@ -182,6 +182,14 @@ def api_smtp_health():
 @bp_interception.route('/interception')
 @login_required
 def interception_dashboard():
+    """Redirect to unified email management with HELD filter"""
+    from flask import redirect
+    return redirect('/emails-unified?status=HELD')
+
+@bp_interception.route('/interception-legacy')
+@login_required
+def interception_dashboard_legacy():
+    """Legacy interception dashboard - kept for reference"""
     return render_template('dashboard_interception.html')
 
 @bp_interception.route('/api/interception/held')

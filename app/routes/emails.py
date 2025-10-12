@@ -23,9 +23,158 @@ from app.services.audit import log_action
 
 emails_bp = Blueprint('emails', __name__)
 
+@emails_bp.route('/emails-unified')
+@login_required
+def emails_unified():
+    """Unified email management interface"""
+    status_filter = request.args.get('status', 'ALL')
+    account_id = request.args.get('account_id', type=int)
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    # Get email accounts
+    accounts = cursor.execute(
+        """
+        SELECT id, account_name, email_address
+        FROM email_accounts
+        WHERE is_active = 1
+        ORDER BY account_name
+        """
+    ).fetchall()
+
+    # Get counts for all statuses
+    counts = fetch_counts(account_id=account_id if account_id else None)
+    
+    conn.close()
+
+    return render_template(
+        'emails_unified.html',
+        accounts=accounts,
+        selected_account=account_id,
+        current_filter=status_filter,
+        total_count=counts.get('total', 0),
+        held_count=counts.get('held', 0),
+        pending_count=counts.get('pending', 0),
+        approved_count=counts.get('approved', 0),
+        rejected_count=counts.get('rejected', 0),
+    )
+
+
+@emails_bp.route('/api/emails/unified')
+@login_required
+def api_emails_unified():
+    """API endpoint for unified email list"""
+    status_filter = request.args.get('status', 'ALL')
+    account_id = request.args.get('account_id', type=int)
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    # Build query based on filters
+    query = """
+        SELECT id, sender, recipients, subject, body_text, 
+               interception_status, status, created_at, 
+               latency_ms, risk_score, keywords_matched
+        FROM email_messages
+        WHERE 1=1
+    """
+    params = []
+
+    if account_id:
+        query += " AND account_id = ?"
+        params.append(account_id)
+
+    if status_filter and status_filter != 'ALL':
+        query += " AND (interception_status = ? OR status = ?)"
+        params.extend([status_filter, status_filter])
+
+    query += " ORDER BY created_at DESC LIMIT 200"
+
+    emails = cursor.execute(query, params).fetchall()
+
+    # Get counts
+    counts = fetch_counts(account_id=account_id if account_id else None)
+
+    # Process emails for response
+    email_list = []
+    for email in emails:
+        email_dict = dict(email)
+        
+        # Add preview snippet
+        body_text = email_dict.get('body_text') or ''
+        email_dict['preview_snippet'] = ' '.join(body_text.split())[:160]
+        
+        # Parse recipients if JSON
+        try:
+            if email_dict.get('recipients'):
+                email_dict['recipients'] = json.loads(email_dict['recipients'])
+        except (json.JSONDecodeError, TypeError):
+            pass
+        
+        email_list.append(email_dict)
+
+    conn.close()
+
+    return jsonify({
+        'emails': email_list,
+        'counts': {
+            'total': counts.get('total', 0),
+            'held': counts.get('held', 0),
+            'pending': counts.get('pending', 0),
+            'approved': counts.get('approved', 0),
+            'rejected': counts.get('rejected', 0),
+        }
+    })
+
+
 @emails_bp.route('/emails')
 @login_required
 def email_queue():
+    """Legacy email queue - redirect to unified"""
+    status_filter = request.args.get('status', 'PENDING')
+    account_id = request.args.get('account_id', type=int)
+    
+    # Redirect to unified view
+    params = []
+    if status_filter:
+        params.append(f'status={status_filter}')
+    if account_id:
+        params.append(f'account_id={account_id}')
+    
+    redirect_url = '/emails-unified'
+    if params:
+        redirect_url += '?' + '&'.join(params)
+    
+    return redirect(redirect_url)
+
+
+@emails_bp.route('/inbox')
+@login_required
+def inbox_redirect():
+    """Legacy inbox - redirect to unified"""
+    account_id = request.args.get('account_id', type=int)
+    
+    redirect_url = '/emails-unified?status=ALL'
+    if account_id:
+        redirect_url += f'&account_id={account_id}'
+    
+    return redirect(redirect_url)
+
+
+@emails_bp.route('/interception')
+@login_required
+def interception_redirect():
+    """Legacy interception - redirect to unified"""
+    return redirect('/emails-unified?status=HELD')
+
+
+# Keep original email_queue for backward compatibility (without redirect)
+@emails_bp.route('/emails-legacy')
+@login_required
+def email_queue_legacy():
     status_filter = request.args.get('status', 'PENDING')
     account_id = request.args.get('account_id', type=int)
 
