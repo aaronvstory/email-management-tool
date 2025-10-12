@@ -126,7 +126,7 @@
 <script>
 function saveRule() {
     // Implement save rule functionality
-    alert('Rule saved successfully!');
+    if (window.showSuccess) showSuccess('Rule saved successfully!');
     $('#addRuleModal').modal('hide');
     location.reload();
 }

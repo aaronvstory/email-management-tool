@@ -359,7 +359,7 @@ function quickAction(emailId, action) {
 function bulkAction(action) {
     const selected = document.querySelectorAll('tbody input[type="checkbox"]:checked');
     if (selected.length === 0) {
-        if (window.showWarning) showWarning('Please select at least one email'); else alert('Please select at least one email');
+        if (window.showWarning) showWarning('Please select at least one email');
         return;
     }
     const run = () => {
@@ -395,7 +395,7 @@ function editEmail(emailId) {
             console.log('Received data:', data);
 
             if (data.error) {
-                if (window.showError) showError(data.error); else alert(data.error);
+                if (window.showError) showError(data.error);
                 return;
             }
 
@@ -403,7 +403,7 @@ function editEmail(emailId) {
             const modalElement = document.getElementById('editEmailModal');
             if (!modalElement) {
                 console.error('Modal element not found');
-                if (window.showError) showError('Edit modal not found in the page'); else alert('Edit modal not found in the page');
+                if (window.showError) showError('Edit modal not found in the page');
                 return;
             }
 
@@ -422,7 +422,7 @@ function editEmail(emailId) {
         .catch(error => {
             console.error('Error loading email details:', error);
             console.error('Error stack:', error.stack);
-            if (window.showError) showError(`Failed to load email details: ${error.message}`); else alert(`Failed to load email details: ${error.message}`);
+            if (window.showError) showError(`Failed to load email details: ${error.message}`);
         });
 }
 
@@ -432,7 +432,7 @@ function saveEmailEdit() {
     const body = document.getElementById('editEmailBody').value;
 
     if (!subject || !body) {
-        if (window.showError) showError('Subject and body are required'); else alert('Subject and body are required');
+        if (window.showError) showError('Subject and body are required');
         return;
     }
 
@@ -461,7 +461,7 @@ function saveEmailEdit() {
     })
     .then(data => {
         if (data.error) {
-            if (window.showError) showError(data.error); else alert(data.error);
+            if (window.showError) showError(data.error);
             saveBtn.disabled = false;
             saveBtn.innerHTML = originalText;
         } else {
@@ -476,7 +476,7 @@ function saveEmailEdit() {
     })
     .catch(error => {
         console.error('Error saving email:', error);
-        if (window.showError) showError(`Failed to save changes: ${error.message}`); else alert(`Failed to save changes: ${error.message}`);
+        if (window.showError) showError(`Failed to save changes: ${error.message}`);
         saveBtn.disabled = false;
         saveBtn.innerHTML = originalText;
     });

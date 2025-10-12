@@ -204,6 +204,83 @@
     </div>
 </div>
 
+<!-- Edit Account Modal -->
+<div class="modal fade" id="editAccountModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content" style="background:#1a1a1a;border:1px solid rgba(255,255,255,0.06);color:#fff;">
+      <div class="modal-header" style="border-bottom:1px solid rgba(255,255,255,0.06);">
+        <h5 class="modal-title"><i class="bi bi-pencil-square"></i> Edit Account</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editAccountForm">
+          <input type="hidden" id="edit_account_id">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Account Name</label>
+              <input type="text" id="edit_account_name" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email Address</label>
+              <input type="email" id="edit_email_address" class="form-control" disabled>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">IMAP Host</label>
+              <input type="text" id="edit_imap_host" class="form-control" required>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">IMAP Port</label>
+              <input type="number" id="edit_imap_port" class="form-control" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">IMAP Username</label>
+              <input type="text" id="edit_imap_username" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">SMTP Host</label>
+              <input type="text" id="edit_smtp_host" class="form-control" required>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">SMTP Port</label>
+              <input type="number" id="edit_smtp_port" class="form-control" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">SMTP Username</label>
+              <input type="text" id="edit_smtp_username" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">IMAP Password (leave blank to keep)</label>
+              <input type="password" id="edit_imap_password" class="form-control" placeholder="••••••••">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">SMTP Password (leave blank to keep)</label>
+              <input type="password" id="edit_smtp_password" class="form-control" placeholder="••••••••">
+            </div>
+            <div class="col-md-12 d-flex gap-3 align-items-center mt-2">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="edit_imap_use_ssl">
+                <label class="form-check-label" for="edit_imap_use_ssl">IMAP SSL</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="edit_smtp_use_ssl">
+                <label class="form-check-label" for="edit_smtp_use_ssl">SMTP SSL</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="edit_is_active">
+                <label class="form-check-label" for="edit_is_active">Active</label>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer" style="border-top:1px solid rgba(255,255,255,0.06);">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" onclick="saveAccountEdit()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 function testAccount(accountId) {
     // Show loading state
@@ -214,14 +291,14 @@ function testAccount(accountId) {
     .then(response => response.json())
     .then(data => {
         if (data && data.success) {
-            if (window.showSuccess) showSuccess('Account test successful'); else alert('Account test successful');
+            if (window.showSuccess) showSuccess('Account test successful');
         } else {
             const msg = (data && (data.error || (data.smtp && data.smtp.message) || (data.imap && data.imap.message))) || 'Test failed';
-            if (window.showError) showError('Account test failed: ' + msg); else alert('Account test failed: ' + msg);
+            if (window.showError) showError('Account test failed: ' + msg);
         }
     })
     .catch(error => {
-        if (window.showError) showError('Error testing account: ' + error); else alert('Error testing account: ' + error);
+        if (window.showError) showError('Error testing account: ' + error);
     });
 }
 
@@ -251,7 +328,7 @@ function deleteAccount(accountId) {
                 if (data.success) {
                     document.getElementById('account-' + accountId).remove();
                 } else {
-                    alert('Error deleting account: ' + data.error);
+                    if (window.showError) showError('Error deleting account: ' + data.error);
                 }
             });
     }
@@ -300,5 +377,58 @@ function exportAccounts() {
     // Implement export functionality
     window.location.href = '/api/accounts/export';
 }
+
+// Edit modal helpers
+function getQueryParam(name){ const u=new URL(window.location.href); return u.searchParams.get(name); }
+async function openEditModal(accountId){
+  try{
+    const r=await fetch('/api/accounts/'+accountId);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const a=await r.json();
+    document.getElementById('edit_account_id').value=a.id||accountId;
+    document.getElementById('edit_account_name').value=a.account_name||'';
+    document.getElementById('edit_email_address').value=a.email_address||'';
+    document.getElementById('edit_imap_host').value=a.imap_host||'';
+    document.getElementById('edit_imap_port').value=a.imap_port||993;
+    document.getElementById('edit_imap_username').value=a.imap_username||'';
+    document.getElementById('edit_smtp_host').value=a.smtp_host||'';
+    document.getElementById('edit_smtp_port').value=a.smtp_port||465;
+    document.getElementById('edit_smtp_username').value=a.smtp_username||'';
+    document.getElementById('edit_imap_use_ssl').checked=!!a.imap_use_ssl;
+    document.getElementById('edit_smtp_use_ssl').checked=!!a.smtp_use_ssl;
+    document.getElementById('edit_is_active').checked=!!a.is_active;
+    document.getElementById('edit_imap_password').value='';
+    document.getElementById('edit_smtp_password').value='';
+    new bootstrap.Modal(document.getElementById('editAccountModal')).show();
+  }catch(e){ if(window.showError) showError('Failed to load account: '+e.message); }
+}
+async function saveAccountEdit(){
+  const id=document.getElementById('edit_account_id').value;
+  const payload={
+    account_name: document.getElementById('edit_account_name').value,
+    imap_host: document.getElementById('edit_imap_host').value,
+    imap_port: parseInt(document.getElementById('edit_imap_port').value)||993,
+    imap_username: document.getElementById('edit_imap_username').value,
+    smtp_host: document.getElementById('edit_smtp_host').value,
+    smtp_port: parseInt(document.getElementById('edit_smtp_port').value)||465,
+    smtp_username: document.getElementById('edit_smtp_username').value,
+    imap_use_ssl: document.getElementById('edit_imap_use_ssl').checked,
+    smtp_use_ssl: document.getElementById('edit_smtp_use_ssl').checked,
+    is_active: document.getElementById('edit_is_active').checked
+  };
+  const imap_pwd=document.getElementById('edit_imap_password').value;
+  const smtp_pwd=document.getElementById('edit_smtp_password').value;
+  if(imap_pwd) payload.imap_password=imap_pwd;
+  if(smtp_pwd) payload.smtp_password=smtp_pwd;
+  try{
+    const r=await fetch('/api/accounts/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const j=await r.json();
+    if(!r.ok||j.error) throw new Error(j.error||('HTTP '+r.status));
+    if(window.showSuccess) showSuccess('Account updated');
+    const url=new URL(window.location.href); url.searchParams.delete('edit'); window.history.replaceState({},'',url.toString());
+    setTimeout(()=>window.location.reload(),500);
+  }catch(e){ if(window.showError) showError('Update failed: '+e.message); }
+}
+(function(){ const id=getQueryParam('edit'); if(id) openEditModal(id); })();
 </script>
 {% endblock %}
