@@ -126,8 +126,7 @@
   }
 
   .email-table thead th {
-    background: rgba(255,255,255,0.03);
-    color: #9ca3af;
+    color: #ffffff;
     font-weight: 600;
     padding: 12px;
     text-align: left;
@@ -178,42 +177,8 @@
     border: 1px solid rgba(59,130,246,0.3);
   }
 
-  /* Action Buttons */
-  .action-buttons {
-    display: flex;
-    gap: 5px;
-  }
-
-  .action-btn {
-    padding: 6px 10px;
-    border-radius: 6px;
-    border: 1px solid rgba(255,255,255,0.12);
-    background: rgba(255,255,255,0.06);
-    color: #ffffff;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-size: 0.85rem;
-  }
-
-  .action-btn:hover {
-    background: rgba(255,255,255,0.12);
-    transform: translateY(-1px);
-  }
-
-  .action-btn.primary {
-    background: linear-gradient(135deg,#dc2626 0%,#991b1b 100%);
-    border: none;
-  }
-
-  .action-btn.success {
-    background: linear-gradient(135deg,#10b981 0%,#059669 100%);
-    border: none;
-  }
-
-  .action-btn.danger {
-    background: linear-gradient(135deg,#dc2626 0%,#991b1b 100%);
-    border: none;
-  }
+  /* Action Buttons container */
+  .action-buttons { display: flex; gap: 5px; }
 
   /* Empty State */
   .empty-state {
@@ -262,39 +227,14 @@
     color: #9ca3af;
   }
 
-  /* Dashboard-style calm buttons */
-  .btn-icon,
-  .btn.btn-secondary.btn-sm,
-  .action-btn,
-  .btn-group-unified .btn {
-    background: rgba(255,255,255,0.06) !important;
-    border: 1px solid rgba(255,255,255,0.12) !important;
-    color: #fff !important;
-  }
-  .btn-icon:hover,
-  .btn.btn-secondary.btn-sm:hover,
-  .action-btn:hover,
-  .btn-group-unified .btn:hover {
-    background: rgba(255,255,255,0.12) !important;
-  }
-  /* keyboard focus ring */
-  .btn-icon:focus-visible,
-  .action-btn:focus-visible { outline:2px solid rgba(255,255,255,0.35); outline-offset:2px; border-color:transparent; }
-  .action-btn.primary,
-  .action-btn.success,
-  .action-btn.danger {
-    background: rgba(255,255,255,0.06) !important;
-    border: 1px solid rgba(255,255,255,0.12) !important;
-  }
+  /* Let global main.css control button styles for consistency */
 
   /* Header/row density */
   .email-table thead th { padding: 6px 10px; }
   .email-table tbody td { padding: 6px 10px; }
-  .chip, .status-badge, .status-chip {
-    min-height: 22px; padding: 3px 8px; font-size: 12px; font-weight: 700;
-  }
+  /* Status chips use global .status-badge sizing */
   .actions { display: flex; gap: 4px; }
-  .action-btn { padding: 4px 8px; font-size: 12px; border-radius: 6px; }
+  
   .email-table tbody tr:hover { background: rgba(255,255,255,0.04); }
 
   /* Lock widths for non-flex columns so Subject can take the rest */
@@ -332,8 +272,7 @@
   #emailDetailModal .modal-dialog { max-width: min(1100px, 95vw); margin: 2vh auto; }
   #emailDetailModal .modal-body { max-height: calc(100vh - 200px); overflow: auto; }
 
-  /* Icon buttons hitbox (match Dashboard) */
-  .btn-icon { padding: 4px 6px !important; border-radius: 6px !important; }
+  /* Icon-only buttons use .btn-icon-only from main.css */
 </style>
 {% endblock %}
 
@@ -341,7 +280,7 @@
 <div class="page-header d-flex justify-content-between align-items-center">
   <h1><i class="bi bi-envelope-fill"></i> Email Management</h1>
   <div class="header-actions btn-group-unified">
-    <a href="/compose" class="btn-primary">
+    <a href="/compose" class="btn btn-primary">
       <i class="bi bi-pencil-square"></i> Compose
     </a>
   </div>
@@ -438,9 +377,9 @@
         <col style="width:120px">     
         <col style="width:14rem">     
         <col style="width:14rem">     
-        <col>                          
+        <col>
         <col style="width:160px">     
-        <col style="width:100px">     
+        <col style="width:140px">     
       </colgroup>
       <thead>
         <tr>
@@ -962,19 +901,19 @@ function renderEmails(emails) {
     let actions = '';
     if (status === 'HELD') {
       actions = `
-        <button class="btn-icon" onclick="event.stopPropagation(); editEmail(${email.id})" title="Edit" aria-label="Edit"><i class="bi bi-pencil"></i></button>
-        <button class="btn-icon" onclick="event.stopPropagation(); releaseEmail(${email.id})" title="Release" aria-label="Release"><i class="bi bi-unlock"></i></button>
-        <button class="btn-icon" onclick="event.stopPropagation(); discardEmail(${email.id})" title="Discard" aria-label="Discard"><i class="bi bi-trash"></i></button>
+        <button class="btn btn-secondary btn-icon-only" onclick="event.stopPropagation(); editEmail(${email.id})" title="Edit" aria-label="Edit"><i class="bi bi-pencil"></i></button>
+        <button class="btn btn-secondary btn-icon-only" onclick="event.stopPropagation(); releaseEmail(${email.id})" title="Release" aria-label="Release"><i class="bi bi-unlock"></i></button>
+        <button class="btn btn-secondary btn-icon-only" onclick="event.stopPropagation(); discardEmail(${email.id})" title="Discard" aria-label="Discard"><i class="bi bi-trash"></i></button>
       `;
     } else if (status === 'PENDING') {
       actions = `
-        <button class="btn-icon" onclick="event.stopPropagation(); editEmail(${email.id})" title="Edit" aria-label="Edit"><i class="bi bi-pencil"></i></button>
-        <button class="btn-icon" onclick="event.stopPropagation(); approveEmail(${email.id})" title="Approve" aria-label="Approve"><i class="bi bi-check"></i></button>
-        <button class="btn-icon" onclick="event.stopPropagation(); rejectEmail(${email.id})" title="Reject" aria-label="Reject"><i class="bi bi-x"></i></button>
+        <button class="btn btn-secondary btn-icon-only" onclick="event.stopPropagation(); editEmail(${email.id})" title="Edit" aria-label="Edit"><i class="bi bi-pencil"></i></button>
+        <button class="btn btn-secondary btn-icon-only" onclick="event.stopPropagation(); approveEmail(${email.id})" title="Approve" aria-label="Approve"><i class="bi bi-check"></i></button>
+        <button class="btn btn-secondary btn-icon-only" onclick="event.stopPropagation(); rejectEmail(${email.id})" title="Reject" aria-label="Reject"><i class="bi bi-x"></i></button>
       `;
     } else {
       actions = `
-        <button class="btn-icon" onclick="event.stopPropagation(); openEmailDetail(${email.id})" title="View" aria-label="View"><i class="bi bi-eye"></i></button>
+        <button class="btn btn-secondary btn-icon-only" onclick="event.stopPropagation(); openEmailDetail(${email.id})" title="View" aria-label="View"><i class="bi bi-eye"></i></button>
       `;
     }
     
@@ -1004,7 +943,7 @@ function renderEmails(emails) {
         <div class="status-cell">
           <span class="status-badge status-${status}">${status}</span>
           ${watcherBadge}
-          <button class="btn-icon" title="Restart watcher" onclick="event.stopPropagation(); restartWatcherFor(${email.account_id})"><i class="bi bi-arrow-repeat"></i></button>
+          <button class="btn btn-secondary btn-icon-only" title="Restart watcher" onclick="event.stopPropagation(); restartWatcherFor(${email.account_id})"><i class="bi bi-arrow-repeat"></i></button>
         </div>
       </td>
     `;
