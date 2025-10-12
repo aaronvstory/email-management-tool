@@ -17,7 +17,7 @@
 </div>
 
 <!-- Account Selector -->
-<div class="content-section">
+<div class="content-section compact">
     <div class="row align-items-center">
         <div class="col-md-6">
             <label class="form-label fw-bold">Select Account:</label>
@@ -93,7 +93,7 @@
         <div class="content-section-header">
           <div class="section-title">System Stats</div>
         </div>
-        <div class="content-grid" id="statsGrid">
+        <div class="metric-grid" id="statsGrid">
           <div class="stat-card-modern">
             <div class="stat-label">Total</div>
             <div class="stat-value" id="statTotal">-</div>
@@ -139,9 +139,17 @@
                 <td>{{ email.sender }}</td>
                 <td>{{ email.recipients }}</td>
                 <td>{{ email.subject[:50] }}{% if email.subject|length > 50 %}...{% endif %}</td>
-                <td><span class="chip {% if email.status == 'released' %}chip-ok{% elif email.status == 'pending' %}chip-warn{% else %}chip-bad{% endif %}">{{ email.status }}</span></td>
+                <td>
+                  <span class="chip
+                    {% if email.status|lower in ['released','delivered'] %}chip-released
+                    {% elif email.status|lower in ['pending','queued'] %}chip-pending
+                    {% elif email.status|lower in ['sent'] %}chip-sent
+                    {% else %}chip-error{% endif %}">
+                    {{ email.status }}
+                  </span>
+                </td>
                 <td class="subtle">{{ email.created_at }}</td>
-                <td><a href="/email/{{ email.id }}" class="btn btn-secondary btn-sm"><i class="bi bi-eye"></i></a></td>
+                <td><a href="/email/{{ email.id }}" class="btn btn-secondary btn-sm btn-icon"><i class="bi bi-eye"></i></a></td>
               </tr>
               {% else %}
               <tr>
