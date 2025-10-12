@@ -297,10 +297,10 @@
           <option value="100">100</option>
         </select>
       </div>
-      <button class="btn-primary" onclick="fetchEmails()" style="margin-top: 20px;">
+      <button class="btn btn-secondary btn-sm" onclick="fetchEmails()" aria-label="Fetch emails">
         <i class="bi bi-cloud-download"></i> Fetch
       </button>
-      <button class="btn-secondary" onclick="fetchMore()" style="margin-top: 20px;">
+      <button class="btn btn-secondary btn-sm" onclick="fetchMore()" aria-label="Fetch more emails">
         <i class="bi bi-plus-circle"></i> More
       </button>
     </div>
@@ -343,20 +343,20 @@
   </div>
 
   <!-- Filters Bar -->
-  <div class="filters-bar">
+  <div class="filters-bar" role="region" aria-label="Filters">
     <input id="searchBox" class="search-input" placeholder="Search subject, sender, or recipient..." />
-    <label class="form-check" style="color: #ffffff; margin: 0;">
+    <label class="form-check subtle" style="margin: 0;">
       <input type="checkbox" class="form-check-input" id="autoRefresh" onchange="toggleAutoRefresh(this.checked)">
       <span style="margin-left: 5px;">Auto-refresh</span>
     </label>
-    <button class="btn-secondary" onclick="reloadEmails()">
+    <button class="btn btn-secondary btn-sm" onclick="reloadEmails()">
       <i class="bi bi-arrow-clockwise"></i> Refresh
     </button>
   </div>
 
   <!-- Email Table -->
   <div style="overflow-x: auto;">
-    <table class="email-table">
+    <table class="email-table" role="table" aria-label="Emails">
       <thead>
         <tr>
           <th style="width: 40px;">
@@ -370,7 +370,7 @@
           <th style="width: 200px;">Actions</th>
         </tr>
       </thead>
-      <tbody id="emailTableBody">
+      <tbody id="emailTableBody" aria-live="polite">
         <!-- Dynamic content -->
       </tbody>
     </table>
@@ -451,6 +451,81 @@
     </div>
   </div>
 </div>
+
+<!-- Email Detail Modal -->
+<div class="modal fade" id="emailDetailModal" tabindex="-1" aria-labelledby="emailDetailLabel" aria-modal="true" role="dialog">
+  <div class="modal-dialog modal-xl modal-fullscreen-md-down">
+    <div class="modal-content" style="background:var(--grad-card);border:1px solid var(--color-border)">
+      <div class="modal-header">
+        <h5 class="modal-title" id="emailDetailLabel">
+          <i class="bi bi-envelope-open"></i>
+          <span id="detailSubject">Email</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="emailDetailBody" style="max-height:70vh;overflow:auto">
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <div class="content-section compact">
+              <div class="subtle">From</div>
+              <div id="detailFrom" class="fw-semibold"></div>
+              <div class="subtle mt-2">To</div>
+              <div id="detailTo" class="fw-semibold"></div>
+              <div class="subtle mt-2">Date</div>
+              <div id="detailDate"></div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="content-section compact">
+              <div class="subtle">Status</div>
+              <div id="detailStatus" class="chip">—</div>
+              <div class="subtle mt-2">Account</div>
+              <div id="detailAccount">—</div>
+            </div>
+          </div>
+        </div>
+        <div class="content-section">
+          <ul class="nav nav-tabs" id="detailTabs" role="tablist" aria-label="Email body views">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="detail-text-tab" data-bs-toggle="tab" data-bs-target="#detail-text" type="button" role="tab" aria-controls="detail-text" aria-selected="true">Text</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="detail-html-tab" data-bs-toggle="tab" data-bs-target="#detail-html" type="button" role="tab" aria-controls="detail-html" aria-selected="false">HTML</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="detail-raw-tab" data-bs-toggle="tab" data-bs-target="#detail-raw" type="button" role="tab" aria-controls="detail-raw" aria-selected="false">Raw</button>
+            </li>
+          </ul>
+          <div class="tab-content p-3" id="detailTabContent">
+            <div class="tab-pane fade show active" id="detail-text" role="tabpanel" aria-labelledby="detail-text-tab">
+              <div id="detailText" class="email-content"></div>
+            </div>
+            <div class="tab-pane fade" id="detail-html" role="tabpanel" aria-labelledby="detail-html-tab">
+              <iframe id="detailHtml" style="width:100%;height:420px;border:none;"></iframe>
+            </div>
+            <div class="tab-pane fade" id="detail-raw" role="tabpanel" aria-labelledby="detail-raw-tab">
+              <pre id="detailRaw" class="email-content" style="white-space:pre-wrap"></pre>
+            </div>
+          </div>
+        </div>
+        <div id="detailAttachments" class="content-section" style="display:none">
+          <div class="section-title">Attachments</div>
+          <div id="attachmentsList" class="d-flex flex-column gap-2"></div>
+        </div>
+      </div>
+      <div class="modal-footer justify-content-between">
+        <div class="subtle" id="detailStatusNote" aria-live="polite"></div>
+        <div class="btn-group-unified" role="group" aria-label="Email actions">
+          <button class="btn btn-secondary btn-sm" id="detailEditBtn"><i class="bi bi-pencil"></i> Edit</button>
+          <button class="btn btn-secondary btn-sm" id="detailApproveBtn"><i class="bi bi-check2"></i> Approve</button>
+          <button class="btn btn-secondary btn-sm" id="detailReleaseBtn"><i class="bi bi-send-check"></i> Release</button>
+          <button class="btn btn-secondary btn-sm" id="detailRejectBtn"><i class="bi bi-x-circle"></i> Reject</button>
+          <button class="btn btn-secondary btn-sm" id="detailDeleteBtn"><i class="bi bi-trash"></i> Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -485,6 +560,78 @@ document.addEventListener('DOMContentLoaded', function() {
     toggleAutoRefresh(true);
   }
 });
+
+// Accessible row enhancer and detail modal opener
+let lastFocusedTrigger = null;
+function enhanceEmailRow(tr, email){
+  try{
+    tr.dataset.id = email.id;
+    tr.tabIndex = 0;
+    tr.setAttribute('role','button');
+    tr.setAttribute('aria-label', `Open email from ${email.sender || 'unknown'} with subject ${email.subject || 'No subject'}`);
+    const open = ()=> openEmailDetail(email.id, tr);
+    tr.addEventListener('click', open);
+    tr.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); open(); }});
+  }catch(_e){}
+}
+
+async function openEmailDetail(id, triggerEl){
+  lastFocusedTrigger = triggerEl || null;
+  try{
+    const r = await fetch(`/api/emails/${id}`);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const email = await r.json();
+    populateDetailModal(email);
+    const modalEl = document.getElementById('emailDetailModal');
+    modalEl.addEventListener('hidden.bs.modal', ()=>{ if(lastFocusedTrigger){ lastFocusedTrigger.focus(); }}, {once:true});
+    new bootstrap.Modal(modalEl,{backdrop:'static'}).show();
+  }catch(e){
+    window.location.href = `/email/${id}`; // fallback to legacy page
+  }
+}
+
+function populateDetailModal(email){
+  document.getElementById('detailSubject').textContent = email.subject || 'No Subject';
+  document.getElementById('detailFrom').textContent = email.sender || '(unknown)';
+  document.getElementById('detailTo').textContent = Array.isArray(email.recipients) ? email.recipients.join(', ') : (email.recipients || '(none)');
+  document.getElementById('detailDate').textContent = email.created_at || '';
+  document.getElementById('detailAccount').textContent = email.account ? (email.account.name || email.account) : (email.account_id ? `Account #${email.account_id}` : '—');
+  const chip = document.getElementById('detailStatus');
+  chip.className = 'chip';
+  const s = (email.interception_status || email.status || 'UNKNOWN').toUpperCase();
+  chip.classList.add(
+    (s==='RELEASED' || s==='DELIVERED') ? 'chip-released' :
+    (s==='PENDING' || s==='HELD' || s==='QUEUED') ? 'chip-pending' :
+    (s==='SENT') ? 'chip-sent' :
+    'chip-error'
+  );
+  chip.textContent = s;
+  document.getElementById('detailText').textContent = email.body_text || 'No text content';
+  const iframe = document.getElementById('detailHtml');
+  iframe.srcdoc = email.body_html || '<div style="padding:12px;color:#666;font-family:system-ui">No HTML content</div>';
+  document.getElementById('detailRaw').textContent = email.raw_content || 'No raw content';
+  const atWrap = document.getElementById('detailAttachments');
+  const list = document.getElementById('attachmentsList');
+  list.innerHTML = '';
+  if(Array.isArray(email.attachments) && email.attachments.length){
+    atWrap.style.display = '';
+    email.attachments.forEach(a=>{
+      const row = document.createElement('div');
+      row.className = 'd-flex justify-content-between align-items-center';
+      row.innerHTML = `<span>${a.filename}</span><button class="btn btn-secondary btn-sm" aria-label="Download ${a.filename}" onclick="downloadAttachment(${a.id})"><i class=\"bi bi-download\"></i></button>`;
+      list.appendChild(row);
+    });
+  } else { atWrap.style.display = 'none'; }
+  document.getElementById('detailEditBtn').onclick    = ()=> editEmail(email.id);
+  document.getElementById('detailApproveBtn').onclick = ()=> approveEmail(email.id);
+  document.getElementById('detailReleaseBtn').onclick = ()=> releaseEmail(email.id);
+  document.getElementById('detailRejectBtn').onclick  = ()=> rejectEmail(email.id);
+  document.getElementById('detailDeleteBtn').onclick  = ()=> discardEmail(email.id);
+}
+
+function downloadAttachment(attId){
+  try { window.location.href = `/api/attachments/${attId}`; } catch(_) {}
+}
 
 function updateActiveTab(status) {
   document.querySelectorAll('.status-tab').forEach(tab => {
@@ -709,7 +856,7 @@ function renderEmails(emails) {
       <td>
         <div class="email-addr-cell ellipsis" style="max-width: 220px;">${recipients}</div>
       </td>
-      <td onclick="viewEmail(${email.id})" style="cursor: pointer;">
+      <td style="cursor: pointer;">
         <div class="subject-cell ellipsis">${email.subject || '(No Subject)'}</div>
         ${email.preview_snippet ? `<div class="email-preview">${email.preview_snippet.substring(0, 100)}...</div>` : ''}
       </td>
@@ -726,7 +873,7 @@ function renderEmails(emails) {
         </div>
       </td>
     `;
-    
+    enhanceEmailRow(tr, email);
     tbody.appendChild(tr);
   });
   
