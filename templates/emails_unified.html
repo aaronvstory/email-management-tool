@@ -302,6 +302,21 @@
 
   /* Compact info cards in modal */
   .content-section.compact { padding: 14px 16px; }
+
+  /* Subject actually fills the cell + lock action/status widths */
+  .email-table td .subject-cell { display:block; width:100%; }
+  .email-table td[data-label="Actions"] { width:160px; }
+  .email-table td[data-label="Status"]  { width:100px; }
+
+  /* Modal sizing to prevent cut-off */
+  #emailDetailModal .modal-dialog { max-width: min(1200px, 96vw); }
+  #emailDetailModal .modal-content { max-height: 90vh; display: flex; flex-direction: column; }
+  #emailDetailModal .modal-header,
+  #emailDetailModal .modal-footer { flex: 0 0 auto; }
+  #emailDetailModal .modal-body { flex: 1 1 auto; overflow: auto; }
+
+  /* Icon buttons hitbox (match Dashboard) */
+  .btn-icon { padding: 4px 6px !important; border-radius: 6px !important; }
 </style>
 {% endblock %}
 
@@ -407,8 +422,8 @@
             <input type="checkbox" class="form-check-input" id="selectAll" onchange="toggleSelectAll(this.checked)">
           </th>
           <th style="width:120px">Time</th>
-          <th style="width:15rem">From</th>
-          <th style="width:15rem">To</th>
+          <th style="width:14rem">From</th>
+          <th style="width:14rem">To</th>
           <th class="col-subject">Subject</th>
           <th style="width:190px">Actions</th>
           <th style="width:100px">Status</th>
@@ -548,7 +563,7 @@
               <div id="detailText" class="email-content"></div>
             </div>
             <div class="tab-pane fade" id="detail-html" role="tabpanel" aria-labelledby="detail-html-tab">
-              <iframe id="detailHtml" style="width:100%;min-height:280px;height:50vh;border:none;"></iframe>
+              <iframe id="detailHtml" style="width:100%;min-height:280px;height:100%;border:none;"></iframe>
             </div>
             <div class="tab-pane fade" id="detail-raw" role="tabpanel" aria-labelledby="detail-raw-tab">
               <pre id="detailRaw" class="email-content" style="white-space:pre-wrap"></pre>
