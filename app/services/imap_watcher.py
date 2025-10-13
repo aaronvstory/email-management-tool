@@ -122,36 +122,15 @@ class ImapWatcher:
             pass
 
     def _connect(self) -> Optional[IMAPClient]:
-        """Establish IMAP connection with validation and error handling.
-
-        Returns:
-            IMAPClient instance on success, None on failure
-        """
         try:
-            # Validate credentials before attempting connection
-            if not self.cfg.username or not self.cfg.password:
-                log.error("Missing credentials for account %s - username or password is empty", self.cfg.account_id)
-                self._record_failure('missing_credentials')
-                return None
-
-            if not self.cfg.imap_host:
-                log.error("Missing IMAP host for account %s", self.cfg.account_id)
-                self._record_failure('missing_config')
-                return None
-
-            log.info("Connecting to IMAP %s:%s (ssl=%s) for account %s",
-                     self.cfg.imap_host, self.cfg.imap_port, self.cfg.use_ssl, self.cfg.account_id)
-
+            log.info("Connecting to IMAP %s:%s (ssl=%s)", self.cfg.imap_host, self.cfg.imap_port, self.cfg.use_ssl)
             ssl_context = sslmod.create_default_context() if self.cfg.use_ssl else None
-
             # Apply connection timeout from env (EMAIL_CONN_TIMEOUT, clamp 5..60, default 15)
             try:
                 to = int(os.getenv("EMAIL_CONN_TIMEOUT", "15"))
                 to = max(5, min(60, to))
             except Exception:
                 to = 15
-
-            # Create IMAP client with timeout
             client = IMAPClient(
                 self.cfg.imap_host,
                 port=self.cfg.imap_port,
@@ -159,14 +138,10 @@ class ImapWatcher:
                 ssl_context=ssl_context,
                 timeout=to
             )
-
-            # Attempt login with masked password in logs
-            log.debug("Attempting login as %s", self.cfg.username)
             client.login(self.cfg.username, self.cfg.password)
-            log.info("Successfully logged in as %s for account %s", self.cfg.username, self.cfg.account_id)
-
+            log.info("Logged in as %s", self.cfg.username)
             capabilities = client.capabilities()
-            log.debug("Server capabilities for account %s: %s", self.cfg.account_id, capabilities)
+            log.debug("Server capabilities: %s", capabilities)
             # Ensure folders (robust: try Quarantine variants with server delimiter)
             # Always ensure INBOX first
             try:
@@ -248,52 +223,18 @@ class ImapWatcher:
                 self._last_uidnext = 1
             return client
         except Exception as e:
-            # Detailed error logging with classification
-            error_msg = str(e)
-            error_lower = error_msg.lower()
-
-            # Classify error type for circuit breaker
-            if 'authenticationfailed' in error_lower or 'auth' in error_lower or 'login' in error_lower:
+            log.error(f"Failed to connect to IMAP for {self.cfg.username}: {e}")
+            # Record failure and possibly trip circuit breaker with better taxonomy
+            msg = str(e).lower()
+            if ('auth' in msg or 'login' in msg):
                 reason = 'auth_failed'
-                log.error("IMAP authentication failed for account %s (%s): %s - Check credentials in database",
-                         self.cfg.account_id, self.cfg.username, error_msg)
-                log.error("Hint: For Gmail/Outlook, use App Passwords. For Hostinger, use regular password.")
-            elif 'ssl' in error_lower or 'tls' in error_lower or 'certificate' in error_lower:
+            elif ('ssl' in msg or 'tls' in msg):
                 reason = 'tls_failed'
-                log.error("IMAP SSL/TLS error for account %s (%s): %s - Check SSL settings and port",
-                         self.cfg.account_id, self.cfg.username, error_msg)
-            elif 'timeout' in error_lower or 'timed out' in error_lower:
+            elif 'timeout' in msg:
                 reason = 'timeout'
-                log.error("IMAP connection timeout for account %s (%s:%s): %s - Check network/firewall",
-                         self.cfg.account_id, self.cfg.imap_host, self.cfg.imap_port, error_msg)
-            elif 'refused' in error_lower or 'unreachable' in error_lower:
-                reason = 'connection_refused'
-                log.error("IMAP connection refused for account %s (%s:%s): %s - Check host/port settings",
-                         self.cfg.account_id, self.cfg.imap_host, self.cfg.imap_port, error_msg)
             else:
                 reason = 'error'
-                log.error("IMAP connection error for account %s (%s): %s",
-                         self.cfg.account_id, self.cfg.username, error_msg)
-
-            # Record failure for circuit breaker
             self._record_failure(reason)
-
-            # Update database with error details if account_id exists
-            try:
-                if self.cfg.account_id:
-                    conn = sqlite3.connect(self.cfg.db_path)
-                    cur = conn.cursor()
-                    # Truncate error message to reasonable length
-                    truncated_error = error_msg[:500] if len(error_msg) > 500 else error_msg
-                    cur.execute(
-                        "UPDATE email_accounts SET last_error=?, last_checked=datetime('now') WHERE id=?",
-                        (f"{reason}: {truncated_error}", self.cfg.account_id)
-                    )
-                    conn.commit()
-                    conn.close()
-            except Exception as db_error:
-                log.warning("Could not update error status in database: %s", db_error)
-
             return None
 
     def _supports_uid_move(self) -> bool:
@@ -671,126 +612,99 @@ class ImapWatcher:
 
     @backoff.on_exception(backoff.expo, (socket.error, OSError, Exception), max_time=60 * 60)
     def run_forever(self):
-        """Main IMAP monitoring loop with robust error handling and reconnection logic."""
         # Early stop if account disabled
         if self._should_stop():
             try:
                 self._update_heartbeat("stopped")
             except Exception:
                 pass
-            log.info("Account %s is disabled, stopping watcher", self.cfg.account_id)
             return
-
-        # Attempt connection with validation
         self._client = self._connect()
-        if self._client is None:
-            log.error("Failed to establish IMAP connection for account %s", self.cfg.account_id)
-            self._update_heartbeat("auth_failed")
-            time.sleep(10)  # Wait before backoff retry
-            raise ConnectionError("IMAP connection failed - authentication or network issue")
-
         client = self._client
-        log.info("IMAP watcher started successfully for account %s (%s)", self.cfg.account_id, self.cfg.username)
+
+        # Check if connection failed
+        if not client:
+            log.error("Failed to establish IMAP connection")
+            time.sleep(10)  # Wait before retry
+            return  # Let backoff handle retry
 
         last_idle_break = time.time()
         # Track UIDNEXT to reduce duplicate scans
         try:
             status = client.folder_status(self.cfg.inbox, [b'UIDNEXT'])
             self._last_uidnext = int(status.get(b'UIDNEXT') or 1)
-        except Exception as e:
-            log.warning("Could not fetch UIDNEXT: %s", e)
+        except Exception:
             self._last_uidnext = 1
-
         # initial heartbeat
-        self._update_heartbeat("active")
-        self._last_hb = time.time()
-
+        self._update_heartbeat("active"); self._last_hb = time.time()
         while True:
             # Stop if account was deactivated while running
             if self._should_stop():
-                log.info("Account %s deactivated, stopping watcher", self.cfg.account_id)
                 try:
                     self._update_heartbeat("stopped")
                 except Exception:
                     pass
                 try:
-                    if self._client:
-                        self._client.logout()
+                    if client:
+                        client.logout()
                 except Exception:
                     pass
                 return
-
-            # Validate client connection before use
-            if self._client is None or client is None:
-                log.warning("Client connection lost for account %s, attempting reconnect", self.cfg.account_id)
+            # Ensure client is still connected
+            if not client:
+                log.error("IMAP client disconnected, attempting reconnect")
                 self._client = self._connect()
                 client = self._client
-                if self._client is None:
-                    log.error("Reconnection failed for account %s", self.cfg.account_id)
+                if not client:
                     time.sleep(10)
                     continue
-                log.info("Reconnected successfully for account %s", self.cfg.account_id)
 
             # Check IDLE support
             try:
                 can_idle = b"IDLE" in (client.capabilities() or [])
-            except Exception as e:
-                log.warning("Could not check IDLE capability: %s", e)
+            except Exception:
                 can_idle = False
-
             if not can_idle:
-                # Poll fallback every few seconds for servers without IDLE
-                try:
-                    time.sleep(5)
-                    client.select_folder(self.cfg.inbox, readonly=False)
-                    self._handle_new_messages(client, {})
-                    if time.time() - self._last_hb > 30:
-                        self._update_heartbeat("active")
-                        self._last_hb = time.time()
-                except Exception as e:
-                    log.error("Poll fallback failed: %s", e)
-                    self._client = None
-                    client = None
+                # Poll fallback every few seconds
+                time.sleep(5)
+                client.select_folder(self.cfg.inbox, readonly=False)
+                self._handle_new_messages(client, {})
+                if time.time() - self._last_hb > 30:
+                    self._update_heartbeat("active"); self._last_hb = time.time()
                 continue
 
-            # IDLE mode - explicit start/stop (not context manager)
+            # Double-check client before IDLE
+            if not client:
+                log.error("Client lost before IDLE, restarting")
+                break
+
+            # Final check - client must not be None for context manager
+            if client is None:
+                log.error("Client is None before IDLE, restarting")
+                break
+
             try:
-                # Validate client one more time before IDLE
-                if self._client is None or client is None:
-                    log.error("Client is None before IDLE, restarting loop")
-                    continue
-
+                # Some imapclient versions do not return a context manager from idle(); use explicit start/stop
                 client.idle()
-                log.debug("Entered IDLE mode for account %s", self.cfg.account_id)
-                idle_start = time.time()
-
+                log.debug("Entered IDLE")
+                start = time.time()
                 while True:
-                    # Validate client is still valid during IDLE
-                    if self._client is None or client is None:
-                        log.error("Client became None during IDLE, exiting IDLE loop")
-                        break
-
                     responses = client.idle_check(timeout=30)
                     # Break and process on EXISTS/RECENT
                     changed = {k: v for (k, v) in responses} if responses else {}
                     if responses:
                         self._handle_new_messages(client, changed)
-
                     # periodic heartbeat
                     if time.time() - self._last_hb > 30:
-                        self._update_heartbeat("active")
-                        self._last_hb = time.time()
-
+                        self._update_heartbeat("active"); self._last_hb = time.time()
                     # Check stop request periodically during IDLE
                     if self._should_stop():
-                        log.info("Stop requested during IDLE for account %s", self.cfg.account_id)
                         try:
                             client.idle_done()
                         except Exception:
                             pass
                         try:
-                            if self._client:
-                                self._client.logout()
+                            client.logout()
                         except Exception:
                             pass
                         try:
@@ -798,24 +712,14 @@ class ImapWatcher:
                         except Exception:
                             pass
                         return
-
                     # Keep alive / break idle periodically
                     now = time.time()
-                    if (now - idle_start) > self.cfg.idle_timeout or (now - last_idle_break) > self.cfg.idle_ping_interval:
+                    if (now - start) > self.cfg.idle_timeout or (now - last_idle_break) > self.cfg.idle_ping_interval:
                         try:
                             client.idle_done()
-                        except Exception as e:
-                            log.warning("idle_done() failed: %s", e)
-
-                        try:
-                            client.noop()
-                        except Exception as e:
-                            log.warning("NOOP failed: %s", e)
-                            # Connection likely lost
-                            self._client = None
-                            client = None
-                            break
-
+                        except Exception:
+                            pass
+                        client.noop()
                         # Opportunistic poll using UIDNEXT delta when possible
                         try:
                             client.select_folder(self.cfg.inbox, readonly=False)
@@ -849,23 +753,14 @@ class ImapWatcher:
                                     self._last_uidnext = max(self._last_uidnext, max(int(u) for u in new_uids) + 1)
                                 except Exception:
                                     self._last_uidnext = uidnext2
-                        except Exception as e:
-                            log.warning("Poll during IDLE break failed: %s", e)
-
+                        except Exception:
+                            pass
                         last_idle_break = now
-                        break  # Exit inner IDLE loop to restart IDLE
-
+                        break
             except Exception as e:
-                log.error("IDLE loop failed for account %s: %s", self.cfg.account_id, e)
-                try:
-                    if self._client:
-                        self._client.idle_done()
-                except Exception:
-                    pass
+                log.error(f"IDLE failed: {e}, reconnecting...")
                 self._client = None
-                client = None
-                time.sleep(5)  # Brief pause before reconnect
-                # Loop continues, will reconnect at top
+                break  # Exit inner loop to reconnect
 
     def close(self):
         try:

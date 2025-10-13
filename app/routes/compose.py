@@ -85,15 +85,26 @@ def compose_email():
             smtp_host = account['smtp_host']
             smtp_port = int(account['smtp_port']) if account['smtp_port'] else 587
             smtp_username = account['smtp_username']
-            # Ensure a Message-ID for tracking
             if not msg.get('Message-ID'):
                 msg['Message-ID'] = make_msgid()
-            if account['smtp_use_ssl']:
-                context = ssl.create_default_context()
+
+            # Enforce protocol by port: 465 → SSL, 587 → STARTTLS; fallback to flag otherwise
+            context = ssl.create_default_context()
+            if smtp_port == 465:
                 server = smtplib.SMTP_SSL(smtp_host, smtp_port, context=context)
-            else:
+            elif smtp_port == 587:
                 server = smtplib.SMTP(smtp_host, smtp_port)
-                server.starttls()
+                server.ehlo()
+                server.starttls(context=context)
+                server.ehlo()
+            else:
+                if account['smtp_use_ssl']:
+                    server = smtplib.SMTP_SSL(smtp_host, smtp_port, context=context)
+                else:
+                    server = smtplib.SMTP(smtp_host, smtp_port)
+                    server.ehlo()
+                    server.starttls(context=context)
+                    server.ehlo()
             server.login(smtp_username, smtp_password)
             recipients_all = [to_address] + ([cc_address] if cc_address else [])
             server.sendmail(account['email_address'], recipients_all, msg.as_string())
