@@ -1232,6 +1232,52 @@ button[disabled] {
 
 .status-cell { display:flex !important; align-items:center !important; gap:6px !important; flex-wrap:nowrap !important; }
 
+/* Email table responsive fixes: prevent overflow past STATUS column */
+.email-table { table-layout: fixed !important; }
+/* Truncate only inner text containers, not all cells */
+.email-table .subject-cell,
+.email-table .email-addr-cell,
+.email-table .email-preview { overflow: hidden !important; text-overflow: ellipsis !important; }
+.email-table .ellipsis { display: block !important; }
+/* Keep status content in a single row for visual consistency */
+.email-table .status-cell { flex-wrap: nowrap !important; gap:6px !important; }
+/* Consistent compact status badge in table */
+.email-table .status-badge {
+    min-width: 72px !important;
+    height: 24px !important;
+    padding: 0 10px !important;
+    font-size: 12px !important;
+    line-height: 24px !important;
+    border-radius: 6px !important;
+}
+/* Time cell: never ellipsis */
+.email-table .time-cell { overflow: visible !important; text-overflow: clip !important; }
+/* Compact action buttons inside the email table to avoid horizontal overflow */
+.email-table .action-buttons { flex-wrap: nowrap !important; gap:6px !important; }
+.email-table .action-buttons .action-btn {
+    min-width: 30px !important;
+    width: 30px !important;
+    height: 30px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 1px solid rgba(255,255,255,0.18) !important;
+    background: rgba(255,255,255,0.06) !important;
+}
+.email-table .action-buttons .action-btn i{ margin:0 !important; font-size: 14px !important; }
+.email-table .action-buttons .action-btn.primary{ border-color: rgba(220,38,38,0.35) !important; color:#fecaca !important; }
+.email-table .action-buttons .action-btn.success{ border-color: rgba(16,185,129,0.35) !important; color:#bbf7d0 !important; }
+.email-table .action-buttons .action-btn.danger{ border-color: rgba(239,68,68,0.45) !important; color:#fecaca !important; }
+.email-table .action-buttons .action-btn:hover{ background: rgba(255,255,255,0.12) !important; transform:none !important; }
+/* Make the watcher restart button truly compact when icon-only inside tables */
+.table .btn.btn-icon-only, .table .btn-sm.btn-icon-only, .email-table .btn.btn-icon-only {
+    min-width: 32px !important;
+    width: 32px !important;
+    height: 32px !important;
+    padding: 6px !important;
+}
+
 /* =============================
    UTILITIES FOR TABLE CELLS / TYPOGRAPHY
    ============================= */

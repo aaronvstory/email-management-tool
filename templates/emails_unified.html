@@ -128,10 +128,10 @@
     background: rgba(255,255,255,0.03);
     color: #9ca3af;
     font-weight: 600;
-    padding: 12px;
+    padding: 8px 10px;
     text-align: left;
     border-bottom: 2px solid rgba(255,255,255,0.06);
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
@@ -147,9 +147,10 @@
   }
 
   .email-table tbody td {
-    padding: 12px;
+    padding: 8px 10px;
     color: #ffffff;
     vertical-align: middle;
+    line-height: 1.3;
   }
 
   .email-subject {
@@ -161,11 +162,31 @@
     font-size: 0.8rem;
     color: #9ca3af;
     margin-top: 4px;
-    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 400px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    white-space: normal;
   }
+
+  /* Two-line address cells */
+  .addr-two-line { 
+    white-space: normal !important; 
+    display: -webkit-box; 
+    -webkit-line-clamp: 2; 
+    -webkit-box-orient: vertical; 
+    overflow: hidden; 
+    line-height: 1.3; 
+  }
+
+  /* Status stacked layout: main badge on first line, utilities on second */
+  .status-cell { display:flex; flex-direction: column; align-items:flex-start; gap:6px; }
+  .status-cell .subline { display:flex; align-items:center; gap:6px; flex-wrap: wrap; }
+
+  /* Actions: allow wrapping to a second line to prevent overlap */
+  .email-table .action-buttons { flex-wrap: wrap; gap:6px; justify-content:flex-start; }
+  .email-table .action-buttons .action-btn { min-width:28px !important; width:28px !important; height:28px !important; }
 
   /* Status badge styling unified in main.css (.status-badge/.status-chip + .status-*) */
 
@@ -364,12 +385,12 @@
           <th style="width: 40px;">
             <input type="checkbox" class="form-check-input" id="selectAll" onchange="toggleSelectAll(this.checked)">
           </th>
-          <th style="width: 120px;">Time</th>
-          <th>From</th>
-          <th>To</th>
+          <th style="width: 150px;">Time</th>
+          <th style="width: 160px;">From</th>
+          <th style="width: 160px;">To</th>
           <th>Subject</th>
-          <th style="width: 100px;">Status</th>
-          <th style="width: 200px;">Actions</th>
+          <th style="width: 140px;">Status</th>
+          <th style="width: 112px;">Actions</th>
         </tr>
       </thead>
       <tbody id="emailTableBody">
@@ -699,17 +720,17 @@ function renderEmails(emails) {
     }
     
     const watcherState = watchersMap[email.account_id] || 'unknown';
-    const watcherBadge = `<span class="badge ${watcherState==='active' ? 'badge-soft-success' : (watcherState==='stopped' ? 'badge-soft-danger' : 'badge-soft-muted')}" title="Watcher state">${watcherState}</span>`;
+    const watcherBadge = `<span class=\"watcher-chip ${watcherState==='active' ? 'active' : (watcherState==='stopped' ? 'stopped' : 'unknown')}\" title=\"Watcher state\">${watcherState}</span>`;
     tr.innerHTML = `
       <td>
         <input type="checkbox" class="form-check-input email-checkbox" value="${email.id}">
       </td>
       <td><span class="time-cell">${email.created_at ? new Date(email.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }) : 'N/A'}</span></td>
       <td>
-        <div class="email-addr-cell ellipsis" style="max-width: 220px;">${email.sender || 'Unknown'}</div>
+        <div class="email-addr-cell addr-two-line">${email.sender || 'Unknown'}</div>
       </td>
       <td>
-        <div class="email-addr-cell ellipsis" style="max-width: 220px;">${recipients}</div>
+        <div class="email-addr-cell addr-two-line">${recipients}</div>
       </td>
       <td onclick="viewEmail(${email.id})" style="cursor: pointer;">
         <div class="subject-cell ellipsis">${email.subject || '(No Subject)'}</div>
@@ -717,9 +738,10 @@ function renderEmails(emails) {
       </td>
       <td>
         <div class="status-cell">
-          <span class="status-badge status-${status}">${status}</span>
-          ${watcherBadge}
-          <button class="btn btn-sm btn-secondary" title="Restart watcher" onclick="restartWatcherFor(${email.account_id})"><i class="bi bi-arrow-repeat"></i></button>
+          <div class="status-main"><span class="status-badge status-${status}">${status}</span></div>
+          <div class="subline">${watcherBadge}
+            <button class="btn btn-sm btn-secondary btn-icon-only" title="Restart watcher" onclick="restartWatcherFor(${email.account_id})"><i class="bi bi-arrow-repeat"></i></button>
+          </div>
         </div>
       </td>
       <td>
