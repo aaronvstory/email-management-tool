@@ -117,6 +117,14 @@ def check_port_available(port, host='localhost'):
 # Load environment from .env early
 load_dotenv()
 
+
+def _bool_env(name: str, default: bool = False) -> bool:
+    """Parse boolean-like environment variables with a safe default."""
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return str(raw).strip().lower() in ("1", "true", "yes", "on")
+
 # Hard preflight (optional): require live credentials present in environment
 def _require_live_env():
     # Default OFF to avoid blocking local/dev — enable by setting REQUIRE_LIVE_CREDENTIALS=1
@@ -153,8 +161,8 @@ app.config['SECRET_KEY'] = (
     or os.environ.get('FLASK_SECRET')
     or 'dev-secret-change-in-production'
 )
-# IMAP-only mode toggle (default ON)
-app.config['IMAP_ONLY'] = str(os.environ.get('IMAP_ONLY', '1')).lower() in ('1','true','yes','on')
+# IMAP-only mode toggle (default OFF so SMTP proxy runs unless explicitly disabled)
+app.config['IMAP_ONLY'] = _bool_env('IMAP_ONLY', default=False)
 
 # CSRF + Rate Limiting (use shared extension instances)
 try:
@@ -1041,11 +1049,16 @@ if __name__ == '__main__':
         smtp_proxy_available = False
         app.logger.warning("SMTP proxy disabled (aiosmtpd not installed). Skipping proxy thread.")
 
-    if smtp_proxy_available and not app.config.get('IMAP_ONLY'):
+    imap_only_mode = bool(app.config.get('IMAP_ONLY'))
+
+    if smtp_proxy_available and not imap_only_mode:
         smtp_thread = threading.Thread(target=run_smtp_proxy, daemon=True)
         smtp_thread.start()
     else:
-        print("ℹ️  SMTP proxy not started (IMAP_ONLY mode or aiosmtpd unavailable)")
+        if not smtp_proxy_available:
+            print("⚠️  SMTP proxy not started because aiosmtpd is not installed. Install with `pip install aiosmtpd` to enable SMTP interception.")
+        elif imap_only_mode:
+            print("ℹ️  SMTP proxy not started because IMAP_ONLY=1. Set IMAP_ONLY=0 (or unset) to enable SMTP interception.")
 
     # Start IMAP monitoring threads (delegated to worker module)
     from app.workers.imap_startup import start_imap_watchers
@@ -1063,8 +1076,12 @@ if __name__ == '__main__':
     smtp_port = int(os.environ.get('SMTP_PROXY_PORT', '8587'))
     flask_host = os.environ.get('FLASK_HOST', '127.0.0.1')
     flask_port = int(os.environ.get('FLASK_PORT', '5000'))
-    if not app.config.get('IMAP_ONLY'):
+    if not imap_only_mode and smtp_proxy_available:
         print(f"   📧 SMTP Proxy: {smtp_host}:{smtp_port}")
+    elif imap_only_mode:
+        print("   ⚠️ SMTP Proxy: disabled because IMAP_ONLY=1")
+    else:
+        print("   ⚠️ SMTP Proxy: unavailable (install aiosmtpd to enable)")
     print(f"   🌐 Web Dashboard: http://{flask_host}:{flask_port}")
     print("   👤 Login: admin / admin123")
     print("\n   ✨ Features:")

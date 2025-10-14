@@ -272,14 +272,15 @@ def api_interception_release(msg_id:int):
     """, (msg_id,)).fetchone()
     if not row:
         conn.close(); return jsonify({'ok':False,'reason':'not-found'}), 404
+    interception_status = str((row['interception_status'] or '')).upper()
     # Idempotent success if already released
-    if str(row.get('interception_status') or '').upper() == 'RELEASED':
+    if interception_status == 'RELEASED':
         conn.close(); return jsonify({'ok': True, 'reason': 'already-released'})
     # Discarded items cannot be released via this endpoint
-    if str(row.get('interception_status') or '').upper() == 'DISCARDED':
+    if interception_status == 'DISCARDED':
         conn.close(); return jsonify({'ok': False, 'reason': 'discarded'}), 409
     # Require HELD for a release action
-    if str(row.get('interception_status') or '').upper() != 'HELD':
+    if interception_status != 'HELD':
         conn.close(); return jsonify({'ok': False, 'reason': 'not-held'}), 409
 
     # Default to persisted edits when payload doesn't include them
