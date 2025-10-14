@@ -920,9 +920,19 @@ function saveAndRelease() {
       target_folder: 'INBOX'
     })
   })
-  .then(response => {
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    return response.json();
+  .then(async response => {
+    const parsed = await window.parseResponseBody(response);
+    const payload = parsed && parsed.format === 'json' ? parsed.body : null;
+    if (!response.ok) {
+      const reason = window.extractErrorMessage(payload ?? parsed?.body, `HTTP ${response.status}`);
+      throw new Error(reason);
+    }
+    if (!payload || !(payload.ok || payload.success)) {
+      const reason = window.extractErrorMessage(payload ?? parsed?.body, 'Release failed');
+      throw new Error(reason);
+    }
+
+    return payload;
   })
   .then(data => {
     if (data.ok || data.success) {
@@ -962,14 +972,20 @@ async function performRelease(emailId) {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ target_folder: 'INBOX' })
     });
-    
-    const data = await response.json();
-    if (data.ok || data.success) {
-      if (window.showSuccess) showSuccess('Email released successfully');
-      reloadEmails();
-    } else {
-      throw new Error(data.error || data.reason || 'Release failed');
+
+    const parsed = await window.parseResponseBody(response);
+    const payload = parsed && parsed.format === 'json' ? parsed.body : null;
+    if (!response.ok) {
+      const reason = window.extractErrorMessage(payload ?? parsed?.body, `HTTP ${response.status}`);
+      throw new Error(reason);
     }
+    if (!payload || !(payload.ok || payload.success)) {
+      const reason = window.extractErrorMessage(payload ?? parsed?.body, 'Release failed');
+      throw new Error(reason);
+    }
+
+    if (window.showSuccess) showSuccess('Email released successfully');
+    reloadEmails();
   } catch (error) {
     if (window.showError) showError(`Failed to release: ${error.message}`);
   }

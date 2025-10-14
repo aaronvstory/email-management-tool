@@ -126,22 +126,24 @@ function showToast(message, type = 'info', duration = 4000) {
     toastEl.style.cssText = `
         background: linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%);
         border: 2px solid ${config.border};
-        border-radius: 12px;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+        border-radius: 10px;
+        box-shadow: 0 8px 18px rgba(0,0,0,0.55);
         color: #ffffff;
-        min-width: 300px;
-        max-width: 500px;
+        min-width: 220px;
+        max-width: 420px;
+        padding: 0;
+        overflow: hidden;
         backdrop-filter: blur(10px);
-        animation: slideInRight 0.3s ease-out;
+        animation: slideInRight 0.25s ease-out;
     `;
 
     toastEl.innerHTML = `
-        <div class="d-flex align-items-center p-3">
-            <i class="bi ${config.icon} me-3" style="font-size: 1.5rem; color: ${config.iconColor};"></i>
-            <div class="toast-body flex-grow-1" style="color: #ffffff; font-weight: 500;">
+        <div class="d-flex" style="align-items:flex-start; column-gap:12px; padding:12px 16px;">
+            <i class="bi ${config.icon}" style="font-size: 1.15rem; color: ${config.iconColor}; margin-top:2px;"></i>
+            <div class="toast-body flex-grow-1" style="color: #ffffff; font-weight: 500; font-size: 0.92rem; line-height: 1.35; white-space: normal; word-break: break-word;">
                 ${message}
             </div>
-            <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="toast" aria-label="Close"></button>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close" style="margin-left: 8px; transform: scale(0.85); opacity: 0.75;"></button>
         </div>
     `;
 
@@ -219,27 +221,28 @@ function confirmToast(message, onConfirm, onCancel = null) {
     toastEl.style.cssText = `
         background: linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%);
         border: 2px solid #f59e0b;
-        border-radius: 12px;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+        border-radius: 10px;
+        box-shadow: 0 8px 18px rgba(0,0,0,0.55);
         color: #ffffff;
-        min-width: 350px;
-        max-width: 500px;
+        min-width: 260px;
+        max-width: 420px;
+        padding: 0;
         backdrop-filter: blur(10px);
     `;
 
     toastEl.innerHTML = `
-        <div class="p-3">
-            <div class="d-flex align-items-center mb-3">
-                <i class="bi bi-exclamation-triangle-fill me-2" style="font-size: 1.5rem; color: #f59e0b;"></i>
-                <div class="flex-grow-1" style="color: #ffffff; font-weight: 600;">
+        <div style="padding:14px 16px 12px;">
+            <div class="d-flex" style="align-items:flex-start; column-gap:10px; margin-bottom:12px;">
+                <i class="bi bi-exclamation-triangle-fill" style="font-size: 1.15rem; color: #f59e0b; margin-top:2px;"></i>
+                <div class="flex-grow-1" style="color: #ffffff; font-weight: 600; line-height:1.4;">
                     ${message}
                 </div>
             </div>
-            <div class="d-flex gap-2 justify-content-end">
-                <button class="btn btn-sm btn-secondary toast-cancel" data-bs-dismiss="toast" style="min-width: 80px;">
+            <div class="d-flex justify-content-end" style="column-gap:8px;">
+                <button class="btn btn-sm btn-secondary toast-cancel" data-bs-dismiss="toast" style="min-width: 80px; height: 32px; padding: 4px 14px;">
                     Cancel
                 </button>
-                <button class="btn btn-sm btn-primary-modern toast-confirm" style="min-width: 80px; background: linear-gradient(135deg,#dc2626 0%,#991b1b 50%,#7f1d1d 100%); color: white; border: none;">
+                <button class="btn btn-sm btn-primary-modern toast-confirm" style="min-width: 80px; height: 32px; padding: 4px 14px; background: linear-gradient(135deg,#dc2626 0%,#991b1b 50%,#7f1d1d 100%); color: white; border: none;">
                     Confirm
                 </button>
             </div>
@@ -306,3 +309,62 @@ window.showError = showError;
 window.showWarning = showWarning;
 window.showInfo = showInfo;
 window.confirmToast = confirmToast;
+
+// ============================================================================
+// HTTP helper utilities
+// ============================================================================
+
+async function parseResponseBody(response) {
+    const cloned = response.clone();
+    const contentType = (response.headers.get('content-type') || '').toLowerCase();
+    if (contentType.includes('application/json')) {
+        try {
+            const data = await cloned.json();
+            return { format: 'json', body: data };
+        } catch (_) {
+            // fall through to text
+        }
+    }
+    try {
+        const data = await cloned.json();
+        return { format: 'json', body: data };
+    } catch (_) {
+        try {
+            const text = await response.text();
+            return { format: 'text', body: text };
+        } catch (_) {
+            return { format: 'text', body: '' };
+        }
+    }
+}
+
+function extractErrorMessage(payload, fallback) {
+    if (!payload && payload !== 0) {
+        return fallback;
+    }
+    if (typeof payload === 'string') {
+        const trimmed = payload.trim();
+        return trimmed || fallback;
+    }
+    if (typeof payload === 'object') {
+        const candidates = ['error', 'reason', 'message', 'detail', 'info', 'statusText'];
+        for (const key of candidates) {
+            if (payload[key]) {
+                const val = String(payload[key]).trim();
+                if (val) return val;
+            }
+        }
+        if (payload.body && typeof payload.body === 'string') {
+            const val = payload.body.trim();
+            if (val) return val;
+        }
+        if (payload.raw) {
+            const val = String(payload.raw).trim();
+            if (val) return val;
+        }
+    }
+    return fallback;
+}
+
+window.parseResponseBody = parseResponseBody;
+window.extractErrorMessage = extractErrorMessage;
