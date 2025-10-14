@@ -57,19 +57,38 @@ def evaluate_rules(
     risk_score = 0
 
     conn = None
+    has_extended_schema = False
     try:
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
-        cur.execute(
-            """
-            SELECT id, rule_name, rule_type, condition_field, condition_operator,
-                   condition_value, action, priority
-            FROM moderation_rules
-            WHERE is_active = 1
-            ORDER BY priority DESC
-            """
-        )
+        columns: List[str] = []
+        try:
+            column_rows = cur.execute("PRAGMA table_info(moderation_rules)").fetchall()
+            columns = [row[1] if isinstance(row, tuple) else row["name"] for row in column_rows]
+        except Exception:
+            columns = []
+        extended_cols = {"rule_type", "condition_field", "condition_operator", "condition_value"}
+        has_extended_schema = extended_cols.issubset(set(columns))
+        if has_extended_schema:
+            cur.execute(
+                """
+                SELECT id, rule_name, rule_type, condition_field, condition_operator,
+                       condition_value, action, priority
+                FROM moderation_rules
+                WHERE is_active = 1
+                ORDER BY priority DESC
+                """
+            )
+        else:
+            cur.execute(
+                """
+                SELECT id, rule_name, keyword, action, priority
+                FROM moderation_rules
+                WHERE is_active = 1
+                ORDER BY priority DESC
+                """
+            )
         rows = cur.fetchall()
     except Exception:
         rows = []
@@ -81,12 +100,26 @@ def evaluate_rules(
                 pass
 
     for row in rows:
-        rule_type = (row['rule_type'] or '').upper()
-        condition_field = (row['condition_field'] or '').upper()
-        condition_value = (row['condition_value'] or '').strip()
-        operator = (row['condition_operator'] or 'CONTAINS').upper()
-        action = (row['action'] or 'HOLD').upper()
-        priority = int(row['priority'] or 0)
+        if has_extended_schema:
+            rule_type = (row['rule_type'] or '').upper()
+            condition_field = (row['condition_field'] or '').upper()
+            condition_value = (row['condition_value'] or '').strip()
+            operator = (row['condition_operator'] or 'CONTAINS').upper()
+            action = (row['action'] or 'HOLD').upper()
+            priority = int(row['priority'] or 0)
+        else:
+            rule_type = 'KEYWORD'
+            condition_field = 'BODY'
+            keyword_val = ''
+            try:
+                if 'keyword' in row.keys():  # type: ignore[attr-defined]
+                    keyword_val = row['keyword'] or ''
+            except Exception:
+                keyword_val = row[2] if len(row) > 2 else ''  # defensive tuple fallback
+            condition_value = keyword_val.strip()
+            operator = 'CONTAINS'
+            action = (row['action'] or 'HOLD').upper()
+            priority = int(row['priority'] or 0)
 
         if not condition_value:
             continue

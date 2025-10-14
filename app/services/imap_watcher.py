@@ -22,7 +22,7 @@ import json
 from datetime import datetime
 from email import message_from_bytes, policy
 from email.utils import getaddresses
-from typing import Optional
+from typing import Optional, List
 
 import backoff
 from imapclient import IMAPClient
@@ -363,33 +363,27 @@ class ImapWatcher:
             log.debug("MOVE failed (%s); fallback copy+purge", e)
             self._copy_purge(uids)
 
-    def _store_in_database(self, client, uids):
-        """Store intercepted emails in database with account_id (idempotent).
-
-        - Fetch RFC822 + metadata (ENVELOPE, FLAGS, INTERNALDATE)
-        - Skip insert if a row with same Message-ID already exists
-        - Persist original_uid, original_internaldate, original_message_id
-        - Set initial status as INTERCEPTED, will be updated to HELD after successful move
-        """
+    def _store_in_database(self, client, uids) -> List[int]:
+        """Store intercepted emails in database and return UIDs requiring quarantine."""
         if not self.cfg.account_id or not uids:
-            return
+            return []
 
+        held_uids: List[int] = []
+
+        conn = None
         try:
-            # Fetch email data before moving (include INTERNALDATE for server timestamp)
             fetch_data = client.fetch(uids, ['RFC822', 'ENVELOPE', 'FLAGS', 'INTERNALDATE'])
 
             conn = sqlite3.connect(self.cfg.db_path)
-            cursor = conn.cursor()
             conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
 
             for uid, data in fetch_data.items():
+                uid_int = int(uid)
                 try:
-                    # Parse email
                     raw_email = data[b'RFC822']
                     email_msg = message_from_bytes(raw_email, policy=policy.default)
 
-                    # Extract envelope data
-                    # Extract basic fields
                     sender = str(email_msg.get('From', ''))
                     addr_fields = email_msg.get_all('To', []) + email_msg.get_all('Cc', [])
                     addr_list = [addr for _, addr in getaddresses(addr_fields)]
@@ -397,22 +391,20 @@ class ImapWatcher:
                     recipients = json.dumps(recipients_list)
                     subject = str(email_msg.get('Subject', 'No Subject'))
                     original_msg_id = (email_msg.get('Message-ID') or '').strip() or None
-                    # Use header Message-ID when available; otherwise stable fallback
-                    message_id = original_msg_id or f"imap_{uid}_{datetime.now().timestamp()}"
+                    message_id = original_msg_id or f"imap_{uid_int}_{datetime.now().timestamp()}"
 
-                    # Extract body
                     body_text = ""
                     body_html = ""
                     if email_msg.is_multipart():
                         for part in email_msg.walk():
-                            if part.get_content_type() == "text/plain":
-                                payload = part.get_payload(decode=True)
+                            ctype = part.get_content_type()
+                            payload = part.get_payload(decode=True)
+                            if ctype == "text/plain":
                                 if isinstance(payload, bytes):
                                     body_text = payload.decode('utf-8', errors='ignore')
                                 elif isinstance(payload, str):
                                     body_text = payload
-                            elif part.get_content_type() == "text/html":
-                                payload = part.get_payload(decode=True)
+                            elif ctype == "text/html":
                                 if isinstance(payload, bytes):
                                     body_html = payload.decode('utf-8', errors='ignore')
                                 elif isinstance(payload, str):
@@ -424,17 +416,15 @@ class ImapWatcher:
                         elif isinstance(content, str):
                             body_text = content
 
-                    # Idempotency: skip if Message-ID already stored
                     try:
                         if original_msg_id:
                             row = cursor.execute("SELECT id FROM email_messages WHERE message_id=?", (original_msg_id,)).fetchone()
                             if row:
-                                log.debug("Skipping duplicate message_id=%s (uid=%s)", original_msg_id, uid)
+                                log.debug("Skipping duplicate message_id=%s (uid=%s)", original_msg_id, uid_int)
                                 continue
                     except Exception:
                         pass
 
-                    # Derive INTERNALDATE
                     internal_dt = None
                     try:
                         internal_obj = data.get(b'INTERNALDATE')
@@ -442,19 +432,16 @@ class ImapWatcher:
                             if isinstance(internal_obj, datetime):
                                 internal_dt = internal_obj.isoformat()
                             else:
-                                # Fallback: best-effort string cast
                                 internal_dt = str(internal_obj)
                     except Exception:
                         internal_dt = None
 
-                    # Evaluate moderation rules
                     rule_eval = evaluate_rules(subject, body_text, sender, recipients_list)
-                    # Set initial status as INTERCEPTED - will be updated to HELD after successful move
-                    interception_status = 'INTERCEPTED'
-                    risk_score = rule_eval['risk_score']
-                    keywords_json = json.dumps(rule_eval['keywords'])
+                    should_hold = bool(rule_eval.get('should_hold'))
+                    interception_status = 'INTERCEPTED' if should_hold else 'FETCHED'
+                    risk_score = rule_eval.get('risk_score', 0)
+                    keywords_json = json.dumps(rule_eval.get('keywords', []))
 
-                    # Store in database with account_id
                     cursor.execute('''
                         INSERT INTO email_messages
                         (message_id, sender, recipients, subject, body_text, body_html,
@@ -473,23 +460,77 @@ class ImapWatcher:
                         self.cfg.account_id,
                         interception_status,
                         'inbound',
-                        int(uid),
+                        uid_int,
                         internal_dt,
                         original_msg_id,
                         risk_score,
                         keywords_json
                     ))
 
-                    log.info(f"Stored INTERCEPTED email {subject} from {sender} for account {self.cfg.account_id} (uid={uid})")
+                    if should_hold:
+                        held_uids.append(uid_int)
+                        log.info("Stored INTERCEPTED email %s from %s for account %s (uid=%s)", subject, sender, self.cfg.account_id, uid_int)
+                    else:
+                        log.debug("Stored FETCHED email %s from %s for account %s (uid=%s)", subject, sender, self.cfg.account_id, uid_int)
 
                 except Exception as e:
-                    log.error(f"Failed to store email UID {uid}: {e}")
+                    log.error("Failed to store email UID %s: %s", uid, e)
 
             conn.commit()
-            conn.close()
 
         except Exception as e:
-            log.error(f"Failed to store emails in database: {e}")
+            log.error("Failed to store emails in database: %s", e)
+            return []
+        finally:
+            try:
+                if 'conn' in locals() and conn:
+                    conn.close()
+            except Exception:
+                pass
+
+        return held_uids
+
+    def _update_message_status(self, uids: List[int], new_status: str) -> None:
+        if not self.cfg.account_id or not uids:
+            return
+        status_upper = str(new_status or '').upper()
+        try:
+            conn = sqlite3.connect(self.cfg.db_path)
+            cursor = conn.cursor()
+            placeholders = ",".join(["?"] * len(uids))
+            params = [
+                status_upper,
+                self.cfg.quarantine,
+                status_upper,
+                status_upper,
+                self.cfg.account_id,
+                *[int(u) for u in uids],
+            ]
+            cursor.execute(
+                f"""
+                UPDATE email_messages
+                SET interception_status = ?,
+                    quarantine_folder = ?,
+                    action_taken_at = datetime('now'),
+                    status = CASE WHEN ? = 'HELD' THEN 'PENDING' ELSE status END,
+                    latency_ms = CASE
+                        WHEN ? = 'HELD' AND latency_ms IS NULL AND created_at IS NOT NULL
+                        THEN CAST((julianday(datetime('now')) - julianday(created_at)) * 86400000 AS INTEGER)
+                        ELSE latency_ms
+                    END
+                WHERE account_id = ? AND original_uid IN ({placeholders})
+                """,
+                params,
+            )
+            conn.commit()
+        except Exception as exc:
+            log.error("Failed to update interception status for account %s UIDs %s: %s", self.cfg.account_id, uids, exc)
+        finally:
+            try:
+                if 'conn' in locals() and conn:
+                    conn.close()
+            except Exception:
+                pass
 
     def _update_heartbeat(self, status: str = "active"):
         """Best-effort upsert of a heartbeat record for /healthz."""
@@ -602,44 +643,43 @@ class ImapWatcher:
 
         log.info("Intercepting %d messages (acct=%s): %s", len(to_process), self.cfg.account_id, to_process)
 
-        # Store in database before moving (status will be INTERCEPTED initially)
-        self._store_in_database(client, to_process)
+        held_uids = self._store_in_database(client, to_process)
 
-        # Then move to quarantine with enhanced error handling and status tracking
-        move_successful = False
-        if self._supports_uid_move():
-            try:
-                log.info("Attempting MOVE operation for %d messages to %s (acct=%s)", len(to_process), self.cfg.quarantine, self.cfg.account_id)
-                self._move(to_process)
-                move_successful = True
-                log.info("Successfully moved %d messages to %s (acct=%s)", len(to_process), self.cfg.quarantine, self.cfg.account_id)
-            except Exception as e:
-                log.warning("MOVE failed for %d messages (acct=%s): %s", len(to_process), self.cfg.account_id, e)
-                log.info("Falling back to copy+purge for %d messages (acct=%s)", len(to_process), self.cfg.account_id)
+        if held_uids:
+            held_uids = sorted(set(held_uids))
+            move_successful = False
+            if self._supports_uid_move():
                 try:
-                    self._copy_purge(to_process)
+                    log.info("Attempting MOVE for %d held messages to %s (acct=%s)", len(held_uids), self.cfg.quarantine, self.cfg.account_id)
+                    self._move(held_uids)
                     move_successful = True
-                    log.info("Successfully copied+purged %d messages to %s (acct=%s)", len(to_process), self.cfg.quarantine, self.cfg.account_id)
-                except Exception as e2:
-                    log.error("Copy+purge also failed for %d messages (acct=%s): %s", len(to_process), self.cfg.account_id, e2)
+                    log.info("MOVE succeeded for %d messages to %s (acct=%s)", len(held_uids), self.cfg.quarantine, self.cfg.account_id)
+                except Exception as e:
+                    log.warning("MOVE failed for %d messages (acct=%s): %s", len(held_uids), self.cfg.account_id, e)
+                    log.info("Falling back to copy+purge for %d held messages (acct=%s)", len(held_uids), self.cfg.account_id)
+                    try:
+                        self._copy_purge(held_uids)
+                        move_successful = True
+                        log.info("Copy+purge succeeded for %d messages to %s (acct=%s)", len(held_uids), self.cfg.quarantine, self.cfg.account_id)
+                    except Exception as e2:
+                        log.error("Copy+purge failed for %d messages (acct=%s): %s", len(held_uids), self.cfg.account_id, e2)
+                        move_successful = False
+            else:
+                log.info("Server lacks MOVE; using copy+purge for %d held messages (acct=%s)", len(held_uids), self.cfg.account_id)
+                try:
+                    self._copy_purge(held_uids)
+                    move_successful = True
+                    log.info("Copy+purge succeeded for %d messages to %s (acct=%s)", len(held_uids), self.cfg.quarantine, self.cfg.account_id)
+                except Exception as e:
+                    log.error("Copy+purge failed for %d messages (acct=%s): %s", len(held_uids), self.cfg.account_id, e)
                     move_successful = False
-        else:
-            log.info("MOVE not supported, using copy+purge for %d messages (acct=%s)", len(to_process), self.cfg.account_id)
-            try:
-                self._copy_purge(to_process)
-                move_successful = True
-                log.info("Successfully copied+purged %d messages to %s (acct=%s)", len(to_process), self.cfg.quarantine, self.cfg.account_id)
-            except Exception as e:
-                log.error("Copy+purge failed for %d messages (acct=%s): %s", len(to_process), self.cfg.account_id, e)
-                move_successful = False
 
-        # Update database status based on move success
-        if move_successful:
-            self._update_message_status(to_process, 'HELD')
+            if move_successful:
+                self._update_message_status(held_uids, 'HELD')
+            else:
+                log.warning("Move failed for %d messages (acct=%s); leaving status as INTERCEPTED for retry", len(held_uids), self.cfg.account_id)
         else:
-            # Keep as INTERCEPTED for retry, or mark as FETCHED if move consistently fails
-            log.warning("Move failed for %d messages (acct=%s), keeping as INTERCEPTED for retry", len(to_process), self.cfg.account_id)
-            # Don't change status - leave as INTERCEPTED so it can be retried
+            log.debug("No rule-matched messages require quarantine (acct=%s, uids=%s)", self.cfg.account_id, to_process)
 
         # Advance tracker past the highest processed UID
         try:
@@ -780,11 +820,32 @@ class ImapWatcher:
                                     new_uids = []
                             if new_uids:
                                 # Persist and move
-                                self._store_in_database(client, new_uids)
-                                if self._supports_uid_move():
-                                    self._move(new_uids)
-                                else:
-                                    self._copy_purge(new_uids)
+                                held_new = self._store_in_database(client, new_uids)
+                                if held_new:
+                                    held_new = sorted(set(int(u) for u in held_new))
+                                    move_ok = False
+                                    if self._supports_uid_move():
+                                        try:
+                                            self._move(held_new)
+                                            move_ok = True
+                                        except Exception as move_exc:
+                                            log.warning("MOVE during idle sweep failed for acct=%s: %s", self.cfg.account_id, move_exc)
+                                            try:
+                                                self._copy_purge(held_new)
+                                                move_ok = True
+                                            except Exception as copy_exc:
+                                                log.error("Copy+purge during idle sweep failed for acct=%s: %s", self.cfg.account_id, copy_exc)
+                                    else:
+                                        try:
+                                            self._copy_purge(held_new)
+                                            move_ok = True
+                                        except Exception as copy_exc:
+                                            log.error("Copy+purge during idle sweep failed for acct=%s: %s", self.cfg.account_id, copy_exc)
+
+                                    if move_ok:
+                                        self._update_message_status(held_new, 'HELD')
+                                    else:
+                                        log.warning("Idle sweep could not move %d messages for acct=%s", len(held_new), self.cfg.account_id)
                                 # Advance tracker to just after the highest UID we processed
                                 try:
                                     self._last_uidnext = max(self._last_uidnext, max(int(u) for u in new_uids) + 1)
