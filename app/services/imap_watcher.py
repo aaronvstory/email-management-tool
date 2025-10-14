@@ -369,6 +369,7 @@ class ImapWatcher:
         - Fetch RFC822 + metadata (ENVELOPE, FLAGS, INTERNALDATE)
         - Skip insert if a row with same Message-ID already exists
         - Persist original_uid, original_internaldate, original_message_id
+        - Set initial status as INTERCEPTED, will be updated to HELD after successful move
         """
         if not self.cfg.account_id or not uids:
             return
@@ -448,7 +449,8 @@ class ImapWatcher:
 
                     # Evaluate moderation rules
                     rule_eval = evaluate_rules(subject, body_text, sender, recipients_list)
-                    interception_status = 'HELD' if rule_eval['should_hold'] else 'FETCHED'
+                    # Set initial status as INTERCEPTED - will be updated to HELD after successful move
+                    interception_status = 'INTERCEPTED'
                     risk_score = rule_eval['risk_score']
                     keywords_json = json.dumps(rule_eval['keywords'])
 
@@ -478,7 +480,7 @@ class ImapWatcher:
                         keywords_json
                     ))
 
-                    log.info(f"Stored email {subject} from {sender} for account {self.cfg.account_id}")
+                    log.info(f"Stored INTERCEPTED email {subject} from {sender} for account {self.cfg.account_id} (uid={uid})")
 
                 except Exception as e:
                     log.error(f"Failed to store email UID {uid}: {e}")
@@ -600,21 +602,44 @@ class ImapWatcher:
 
         log.info("Intercepting %d messages (acct=%s): %s", len(to_process), self.cfg.account_id, to_process)
 
-        # Store in database before moving
+        # Store in database before moving (status will be INTERCEPTED initially)
         self._store_in_database(client, to_process)
 
-        # Then move to quarantine
+        # Then move to quarantine with enhanced error handling and status tracking
+        move_successful = False
         if self._supports_uid_move():
             try:
+                log.info("Attempting MOVE operation for %d messages to %s (acct=%s)", len(to_process), self.cfg.quarantine, self.cfg.account_id)
                 self._move(to_process)
-                log.info("Moved %d messages to %s (acct=%s)", len(to_process), self.cfg.quarantine, self.cfg.account_id)
+                move_successful = True
+                log.info("Successfully moved %d messages to %s (acct=%s)", len(to_process), self.cfg.quarantine, self.cfg.account_id)
             except Exception as e:
-                log.warning("MOVE failed, falling back to copy+purge: %s", e)
-                self._copy_purge(to_process)
-                log.info("Copied+purged %d messages to %s (acct=%s)", len(to_process), self.cfg.quarantine, self.cfg.account_id)
+                log.warning("MOVE failed for %d messages (acct=%s): %s", len(to_process), self.cfg.account_id, e)
+                log.info("Falling back to copy+purge for %d messages (acct=%s)", len(to_process), self.cfg.account_id)
+                try:
+                    self._copy_purge(to_process)
+                    move_successful = True
+                    log.info("Successfully copied+purged %d messages to %s (acct=%s)", len(to_process), self.cfg.quarantine, self.cfg.account_id)
+                except Exception as e2:
+                    log.error("Copy+purge also failed for %d messages (acct=%s): %s", len(to_process), self.cfg.account_id, e2)
+                    move_successful = False
         else:
-            self._copy_purge(to_process)
-            log.info("Copied+purged %d messages to %s (acct=%s)", len(to_process), self.cfg.quarantine, self.cfg.account_id)
+            log.info("MOVE not supported, using copy+purge for %d messages (acct=%s)", len(to_process), self.cfg.account_id)
+            try:
+                self._copy_purge(to_process)
+                move_successful = True
+                log.info("Successfully copied+purged %d messages to %s (acct=%s)", len(to_process), self.cfg.quarantine, self.cfg.account_id)
+            except Exception as e:
+                log.error("Copy+purge failed for %d messages (acct=%s): %s", len(to_process), self.cfg.account_id, e)
+                move_successful = False
+
+        # Update database status based on move success
+        if move_successful:
+            self._update_message_status(to_process, 'HELD')
+        else:
+            # Keep as INTERCEPTED for retry, or mark as FETCHED if move consistently fails
+            log.warning("Move failed for %d messages (acct=%s), keeping as INTERCEPTED for retry", len(to_process), self.cfg.account_id)
+            # Don't change status - leave as INTERCEPTED so it can be retried
 
         # Advance tracker past the highest processed UID
         try:
