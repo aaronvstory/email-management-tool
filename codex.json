@@ -1,0 +1,120 @@
+{
+  "name": "Email Management Tool",
+  "description": "Python Flask Email Management and Interception Tool",
+  "version": "1.0.0",
+  "runtime": "python:3.11",
+
+  "build": {
+    "dockerfile": false,
+    "commands": [
+      "apt-get update",
+      "apt-get install -y sqlite3 git curl nano bash",
+      "pip install --upgrade pip",
+      "if [ -f requirements.txt ]; then pip install -r requirements.txt; else pip install flask flask-login flask-wtf aiosmtpd cryptography bcrypt; fi",
+      "chmod +x entrypoint.sh 2>/dev/null || true",
+      "chmod +x fix-terminal.sh 2>/dev/null || true"
+    ]
+  },
+
+  "start": {
+    "command": "/bin/bash",
+    "args": ["--login", "-i", "-c", "exec /bin/bash --login"],
+    "shell": false,
+    "keepAlive": true
+  },
+
+  "entrypoint": {
+    "command": "/workspace/entrypoint.sh",
+    "shell": true
+  },
+
+  "environment": {
+    "FLASK_APP": "simple_app.py",
+    "FLASK_ENV": "development",
+    "FLASK_DEBUG": "1",
+    "PYTHONPATH": "/workspace",
+    "DB_PATH": "/workspace/email_manager.db",
+    "SHELL": "/bin/bash",
+    "TERM": "xterm-256color",
+    "PS1": "\\[\\033[01;32m\\]\\u@email-tool\\[\\033[00m\\]:\\[\\033[01;34m\\]\\w\\[\\033[00m\\]\\$ ",
+    "DEBIAN_FRONTEND": "noninteractive"
+  },
+
+  "ports": [
+    {
+      "port": 5000,
+      "label": "Flask App",
+      "protocol": "http",
+      "expose": true
+    },
+    {
+      "port": 8587,
+      "label": "SMTP Proxy",
+      "expose": false
+    }
+  ],
+
+  "workspace": {
+    "root": "/workspace",
+    "persistent": true,
+    "mount": "."
+  },
+
+  "shell": {
+    "command": "/bin/bash",
+    "args": ["--login", "-i"],
+    "keepAlive": true,
+    "initCommands": [
+      "cd /workspace 2>/dev/null || cd /",
+      "if [ -f /workspace/entrypoint.sh ]; then chmod +x /workspace/entrypoint.sh && /workspace/entrypoint.sh; fi",
+      "echo 'Email Management Tool - Container Ready'",
+      "echo 'Run: python simple_app.py to start the application'"
+    ]
+  },
+
+  "lifecycle": {
+    "postCreate": [
+      "chmod +x *.sh 2>/dev/null || true",
+      "mkdir -p app templates static scripts tests logs archive",
+      "if [ ! -f key.txt ] && command -v python3 >/dev/null; then python3 -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())' > key.txt; fi"
+    ],
+    "postStart": [
+      "echo 'Container started successfully'"
+    ],
+    "keepAlive": true,
+    "restartPolicy": "always"
+  },
+
+  "dependencies": {
+    "python": [
+      "flask>=3.0.0",
+      "flask-login>=0.6.3",
+      "flask-wtf>=1.2.1",
+      "flask-limiter>=3.5.0",
+      "flask-cors>=4.0.0",
+      "aiosmtpd>=1.4.4",
+      "cryptography>=41.0.7",
+      "bcrypt>=4.1.2",
+      "imapclient>=3.0.0",
+      "beautifulsoup4>=4.12.2",
+      "email-validator>=2.1.0",
+      "python-dotenv>=1.0.0",
+      "pytest>=7.4.3"
+    ],
+    "system": [
+      "sqlite3",
+      "git",
+      "curl",
+      "nano",
+      "vim",
+      "bash",
+      "build-essential"
+    ]
+  },
+
+  "terminal": {
+    "defaultShell": "/bin/bash",
+    "keepAlive": true,
+    "persistSession": true
+  }
+}

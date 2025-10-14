@@ -93,7 +93,7 @@
                     <input type="text" placeholder="Search mail, accounts, rules..." aria-label="Search">
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;">
-                    <span id="nav-smtp" class="badge badge-soft-muted" title="SMTP Proxy">SMTP</span>
+                    {% if not imap_only %}<span id="nav-smtp" class="badge badge-soft-muted" title="SMTP Proxy">SMTP</span>{% endif %}
                     <span id="nav-watchers" class="badge badge-soft-muted" title="Active IMAP watchers">Watchers: --</span>
                 </div>
             </div>
@@ -129,10 +129,12 @@
             if(!r.ok) return;
             const j = await r.json();
             const smtp = document.getElementById('nav-smtp');
-            const ok = j.smtp && j.smtp.listening;
-            smtp.textContent = ok ? 'SMTP: OK' : 'SMTP: DOWN';
-            smtp.classList.remove('badge-soft-success','badge-soft-danger','badge-soft-muted');
-            smtp.classList.add(ok ? 'badge-soft-success' : 'badge-soft-danger');
+            if(smtp){
+              const ok = j.smtp && j.smtp.listening;
+              smtp.textContent = ok ? 'SMTP: OK' : 'SMTP: DOWN';
+              smtp.classList.remove('badge-soft-success','badge-soft-danger','badge-soft-muted');
+              smtp.classList.add(ok ? 'badge-soft-success' : 'badge-soft-danger');
+            }
 
             const w = document.getElementById('nav-watchers');
             const count = Array.isArray(j.workers) ? j.workers.length : 0;

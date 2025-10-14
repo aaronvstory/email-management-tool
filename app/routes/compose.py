@@ -16,6 +16,7 @@ from email.utils import make_msgid
 
 from app.utils.db import DB_PATH
 from app.utils.crypto import decrypt_credential
+from app.utils.email_helpers import negotiate_smtp as _negotiate_smtp
 
 
 # Create blueprint
@@ -88,23 +89,33 @@ def compose_email():
             if not msg.get('Message-ID'):
                 msg['Message-ID'] = make_msgid()
 
-            # Enforce protocol by port: 465 → SSL, 587 → STARTTLS; fallback to flag otherwise
+            # Use stored settings first (normalized by port), fallback to negotiate only on failure.
             context = ssl.create_default_context()
-            if smtp_port == 465:
-                server = smtplib.SMTP_SSL(smtp_host, smtp_port, context=context)
-            elif smtp_port == 587:
-                server = smtplib.SMTP(smtp_host, smtp_port)
-                server.ehlo()
-                server.starttls(context=context)
-                server.ehlo()
-            else:
-                if account['smtp_use_ssl']:
-                    server = smtplib.SMTP_SSL(smtp_host, smtp_port, context=context)
-                else:
-                    server = smtplib.SMTP(smtp_host, smtp_port)
-                    server.ehlo()
-                    server.starttls(context=context)
-                    server.ehlo()
+            def _connect(host: str, port: int, use_ssl_flag: bool):
+                if use_ssl_flag:
+                    return smtplib.SMTP_SSL(host, port, context=context)
+                s = smtplib.SMTP(host, port)
+                s.ehlo(); s.starttls(context=context); s.ehlo()
+                return s
+
+            # Normalize by common ports
+            pref_use_ssl = True if smtp_port == 465 else False if smtp_port == 587 else bool(account['smtp_use_ssl'])
+            try:
+                server = _connect(smtp_host, smtp_port, pref_use_ssl)
+            except Exception:
+                # Fallback: probe and persist corrected values
+                chosen = _negotiate_smtp(smtp_host, smtp_username, smtp_password, smtp_port, bool(account['smtp_use_ssl']))
+                smtp_host = str(chosen['smtp_host']); smtp_port = int(chosen['smtp_port']); pref_use_ssl = bool(chosen['smtp_use_ssl'])
+                server = _connect(smtp_host, smtp_port, pref_use_ssl)
+                try:
+                    # Persist corrected choice for future sends
+                    cur2 = conn.cursor()
+                    cur2.execute(
+                        "UPDATE email_accounts SET smtp_host=?, smtp_port=?, smtp_use_ssl=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                        (smtp_host, smtp_port, 1 if pref_use_ssl else 0, int(from_account_id)),
+                    ); conn.commit()
+                except Exception:
+                    pass
             server.login(smtp_username, smtp_password)
             recipients_all = [to_address] + ([cc_address] if cc_address else [])
             server.sendmail(account['email_address'], recipients_all, msg.as_string())

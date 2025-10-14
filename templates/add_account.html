@@ -192,6 +192,14 @@
                            placeholder="your@email.com">
                 </div>
             </div>
+            <div class="mt-2" style="display:flex; gap:10px;">
+                <button type="button" class="btn btn-sm btn-secondary" onclick="autoDetect()">
+                    <i class="bi bi-magic"></i> Auto-detect settings
+                </button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="autoDetectAndTest()">
+                    <i class="bi bi-activity"></i> Auto-detect & Test
+                </button>
+            </div>
         </div>
         
         <!-- IMAP Settings -->
@@ -323,6 +331,38 @@ function setProvider(provider) {
             document.getElementById('smtp_username').value = email;
         }
     }
+}
+
+function autoDetect() {
+    const email = document.getElementById('email_address').value.trim();
+    if (!email || !email.includes('@')) {
+        alert('Enter a valid email first.');
+        return;
+    }
+    fetch('/api/detect-email-settings', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({email})
+    })
+    .then(r => r.json())
+    .then(cfg => {
+        if (!cfg || !cfg.smtp_host) throw new Error('Detection failed');
+        document.getElementById('imap_host').value = cfg.imap_host;
+        document.getElementById('imap_port').value = cfg.imap_port;
+        document.getElementById('imap_use_ssl').checked = !!cfg.imap_use_ssl;
+        document.getElementById('smtp_host').value = cfg.smtp_host;
+        document.getElementById('smtp_port').value = cfg.smtp_port;
+        document.getElementById('smtp_use_ssl').checked = !!cfg.smtp_use_ssl;
+        // Set usernames to email if empty
+        if (!document.getElementById('imap_username').value) document.getElementById('imap_username').value = email;
+        if (!document.getElementById('smtp_username').value) document.getElementById('smtp_username').value = email;
+    })
+    .catch(err => alert('Auto-detect failed: ' + err));
+}
+
+function autoDetectAndTest() {
+    autoDetect();
+    // Give a short delay to let fields populate
+    setTimeout(() => { testConnection('imap'); testConnection('smtp'); }, 400);
 }
 
 // Auto-fill usernames when email changes

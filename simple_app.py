@@ -153,6 +153,8 @@ app.config['SECRET_KEY'] = (
     or os.environ.get('FLASK_SECRET')
     or 'dev-secret-change-in-production'
 )
+# IMAP-only mode toggle (default ON)
+app.config['IMAP_ONLY'] = str(os.environ.get('IMAP_ONLY', '1')).lower() in ('1','true','yes','on')
 
 # CSRF + Rate Limiting (use shared extension instances)
 try:
@@ -733,7 +735,7 @@ class EmailModerationHandler:
 def inject_template_context():
     """Inject pending_count and csrf_token into all templates"""
     from typing import Dict, Any
-    context: Dict[str, Any] = {'pending_count': 0}
+    context: Dict[str, Any] = {'pending_count': 0, 'imap_only': bool(app.config.get('IMAP_ONLY', False))}
 
     # Add pending count for authenticated users
     try:
@@ -1039,11 +1041,11 @@ if __name__ == '__main__':
         smtp_proxy_available = False
         app.logger.warning("SMTP proxy disabled (aiosmtpd not installed). Skipping proxy thread.")
 
-    if smtp_proxy_available:
+    if smtp_proxy_available and not app.config.get('IMAP_ONLY'):
         smtp_thread = threading.Thread(target=run_smtp_proxy, daemon=True)
         smtp_thread.start()
     else:
-        print("⚠️  SMTP proxy disabled (aiosmtpd not available)")
+        print("ℹ️  SMTP proxy not started (IMAP_ONLY mode or aiosmtpd unavailable)")
 
     # Start IMAP monitoring threads (delegated to worker module)
     from app.workers.imap_startup import start_imap_watchers
@@ -1061,7 +1063,8 @@ if __name__ == '__main__':
     smtp_port = int(os.environ.get('SMTP_PROXY_PORT', '8587'))
     flask_host = os.environ.get('FLASK_HOST', '127.0.0.1')
     flask_port = int(os.environ.get('FLASK_PORT', '5000'))
-    print(f"   📧 SMTP Proxy: {smtp_host}:{smtp_port}")
+    if not app.config.get('IMAP_ONLY'):
+        print(f"   📧 SMTP Proxy: {smtp_host}:{smtp_port}")
     print(f"   🌐 Web Dashboard: http://{flask_host}:{flask_port}")
     print("   👤 Login: admin / admin123")
     print("\n   ✨ Features:")

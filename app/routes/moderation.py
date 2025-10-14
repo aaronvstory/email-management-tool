@@ -31,6 +31,7 @@ def rules():
         d = dict(r)
         if 'rule_type' in cols and 'condition_value' in cols:
             normalized.append({
+                'id': d.get('id'),
                 'rule_name': d.get('rule_name'),
                 'rule_type': d.get('rule_type') or 'KEYWORD',
                 'condition_value': d.get('condition_value') or d.get('keyword') or '',
@@ -41,6 +42,7 @@ def rules():
         else:
             # Legacy schema: keyword-only
             normalized.append({
+                'id': d.get('id'),
                 'rule_name': d.get('rule_name'),
                 'rule_type': 'KEYWORD',
                 'condition_value': d.get('keyword') or '',
@@ -101,3 +103,40 @@ def api_create_rule():
         return jsonify({'success': False, 'error': str(e)}), 500
     finally:
         conn.close()
+
+
+@moderation_bp.route('/api/rules/<int:rule_id>', methods=['PUT'])
+@csrf.exempt
+@login_required
+def api_update_rule(rule_id: int):
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Admin access required'}), 403
+    payload = request.get_json(silent=True) or {}
+    conn = sqlite3.connect(DB_PATH); cur = conn.cursor()
+    cols = [r[1] for r in cur.execute("PRAGMA table_info(moderation_rules)").fetchall()]
+    fields=[]; values=[]
+    if 'rule_name' in payload: fields.append('rule_name=?'); values.append(payload['rule_name'])
+    if 'priority' in payload: fields.append('priority=?'); values.append(int(payload['priority']))
+    if 'is_active' in payload: fields.append('is_active=?'); values.append(1 if payload['is_active'] else 0)
+    if 'action' in payload: fields.append('action=?'); values.append(str(payload['action']).upper())
+    # Pattern/type may be stored in extended or legacy schema
+    if 'rule_type' in payload and 'condition_value' in payload and 'rule_type' in cols and 'condition_value' in cols:
+        fields.extend(['rule_type=?','condition_value=?']); values.extend([str(payload['rule_type']).upper(), payload['condition_value']])
+    elif 'pattern' in payload and 'keyword' in cols:
+        fields.append('keyword=?'); values.append(payload['pattern'])
+    if not fields:
+        conn.close(); return jsonify({'success': False, 'error': 'No fields to update'}), 400
+    values.append(rule_id)
+    cur.execute(f"UPDATE moderation_rules SET {', '.join(fields)} WHERE id=?", values); conn.commit(); conn.close()
+    return jsonify({'success': True})
+
+
+@moderation_bp.route('/api/rules/<int:rule_id>', methods=['DELETE'])
+@csrf.exempt
+@login_required
+def api_delete_rule(rule_id: int):
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Admin access required'}), 403
+    conn = sqlite3.connect(DB_PATH); cur = conn.cursor()
+    cur.execute('DELETE FROM moderation_rules WHERE id=?', (rule_id,)); conn.commit(); conn.close()
+    return jsonify({'success': True})

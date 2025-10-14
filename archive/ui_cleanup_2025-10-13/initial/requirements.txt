@@ -1,0 +1,5 @@
+# Archived dependency list intentionally moved to `requirements.archive.txt`
+# so that Codex auto-setup does not downgrade the global toolchain every time
+# the container boots. If you need to recreate the original environment,
+# install with:
+#     pip install -r requirements.archive.txt

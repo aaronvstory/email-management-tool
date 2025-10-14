@@ -1,0 +1,1386 @@
+
+
+
+› terminal not loading for codex  ontainer environment for this prohject why? fix it "Terminal
+  Disconnected
+
+  Terminal errored
+
+  An unexpected connection error occurred
+  Starting test
+  Configuring container
+  Downloading repo
+  Running setup scripts
+  Configuring language runtimes...
+  # Python: 3.13
+  # Node.js: v20 (default: v22)
+  default -> 20 (-> v20.19.4)
+  Now using node v20.19.4 (npm v11.4.2)
+  # Ruby: 3.4.4 (default: 3.2.3)
+  mise ~/.config/mise/config.toml tools: ruby@3.4.4 ⠉ 0s
+  # Rust: 1.89.0 (default: 1.89.0)
+  # Go: go1.24.3 (default: go1.24.3)
+  # Swift: 6.1 (default: 6.1)
+  # PHP: 8.4 (default: 8.4)
+  Running auto setup...
+  Scanning repository (up to depth 3) for dependency configurations...
+  --- Checking . ---
+  ==> Processing Python project in .
+  Found requirements.txt. Installing Python dependencies...
+  Running: pip install -r requirements.txt
+  Collecting Flask==3.0.0 (from -r requirements.txt (line 2))
+  Downloading flask-3.0.0-py3-none-any.whl.metadata (3.6 kB)
+  Collecting Flask-RESTX==1.3.0 (from -r requirements.txt (line 3))
+  Downloading flask_restx-1.3.0-py2.py3-none-any.whl.metadata (9.3 kB)
+  Collecting Flask-Login==0.6.3 (from -r requirements.txt (line 4))
+  Downloading Flask_Login-0.6.3-py3-none-any.whl.metadata (5.8 kB)
+  Collecting Flask-JWT-Extended==4.5.3 (from -r requirements.txt (line 5))
+  Downloading Flask_JWT_Extended-4.5.3-py2.py3-none-any.whl.metadata (3.9 kB)
+  Collecting Flask-WTF==1.2.1 (from -r requirements.txt (line 6))
+  Downloading flask_wtf-1.2.1-py3-none-any.whl.metadata (3.4 kB)
+  Collecting Flask-Limiter==3.5.0 (from -r requirements.txt (line 7))
+  Downloading Flask_Limiter-3.5.0-py3-none-any.whl.metadata (6.3 kB)
+  Collecting Flask-Cors==4.0.0 (from -r requirements.txt (line 8))
+  Downloading Flask_Cors-4.0.0-py2.py3-none-any.whl.metadata (5.4 kB)
+  Collecting Flask-SSE==1.0.0 (from -r requirements.txt (line 9))
+  Downloading Flask_SSE-1.0.0-py2.py3-none-any.whl.metadata (2.3 kB)
+  Collecting Werkzeug==3.0.1 (from -r requirements.txt (line 10))
+  Downloading werkzeug-3.0.1-py3-none-any.whl.metadata (4.1 kB)
+  Collecting SQLAlchemy==2.0.23 (from -r requirements.txt (line 13))
+  Downloading SQLAlchemy-2.0.23-py3-none-any.whl.metadata (9.6 kB)
+  Collecting alembic==1.12.1 (from -r requirements.txt (line 14))
+  Downloading alembic-1.12.1-py3-none-any.whl.metadata (7.3 kB)
+  Collecting psycopg2-binary==2.9.9 (from -r requirements.txt (line 15))
+  Downloading psycopg2-binary-2.9.9.tar.gz (384 kB)
+  Installing build dependencies ... done
+  Getting requirements to build wheel ... done
+  Preparing metadata (pyproject.toml) ... done
+  Collecting aiosmtpd==1.4.4.post2 (from -r requirements.txt (line 18))
+  Downloading aiosmtpd-1.4.4.post2-py3-none-any.whl.metadata (6.8 kB)
+  Collecting python-magic==0.4.27 (from -r requirements.txt (line 19))
+  Downloading python_magic-0.4.27-py2.py3-none-any.whl.metadata (5.8 kB)
+  Collecting beautifulsoup4==4.12.2 (from -r requirements.txt (line 20))
+  Downloading beautifulsoup4-4.12.2-py3-none-any.whl.metadata (3.6 kB)
+  Collecting bleach==6.1.0 (from -r requirements.txt (line 21))
+  Downloading bleach-6.1.0-py3-none-any.whl.metadata (30 kB)
+  Collecting email-validator==2.1.0 (from -r requirements.txt (line 22))
+  Downloading email_validator-2.1.0-py3-none-any.whl.metadata (25 kB)
+  Collecting cryptography==41.0.7 (from -r requirements.txt (line 25))
+  Downloading cryptography-41.0.7-cp37-abi3-manylinux_2_28_x86_64.whl.metadata (5.2 kB)
+  Collecting bcrypt==4.1.2 (from -r requirements.txt (line 26))
+  Downloading bcrypt-4.1.2-cp39-abi3-manylinux_2_28_x86_64.whl.metadata (9.5 kB)
+  Collecting PyJWT==2.8.0 (from -r requirements.txt (line 27))
+  Downloading PyJWT-2.8.0-py3-none-any.whl.metadata (4.2 kB)
+  Collecting python-dotenv==1.0.0 (from -r requirements.txt (line 28))
+  Downloading python_dotenv-1.0.0-py3-none-any.whl.metadata (21 kB)
+  Collecting celery==5.3.4 (from -r requirements.txt (line 31))
+  Downloading celery-5.3.4-py3-none-any.whl.metadata (21 kB)
+  Collecting redis==5.0.1 (from -r requirements.txt (line 32))
+  Downloading redis-5.0.1-py3-none-any.whl.metadata (8.9 kB)
+  Collecting flower==2.0.1 (from -r requirements.txt (line 33))
+  Downloading flower-2.0.1-py2.py3-none-any.whl.metadata (4.5 kB)
+  Collecting python-dateutil==2.8.2 (from -r requirements.txt (line 36))
+  Downloading python_dateutil-2.8.2-py2.py3-none-any.whl.metadata (8.2 kB)
+  Collecting pytz==2023.3 (from -r requirements.txt (line 37))
+  Downloading pytz-2023.3-py2.py3-none-any.whl.metadata (22 kB)
+  Collecting pyyaml==6.0.1 (from -r requirements.txt (line 38))
+  Downloading PyYAML-6.0.1.tar.gz (125 kB)
+  Installing build dependencies ... done
+  Getting requirements to build wheel ... done
+  Preparing metadata (pyproject.toml) ... done
+  Collecting click==8.1.7 (from -r requirements.txt (line 39))
+  Downloading click-8.1.7-py3-none-any.whl.metadata (3.0 kB)
+  Collecting colorama==0.4.6 (from -r requirements.txt (line 40))
+  Downloading colorama-0.4.6-py2.py3-none-any.whl.metadata (17 kB)
+  Collecting python-json-logger==2.0.7 (from -r requirements.txt (line 43))
+  Downloading python_json_logger-2.0.7-py3-none-any.whl.metadata (6.5 kB)
+  Collecting sentry-sdk==1.39.1 (from sentry-sdk[flask]==1.39.1->-r requirements.txt (line 44))
+  Downloading sentry_sdk-1.39.1-py2.py3-none-any.whl.metadata (9.7 kB)
+  Collecting pytest==7.4.3 (from -r requirements.txt (line 47))
+  Downloading pytest-7.4.3-py3-none-any.whl.metadata (7.9 kB)
+  Collecting pytest-flask==1.3.0 (from -r requirements.txt (line 48))
+  Downloading pytest_flask-1.3.0-py3-none-any.whl.metadata (14 kB)
+  Collecting pytest-asyncio==0.21.1 (from -r requirements.txt (line 49))
+  Downloading pytest_asyncio-0.21.1-py3-none-any.whl.metadata (4.0 kB)
+  Collecting faker==20.1.0 (from -r requirements.txt (line 50))
+  Downloading Faker-20.1.0-py3-none-any.whl.metadata (15 kB)
+  Collecting locust==2.19.1 (from -r requirements.txt (line 51))
+  Downloading locust-2.19.1-py3-none-any.whl.metadata (7.1 kB)
+  Collecting black==23.12.0 (from -r requirements.txt (line 54))
+  Downloading black-23.12.0-py3-none-any.whl.metadata (68 kB)
+  Collecting pylint==3.0.3 (from -r requirements.txt (line 55))
+  Downloading pylint-3.0.3-py3-none-any.whl.metadata (12 kB)
+  Collecting mypy==1.7.1 (from -r requirements.txt (line 56))
+  Downloading mypy-1.7.1-py3-none-any.whl.metadata (1.8 kB)
+  Collecting pre-commit==3.6.0 (from -r requirements.txt (line 57))
+  Downloading pre_commit-3.6.0-py2.py3-none-any.whl.metadata (1.3 kB)
+  Collecting imapclient==3.0.0 (from -r requirements.txt (line 60))
+  Downloading IMAPClient-3.0.0-py2.py3-none-any.whl.metadata (1.7 kB)
+  Collecting backoff==2.2.1 (from -r requirements.txt (line 61))
+  Downloading backoff-2.2.1-py3-none-any.whl.metadata (14 kB)
+  Collecting dnspython==2.6.1 (from -r requirements.txt (line 62))
+  Downloading dnspython-2.6.1-py3-none-any.whl.metadata (5.8 kB)
+  Collecting mcp==1.0.0 (from -r requirements.txt (line 65))
+  Downloading mcp-1.0.0-py3-none-any.whl.metadata (13 kB)
+  Collecting Jinja2>=3.1.2 (from Flask==3.0.0->-r requirements.txt (line 2))
+  Downloading jinja2-3.1.6-py3-none-any.whl.metadata (2.9 kB)
+  Collecting itsdangerous>=2.1.2 (from Flask==3.0.0->-r requirements.txt (line 2))
+  Downloading itsdangerous-2.2.0-py3-none-any.whl.metadata (1.9 kB)
+  Collecting blinker>=1.6.2 (from Flask==3.0.0->-r requirements.txt (line 2))
+  Downloading blinker-1.9.0-py3-none-any.whl.metadata (1.6 kB)
+  Collecting aniso8601>=0.82 (from Flask-RESTX==1.3.0->-r requirements.txt (line 3))
+  Downloading aniso8601-10.0.1-py2.py3-none-any.whl.metadata (23 kB)
+  Collecting jsonschema (from Flask-RESTX==1.3.0->-r requirements.txt (line 3))
+  Downloading jsonschema-4.25.1-py3-none-any.whl.metadata (7.6 kB)
+  Collecting importlib-resources (from Flask-RESTX==1.3.0->-r requirements.txt (line 3))
+  Downloading importlib_resources-6.5.2-py3-none-any.whl.metadata (3.9 kB)
+  Collecting wtforms (from Flask-WTF==1.2.1->-r requirements.txt (line 6))
+  Downloading wtforms-3.2.1-py3-none-any.whl.metadata (5.3 kB)
+  Collecting limits>=2.8 (from Flask-Limiter==3.5.0->-r requirements.txt (line 7))
+  Downloading limits-5.6.0-py3-none-any.whl.metadata (10 kB)
+  Collecting ordered-set<5,>4 (from Flask-Limiter==3.5.0->-r requirements.txt (line 7))
+  Downloading ordered_set-4.1.0-py3-none-any.whl.metadata (5.3 kB)
+  Collecting rich<14,>=12 (from Flask-Limiter==3.5.0->-r requirements.txt (line 7))
+  Downloading rich-13.9.4-py3-none-any.whl.metadata (18 kB)
+  Requirement already satisfied: typing-extensions>=4 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from Flask-
+  Limiter==3.5.0->-r requirements.txt (line 7)) (4.15.0)
+  Collecting six (from Flask-SSE==1.0.0->-r requirements.txt (line 9))
+  Downloading six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+  Collecting MarkupSafe>=2.1.1 (from Werkzeug==3.0.1->-r requirements.txt (line 10))
+  Downloading markupsafe-3.0.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.7 kB)
+  Collecting greenlet!=0.4.17 (from SQLAlchemy==2.0.23->-r requirements.txt (line 13))
+  Downloading greenlet-3.2.4-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (4.1 kB)
+  Collecting Mako (from alembic==1.12.1->-r requirements.txt (line 14))
+  Downloading mako-1.3.10-py3-none-any.whl.metadata (2.9 kB)
+  Collecting atpublic (from aiosmtpd==1.4.4.post2->-r requirements.txt (line 18))
+  Downloading atpublic-6.0.2-py3-none-any.whl.metadata (2.0 kB)
+  Collecting attrs (from aiosmtpd==1.4.4.post2->-r requirements.txt (line 18))
+  Downloading attrs-25.4.0-py3-none-any.whl.metadata (10 kB)
+  Collecting soupsieve>1.2 (from beautifulsoup4==4.12.2->-r requirements.txt (line 20))
+  Downloading soupsieve-2.8-py3-none-any.whl.metadata (4.6 kB)
+  Collecting webencodings (from bleach==6.1.0->-r requirements.txt (line 21))
+  Downloading webencodings-0.5.1-py2.py3-none-any.whl.metadata (2.1 kB)
+  Collecting idna>=2.0.0 (from email-validator==2.1.0->-r requirements.txt (line 22))
+  Downloading idna-3.11-py3-none-any.whl.metadata (8.4 kB)
+  Collecting cffi>=1.12 (from cryptography==41.0.7->-r requirements.txt (line 25))
+  Downloading cffi-2.0.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.6 kB)
+  Collecting billiard<5.0,>=4.1.0 (from celery==5.3.4->-r requirements.txt (line 31))
+  Downloading billiard-4.2.2-py3-none-any.whl.metadata (4.8 kB)
+  Collecting kombu<6.0,>=5.3.2 (from celery==5.3.4->-r requirements.txt (line 31))
+  Downloading kombu-5.5.4-py3-none-any.whl.metadata (3.5 kB)
+  Collecting vine<6.0,>=5.0.0 (from celery==5.3.4->-r requirements.txt (line 31))
+  Downloading vine-5.1.0-py3-none-any.whl.metadata (2.7 kB)
+  Collecting click-didyoumean>=0.3.0 (from celery==5.3.4->-r requirements.txt (line 31))
+  Downloading click_didyoumean-0.3.1-py3-none-any.whl.metadata (3.9 kB)
+  Collecting click-repl>=0.2.0 (from celery==5.3.4->-r requirements.txt (line 31))
+  Downloading click_repl-0.3.0-py3-none-any.whl.metadata (3.6 kB)
+  Collecting click-plugins>=1.1.1 (from celery==5.3.4->-r requirements.txt (line 31))
+  Downloading click_plugins-1.1.1.2-py2.py3-none-any.whl.metadata (6.5 kB)
+  Collecting tzdata>=2022.7 (from celery==5.3.4->-r requirements.txt (line 31))
+  Downloading tzdata-2025.2-py2.py3-none-any.whl.metadata (1.4 kB)
+  Collecting tornado<7.0.0,>=5.0.0 (from flower==2.0.1->-r requirements.txt (line 33))
+  Downloading tornado-6.5.2-cp39-abi3-
+  manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (2.8 kB)
+  Collecting prometheus-client>=0.8.0 (from flower==2.0.1->-r requirements.txt (line 33))
+  Downloading prometheus_client-0.23.1-py3-none-any.whl.metadata (1.9 kB)
+  Collecting humanize (from flower==2.0.1->-r requirements.txt (line 33))
+  Downloading humanize-4.13.0-py3-none-any.whl.metadata (7.8 kB)
+  Collecting certifi (from sentry-sdk==1.39.1->sentry-sdk[flask]==1.39.1->-r requirements.txt (line 44))
+  Downloading certifi-2025.10.5-py3-none-any.whl.metadata (2.5 kB)
+  Collecting urllib3>=1.26.11 (from sentry-sdk==1.39.1->sentry-sdk[flask]==1.39.1->-r requirements.txt (line 44))
+  Downloading urllib3-2.5.0-py3-none-any.whl.metadata (6.5 kB)
+  Requirement already satisfied: iniconfig in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from pytest==7.4.3->-r
+  requirements.txt (line 47)) (2.1.0)
+  Requirement already satisfied: packaging in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from pytest==7.4.3->-r
+  requirements.txt (line 47)) (25.0)
+  Requirement already satisfied: pluggy<2.0,>=0.12 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  pytest==7.4.3->-r requirements.txt (line 47)) (1.6.0)
+  Collecting gevent>=22.10.2 (from locust==2.19.1->-r requirements.txt (line 51))
+  Downloading gevent-25.9.1-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (14 kB)
+  Collecting requests>=2.23.0 (from locust==2.19.1->-r requirements.txt (line 51))
+  Downloading requests-2.32.5-py3-none-any.whl.metadata (4.9 kB)
+  Collecting msgpack>=1.0.0 (from locust==2.19.1->-r requirements.txt (line 51))
+  Downloading msgpack-1.1.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (8.1 kB)
+  Collecting pyzmq>=25.0.0 (from locust==2.19.1->-r requirements.txt (line 51))
+  Downloading pyzmq-27.1.0-cp312-abi3-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl.metadata (6.0 kB)
+  Collecting geventhttpclient>=2.0.11 (from locust==2.19.1->-r requirements.txt (line 51))
+  Downloading geventhttpclient-2.3.4-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (8.4
+  kB)
+  Collecting ConfigArgParse>=1.5.5 (from locust==2.19.1->-r requirements.txt (line 51))
+  Downloading configargparse-1.7.1-py3-none-any.whl.metadata (24 kB)
+  Collecting psutil>=5.9.1 (from locust==2.19.1->-r requirements.txt (line 51))
+  Downloading psutil-7.1.0-cp36-abi3-
+  manylinux_2_12_x86_64.manylinux2010_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (23 kB)
+  Collecting Flask-BasicAuth>=0.2.0 (from locust==2.19.1->-r requirements.txt (line 51))
+  Downloading Flask-BasicAuth-0.2.0.tar.gz (16 kB)
+  Installing build dependencies ... done
+  Getting requirements to build wheel ... done
+  Preparing metadata (pyproject.toml) ... done
+  Collecting roundrobin>=0.0.2 (from locust==2.19.1->-r requirements.txt (line 51))
+  Downloading roundrobin-0.0.4.tar.gz (3.4 kB)
+  Installing build dependencies ... done
+  Getting requirements to build wheel ... done
+  Preparing metadata (pyproject.toml) ... done
+  Requirement already satisfied: mypy-extensions>=0.4.3 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  black==23.12.0->-r requirements.txt (line 54)) (1.1.0)
+  Requirement already satisfied: pathspec>=0.9.0 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  black==23.12.0->-r requirements.txt (line 54)) (0.12.1)
+  Requirement already satisfied: platformdirs>=2 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  black==23.12.0->-r requirements.txt (line 54)) (4.4.0)
+  Collecting aiohttp>=3.7.4 (from black==23.12.0->-r requirements.txt (line 54))
+  Downloading aiohttp-3.13.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (8.1 kB)
+  Collecting astroid<=3.1.0-dev0,>=3.0.1 (from pylint==3.0.3->-r requirements.txt (line 55))
+  Downloading astroid-3.0.3-py3-none-any.whl.metadata (4.5 kB)
+  Collecting isort!=5.13.0,<6,>=4.2.5 (from pylint==3.0.3->-r requirements.txt (line 55))
+  Downloading isort-5.13.2-py3-none-any.whl.metadata (12 kB)
+  Collecting mccabe<0.8,>=0.6 (from pylint==3.0.3->-r requirements.txt (line 55))
+  Downloading mccabe-0.7.0-py2.py3-none-any.whl.metadata (5.0 kB)
+  Collecting tomlkit>=0.10.1 (from pylint==3.0.3->-r requirements.txt (line 55))
+  Downloading tomlkit-0.13.3-py3-none-any.whl.metadata (2.8 kB)
+  Collecting dill>=0.3.6 (from pylint==3.0.3->-r requirements.txt (line 55))
+  Downloading dill-0.4.0-py3-none-any.whl.metadata (10 kB)
+  Collecting cfgv>=2.0.0 (from pre-commit==3.6.0->-r requirements.txt (line 57))
+  Downloading cfgv-3.4.0-py2.py3-none-any.whl.metadata (8.5 kB)
+  Collecting identify>=1.0.0 (from pre-commit==3.6.0->-r requirements.txt (line 57))
+  Downloading identify-2.6.15-py2.py3-none-any.whl.metadata (4.4 kB)
+  Requirement already satisfied: nodeenv>=0.11.1 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from pre-
+  commit==3.6.0->-r requirements.txt (line 57)) (1.9.1)
+  Collecting virtualenv>=20.10.0 (from pre-commit==3.6.0->-r requirements.txt (line 57))
+  Downloading virtualenv-20.35.3-py3-none-any.whl.metadata (4.6 kB)
+  Collecting anyio>=4.6 (from mcp==1.0.0->-r requirements.txt (line 65))
+  Downloading anyio-4.11.0-py3-none-any.whl.metadata (4.1 kB)
+  Collecting httpx-sse>=0.4 (from mcp==1.0.0->-r requirements.txt (line 65))
+  Downloading httpx_sse-0.4.3-py3-none-any.whl.metadata (9.7 kB)
+  Collecting httpx>=0.27 (from mcp==1.0.0->-r requirements.txt (line 65))
+  Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+  Collecting pydantic>=2.8.0 (from mcp==1.0.0->-r requirements.txt (line 65))
+  Downloading pydantic-2.12.1-py3-none-any.whl.metadata (85 kB)
+  Collecting sse-starlette>=2.0 (from mcp==1.0.0->-r requirements.txt (line 65))
+  Downloading sse_starlette-3.0.2-py3-none-any.whl.metadata (11 kB)
+  Collecting starlette>=0.39 (from mcp==1.0.0->-r requirements.txt (line 65))
+  Downloading starlette-0.48.0-py3-none-any.whl.metadata (6.3 kB)
+  Collecting amqp<6.0.0,>=5.1.1 (from kombu<6.0,>=5.3.2->celery==5.3.4->-r requirements.txt (line 31))
+  Downloading amqp-5.3.1-py3-none-any.whl.metadata (8.9 kB)
+  Collecting markdown-it-py>=2.2.0 (from rich<14,>=12->Flask-Limiter==3.5.0->-r requirements.txt (line 7))
+  Downloading markdown_it_py-4.0.0-py3-none-any.whl.metadata (7.3 kB)
+  Requirement already satisfied: pygments<3.0.0,>=2.13.0 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  rich<14,>=12->Flask-Limiter==3.5.0->-r requirements.txt (line 7)) (2.19.2)
+  Collecting aiohappyeyeballs>=2.5.0 (from aiohttp>=3.7.4->black==23.12.0->-r requirements.txt (line 54))
+  Downloading aiohappyeyeballs-2.6.1-py3-none-any.whl.metadata (5.9 kB)
+  Collecting aiosignal>=1.4.0 (from aiohttp>=3.7.4->black==23.12.0->-r requirements.txt (line 54))
+  Downloading aiosignal-1.4.0-py3-none-any.whl.metadata (3.7 kB)
+  Collecting frozenlist>=1.1.1 (from aiohttp>=3.7.4->black==23.12.0->-r requirements.txt (line 54))
+  Downloading frozenlist-1.8.0-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (20 kB)
+  Collecting multidict<7.0,>=4.5 (from aiohttp>=3.7.4->black==23.12.0->-r requirements.txt (line 54))
+  Downloading multidict-6.7.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (5.3 kB)
+  Collecting propcache>=0.2.0 (from aiohttp>=3.7.4->black==23.12.0->-r requirements.txt (line 54))
+  Downloading propcache-0.4.1-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (13 kB)
+  Collecting yarl<2.0,>=1.17.0 (from aiohttp>=3.7.4->black==23.12.0->-r requirements.txt (line 54))
+  Downloading yarl-1.22.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (75 kB)
+  Collecting sniffio>=1.1 (from anyio>=4.6->mcp==1.0.0->-r requirements.txt (line 65))
+  Downloading sniffio-1.3.1-py3-none-any.whl.metadata (3.9 kB)
+  Collecting pycparser (from cffi>=1.12->cryptography==41.0.7->-r requirements.txt (line 25))
+  Downloading pycparser-2.23-py3-none-any.whl.metadata (993 bytes)
+  Collecting prompt-toolkit>=3.0.36 (from click-repl>=0.2.0->celery==5.3.4->-r requirements.txt (line 31))
+  Downloading prompt_toolkit-3.0.52-py3-none-any.whl.metadata (6.4 kB)
+  Collecting zope.event (from gevent>=22.10.2->locust==2.19.1->-r requirements.txt (line 51))
+  Downloading zope_event-6.0-py3-none-any.whl.metadata (5.1 kB)
+  Collecting zope.interface (from gevent>=22.10.2->locust==2.19.1->-r requirements.txt (line 51))
+  Downloading zope_interface-8.0.1-cp313-cp313-
+  manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl.metadata (44 kB)
+  Collecting brotli (from geventhttpclient>=2.0.11->locust==2.19.1->-r requirements.txt (line 51))
+  Downloading Brotli-1.1.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (5.5 kB)
+  Collecting httpcore==1.* (from httpx>=0.27->mcp==1.0.0->-r requirements.txt (line 65))
+  Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+  Collecting h11>=0.16 (from httpcore==1.*->httpx>=0.27->mcp==1.0.0->-r requirements.txt (line 65))
+  Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+  Collecting deprecated>=1.2 (from limits>=2.8->Flask-Limiter==3.5.0->-r requirements.txt (line 7))
+  Downloading Deprecated-1.2.18-py2.py3-none-any.whl.metadata (5.7 kB)
+  Collecting wrapt<2,>=1.10 (from deprecated>=1.2->limits>=2.8->Flask-Limiter==3.5.0->-r requirements.txt (line 7))
+  Downloading wrapt-1.17.3-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (6.4 kB)
+  Collecting mdurl~=0.1 (from markdown-it-py>=2.2.0->rich<14,>=12->Flask-Limiter==3.5.0->-r requirements.txt (line 7))
+  Downloading mdurl-0.1.2-py3-none-any.whl.metadata (1.6 kB)
+  Collecting wcwidth (from prompt-toolkit>=3.0.36->click-repl>=0.2.0->celery==5.3.4->-r requirements.txt (line 31))
+  Downloading wcwidth-0.2.14-py2.py3-none-any.whl.metadata (15 kB)
+  Collecting annotated-types>=0.6.0 (from pydantic>=2.8.0->mcp==1.0.0->-r requirements.txt (line 65))
+  Downloading annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+  Collecting pydantic-core==2.41.3 (from pydantic>=2.8.0->mcp==1.0.0->-r requirements.txt (line 65))
+  Downloading pydantic_core-2.41.3-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (7.3 kB)
+  Collecting typing-inspection>=0.4.2 (from pydantic>=2.8.0->mcp==1.0.0->-r requirements.txt (line 65))
+  Downloading typing_inspection-0.4.2-py3-none-any.whl.metadata (2.6 kB)
+  Collecting charset_normalizer<4,>=2 (from requests>=2.23.0->locust==2.19.1->-r requirements.txt (line 51))
+  Downloading charset_normalizer-3.4.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata
+  (36 kB)
+  Collecting distlib<1,>=0.3.7 (from virtualenv>=20.10.0->pre-commit==3.6.0->-r requirements.txt (line 57))
+  Downloading distlib-0.4.0-py2.py3-none-any.whl.metadata (5.2 kB)
+  Collecting filelock<4,>=3.12.2 (from virtualenv>=20.10.0->pre-commit==3.6.0->-r requirements.txt (line 57))
+  Downloading filelock-3.20.0-py3-none-any.whl.metadata (2.1 kB)
+  Collecting jsonschema-specifications>=2023.03.6 (from jsonschema->Flask-RESTX==1.3.0->-r requirements.txt (line 3))
+  Downloading jsonschema_specifications-2025.9.1-py3-none-any.whl.metadata (2.9 kB)
+  Collecting referencing>=0.28.4 (from jsonschema->Flask-RESTX==1.3.0->-r requirements.txt (line 3))
+  Downloading referencing-0.37.0-py3-none-any.whl.metadata (2.8 kB)
+  Collecting rpds-py>=0.7.1 (from jsonschema->Flask-RESTX==1.3.0->-r requirements.txt (line 3))
+  Downloading rpds_py-0.27.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.2 kB)
+  Collecting setuptools>=75.8.2 (from zope.event->gevent>=22.10.2->locust==2.19.1->-r requirements.txt (line 51))
+  Using cached setuptools-80.9.0-py3-none-any.whl.metadata (6.6 kB)
+  WARNING: The candidate selected for download or install is a yanked version: 'email-validator' candidate (version 2.1.0 at
+  https://files.pythonhosted.org/packages/90/41/4767ff64e422734487a06384a66e62615b1f5cf9cf3b23295e22d3ecf711/email_validator-
+  2.1.0-py3-none-any.whl (from https://pypi.org/simple/email-validator/) (requires-python:>=3.7))
+  Reason for being yanked: Forgot to drop Python 3.7 from python_requires, see https://github.com/JoshData/python-email-validator/
+  pull/118
+  Downloading flask-3.0.0-py3-none-any.whl (99 kB)
+  Downloading flask_restx-1.3.0-py2.py3-none-any.whl (2.8 MB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.8/2.8 MB 20.2 MB/s 0:00:00
+  Downloading Flask_Login-0.6.3-py3-none-any.whl (17 kB)
+  Downloading Flask_JWT_Extended-4.5.3-py2.py3-none-any.whl (22 kB)
+  Downloading PyJWT-2.8.0-py3-none-any.whl (22 kB)
+  Downloading flask_wtf-1.2.1-py3-none-any.whl (12 kB)
+  Downloading Flask_Limiter-3.5.0-py3-none-any.whl (28 kB)
+  Downloading Flask_Cors-4.0.0-py2.py3-none-any.whl (14 kB)
+  Downloading Flask_SSE-1.0.0-py2.py3-none-any.whl (5.0 kB)
+  Downloading werkzeug-3.0.1-py3-none-any.whl (226 kB)
+  Downloading SQLAlchemy-2.0.23-py3-none-any.whl (1.9 MB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.9/1.9 MB 18.8 MB/s 0:00:00
+  Downloading alembic-1.12.1-py3-none-any.whl (226 kB)
+  Downloading aiosmtpd-1.4.4.post2-py3-none-any.whl (154 kB)
+  Downloading python_magic-0.4.27-py2.py3-none-any.whl (13 kB)
+  Downloading beautifulsoup4-4.12.2-py3-none-any.whl (142 kB)
+  Downloading bleach-6.1.0-py3-none-any.whl (162 kB)
+  Downloading email_validator-2.1.0-py3-none-any.whl (32 kB)
+  Downloading cryptography-41.0.7-cp37-abi3-manylinux_2_28_x86_64.whl (4.4 MB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.4/4.4 MB 23.2 MB/s 0:00:00
+  Downloading bcrypt-4.1.2-cp39-abi3-manylinux_2_28_x86_64.whl (698 kB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 698.9/698.9 kB 29.2 MB/s 0:00:00
+  Downloading python_dotenv-1.0.0-py3-none-any.whl (19 kB)
+  Downloading celery-5.3.4-py3-none-any.whl (421 kB)
+  Downloading click-8.1.7-py3-none-any.whl (97 kB)
+  Downloading redis-5.0.1-py3-none-any.whl (250 kB)
+  Downloading flower-2.0.1-py2.py3-none-any.whl (383 kB)
+  Downloading python_dateutil-2.8.2-py2.py3-none-any.whl (247 kB)
+  Downloading pytz-2023.3-py2.py3-none-any.whl (502 kB)
+  Downloading colorama-0.4.6-py2.py3-none-any.whl (25 kB)
+  Downloading python_json_logger-2.0.7-py3-none-any.whl (8.1 kB)
+  Downloading sentry_sdk-1.39.1-py2.py3-none-any.whl (254 kB)
+  Downloading pytest-7.4.3-py3-none-any.whl (325 kB)
+  Downloading pytest_flask-1.3.0-py3-none-any.whl (13 kB)
+  Downloading pytest_asyncio-0.21.1-py3-none-any.whl (13 kB)
+  Downloading Faker-20.1.0-py3-none-any.whl (1.7 MB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.7/1.7 MB 25.2 MB/s 0:00:00
+  Downloading locust-2.19.1-py3-none-any.whl (1.4 MB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.4/1.4 MB 23.7 MB/s 0:00:00
+  Downloading black-23.12.0-py3-none-any.whl (194 kB)
+  Downloading pylint-3.0.3-py3-none-any.whl (510 kB)
+  Downloading mypy-1.7.1-py3-none-any.whl (2.5 MB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.5/2.5 MB 20.5 MB/s 0:00:00
+  Downloading pre_commit-3.6.0-py2.py3-none-any.whl (204 kB)
+  Downloading IMAPClient-3.0.0-py2.py3-none-any.whl (182 kB)
+  Downloading backoff-2.2.1-py3-none-any.whl (15 kB)
+  Downloading dnspython-2.6.1-py3-none-any.whl (307 kB)
+  Downloading mcp-1.0.0-py3-none-any.whl (36 kB)
+  Downloading astroid-3.0.3-py3-none-any.whl (275 kB)
+  Downloading billiard-4.2.2-py3-none-any.whl (86 kB)
+  Downloading isort-5.13.2-py3-none-any.whl (92 kB)
+  Downloading kombu-5.5.4-py3-none-any.whl (210 kB)
+  Downloading vine-5.1.0-py3-none-any.whl (9.6 kB)
+  Downloading amqp-5.3.1-py3-none-any.whl (50 kB)
+  Downloading mccabe-0.7.0-py2.py3-none-any.whl (7.3 kB)
+  Downloading ordered_set-4.1.0-py3-none-any.whl (7.6 kB)
+  Downloading rich-13.9.4-py3-none-any.whl (242 kB)
+  Downloading tornado-6.5.2-cp39-abi3-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl (443
+  kB)
+  Downloading aiohttp-3.13.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (1.7 MB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.7/1.7 MB 14.6 MB/s 0:00:00
+  Downloading multidict-6.7.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (254 kB)
+  Downloading yarl-1.22.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (377 kB)
+  Downloading aiohappyeyeballs-2.6.1-py3-none-any.whl (15 kB)
+  Downloading aiosignal-1.4.0-py3-none-any.whl (7.5 kB)
+  Downloading aniso8601-10.0.1-py2.py3-none-any.whl (52 kB)
+  Downloading anyio-4.11.0-py3-none-any.whl (109 kB)
+  Downloading attrs-25.4.0-py3-none-any.whl (67 kB)
+  Downloading blinker-1.9.0-py3-none-any.whl (8.5 kB)
+  Downloading cffi-2.0.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (219 kB)
+  Downloading cfgv-3.4.0-py2.py3-none-any.whl (7.2 kB)
+  Downloading click_didyoumean-0.3.1-py3-none-any.whl (3.6 kB)
+  Downloading click_plugins-1.1.1.2-py2.py3-none-any.whl (11 kB)
+  Downloading click_repl-0.3.0-py3-none-any.whl (10 kB)
+  Downloading configargparse-1.7.1-py3-none-any.whl (25 kB)
+  Downloading dill-0.4.0-py3-none-any.whl (119 kB)
+  Downloading frozenlist-1.8.0-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (234 kB)
+  Downloading gevent-25.9.1-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (2.1 MB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 30.4 MB/s 0:00:00
+  Downloading geventhttpclient-2.3.4-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (114 kB)
+  Downloading greenlet-3.2.4-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (610 kB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 610.5/610.5 kB 17.9 MB/s 0:00:00
+  Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+  Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+  Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+  Downloading httpx_sse-0.4.3-py3-none-any.whl (9.0 kB)
+  Downloading identify-2.6.15-py2.py3-none-any.whl (99 kB)
+  Downloading idna-3.11-py3-none-any.whl (71 kB)
+  Downloading itsdangerous-2.2.0-py3-none-any.whl (16 kB)
+  Downloading jinja2-3.1.6-py3-none-any.whl (134 kB)
+  Downloading limits-5.6.0-py3-none-any.whl (60 kB)
+  Downloading Deprecated-1.2.18-py2.py3-none-any.whl (10.0 kB)
+  Downloading wrapt-1.17.3-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (88 kB)
+  Downloading markdown_it_py-4.0.0-py3-none-any.whl (87 kB)
+  Downloading mdurl-0.1.2-py3-none-any.whl (10.0 kB)
+  Downloading markupsafe-3.0.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (22 kB)
+  Downloading msgpack-1.1.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (424 kB)
+  Downloading prometheus_client-0.23.1-py3-none-any.whl (61 kB)
+  Downloading prompt_toolkit-3.0.52-py3-none-any.whl (391 kB)
+  Downloading propcache-0.4.1-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (204 kB)
+  Downloading psutil-7.1.0-cp36-abi3-manylinux_2_12_x86_64.manylinux2010_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+  (291 kB)
+  Downloading pydantic-2.12.1-py3-none-any.whl (460 kB)
+  Downloading pydantic_core-2.41.3-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.1 MB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 28.5 MB/s 0:00:00
+  Downloading annotated_types-0.7.0-py3-none-any.whl (13 kB)
+  Downloading pyzmq-27.1.0-cp312-abi3-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl (840 kB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 841.0/841.0 kB 19.6 MB/s 0:00:00
+  Downloading requests-2.32.5-py3-none-any.whl (64 kB)
+  Downloading charset_normalizer-3.4.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (151 kB)
+  Downloading urllib3-2.5.0-py3-none-any.whl (129 kB)
+  Downloading certifi-2025.10.5-py3-none-any.whl (163 kB)
+  Downloading six-1.17.0-py2.py3-none-any.whl (11 kB)
+  Downloading sniffio-1.3.1-py3-none-any.whl (10 kB)
+  Downloading soupsieve-2.8-py3-none-any.whl (36 kB)
+  Downloading sse_starlette-3.0.2-py3-none-any.whl (11 kB)
+  Downloading starlette-0.48.0-py3-none-any.whl (73 kB)
+  Downloading tomlkit-0.13.3-py3-none-any.whl (38 kB)
+  Downloading typing_inspection-0.4.2-py3-none-any.whl (14 kB)
+  Downloading tzdata-2025.2-py2.py3-none-any.whl (347 kB)
+  Downloading virtualenv-20.35.3-py3-none-any.whl (6.0 MB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.0/6.0 MB 20.7 MB/s 0:00:00 eta 0:00:01
+  Downloading distlib-0.4.0-py2.py3-none-any.whl (469 kB)
+  Downloading filelock-3.20.0-py3-none-any.whl (16 kB)
+  Downloading atpublic-6.0.2-py3-none-any.whl (6.4 kB)
+  Downloading Brotli-1.1.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.9 MB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.9/2.9 MB 15.4 MB/s 0:00:00
+  Downloading humanize-4.13.0-py3-none-any.whl (128 kB)
+  Downloading importlib_resources-6.5.2-py3-none-any.whl (37 kB)
+  Downloading jsonschema-4.25.1-py3-none-any.whl (90 kB)
+  Downloading jsonschema_specifications-2025.9.1-py3-none-any.whl (18 kB)
+  Downloading referencing-0.37.0-py3-none-any.whl (26 kB)
+  Downloading rpds_py-0.27.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (386 kB)
+  Downloading mako-1.3.10-py3-none-any.whl (78 kB)
+  Downloading pycparser-2.23-py3-none-any.whl (118 kB)
+  Downloading wcwidth-0.2.14-py2.py3-none-any.whl (37 kB)
+  Downloading webencodings-0.5.1-py2.py3-none-any.whl (11 kB)
+  Downloading wtforms-3.2.1-py3-none-any.whl (152 kB)
+  Downloading zope_event-6.0-py3-none-any.whl (6.4 kB)
+  Using cached setuptools-80.9.0-py3-none-any.whl (1.2 MB)
+  Downloading zope_interface-8.0.1-cp313-cp313-
+  manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl (264 kB)
+  Building wheels for collected packages: psycopg2-binary, pyyaml, Flask-BasicAuth, roundrobin
+  Building wheel for psycopg2-binary (pyproject.toml) ... done
+  Created wheel for psycopg2-binary: filename=psycopg2_binary-2.9.9-cp313-cp313-linux_x86_64.whl size=550042
+  sha256=f29a4221013d701552bed81732091c0f0656ecad3566a808bffdeb04fcadd4eb
+  Stored in directory: /root/.cache/pip/wheels/03/34/cf/71a53a0a7ee50c85943f826ea7225cb94fde84b15f8be3da89
+  Building wheel for pyyaml (pyproject.toml) ... done
+  Created wheel for pyyaml: filename=pyyaml-6.0.1-cp313-cp313-linux_x86_64.whl size=45459
+  sha256=de239b9ef2b202d7dc807d03e7594d0641f8e3272aa83f82186ca17298ebf214
+  Stored in directory: /root/.cache/pip/wheels/9c/9e/34/1e1548811b63a9d001469f21797e8b7d5c216d8eb928e7d6ad
+  Building wheel for Flask-BasicAuth (pyproject.toml) ... done
+  Created wheel for Flask-BasicAuth: filename=flask_basicauth-0.2.0-py3-none-any.whl size=4320
+  sha256=9fbab560266211b0a659db312f9d2065eb3b3714987a3ee276b1a25f5a9e7c81
+  Stored in directory: /root/.cache/pip/wheels/95/0c/5f/15b54ef498c160f2865f5e01ecccf93376be36c8234751c3fc
+  Building wheel for roundrobin (pyproject.toml) ... done
+  Created wheel for roundrobin: filename=roundrobin-0.0.4-py3-none-any.whl size=4097
+  sha256=76f020452dcdd10ff11f3b3a991ded710bc15b51d4d0404e054701385e60ffc2
+  Stored in directory: /root/.cache/pip/wheels/03/be/f2/952cf669540e20f18cd805d5e68a6c788b7615e56e13531120
+  Successfully built psycopg2-binary pyyaml Flask-BasicAuth roundrobin
+  Installing collected packages: webencodings, roundrobin, pytz, distlib, brotli, aniso8601, zope.interface, wrapt, wcwidth, vine,
+  urllib3, tzdata, typing-inspection, tornado, tomlkit, soupsieve, sniffio, six, setuptools, rpds-py, redis, pyzmq, pyyaml,
+  python-magic, python-json-logger, python-dotenv, pytest, PyJWT, pydantic-core, pycparser, psycopg2-binary, psutil, propcache,
+  prometheus-client, ordered-set, mypy, multidict, msgpack, mdurl, mccabe, MarkupSafe, itsdangerous, isort, importlib-resources,
+  imapclient, idna, identify, humanize, httpx-sse, h11, greenlet, frozenlist, filelock, dnspython, dill, ConfigArgParse, colorama,
+  click, charset_normalizer, cfgv, certifi, blinker, billiard, bcrypt, backoff, attrs, atpublic, astroid, annotated-types,
+  aiohappyeyeballs, zope.event, yarl, wtforms, Werkzeug, virtualenv, SQLAlchemy, sentry-sdk, requests, referencing, python-
+  dateutil, pytest-asyncio, pylint, pydantic, prompt-toolkit, markdown-it-py, Mako, Jinja2, httpcore, email-validator, deprecated,
+  click-plugins, click-didyoumean, cffi, bleach, beautifulsoup4, anyio, amqp, aiosmtpd, aiosignal, starlette, sse-starlette, rich,
+  pre-commit, limits, kombu, jsonschema-specifications, httpx, gevent, Flask, faker, cryptography, click-repl, alembic, aiohttp,
+  pytest-flask, mcp, jsonschema, geventhttpclient, Flask-WTF, Flask-SSE, Flask-Login, Flask-Limiter, Flask-JWT-Extended, Flask-
+  Cors, Flask-BasicAuth, celery, black, locust, flower, Flask-RESTX
+  Attempting uninstall: pytest90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 21/130 [pyzmq]ools]ace]
+  Found existing installation: pytest 8.4.1━━━━━━━━━━━━━━━━━ 21/130 [pyzmq]
+  Uninstalling pytest-8.4.1:━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 26/130 [pytest]
+  Successfully uninstalled pytest-8.4.1━━━━━━━━━━━━━━━━━━━━━━━ 26/130 [pytest]
+  Attempting uninstall: mypy[0m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 31/130 [psutil]er]
+  Found existing installation: mypy 1.17.1━━━━━━━━━━━━━━━━━━ 31/130 [psutil]
+  Uninstalling mypy-1.17.1:[0m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 35/130 [mypy]
+  Successfully uninstalled mypy-1.17.1━━━━━━━━━━━━━━━━━━━━ 35/130 [mypy]
+  Attempting uninstall: isort━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 36/130 [multidict]
+  Found existing installation: isort 6.0.1━━━━━━━━━━━━━━━━━━ 36/130 [multidict]
+  Uninstalling isort-6.0.1:━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 36/130 [multidict]
+  Successfully uninstalled isort-6.0.1━━━━━━━━━━━━━━━━━━━━ 36/130 [multidict]
+  Attempting uninstall: click[91m╸━━━━━━━━━━━━━━━━━━━━━━━ 54/130 [dill]thon]]
+  Found existing installation: click 8.2.1━━━━━━━━━━━━━━━━━━ 54/130 [dill]
+  Uninstalling click-8.2.1:╸━━━━━━━━━━━━━━━━━━━━━━━ 54/130 [dill]
+  Successfully uninstalled click-8.2.1━━━━━━━━━━━━━━━━━━━━ 54/130 [dill]
+  Attempting uninstall: black━━━━━━━━━━━━━━━━━╺━ 125/130 [celery]ogin]]4]]
+  Found existing installation: black 25.1.0m╺━ 125/130 [celery]
+  Uninstalling black-25.1.0:━━━━━━━━━━━━╺━ 125/130 [celery]
+  Successfully uninstalled black-25.1.0━━━╸━ 126/130 [black]
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 130/130 [Flask-RESTX]sk-RESTX]ck]
+  Successfully installed ConfigArgParse-1.7.1 Flask-3.0.0 Flask-BasicAuth-0.2.0 Flask-Cors-4.0.0 Flask-JWT-Extended-4.5.3 Flask-
+  Limiter-3.5.0 Flask-Login-0.6.3 Flask-RESTX-1.3.0 Flask-SSE-1.0.0 Flask-WTF-1.2.1 Jinja2-3.1.6 Mako-1.3.10 MarkupSafe-3.0.3
+  PyJWT-2.8.0 SQLAlchemy-2.0.23 Werkzeug-3.0.1 aiohappyeyeballs-2.6.1 aiohttp-3.13.0 aiosignal-1.4.0 aiosmtpd-1.4.4.post2 alembic-
+  1.12.1 amqp-5.3.1 aniso8601-10.0.1 annotated-types-0.7.0 anyio-4.11.0 astroid-3.0.3 atpublic-6.0.2 attrs-25.4.0 backoff-2.2.1
+  bcrypt-4.1.2 beautifulsoup4-4.12.2 billiard-4.2.2 black-23.12.0 bleach-6.1.0 blinker-1.9.0 brotli-1.1.0 celery-5.3.4 certifi-
+  2025.10.5 cffi-2.0.0 cfgv-3.4.0 charset_normalizer-3.4.3 click-8.1.7 click-didyoumean-0.3.1 click-plugins-1.1.1.2 click-repl-
+  0.3.0 colorama-0.4.6 cryptography-41.0.7 deprecated-1.2.18 dill-0.4.0 distlib-0.4.0 dnspython-2.6.1 email-validator-2.1.0 faker-
+  20.1.0 filelock-3.20.0 flower-2.0.1 frozenlist-1.8.0 gevent-25.9.1 geventhttpclient-2.3.4 greenlet-3.2.4 h11-0.16.0 httpcore-
+  1.0.9 httpx-0.28.1 httpx-sse-0.4.3 humanize-4.13.0 identify-2.6.15 idna-3.11 imapclient-3.0.0 importlib-resources-6.5.2 isort-
+  5.13.2 itsdangerous-2.2.0 jsonschema-4.25.1 jsonschema-specifications-2025.9.1 kombu-5.5.4 limits-5.6.0 locust-2.19.1 markdown-
+  it-py-4.0.0 mccabe-0.7.0 mcp-1.0.0 mdurl-0.1.2 msgpack-1.1.2 multidict-6.7.0 mypy-1.7.1 ordered-set-4.1.0 pre-commit-3.6.0
+  prometheus-client-0.23.1 prompt-toolkit-3.0.52 propcache-0.4.1 psutil-7.1.0 psycopg2-binary-2.9.9 pycparser-2.23 pydantic-2.12.1
+  pydantic-core-2.41.3 pylint-3.0.3 pytest-7.4.3 pytest-asyncio-0.21.1 pytest-flask-1.3.0 python-dateutil-2.8.2 python-dotenv-
+  1.0.0 python-json-logger-2.0.7 python-magic-0.4.27 pytz-2023.3 pyyaml-6.0.1 pyzmq-27.1.0 redis-5.0.1 referencing-0.37.0
+  requests-2.32.5 rich-13.9.4 roundrobin-0.0.4 rpds-py-0.27.1 sentry-sdk-1.39.1 setuptools-80.9.0 six-1.17.0 sniffio-1.3.1
+  soupsieve-2.8 sse-starlette-3.0.2 starlette-0.48.0 tomlkit-0.13.3 tornado-6.5.2 typing-inspection-0.4.2 tzdata-2025.2 urllib3-
+  2.5.0 vine-5.1.0 virtualenv-20.35.3 wcwidth-0.2.14 webencodings-0.5.1 wrapt-1.17.3 wtforms-3.2.1 yarl-1.22.0 zope.event-6.0
+  zope.interface-8.0.1
+  WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package
+  manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/
+  warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+  --- Checking ./initial ---
+  ==> Processing Python project in ./initial
+  Found requirements.txt. Installing Python dependencies...
+  Running: pip install -r requirements.txt
+  Collecting aiosmtpd==1.4.6 (from -r requirements.txt (line 1))
+  Downloading aiosmtpd-1.4.6-py3-none-any.whl.metadata (6.6 kB)
+  Collecting flask==3.0.3 (from -r requirements.txt (line 2))
+  Downloading flask-3.0.3-py3-none-any.whl.metadata (3.2 kB)
+  Collecting flask-sqlalchemy==3.1.1 (from -r requirements.txt (line 3))
+  Downloading flask_sqlalchemy-3.1.1-py3-none-any.whl.metadata (3.4 kB)
+  Collecting email-validator==2.1.1 (from -r requirements.txt (line 4))
+  Downloading email_validator-2.1.1-py3-none-any.whl.metadata (26 kB)
+  Collecting dkimpy==1.0.5 (from -r requirements.txt (line 5))
+  Downloading dkimpy-1.0.5.tar.gz (59 kB)
+  Installing build dependencies ... done
+  Getting requirements to build wheel ... done
+  Preparing metadata (pyproject.toml) ... done
+  Collecting cryptography==42.0.8 (from -r requirements.txt (line 6))
+  Downloading cryptography-42.0.8-cp39-abi3-manylinux_2_28_x86_64.whl.metadata (5.3 kB)
+  Requirement already satisfied: dnspython==2.6.1 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from -r
+  requirements.txt (line 7)) (2.6.1)
+  Collecting python-dateutil==2.9.0.post0 (from -r requirements.txt (line 8))
+  Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl.metadata (8.4 kB)
+  Collecting werkzeug==3.0.3 (from -r requirements.txt (line 9))
+  Downloading werkzeug-3.0.3-py3-none-any.whl.metadata (3.7 kB)
+  Collecting jinja2==3.1.4 (from -r requirements.txt (line 10))
+  Downloading jinja2-3.1.4-py3-none-any.whl.metadata (2.6 kB)
+  Collecting requests==2.32.3 (from -r requirements.txt (line 11))
+  Downloading requests-2.32.3-py3-none-any.whl.metadata (4.6 kB)
+  Requirement already satisfied: atpublic in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from aiosmtpd==1.4.6->-r
+  requirements.txt (line 1)) (6.0.2)
+  Requirement already satisfied: attrs in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from aiosmtpd==1.4.6->-r
+  requirements.txt (line 1)) (25.4.0)
+  Requirement already satisfied: itsdangerous>=2.1.2 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  flask==3.0.3->-r requirements.txt (line 2)) (2.2.0)
+  Requirement already satisfied: click>=8.1.3 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from flask==3.0.3->-r
+  requirements.txt (line 2)) (8.1.7)
+  Requirement already satisfied: blinker>=1.6.2 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  flask==3.0.3->-r requirements.txt (line 2)) (1.9.0)
+  Requirement already satisfied: sqlalchemy>=2.0.16 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from flask-
+  sqlalchemy==3.1.1->-r requirements.txt (line 3)) (2.0.23)
+  Requirement already satisfied: idna>=2.0.0 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from email-
+  validator==2.1.1->-r requirements.txt (line 4)) (3.11)
+  Requirement already satisfied: cffi>=1.12 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  cryptography==42.0.8->-r requirements.txt (line 6)) (2.0.0)
+  Requirement already satisfied: six>=1.5 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from python-
+  dateutil==2.9.0.post0->-r requirements.txt (line 8)) (1.17.0)
+  Requirement already satisfied: MarkupSafe>=2.1.1 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  werkzeug==3.0.3->-r requirements.txt (line 9)) (3.0.3)
+  Requirement already satisfied: charset-normalizer<4,>=2 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  requests==2.32.3->-r requirements.txt (line 11)) (3.4.3)
+  Requirement already satisfied: urllib3<3,>=1.21.1 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  requests==2.32.3->-r requirements.txt (line 11)) (2.5.0)
+  Requirement already satisfied: certifi>=2017.4.17 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  requests==2.32.3->-r requirements.txt (line 11)) (2025.10.5)
+  Requirement already satisfied: pycparser in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  cffi>=1.12->cryptography==42.0.8->-r requirements.txt (line 6)) (2.23)
+  Requirement already satisfied: typing-extensions>=4.2.0 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  sqlalchemy>=2.0.16->flask-sqlalchemy==3.1.1->-r requirements.txt (line 3)) (4.15.0)
+  Requirement already satisfied: greenlet!=0.4.17 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  sqlalchemy>=2.0.16->flask-sqlalchemy==3.1.1->-r requirements.txt (line 3)) (3.2.4)
+  Downloading aiosmtpd-1.4.6-py3-none-any.whl (154 kB)
+  Downloading flask-3.0.3-py3-none-any.whl (101 kB)
+  Downloading flask_sqlalchemy-3.1.1-py3-none-any.whl (25 kB)
+  Downloading email_validator-2.1.1-py3-none-any.whl (30 kB)
+  Downloading cryptography-42.0.8-cp39-abi3-manylinux_2_28_x86_64.whl (3.9 MB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.9/3.9 MB 13.7 MB/s 0:00:00 eta 0:00:01
+  Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl (229 kB)
+  Downloading werkzeug-3.0.3-py3-none-any.whl (227 kB)
+  Downloading jinja2-3.1.4-py3-none-any.whl (133 kB)
+  Downloading requests-2.32.3-py3-none-any.whl (64 kB)
+  Building wheels for collected packages: dkimpy
+  Building wheel for dkimpy (pyproject.toml) ... done
+  Created wheel for dkimpy: filename=dkimpy-1.0.5-py3-none-any.whl size=48817
+  sha256=d708871d2f5b4a62b6f8951d28ed226b4219455cb16cf70eb9883edf16279a66
+  Stored in directory: /root/.cache/pip/wheels/a4/f5/eb/f7ea2f3cd0a3fb6e35319cddf407bbe8ac8e456d4d976288a9
+  Successfully built dkimpy
+  Installing collected packages: werkzeug, requests, python-dateutil, jinja2, email-validator, dkimpy, aiosmtpd, flask,
+  cryptography, flask-sqlalchemy
+  Attempting uninstall: werkzeug
+  Found existing installation: Werkzeug 3.0.1
+  Uninstalling Werkzeug-3.0.1:
+  Successfully uninstalled Werkzeug-3.0.1
+  Attempting uninstall: requests━━━━━━━━━━━━━━━━ 0/10 [werkzeug]
+  Found existing installation: requests 2.32.5 0/10 [werkzeug]
+  Uninstalling requests-2.32.5:━━━━━━━━━━━ 0/10 [werkzeug]
+  Successfully uninstalled requests-2.32.50m 0/10 [werkzeug]
+  Attempting uninstall: python-dateutil━━━━━ 0/10 [werkzeug]
+  Found existing installation: python-dateutil 2.8.2 0/10 [werkzeug]
+  Uninstalling python-dateutil-2.8.2:━━━━━ 0/10 [werkzeug]
+  Successfully uninstalled python-dateutil-2.8.22m 0/10 [werkzeug]
+  Attempting uninstall: jinja2━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2/10 [python-dateutil]
+  Found existing installation: Jinja2 3.1.6━━━━━━━━━━━━━━━━━ 2/10 [python-dateutil]
+  Uninstalling Jinja2-3.1.6:m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2/10 [python-dateutil]
+  Successfully uninstalled Jinja2-3.1.6━━━━━━━━━━━━━━━━━━━ 2/10 [python-dateutil]
+  Attempting uninstall: email-validator━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3/10 [jinja2]util]
+  Found existing installation: email-validator 2.1.0━━━━━━━━ 3/10 [jinja2]
+  Uninstalling email-validator-2.1.0:━━━━━━━━━━━━━━━━━━━━━━━ 3/10 [jinja2]
+  Successfully uninstalled email-validator-2.1.0━━━━━━━━━━ 3/10 [jinja2]
+  Attempting uninstall: aiosmtpd90m━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3/10 [jinja2]
+  Found existing installation: aiosmtpd 1.4.4.post2━━━━━━━━━ 3/10 [jinja2]
+  Uninstalling aiosmtpd-1.4.4.post2:━━━━━━━━━━━━━━━━━━━━━━━━ 3/10 [jinja2]
+  Successfully uninstalled aiosmtpd-1.4.4.post2━━━━━━━━━━━ 3/10 [jinja2]
+  Attempting uninstall: flask━━━╺━━━━━━━━━━━━━━━ 6/10 [aiosmtpd]
+  Found existing installation: Flask 3.0.090m━━━━━━━━━━━━━━━ 6/10 [aiosmtpd]
+  Uninstalling Flask-3.0.0:[0m╺━━━━━━━━━━━━━━━ 6/10 [aiosmtpd]
+  Successfully uninstalled Flask-3.0.0━━━━━━━━━━━━━━━ 6/10 [aiosmtpd]
+  Attempting uninstall: cryptography╺━━━━━━━━━━━ 7/10 [flask]
+  Found existing installation: cryptography 41.0.7━━━━━━━━━━ 7/10 [flask]
+  Uninstalling cryptography-41.0.7:[90m╺━━━━━━━━━━━ 7/10 [flask]
+  Successfully uninstalled cryptography-41.0.7m━━━━━━━━━━━ 7/10 [flask]
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 10/10 [flask-sqlalchemy][cryptography]
+  Successfully installed aiosmtpd-1.4.6 cryptography-42.0.8 dkimpy-1.0.5 email-validator-2.1.1 flask-3.0.3 flask-sqlalchemy-3.1.1
+  jinja2-3.1.4 python-dateutil-2.9.0.post0 requests-2.32.3 werkzeug-3.0.3
+  WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package
+  manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/
+  warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+  No installations were performed.
+  Finalizing container setup
+  Test complete
+  "Settings
+  Docs
+  Environments
+  aaronvstory/email-management-tool
+  edit
+  Basic
+
+  Repository
+
+  email-management-tool
+  Public
+
+  Name
+  33/64
+
+  Description
+  **Email Management Tool** is a Python Flask application for local email interception, moderation, and management. Dev-focused;
+  not production-validated. Runs entirely on localhost with SQLite—no cloud services, no Docker required.
+
+  Explain to members of your organization what this environment is for.
+  231/512
+
+  Sharing
+  Code executionSet up dependencies, lint, and tests.
+  Learn more
+
+  Container image
+
+  Universal is an image based on Ubuntu 24.04 - see openai/codex-universal to learn more.
+  The repository will be cloned to /workspace/email-management-tool.
+
+  Environment variables
+
+  Secrets
+
+  Container Caching
+
+  Speed up container start by caching state after running the setup script. Maintenance scripts are run before every task.
+
+  Setup script
+
+  Runs the install commands like npm install for common package managers. Learn more.
+
+  Agent internet access
+
+  Domain allowlist
+  Domain details
+
+  Allowed HTTP Methods
+  Enabling internet access exposes your environment to security risks
+  These include prompt injection, exfiltration of code or secrets, inclusion of malware or vulnerabilities, or use of content with
+  license restrictions. See the docs for an example exfiltration attack.
+
+  To mitigate risks, only allow necessary domains and methods, and always review Codex's outputs and work log.
+  Terminal
+  Disconnected
+
+  Terminal errored
+
+  An unexpected connection error occurred
+  Starting test
+  Configuring container
+  Downloading repo
+  Running setup scripts
+  Configuring language runtimes...
+  # Python: 3.13
+  # Node.js: v20 (default: v22)
+  default -> 20 (-> v20.19.4)
+  Now using node v20.19.4 (npm v11.4.2)
+  # Ruby: 3.4.4 (default: 3.2.3)
+  mise ~/.config/mise/config.toml tools: ruby@3.4.4 ⠉ 0s
+  # Rust: 1.89.0 (default: 1.89.0)
+  # Go: go1.24.3 (default: go1.24.3)
+  # Swift: 6.1 (default: 6.1)
+  # PHP: 8.4 (default: 8.4)
+  Running auto setup...
+  Scanning repository (up to depth 3) for dependency configurations...
+  --- Checking . ---
+  ==> Processing Python project in .
+  Found requirements.txt. Installing Python dependencies...
+  Running: pip install -r requirements.txt
+  Collecting Flask==3.0.0 (from -r requirements.txt (line 2))
+  Downloading flask-3.0.0-py3-none-any.whl.metadata (3.6 kB)
+  Collecting Flask-RESTX==1.3.0 (from -r requirements.txt (line 3))
+  Downloading flask_restx-1.3.0-py2.py3-none-any.whl.metadata (9.3 kB)
+  Collecting Flask-Login==0.6.3 (from -r requirements.txt (line 4))
+  Downloading Flask_Login-0.6.3-py3-none-any.whl.metadata (5.8 kB)
+  Collecting Flask-JWT-Extended==4.5.3 (from -r requirements.txt (line 5))
+  Downloading Flask_JWT_Extended-4.5.3-py2.py3-none-any.whl.metadata (3.9 kB)
+  Collecting Flask-WTF==1.2.1 (from -r requirements.txt (line 6))
+  Downloading flask_wtf-1.2.1-py3-none-any.whl.metadata (3.4 kB)
+  Collecting Flask-Limiter==3.5.0 (from -r requirements.txt (line 7))
+  Downloading Flask_Limiter-3.5.0-py3-none-any.whl.metadata (6.3 kB)
+  Collecting Flask-Cors==4.0.0 (from -r requirements.txt (line 8))
+  Downloading Flask_Cors-4.0.0-py2.py3-none-any.whl.metadata (5.4 kB)
+  Collecting Flask-SSE==1.0.0 (from -r requirements.txt (line 9))
+  Downloading Flask_SSE-1.0.0-py2.py3-none-any.whl.metadata (2.3 kB)
+  Collecting Werkzeug==3.0.1 (from -r requirements.txt (line 10))
+  Downloading werkzeug-3.0.1-py3-none-any.whl.metadata (4.1 kB)
+  Collecting SQLAlchemy==2.0.23 (from -r requirements.txt (line 13))
+  Downloading SQLAlchemy-2.0.23-py3-none-any.whl.metadata (9.6 kB)
+  Collecting alembic==1.12.1 (from -r requirements.txt (line 14))
+  Downloading alembic-1.12.1-py3-none-any.whl.metadata (7.3 kB)
+  Collecting psycopg2-binary==2.9.9 (from -r requirements.txt (line 15))
+  Downloading psycopg2-binary-2.9.9.tar.gz (384 kB)
+  Installing build dependencies ... done
+  Getting requirements to build wheel ... done
+  Preparing metadata (pyproject.toml) ... done
+  Collecting aiosmtpd==1.4.4.post2 (from -r requirements.txt (line 18))
+  Downloading aiosmtpd-1.4.4.post2-py3-none-any.whl.metadata (6.8 kB)
+  Collecting python-magic==0.4.27 (from -r requirements.txt (line 19))
+  Downloading python_magic-0.4.27-py2.py3-none-any.whl.metadata (5.8 kB)
+  Collecting beautifulsoup4==4.12.2 (from -r requirements.txt (line 20))
+  Downloading beautifulsoup4-4.12.2-py3-none-any.whl.metadata (3.6 kB)
+  Collecting bleach==6.1.0 (from -r requirements.txt (line 21))
+  Downloading bleach-6.1.0-py3-none-any.whl.metadata (30 kB)
+  Collecting email-validator==2.1.0 (from -r requirements.txt (line 22))
+  Downloading email_validator-2.1.0-py3-none-any.whl.metadata (25 kB)
+  Collecting cryptography==41.0.7 (from -r requirements.txt (line 25))
+  Downloading cryptography-41.0.7-cp37-abi3-manylinux_2_28_x86_64.whl.metadata (5.2 kB)
+  Collecting bcrypt==4.1.2 (from -r requirements.txt (line 26))
+  Downloading bcrypt-4.1.2-cp39-abi3-manylinux_2_28_x86_64.whl.metadata (9.5 kB)
+  Collecting PyJWT==2.8.0 (from -r requirements.txt (line 27))
+  Downloading PyJWT-2.8.0-py3-none-any.whl.metadata (4.2 kB)
+  Collecting python-dotenv==1.0.0 (from -r requirements.txt (line 28))
+  Downloading python_dotenv-1.0.0-py3-none-any.whl.metadata (21 kB)
+  Collecting celery==5.3.4 (from -r requirements.txt (line 31))
+  Downloading celery-5.3.4-py3-none-any.whl.metadata (21 kB)
+  Collecting redis==5.0.1 (from -r requirements.txt (line 32))
+  Downloading redis-5.0.1-py3-none-any.whl.metadata (8.9 kB)
+  Collecting flower==2.0.1 (from -r requirements.txt (line 33))
+  Downloading flower-2.0.1-py2.py3-none-any.whl.metadata (4.5 kB)
+  Collecting python-dateutil==2.8.2 (from -r requirements.txt (line 36))
+  Downloading python_dateutil-2.8.2-py2.py3-none-any.whl.metadata (8.2 kB)
+  Collecting pytz==2023.3 (from -r requirements.txt (line 37))
+  Downloading pytz-2023.3-py2.py3-none-any.whl.metadata (22 kB)
+  Collecting pyyaml==6.0.1 (from -r requirements.txt (line 38))
+  Downloading PyYAML-6.0.1.tar.gz (125 kB)
+  Installing build dependencies ... done
+  Getting requirements to build wheel ... done
+  Preparing metadata (pyproject.toml) ... done
+  Collecting click==8.1.7 (from -r requirements.txt (line 39))
+  Downloading click-8.1.7-py3-none-any.whl.metadata (3.0 kB)
+  Collecting colorama==0.4.6 (from -r requirements.txt (line 40))
+  Downloading colorama-0.4.6-py2.py3-none-any.whl.metadata (17 kB)
+  Collecting python-json-logger==2.0.7 (from -r requirements.txt (line 43))
+  Downloading python_json_logger-2.0.7-py3-none-any.whl.metadata (6.5 kB)
+  Collecting sentry-sdk==1.39.1 (from sentry-sdk[flask]==1.39.1->-r requirements.txt (line 44))
+  Downloading sentry_sdk-1.39.1-py2.py3-none-any.whl.metadata (9.7 kB)
+  Collecting pytest==7.4.3 (from -r requirements.txt (line 47))
+  Downloading pytest-7.4.3-py3-none-any.whl.metadata (7.9 kB)
+  Collecting pytest-flask==1.3.0 (from -r requirements.txt (line 48))
+  Downloading pytest_flask-1.3.0-py3-none-any.whl.metadata (14 kB)
+  Collecting pytest-asyncio==0.21.1 (from -r requirements.txt (line 49))
+  Downloading pytest_asyncio-0.21.1-py3-none-any.whl.metadata (4.0 kB)
+  Collecting faker==20.1.0 (from -r requirements.txt (line 50))
+  Downloading Faker-20.1.0-py3-none-any.whl.metadata (15 kB)
+  Collecting locust==2.19.1 (from -r requirements.txt (line 51))
+  Downloading locust-2.19.1-py3-none-any.whl.metadata (7.1 kB)
+  Collecting black==23.12.0 (from -r requirements.txt (line 54))
+  Downloading black-23.12.0-py3-none-any.whl.metadata (68 kB)
+  Collecting pylint==3.0.3 (from -r requirements.txt (line 55))
+  Downloading pylint-3.0.3-py3-none-any.whl.metadata (12 kB)
+  Collecting mypy==1.7.1 (from -r requirements.txt (line 56))
+  Downloading mypy-1.7.1-py3-none-any.whl.metadata (1.8 kB)
+  Collecting pre-commit==3.6.0 (from -r requirements.txt (line 57))
+  Downloading pre_commit-3.6.0-py2.py3-none-any.whl.metadata (1.3 kB)
+  Collecting imapclient==3.0.0 (from -r requirements.txt (line 60))
+  Downloading IMAPClient-3.0.0-py2.py3-none-any.whl.metadata (1.7 kB)
+  Collecting backoff==2.2.1 (from -r requirements.txt (line 61))
+  Downloading backoff-2.2.1-py3-none-any.whl.metadata (14 kB)
+  Collecting dnspython==2.6.1 (from -r requirements.txt (line 62))
+  Downloading dnspython-2.6.1-py3-none-any.whl.metadata (5.8 kB)
+  Collecting mcp==1.0.0 (from -r requirements.txt (line 65))
+  Downloading mcp-1.0.0-py3-none-any.whl.metadata (13 kB)
+  Collecting Jinja2>=3.1.2 (from Flask==3.0.0->-r requirements.txt (line 2))
+  Downloading jinja2-3.1.6-py3-none-any.whl.metadata (2.9 kB)
+  Collecting itsdangerous>=2.1.2 (from Flask==3.0.0->-r requirements.txt (line 2))
+  Downloading itsdangerous-2.2.0-py3-none-any.whl.metadata (1.9 kB)
+  Collecting blinker>=1.6.2 (from Flask==3.0.0->-r requirements.txt (line 2))
+  Downloading blinker-1.9.0-py3-none-any.whl.metadata (1.6 kB)
+  Collecting aniso8601>=0.82 (from Flask-RESTX==1.3.0->-r requirements.txt (line 3))
+  Downloading aniso8601-10.0.1-py2.py3-none-any.whl.metadata (23 kB)
+  Collecting jsonschema (from Flask-RESTX==1.3.0->-r requirements.txt (line 3))
+  Downloading jsonschema-4.25.1-py3-none-any.whl.metadata (7.6 kB)
+  Collecting importlib-resources (from Flask-RESTX==1.3.0->-r requirements.txt (line 3))
+  Downloading importlib_resources-6.5.2-py3-none-any.whl.metadata (3.9 kB)
+  Collecting wtforms (from Flask-WTF==1.2.1->-r requirements.txt (line 6))
+  Downloading wtforms-3.2.1-py3-none-any.whl.metadata (5.3 kB)
+  Collecting limits>=2.8 (from Flask-Limiter==3.5.0->-r requirements.txt (line 7))
+  Downloading limits-5.6.0-py3-none-any.whl.metadata (10 kB)
+  Collecting ordered-set<5,>4 (from Flask-Limiter==3.5.0->-r requirements.txt (line 7))
+  Downloading ordered_set-4.1.0-py3-none-any.whl.metadata (5.3 kB)
+  Collecting rich<14,>=12 (from Flask-Limiter==3.5.0->-r requirements.txt (line 7))
+  Downloading rich-13.9.4-py3-none-any.whl.metadata (18 kB)
+  Requirement already satisfied: typing-extensions>=4 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from Flask-
+  Limiter==3.5.0->-r requirements.txt (line 7)) (4.15.0)
+  Collecting six (from Flask-SSE==1.0.0->-r requirements.txt (line 9))
+  Downloading six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+  Collecting MarkupSafe>=2.1.1 (from Werkzeug==3.0.1->-r requirements.txt (line 10))
+  Downloading markupsafe-3.0.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.7 kB)
+  Collecting greenlet!=0.4.17 (from SQLAlchemy==2.0.23->-r requirements.txt (line 13))
+  Downloading greenlet-3.2.4-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (4.1 kB)
+  Collecting Mako (from alembic==1.12.1->-r requirements.txt (line 14))
+  Downloading mako-1.3.10-py3-none-any.whl.metadata (2.9 kB)
+  Collecting atpublic (from aiosmtpd==1.4.4.post2->-r requirements.txt (line 18))
+  Downloading atpublic-6.0.2-py3-none-any.whl.metadata (2.0 kB)
+  Collecting attrs (from aiosmtpd==1.4.4.post2->-r requirements.txt (line 18))
+  Downloading attrs-25.4.0-py3-none-any.whl.metadata (10 kB)
+  Collecting soupsieve>1.2 (from beautifulsoup4==4.12.2->-r requirements.txt (line 20))
+  Downloading soupsieve-2.8-py3-none-any.whl.metadata (4.6 kB)
+  Collecting webencodings (from bleach==6.1.0->-r requirements.txt (line 21))
+  Downloading webencodings-0.5.1-py2.py3-none-any.whl.metadata (2.1 kB)
+  Collecting idna>=2.0.0 (from email-validator==2.1.0->-r requirements.txt (line 22))
+  Downloading idna-3.11-py3-none-any.whl.metadata (8.4 kB)
+  Collecting cffi>=1.12 (from cryptography==41.0.7->-r requirements.txt (line 25))
+  Downloading cffi-2.0.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.6 kB)
+  Collecting billiard<5.0,>=4.1.0 (from celery==5.3.4->-r requirements.txt (line 31))
+  Downloading billiard-4.2.2-py3-none-any.whl.metadata (4.8 kB)
+  Collecting kombu<6.0,>=5.3.2 (from celery==5.3.4->-r requirements.txt (line 31))
+  Downloading kombu-5.5.4-py3-none-any.whl.metadata (3.5 kB)
+  Collecting vine<6.0,>=5.0.0 (from celery==5.3.4->-r requirements.txt (line 31))
+  Downloading vine-5.1.0-py3-none-any.whl.metadata (2.7 kB)
+  Collecting click-didyoumean>=0.3.0 (from celery==5.3.4->-r requirements.txt (line 31))
+  Downloading click_didyoumean-0.3.1-py3-none-any.whl.metadata (3.9 kB)
+  Collecting click-repl>=0.2.0 (from celery==5.3.4->-r requirements.txt (line 31))
+  Downloading click_repl-0.3.0-py3-none-any.whl.metadata (3.6 kB)
+  Collecting click-plugins>=1.1.1 (from celery==5.3.4->-r requirements.txt (line 31))
+  Downloading click_plugins-1.1.1.2-py2.py3-none-any.whl.metadata (6.5 kB)
+  Collecting tzdata>=2022.7 (from celery==5.3.4->-r requirements.txt (line 31))
+  Downloading tzdata-2025.2-py2.py3-none-any.whl.metadata (1.4 kB)
+  Collecting tornado<7.0.0,>=5.0.0 (from flower==2.0.1->-r requirements.txt (line 33))
+  Downloading tornado-6.5.2-cp39-abi3-
+  manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (2.8 kB)
+  Collecting prometheus-client>=0.8.0 (from flower==2.0.1->-r requirements.txt (line 33))
+  Downloading prometheus_client-0.23.1-py3-none-any.whl.metadata (1.9 kB)
+  Collecting humanize (from flower==2.0.1->-r requirements.txt (line 33))
+  Downloading humanize-4.13.0-py3-none-any.whl.metadata (7.8 kB)
+  Collecting certifi (from sentry-sdk==1.39.1->sentry-sdk[flask]==1.39.1->-r requirements.txt (line 44))
+  Downloading certifi-2025.10.5-py3-none-any.whl.metadata (2.5 kB)
+  Collecting urllib3>=1.26.11 (from sentry-sdk==1.39.1->sentry-sdk[flask]==1.39.1->-r requirements.txt (line 44))
+  Downloading urllib3-2.5.0-py3-none-any.whl.metadata (6.5 kB)
+  Requirement already satisfied: iniconfig in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from pytest==7.4.3->-r
+  requirements.txt (line 47)) (2.1.0)
+  Requirement already satisfied: packaging in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from pytest==7.4.3->-r
+  requirements.txt (line 47)) (25.0)
+  Requirement already satisfied: pluggy<2.0,>=0.12 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  pytest==7.4.3->-r requirements.txt (line 47)) (1.6.0)
+  Collecting gevent>=22.10.2 (from locust==2.19.1->-r requirements.txt (line 51))
+  Downloading gevent-25.9.1-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (14 kB)
+  Collecting requests>=2.23.0 (from locust==2.19.1->-r requirements.txt (line 51))
+  Downloading requests-2.32.5-py3-none-any.whl.metadata (4.9 kB)
+  Collecting msgpack>=1.0.0 (from locust==2.19.1->-r requirements.txt (line 51))
+  Downloading msgpack-1.1.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (8.1 kB)
+  Collecting pyzmq>=25.0.0 (from locust==2.19.1->-r requirements.txt (line 51))
+  Downloading pyzmq-27.1.0-cp312-abi3-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl.metadata (6.0 kB)
+  Collecting geventhttpclient>=2.0.11 (from locust==2.19.1->-r requirements.txt (line 51))
+  Downloading geventhttpclient-2.3.4-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (8.4
+  kB)
+  Collecting ConfigArgParse>=1.5.5 (from locust==2.19.1->-r requirements.txt (line 51))
+  Downloading configargparse-1.7.1-py3-none-any.whl.metadata (24 kB)
+  Collecting psutil>=5.9.1 (from locust==2.19.1->-r requirements.txt (line 51))
+  Downloading psutil-7.1.0-cp36-abi3-
+  manylinux_2_12_x86_64.manylinux2010_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (23 kB)
+  Collecting Flask-BasicAuth>=0.2.0 (from locust==2.19.1->-r requirements.txt (line 51))
+  Downloading Flask-BasicAuth-0.2.0.tar.gz (16 kB)
+  Installing build dependencies ... done
+  Getting requirements to build wheel ... done
+  Preparing metadata (pyproject.toml) ... done
+  Collecting roundrobin>=0.0.2 (from locust==2.19.1->-r requirements.txt (line 51))
+  Downloading roundrobin-0.0.4.tar.gz (3.4 kB)
+  Installing build dependencies ... done
+  Getting requirements to build wheel ... done
+  Preparing metadata (pyproject.toml) ... done
+  Requirement already satisfied: mypy-extensions>=0.4.3 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  black==23.12.0->-r requirements.txt (line 54)) (1.1.0)
+  Requirement already satisfied: pathspec>=0.9.0 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  black==23.12.0->-r requirements.txt (line 54)) (0.12.1)
+  Requirement already satisfied: platformdirs>=2 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  black==23.12.0->-r requirements.txt (line 54)) (4.4.0)
+  Collecting aiohttp>=3.7.4 (from black==23.12.0->-r requirements.txt (line 54))
+  Downloading aiohttp-3.13.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (8.1 kB)
+  Collecting astroid<=3.1.0-dev0,>=3.0.1 (from pylint==3.0.3->-r requirements.txt (line 55))
+  Downloading astroid-3.0.3-py3-none-any.whl.metadata (4.5 kB)
+  Collecting isort!=5.13.0,<6,>=4.2.5 (from pylint==3.0.3->-r requirements.txt (line 55))
+  Downloading isort-5.13.2-py3-none-any.whl.metadata (12 kB)
+  Collecting mccabe<0.8,>=0.6 (from pylint==3.0.3->-r requirements.txt (line 55))
+  Downloading mccabe-0.7.0-py2.py3-none-any.whl.metadata (5.0 kB)
+  Collecting tomlkit>=0.10.1 (from pylint==3.0.3->-r requirements.txt (line 55))
+  Downloading tomlkit-0.13.3-py3-none-any.whl.metadata (2.8 kB)
+  Collecting dill>=0.3.6 (from pylint==3.0.3->-r requirements.txt (line 55))
+  Downloading dill-0.4.0-py3-none-any.whl.metadata (10 kB)
+  Collecting cfgv>=2.0.0 (from pre-commit==3.6.0->-r requirements.txt (line 57))
+  Downloading cfgv-3.4.0-py2.py3-none-any.whl.metadata (8.5 kB)
+  Collecting identify>=1.0.0 (from pre-commit==3.6.0->-r requirements.txt (line 57))
+  Downloading identify-2.6.15-py2.py3-none-any.whl.metadata (4.4 kB)
+  Requirement already satisfied: nodeenv>=0.11.1 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from pre-
+  commit==3.6.0->-r requirements.txt (line 57)) (1.9.1)
+  Collecting virtualenv>=20.10.0 (from pre-commit==3.6.0->-r requirements.txt (line 57))
+  Downloading virtualenv-20.35.3-py3-none-any.whl.metadata (4.6 kB)
+  Collecting anyio>=4.6 (from mcp==1.0.0->-r requirements.txt (line 65))
+  Downloading anyio-4.11.0-py3-none-any.whl.metadata (4.1 kB)
+  Collecting httpx-sse>=0.4 (from mcp==1.0.0->-r requirements.txt (line 65))
+  Downloading httpx_sse-0.4.3-py3-none-any.whl.metadata (9.7 kB)
+  Collecting httpx>=0.27 (from mcp==1.0.0->-r requirements.txt (line 65))
+  Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+  Collecting pydantic>=2.8.0 (from mcp==1.0.0->-r requirements.txt (line 65))
+  Downloading pydantic-2.12.1-py3-none-any.whl.metadata (85 kB)
+  Collecting sse-starlette>=2.0 (from mcp==1.0.0->-r requirements.txt (line 65))
+  Downloading sse_starlette-3.0.2-py3-none-any.whl.metadata (11 kB)
+  Collecting starlette>=0.39 (from mcp==1.0.0->-r requirements.txt (line 65))
+  Downloading starlette-0.48.0-py3-none-any.whl.metadata (6.3 kB)
+  Collecting amqp<6.0.0,>=5.1.1 (from kombu<6.0,>=5.3.2->celery==5.3.4->-r requirements.txt (line 31))
+  Downloading amqp-5.3.1-py3-none-any.whl.metadata (8.9 kB)
+  Collecting markdown-it-py>=2.2.0 (from rich<14,>=12->Flask-Limiter==3.5.0->-r requirements.txt (line 7))
+  Downloading markdown_it_py-4.0.0-py3-none-any.whl.metadata (7.3 kB)
+  Requirement already satisfied: pygments<3.0.0,>=2.13.0 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  rich<14,>=12->Flask-Limiter==3.5.0->-r requirements.txt (line 7)) (2.19.2)
+  Collecting aiohappyeyeballs>=2.5.0 (from aiohttp>=3.7.4->black==23.12.0->-r requirements.txt (line 54))
+  Downloading aiohappyeyeballs-2.6.1-py3-none-any.whl.metadata (5.9 kB)
+  Collecting aiosignal>=1.4.0 (from aiohttp>=3.7.4->black==23.12.0->-r requirements.txt (line 54))
+  Downloading aiosignal-1.4.0-py3-none-any.whl.metadata (3.7 kB)
+  Collecting frozenlist>=1.1.1 (from aiohttp>=3.7.4->black==23.12.0->-r requirements.txt (line 54))
+  Downloading frozenlist-1.8.0-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (20 kB)
+  Collecting multidict<7.0,>=4.5 (from aiohttp>=3.7.4->black==23.12.0->-r requirements.txt (line 54))
+  Downloading multidict-6.7.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (5.3 kB)
+  Collecting propcache>=0.2.0 (from aiohttp>=3.7.4->black==23.12.0->-r requirements.txt (line 54))
+  Downloading propcache-0.4.1-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (13 kB)
+  Collecting yarl<2.0,>=1.17.0 (from aiohttp>=3.7.4->black==23.12.0->-r requirements.txt (line 54))
+  Downloading yarl-1.22.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (75 kB)
+  Collecting sniffio>=1.1 (from anyio>=4.6->mcp==1.0.0->-r requirements.txt (line 65))
+  Downloading sniffio-1.3.1-py3-none-any.whl.metadata (3.9 kB)
+  Collecting pycparser (from cffi>=1.12->cryptography==41.0.7->-r requirements.txt (line 25))
+  Downloading pycparser-2.23-py3-none-any.whl.metadata (993 bytes)
+  Collecting prompt-toolkit>=3.0.36 (from click-repl>=0.2.0->celery==5.3.4->-r requirements.txt (line 31))
+  Downloading prompt_toolkit-3.0.52-py3-none-any.whl.metadata (6.4 kB)
+  Collecting zope.event (from gevent>=22.10.2->locust==2.19.1->-r requirements.txt (line 51))
+  Downloading zope_event-6.0-py3-none-any.whl.metadata (5.1 kB)
+  Collecting zope.interface (from gevent>=22.10.2->locust==2.19.1->-r requirements.txt (line 51))
+  Downloading zope_interface-8.0.1-cp313-cp313-
+  manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl.metadata (44 kB)
+  Collecting brotli (from geventhttpclient>=2.0.11->locust==2.19.1->-r requirements.txt (line 51))
+  Downloading Brotli-1.1.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (5.5 kB)
+  Collecting httpcore==1.* (from httpx>=0.27->mcp==1.0.0->-r requirements.txt (line 65))
+  Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+  Collecting h11>=0.16 (from httpcore==1.*->httpx>=0.27->mcp==1.0.0->-r requirements.txt (line 65))
+  Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+  Collecting deprecated>=1.2 (from limits>=2.8->Flask-Limiter==3.5.0->-r requirements.txt (line 7))
+  Downloading Deprecated-1.2.18-py2.py3-none-any.whl.metadata (5.7 kB)
+  Collecting wrapt<2,>=1.10 (from deprecated>=1.2->limits>=2.8->Flask-Limiter==3.5.0->-r requirements.txt (line 7))
+  Downloading wrapt-1.17.3-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (6.4 kB)
+  Collecting mdurl~=0.1 (from markdown-it-py>=2.2.0->rich<14,>=12->Flask-Limiter==3.5.0->-r requirements.txt (line 7))
+  Downloading mdurl-0.1.2-py3-none-any.whl.metadata (1.6 kB)
+  Collecting wcwidth (from prompt-toolkit>=3.0.36->click-repl>=0.2.0->celery==5.3.4->-r requirements.txt (line 31))
+  Downloading wcwidth-0.2.14-py2.py3-none-any.whl.metadata (15 kB)
+  Collecting annotated-types>=0.6.0 (from pydantic>=2.8.0->mcp==1.0.0->-r requirements.txt (line 65))
+  Downloading annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+  Collecting pydantic-core==2.41.3 (from pydantic>=2.8.0->mcp==1.0.0->-r requirements.txt (line 65))
+  Downloading pydantic_core-2.41.3-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (7.3 kB)
+  Collecting typing-inspection>=0.4.2 (from pydantic>=2.8.0->mcp==1.0.0->-r requirements.txt (line 65))
+  Downloading typing_inspection-0.4.2-py3-none-any.whl.metadata (2.6 kB)
+  Collecting charset_normalizer<4,>=2 (from requests>=2.23.0->locust==2.19.1->-r requirements.txt (line 51))
+  Downloading charset_normalizer-3.4.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata
+  (36 kB)
+  Collecting distlib<1,>=0.3.7 (from virtualenv>=20.10.0->pre-commit==3.6.0->-r requirements.txt (line 57))
+  Downloading distlib-0.4.0-py2.py3-none-any.whl.metadata (5.2 kB)
+  Collecting filelock<4,>=3.12.2 (from virtualenv>=20.10.0->pre-commit==3.6.0->-r requirements.txt (line 57))
+  Downloading filelock-3.20.0-py3-none-any.whl.metadata (2.1 kB)
+  Collecting jsonschema-specifications>=2023.03.6 (from jsonschema->Flask-RESTX==1.3.0->-r requirements.txt (line 3))
+  Downloading jsonschema_specifications-2025.9.1-py3-none-any.whl.metadata (2.9 kB)
+  Collecting referencing>=0.28.4 (from jsonschema->Flask-RESTX==1.3.0->-r requirements.txt (line 3))
+  Downloading referencing-0.37.0-py3-none-any.whl.metadata (2.8 kB)
+  Collecting rpds-py>=0.7.1 (from jsonschema->Flask-RESTX==1.3.0->-r requirements.txt (line 3))
+  Downloading rpds_py-0.27.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.2 kB)
+  Collecting setuptools>=75.8.2 (from zope.event->gevent>=22.10.2->locust==2.19.1->-r requirements.txt (line 51))
+  Using cached setuptools-80.9.0-py3-none-any.whl.metadata (6.6 kB)
+  WARNING: The candidate selected for download or install is a yanked version: 'email-validator' candidate (version 2.1.0 at
+  https://files.pythonhosted.org/packages/90/41/4767ff64e422734487a06384a66e62615b1f5cf9cf3b23295e22d3ecf711/email_validator-
+  2.1.0-py3-none-any.whl (from https://pypi.org/simple/email-validator/) (requires-python:>=3.7))
+  Reason for being yanked: Forgot to drop Python 3.7 from python_requires, see https://github.com/JoshData/python-email-validator/
+  pull/118
+  Downloading flask-3.0.0-py3-none-any.whl (99 kB)
+  Downloading flask_restx-1.3.0-py2.py3-none-any.whl (2.8 MB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.8/2.8 MB 20.2 MB/s 0:00:00
+  Downloading Flask_Login-0.6.3-py3-none-any.whl (17 kB)
+  Downloading Flask_JWT_Extended-4.5.3-py2.py3-none-any.whl (22 kB)
+  Downloading PyJWT-2.8.0-py3-none-any.whl (22 kB)
+  Downloading flask_wtf-1.2.1-py3-none-any.whl (12 kB)
+  Downloading Flask_Limiter-3.5.0-py3-none-any.whl (28 kB)
+  Downloading Flask_Cors-4.0.0-py2.py3-none-any.whl (14 kB)
+  Downloading Flask_SSE-1.0.0-py2.py3-none-any.whl (5.0 kB)
+  Downloading werkzeug-3.0.1-py3-none-any.whl (226 kB)
+  Downloading SQLAlchemy-2.0.23-py3-none-any.whl (1.9 MB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.9/1.9 MB 18.8 MB/s 0:00:00
+  Downloading alembic-1.12.1-py3-none-any.whl (226 kB)
+  Downloading aiosmtpd-1.4.4.post2-py3-none-any.whl (154 kB)
+  Downloading python_magic-0.4.27-py2.py3-none-any.whl (13 kB)
+  Downloading beautifulsoup4-4.12.2-py3-none-any.whl (142 kB)
+  Downloading bleach-6.1.0-py3-none-any.whl (162 kB)
+  Downloading email_validator-2.1.0-py3-none-any.whl (32 kB)
+  Downloading cryptography-41.0.7-cp37-abi3-manylinux_2_28_x86_64.whl (4.4 MB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.4/4.4 MB 23.2 MB/s 0:00:00
+  Downloading bcrypt-4.1.2-cp39-abi3-manylinux_2_28_x86_64.whl (698 kB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 698.9/698.9 kB 29.2 MB/s 0:00:00
+  Downloading python_dotenv-1.0.0-py3-none-any.whl (19 kB)
+  Downloading celery-5.3.4-py3-none-any.whl (421 kB)
+  Downloading click-8.1.7-py3-none-any.whl (97 kB)
+  Downloading redis-5.0.1-py3-none-any.whl (250 kB)
+  Downloading flower-2.0.1-py2.py3-none-any.whl (383 kB)
+  Downloading python_dateutil-2.8.2-py2.py3-none-any.whl (247 kB)
+  Downloading pytz-2023.3-py2.py3-none-any.whl (502 kB)
+  Downloading colorama-0.4.6-py2.py3-none-any.whl (25 kB)
+  Downloading python_json_logger-2.0.7-py3-none-any.whl (8.1 kB)
+  Downloading sentry_sdk-1.39.1-py2.py3-none-any.whl (254 kB)
+  Downloading pytest-7.4.3-py3-none-any.whl (325 kB)
+  Downloading pytest_flask-1.3.0-py3-none-any.whl (13 kB)
+  Downloading pytest_asyncio-0.21.1-py3-none-any.whl (13 kB)
+  Downloading Faker-20.1.0-py3-none-any.whl (1.7 MB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.7/1.7 MB 25.2 MB/s 0:00:00
+  Downloading locust-2.19.1-py3-none-any.whl (1.4 MB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.4/1.4 MB 23.7 MB/s 0:00:00
+  Downloading black-23.12.0-py3-none-any.whl (194 kB)
+  Downloading pylint-3.0.3-py3-none-any.whl (510 kB)
+  Downloading mypy-1.7.1-py3-none-any.whl (2.5 MB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.5/2.5 MB 20.5 MB/s 0:00:00
+  Downloading pre_commit-3.6.0-py2.py3-none-any.whl (204 kB)
+  Downloading IMAPClient-3.0.0-py2.py3-none-any.whl (182 kB)
+  Downloading backoff-2.2.1-py3-none-any.whl (15 kB)
+  Downloading dnspython-2.6.1-py3-none-any.whl (307 kB)
+  Downloading mcp-1.0.0-py3-none-any.whl (36 kB)
+  Downloading astroid-3.0.3-py3-none-any.whl (275 kB)
+  Downloading billiard-4.2.2-py3-none-any.whl (86 kB)
+  Downloading isort-5.13.2-py3-none-any.whl (92 kB)
+  Downloading kombu-5.5.4-py3-none-any.whl (210 kB)
+  Downloading vine-5.1.0-py3-none-any.whl (9.6 kB)
+  Downloading amqp-5.3.1-py3-none-any.whl (50 kB)
+  Downloading mccabe-0.7.0-py2.py3-none-any.whl (7.3 kB)
+  Downloading ordered_set-4.1.0-py3-none-any.whl (7.6 kB)
+  Downloading rich-13.9.4-py3-none-any.whl (242 kB)
+  Downloading tornado-6.5.2-cp39-abi3-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl (443
+  kB)
+  Downloading aiohttp-3.13.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (1.7 MB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.7/1.7 MB 14.6 MB/s 0:00:00
+  Downloading multidict-6.7.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (254 kB)
+  Downloading yarl-1.22.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (377 kB)
+  Downloading aiohappyeyeballs-2.6.1-py3-none-any.whl (15 kB)
+  Downloading aiosignal-1.4.0-py3-none-any.whl (7.5 kB)
+  Downloading aniso8601-10.0.1-py2.py3-none-any.whl (52 kB)
+  Downloading anyio-4.11.0-py3-none-any.whl (109 kB)
+  Downloading attrs-25.4.0-py3-none-any.whl (67 kB)
+  Downloading blinker-1.9.0-py3-none-any.whl (8.5 kB)
+  Downloading cffi-2.0.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (219 kB)
+  Downloading cfgv-3.4.0-py2.py3-none-any.whl (7.2 kB)
+  Downloading click_didyoumean-0.3.1-py3-none-any.whl (3.6 kB)
+  Downloading click_plugins-1.1.1.2-py2.py3-none-any.whl (11 kB)
+  Downloading click_repl-0.3.0-py3-none-any.whl (10 kB)
+  Downloading configargparse-1.7.1-py3-none-any.whl (25 kB)
+  Downloading dill-0.4.0-py3-none-any.whl (119 kB)
+  Downloading frozenlist-1.8.0-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (234 kB)
+  Downloading gevent-25.9.1-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (2.1 MB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 30.4 MB/s 0:00:00
+  Downloading geventhttpclient-2.3.4-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (114 kB)
+  Downloading greenlet-3.2.4-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (610 kB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 610.5/610.5 kB 17.9 MB/s 0:00:00
+  Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+  Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+  Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+  Downloading httpx_sse-0.4.3-py3-none-any.whl (9.0 kB)
+  Downloading identify-2.6.15-py2.py3-none-any.whl (99 kB)
+  Downloading idna-3.11-py3-none-any.whl (71 kB)
+  Downloading itsdangerous-2.2.0-py3-none-any.whl (16 kB)
+  Downloading jinja2-3.1.6-py3-none-any.whl (134 kB)
+  Downloading limits-5.6.0-py3-none-any.whl (60 kB)
+  Downloading Deprecated-1.2.18-py2.py3-none-any.whl (10.0 kB)
+  Downloading wrapt-1.17.3-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (88 kB)
+  Downloading markdown_it_py-4.0.0-py3-none-any.whl (87 kB)
+  Downloading mdurl-0.1.2-py3-none-any.whl (10.0 kB)
+  Downloading markupsafe-3.0.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (22 kB)
+  Downloading msgpack-1.1.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (424 kB)
+  Downloading prometheus_client-0.23.1-py3-none-any.whl (61 kB)
+  Downloading prompt_toolkit-3.0.52-py3-none-any.whl (391 kB)
+  Downloading propcache-0.4.1-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (204 kB)
+  Downloading psutil-7.1.0-cp36-abi3-manylinux_2_12_x86_64.manylinux2010_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+  (291 kB)
+  Downloading pydantic-2.12.1-py3-none-any.whl (460 kB)
+  Downloading pydantic_core-2.41.3-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.1 MB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 28.5 MB/s 0:00:00
+  Downloading annotated_types-0.7.0-py3-none-any.whl (13 kB)
+  Downloading pyzmq-27.1.0-cp312-abi3-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl (840 kB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 841.0/841.0 kB 19.6 MB/s 0:00:00
+  Downloading requests-2.32.5-py3-none-any.whl (64 kB)
+  Downloading charset_normalizer-3.4.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (151 kB)
+  Downloading urllib3-2.5.0-py3-none-any.whl (129 kB)
+  Downloading certifi-2025.10.5-py3-none-any.whl (163 kB)
+  Downloading six-1.17.0-py2.py3-none-any.whl (11 kB)
+  Downloading sniffio-1.3.1-py3-none-any.whl (10 kB)
+  Downloading soupsieve-2.8-py3-none-any.whl (36 kB)
+  Downloading sse_starlette-3.0.2-py3-none-any.whl (11 kB)
+  Downloading starlette-0.48.0-py3-none-any.whl (73 kB)
+  Downloading tomlkit-0.13.3-py3-none-any.whl (38 kB)
+  Downloading typing_inspection-0.4.2-py3-none-any.whl (14 kB)
+  Downloading tzdata-2025.2-py2.py3-none-any.whl (347 kB)
+  Downloading virtualenv-20.35.3-py3-none-any.whl (6.0 MB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.0/6.0 MB 20.7 MB/s 0:00:00 eta 0:00:01
+  Downloading distlib-0.4.0-py2.py3-none-any.whl (469 kB)
+  Downloading filelock-3.20.0-py3-none-any.whl (16 kB)
+  Downloading atpublic-6.0.2-py3-none-any.whl (6.4 kB)
+  Downloading Brotli-1.1.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.9 MB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.9/2.9 MB 15.4 MB/s 0:00:00
+  Downloading humanize-4.13.0-py3-none-any.whl (128 kB)
+  Downloading importlib_resources-6.5.2-py3-none-any.whl (37 kB)
+  Downloading jsonschema-4.25.1-py3-none-any.whl (90 kB)
+  Downloading jsonschema_specifications-2025.9.1-py3-none-any.whl (18 kB)
+  Downloading referencing-0.37.0-py3-none-any.whl (26 kB)
+  Downloading rpds_py-0.27.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (386 kB)
+  Downloading mako-1.3.10-py3-none-any.whl (78 kB)
+  Downloading pycparser-2.23-py3-none-any.whl (118 kB)
+  Downloading wcwidth-0.2.14-py2.py3-none-any.whl (37 kB)
+  Downloading webencodings-0.5.1-py2.py3-none-any.whl (11 kB)
+  Downloading wtforms-3.2.1-py3-none-any.whl (152 kB)
+  Downloading zope_event-6.0-py3-none-any.whl (6.4 kB)
+  Using cached setuptools-80.9.0-py3-none-any.whl (1.2 MB)
+  Downloading zope_interface-8.0.1-cp313-cp313-
+  manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl (264 kB)
+  Building wheels for collected packages: psycopg2-binary, pyyaml, Flask-BasicAuth, roundrobin
+  Building wheel for psycopg2-binary (pyproject.toml) ... done
+  Created wheel for psycopg2-binary: filename=psycopg2_binary-2.9.9-cp313-cp313-linux_x86_64.whl size=550042
+  sha256=f29a4221013d701552bed81732091c0f0656ecad3566a808bffdeb04fcadd4eb
+  Stored in directory: /root/.cache/pip/wheels/03/34/cf/71a53a0a7ee50c85943f826ea7225cb94fde84b15f8be3da89
+  Building wheel for pyyaml (pyproject.toml) ... done
+  Created wheel for pyyaml: filename=pyyaml-6.0.1-cp313-cp313-linux_x86_64.whl size=45459
+  sha256=de239b9ef2b202d7dc807d03e7594d0641f8e3272aa83f82186ca17298ebf214
+  Stored in directory: /root/.cache/pip/wheels/9c/9e/34/1e1548811b63a9d001469f21797e8b7d5c216d8eb928e7d6ad
+  Building wheel for Flask-BasicAuth (pyproject.toml) ... done
+  Created wheel for Flask-BasicAuth: filename=flask_basicauth-0.2.0-py3-none-any.whl size=4320
+  sha256=9fbab560266211b0a659db312f9d2065eb3b3714987a3ee276b1a25f5a9e7c81
+  Stored in directory: /root/.cache/pip/wheels/95/0c/5f/15b54ef498c160f2865f5e01ecccf93376be36c8234751c3fc
+  Building wheel for roundrobin (pyproject.toml) ... done
+  Created wheel for roundrobin: filename=roundrobin-0.0.4-py3-none-any.whl size=4097
+  sha256=76f020452dcdd10ff11f3b3a991ded710bc15b51d4d0404e054701385e60ffc2
+  Stored in directory: /root/.cache/pip/wheels/03/be/f2/952cf669540e20f18cd805d5e68a6c788b7615e56e13531120
+  Successfully built psycopg2-binary pyyaml Flask-BasicAuth roundrobin
+  Installing collected packages: webencodings, roundrobin, pytz, distlib, brotli, aniso8601, zope.interface, wrapt, wcwidth, vine,
+  urllib3, tzdata, typing-inspection, tornado, tomlkit, soupsieve, sniffio, six, setuptools, rpds-py, redis, pyzmq, pyyaml,
+  python-magic, python-json-logger, python-dotenv, pytest, PyJWT, pydantic-core, pycparser, psycopg2-binary, psutil, propcache,
+  prometheus-client, ordered-set, mypy, multidict, msgpack, mdurl, mccabe, MarkupSafe, itsdangerous, isort, importlib-resources,
+  imapclient, idna, identify, humanize, httpx-sse, h11, greenlet, frozenlist, filelock, dnspython, dill, ConfigArgParse, colorama,
+  click, charset_normalizer, cfgv, certifi, blinker, billiard, bcrypt, backoff, attrs, atpublic, astroid, annotated-types,
+  aiohappyeyeballs, zope.event, yarl, wtforms, Werkzeug, virtualenv, SQLAlchemy, sentry-sdk, requests, referencing, python-
+  dateutil, pytest-asyncio, pylint, pydantic, prompt-toolkit, markdown-it-py, Mako, Jinja2, httpcore, email-validator, deprecated,
+  click-plugins, click-didyoumean, cffi, bleach, beautifulsoup4, anyio, amqp, aiosmtpd, aiosignal, starlette, sse-starlette, rich,
+  pre-commit, limits, kombu, jsonschema-specifications, httpx, gevent, Flask, faker, cryptography, click-repl, alembic, aiohttp,
+  pytest-flask, mcp, jsonschema, geventhttpclient, Flask-WTF, Flask-SSE, Flask-Login, Flask-Limiter, Flask-JWT-Extended, Flask-
+  Cors, Flask-BasicAuth, celery, black, locust, flower, Flask-RESTX
+  Attempting uninstall: pytest90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 21/130 [pyzmq]ools]ace]
+  Found existing installation: pytest 8.4.1━━━━━━━━━━━━━━━━━ 21/130 [pyzmq]
+  Uninstalling pytest-8.4.1:━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 26/130 [pytest]
+  Successfully uninstalled pytest-8.4.1━━━━━━━━━━━━━━━━━━━━━━━ 26/130 [pytest]
+  Attempting uninstall: mypy[0m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 31/130 [psutil]er]
+  Found existing installation: mypy 1.17.1━━━━━━━━━━━━━━━━━━ 31/130 [psutil]
+  Uninstalling mypy-1.17.1:[0m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 35/130 [mypy]
+  Successfully uninstalled mypy-1.17.1━━━━━━━━━━━━━━━━━━━━ 35/130 [mypy]
+  Attempting uninstall: isort━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 36/130 [multidict]
+  Found existing installation: isort 6.0.1━━━━━━━━━━━━━━━━━━ 36/130 [multidict]
+  Uninstalling isort-6.0.1:━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 36/130 [multidict]
+  Successfully uninstalled isort-6.0.1━━━━━━━━━━━━━━━━━━━━ 36/130 [multidict]
+  Attempting uninstall: click[91m╸━━━━━━━━━━━━━━━━━━━━━━━ 54/130 [dill]thon]]
+  Found existing installation: click 8.2.1━━━━━━━━━━━━━━━━━━ 54/130 [dill]
+  Uninstalling click-8.2.1:╸━━━━━━━━━━━━━━━━━━━━━━━ 54/130 [dill]
+  Successfully uninstalled click-8.2.1━━━━━━━━━━━━━━━━━━━━ 54/130 [dill]
+  Attempting uninstall: black━━━━━━━━━━━━━━━━━╺━ 125/130 [celery]ogin]]4]]
+  Found existing installation: black 25.1.0m╺━ 125/130 [celery]
+  Uninstalling black-25.1.0:━━━━━━━━━━━━╺━ 125/130 [celery]
+  Successfully uninstalled black-25.1.0━━━╸━ 126/130 [black]
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 130/130 [Flask-RESTX]sk-RESTX]ck]
+  Successfully installed ConfigArgParse-1.7.1 Flask-3.0.0 Flask-BasicAuth-0.2.0 Flask-Cors-4.0.0 Flask-JWT-Extended-4.5.3 Flask-
+  Limiter-3.5.0 Flask-Login-0.6.3 Flask-RESTX-1.3.0 Flask-SSE-1.0.0 Flask-WTF-1.2.1 Jinja2-3.1.6 Mako-1.3.10 MarkupSafe-3.0.3
+  PyJWT-2.8.0 SQLAlchemy-2.0.23 Werkzeug-3.0.1 aiohappyeyeballs-2.6.1 aiohttp-3.13.0 aiosignal-1.4.0 aiosmtpd-1.4.4.post2 alembic-
+  1.12.1 amqp-5.3.1 aniso8601-10.0.1 annotated-types-0.7.0 anyio-4.11.0 astroid-3.0.3 atpublic-6.0.2 attrs-25.4.0 backoff-2.2.1
+  bcrypt-4.1.2 beautifulsoup4-4.12.2 billiard-4.2.2 black-23.12.0 bleach-6.1.0 blinker-1.9.0 brotli-1.1.0 celery-5.3.4 certifi-
+  2025.10.5 cffi-2.0.0 cfgv-3.4.0 charset_normalizer-3.4.3 click-8.1.7 click-didyoumean-0.3.1 click-plugins-1.1.1.2 click-repl-
+  0.3.0 colorama-0.4.6 cryptography-41.0.7 deprecated-1.2.18 dill-0.4.0 distlib-0.4.0 dnspython-2.6.1 email-validator-2.1.0 faker-
+  20.1.0 filelock-3.20.0 flower-2.0.1 frozenlist-1.8.0 gevent-25.9.1 geventhttpclient-2.3.4 greenlet-3.2.4 h11-0.16.0 httpcore-
+  1.0.9 httpx-0.28.1 httpx-sse-0.4.3 humanize-4.13.0 identify-2.6.15 idna-3.11 imapclient-3.0.0 importlib-resources-6.5.2 isort-
+  5.13.2 itsdangerous-2.2.0 jsonschema-4.25.1 jsonschema-specifications-2025.9.1 kombu-5.5.4 limits-5.6.0 locust-2.19.1 markdown-
+  it-py-4.0.0 mccabe-0.7.0 mcp-1.0.0 mdurl-0.1.2 msgpack-1.1.2 multidict-6.7.0 mypy-1.7.1 ordered-set-4.1.0 pre-commit-3.6.0
+  prometheus-client-0.23.1 prompt-toolkit-3.0.52 propcache-0.4.1 psutil-7.1.0 psycopg2-binary-2.9.9 pycparser-2.23 pydantic-2.12.1
+  pydantic-core-2.41.3 pylint-3.0.3 pytest-7.4.3 pytest-asyncio-0.21.1 pytest-flask-1.3.0 python-dateutil-2.8.2 python-dotenv-
+  1.0.0 python-json-logger-2.0.7 python-magic-0.4.27 pytz-2023.3 pyyaml-6.0.1 pyzmq-27.1.0 redis-5.0.1 referencing-0.37.0
+  requests-2.32.5 rich-13.9.4 roundrobin-0.0.4 rpds-py-0.27.1 sentry-sdk-1.39.1 setuptools-80.9.0 six-1.17.0 sniffio-1.3.1
+  soupsieve-2.8 sse-starlette-3.0.2 starlette-0.48.0 tomlkit-0.13.3 tornado-6.5.2 typing-inspection-0.4.2 tzdata-2025.2 urllib3-
+  2.5.0 vine-5.1.0 virtualenv-20.35.3 wcwidth-0.2.14 webencodings-0.5.1 wrapt-1.17.3 wtforms-3.2.1 yarl-1.22.0 zope.event-6.0
+  zope.interface-8.0.1
+  WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package
+  manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/
+  warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+  --- Checking ./initial ---
+  ==> Processing Python project in ./initial
+  Found requirements.txt. Installing Python dependencies...
+  Running: pip install -r requirements.txt
+  Collecting aiosmtpd==1.4.6 (from -r requirements.txt (line 1))
+  Downloading aiosmtpd-1.4.6-py3-none-any.whl.metadata (6.6 kB)
+  Collecting flask==3.0.3 (from -r requirements.txt (line 2))
+  Downloading flask-3.0.3-py3-none-any.whl.metadata (3.2 kB)
+  Collecting flask-sqlalchemy==3.1.1 (from -r requirements.txt (line 3))
+  Downloading flask_sqlalchemy-3.1.1-py3-none-any.whl.metadata (3.4 kB)
+  Collecting email-validator==2.1.1 (from -r requirements.txt (line 4))
+  Downloading email_validator-2.1.1-py3-none-any.whl.metadata (26 kB)
+  Collecting dkimpy==1.0.5 (from -r requirements.txt (line 5))
+  Downloading dkimpy-1.0.5.tar.gz (59 kB)
+  Installing build dependencies ... done
+  Getting requirements to build wheel ... done
+  Preparing metadata (pyproject.toml) ... done
+  Collecting cryptography==42.0.8 (from -r requirements.txt (line 6))
+  Downloading cryptography-42.0.8-cp39-abi3-manylinux_2_28_x86_64.whl.metadata (5.3 kB)
+  Requirement already satisfied: dnspython==2.6.1 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from -r
+  requirements.txt (line 7)) (2.6.1)
+  Collecting python-dateutil==2.9.0.post0 (from -r requirements.txt (line 8))
+  Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl.metadata (8.4 kB)
+  Collecting werkzeug==3.0.3 (from -r requirements.txt (line 9))
+  Downloading werkzeug-3.0.3-py3-none-any.whl.metadata (3.7 kB)
+  Collecting jinja2==3.1.4 (from -r requirements.txt (line 10))
+  Downloading jinja2-3.1.4-py3-none-any.whl.metadata (2.6 kB)
+  Collecting requests==2.32.3 (from -r requirements.txt (line 11))
+  Downloading requests-2.32.3-py3-none-any.whl.metadata (4.6 kB)
+  Requirement already satisfied: atpublic in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from aiosmtpd==1.4.6->-r
+  requirements.txt (line 1)) (6.0.2)
+  Requirement already satisfied: attrs in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from aiosmtpd==1.4.6->-r
+  requirements.txt (line 1)) (25.4.0)
+  Requirement already satisfied: itsdangerous>=2.1.2 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  flask==3.0.3->-r requirements.txt (line 2)) (2.2.0)
+  Requirement already satisfied: click>=8.1.3 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from flask==3.0.3->-r
+  requirements.txt (line 2)) (8.1.7)
+  Requirement already satisfied: blinker>=1.6.2 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  flask==3.0.3->-r requirements.txt (line 2)) (1.9.0)
+  Requirement already satisfied: sqlalchemy>=2.0.16 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from flask-
+  sqlalchemy==3.1.1->-r requirements.txt (line 3)) (2.0.23)
+  Requirement already satisfied: idna>=2.0.0 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from email-
+  validator==2.1.1->-r requirements.txt (line 4)) (3.11)
+  Requirement already satisfied: cffi>=1.12 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  cryptography==42.0.8->-r requirements.txt (line 6)) (2.0.0)
+  Requirement already satisfied: six>=1.5 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from python-
+  dateutil==2.9.0.post0->-r requirements.txt (line 8)) (1.17.0)
+  Requirement already satisfied: MarkupSafe>=2.1.1 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  werkzeug==3.0.3->-r requirements.txt (line 9)) (3.0.3)
+  Requirement already satisfied: charset-normalizer<4,>=2 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  requests==2.32.3->-r requirements.txt (line 11)) (3.4.3)
+  Requirement already satisfied: urllib3<3,>=1.21.1 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  requests==2.32.3->-r requirements.txt (line 11)) (2.5.0)
+  Requirement already satisfied: certifi>=2017.4.17 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  requests==2.32.3->-r requirements.txt (line 11)) (2025.10.5)
+  Requirement already satisfied: pycparser in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  cffi>=1.12->cryptography==42.0.8->-r requirements.txt (line 6)) (2.23)
+  Requirement already satisfied: typing-extensions>=4.2.0 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  sqlalchemy>=2.0.16->flask-sqlalchemy==3.1.1->-r requirements.txt (line 3)) (4.15.0)
+  Requirement already satisfied: greenlet!=0.4.17 in /root/.pyenv/versions/3.13.3/lib/python3.13/site-packages (from
+  sqlalchemy>=2.0.16->flask-sqlalchemy==3.1.1->-r requirements.txt (line 3)) (3.2.4)
+  Downloading aiosmtpd-1.4.6-py3-none-any.whl (154 kB)
+  Downloading flask-3.0.3-py3-none-any.whl (101 kB)
+  Downloading flask_sqlalchemy-3.1.1-py3-none-any.whl (25 kB)
+  Downloading email_validator-2.1.1-py3-none-any.whl (30 kB)
+  Downloading cryptography-42.0.8-cp39-abi3-manylinux_2_28_x86_64.whl (3.9 MB)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.9/3.9 MB 13.7 MB/s 0:00:00 eta 0:00:01
+  Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl (229 kB)
+  Downloading werkzeug-3.0.3-py3-none-any.whl (227 kB)
+  Downloading jinja2-3.1.4-py3-none-any.whl (133 kB)
+  Downloading requests-2.32.3-py3-none-any.whl (64 kB)
+  Building wheels for collected packages: dkimpy
+  Building wheel for dkimpy (pyproject.toml) ... done
+  Created wheel for dkimpy: filename=dkimpy-1.0.5-py3-none-any.whl size=48817
+  sha256=d708871d2f5b4a62b6f8951d28ed226b4219455cb16cf70eb9883edf16279a66
+  Stored in directory: /root/.cache/pip/wheels/a4/f5/eb/f7ea2f3cd0a3fb6e35319cddf407bbe8ac8e456d4d976288a9
+  Successfully built dkimpy
+  Installing collected packages: werkzeug, requests, python-dateutil, jinja2, email-validator, dkimpy, aiosmtpd, flask,
+  cryptography, flask-sqlalchemy
+  Attempting uninstall: werkzeug
+  Found existing installation: Werkzeug 3.0.1
+  Uninstalling Werkzeug-3.0.1:
+  Successfully uninstalled Werkzeug-3.0.1
+  Attempting uninstall: requests━━━━━━━━━━━━━━━━ 0/10 [werkzeug]
+  Found existing installation: requests 2.32.5 0/10 [werkzeug]
+  Uninstalling requests-2.32.5:━━━━━━━━━━━ 0/10 [werkzeug]
+  Successfully uninstalled requests-2.32.50m 0/10 [werkzeug]
+  Attempting uninstall: python-dateutil━━━━━ 0/10 [werkzeug]
+  Found existing installation: python-dateutil 2.8.2 0/10 [werkzeug]
+  Uninstalling python-dateutil-2.8.2:━━━━━ 0/10 [werkzeug]
+  Successfully uninstalled python-dateutil-2.8.22m 0/10 [werkzeug]
+  Attempting uninstall: jinja2━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2/10 [python-dateutil]
+  Found existing installation: Jinja2 3.1.6━━━━━━━━━━━━━━━━━ 2/10 [python-dateutil]
+  Uninstalling Jinja2-3.1.6:m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2/10 [python-dateutil]
+  Successfully uninstalled Jinja2-3.1.6━━━━━━━━━━━━━━━━━━━ 2/10 [python-dateutil]
+  Attempting uninstall: email-validator━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3/10 [jinja2]util]
+  Found existing installation: email-validator 2.1.0━━━━━━━━ 3/10 [jinja2]
+  Uninstalling email-validator-2.1.0:━━━━━━━━━━━━━━━━━━━━━━━ 3/10 [jinja2]
+  Successfully uninstalled email-validator-2.1.0━━━━━━━━━━ 3/10 [jinja2]
+  Attempting uninstall: aiosmtpd90m━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3/10 [jinja2]
+  Found existing installation: aiosmtpd 1.4.4.post2━━━━━━━━━ 3/10 [jinja2]
+  Uninstalling aiosmtpd-1.4.4.post2:━━━━━━━━━━━━━━━━━━━━━━━━ 3/10 [jinja2]
+  Successfully uninstalled aiosmtpd-1.4.4.post2━━━━━━━━━━━ 3/10 [jinja2]
+  Attempting uninstall: flask━━━╺━━━━━━━━━━━━━━━ 6/10 [aiosmtpd]
+  Found existing installation: Flask 3.0.090m━━━━━━━━━━━━━━━ 6/10 [aiosmtpd]
+  Uninstalling Flask-3.0.0:[0m╺━━━━━━━━━━━━━━━ 6/10 [aiosmtpd]
+  Successfully uninstalled Flask-3.0.0━━━━━━━━━━━━━━━ 6/10 [aiosmtpd]
+  Attempting uninstall: cryptography╺━━━━━━━━━━━ 7/10 [flask]
+  Found existing installation: cryptography 41.0.7━━━━━━━━━━ 7/10 [flask]
+  Uninstalling cryptography-41.0.7:[90m╺━━━━━━━━━━━ 7/10 [flask]
+  Successfully uninstalled cryptography-41.0.7m━━━━━━━━━━━ 7/10 [flask]
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 10/10 [flask-sqlalchemy][cryptography]
+  Successfully installed aiosmtpd-1.4.6 cryptography-42.0.8 dkimpy-1.0.5 email-validator-2.1.1 flask-3.0.3 flask-sqlalchemy-3.1.1
+  jinja2-3.1.4 python-dateutil-2.9.0.post0 requests-2.32.3 werkzeug-3.0.3
+  WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package
+  manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/
+  warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+  No installations were performed.
+  Finalizing container setup
+  Test complete
+   https://chatgpt.com/codex/settings/environment/68eba2448d5c8191901080fa119ddb2b/edit
+
+
+◦ Working (4s • esc to interrupt)
+                                                                                                                                                                                                                                                                    › Find and fix a bug in @filename                                                                                                                                                          

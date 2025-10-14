@@ -1,0 +1,99 @@
+{
+  "name": "Email Management Tool",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+
+  // Use Python 3.11 base image
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+
+  // Features to add to the dev container
+  "features": {
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11",
+      "installJupyterLab": "false"
+    },
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": "false",
+      "upgradePackages": "true"
+    }
+  },
+
+  // Configure container environment
+  "containerEnv": {
+    "FLASK_APP": "simple_app.py",
+    "FLASK_ENV": "development",
+    "FLASK_DEBUG": "1",
+    "PYTHONPATH": "/workspace",
+    "DB_PATH": "/workspace/email_manager.db",
+    "SHELL": "/bin/bash"
+  },
+
+  // Run commands after container is created
+  "postCreateCommand": "chmod +x /workspace/.devcontainer/post-create.sh && /workspace/.devcontainer/post-create.sh",
+
+  // Configure VS Code settings and extensions
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "/bin/bash",
+            "args": ["--login"],
+            "icon": "terminal-bash"
+          }
+        },
+        "terminal.integrated.shell.linux": "/bin/bash",
+        "terminal.integrated.shellArgs.linux": ["--login"],
+        "python.defaultInterpreterPath": "/usr/local/bin/python3",
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": true,
+        "python.formatting.provider": "black",
+        "python.terminal.activateEnvironment": true
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-toolsai.jupyter",
+        "ms-azuretools.vscode-docker"
+      ]
+    },
+    "codespaces": {
+      "openFiles": ["README.md"]
+    }
+  },
+
+  // Forward ports
+  "forwardPorts": [5000, 8587],
+  "portsAttributes": {
+    "5000": {
+      "label": "Flask App",
+      "onAutoForward": "notify",
+      "protocol": "http"
+    },
+    "8587": {
+      "label": "SMTP Proxy",
+      "onAutoForward": "silent"
+    }
+  },
+
+  // Use root user to avoid permission issues
+  "remoteUser": "root",
+
+  // Ensure container stays running
+  "overrideCommand": false,
+
+  // Mount the workspace
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
+  ],
+
+  // Run bash as the default command
+  "postStartCommand": "echo 'Container ready! Run: python simple_app.py to start the application'",
+
+  // Lifecycle scripts
+  "initializeCommand": "echo 'Initializing container...'",
+  "updateContentCommand": "echo 'Updating container content...'"
+}

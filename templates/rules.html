@@ -25,7 +25,7 @@
         </thead>
         <tbody>
             {% for rule in rules %}
-            <tr>
+            <tr data-rule='{{ rule|tojson|safe }}' data-id='{{ rule.id }}'>
                 <td>
                     <span class="badge bg-primary">{{ rule.priority }}</span>
                 </td>
@@ -50,10 +50,10 @@
                 </td>
                 <td>
                     <div class="btn-group" role="group">
-                        <button class="btn btn-sm btn-outline-primary">
+                        <button class="btn btn-sm btn-outline-primary" onclick="editRule(this)">
                             <i class="bi bi-pencil"></i>
                         </button>
-                        <button class="btn btn-sm btn-outline-danger">
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteRule(this)">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
@@ -148,6 +148,30 @@ async function saveRule(){
     modal.hide();
     setTimeout(()=>window.location.reload(), 500);
   }catch(e){ if(window.showError) showError('Error: '+e.message); }
+}
+
+async function editRule(btn){
+  const tr = btn.closest('tr');
+  const r = JSON.parse(tr.getAttribute('data-rule'));
+  const id = tr.getAttribute('data-id');
+  const name = prompt('Rule name:', r.rule_name||''); if(name===null) return;
+  const pattern = prompt('Pattern:', r.condition_value||''); if(pattern===null) return;
+  const priority = parseInt(prompt('Priority (0-100):', r.priority||50) || '50',10);
+  const action = prompt('Action (HOLD/APPROVE/REJECT):', r.action||'HOLD') || 'HOLD';
+  const payload = { rule_name:name, priority, action, rule_type: r.rule_type||'KEYWORD', condition_value: pattern, is_active: true };
+  const r2 = await fetch('/api/rules/'+id, {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+  const jd = await r2.json();
+  if(r2.ok && jd.success){ if(window.showSuccess) showSuccess('Rule updated'); setTimeout(()=>window.location.reload(),600); }
+  else { if(window.showError) showError('Update failed: '+(jd.error||'unknown')); }
+}
+async function deleteRule(btn){
+  const tr = btn.closest('tr'); const r = JSON.parse(tr.getAttribute('data-rule'));
+  const id = tr.getAttribute('data-id');
+  if(!(window.confirmToast? await new Promise(res=>confirmToast('Delete this rule?', ()=>res(true), ()=>res(false))) : confirm('Delete this rule?'))) return;
+  const r2 = await fetch('/api/rules/'+id, {method:'DELETE'});
+  const jd = await r2.json();
+  if(r2.ok && jd.success){ tr.remove(); if(window.showSuccess) showSuccess('Rule deleted'); }
+  else { if(window.showError) showError('Delete failed: '+(jd.error||'unknown')); }
 }
 </script>
 {% endblock %}

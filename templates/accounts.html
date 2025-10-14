@@ -106,6 +106,10 @@
         gap: 15px;
         margin-bottom: 20px;
     }
+    .mini-badge { padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; border:1px solid transparent; }
+    .ok { background: rgba(34,197,94,0.15); color:#22c55e; border-color: rgba(34,197,94,0.5); }
+    .warn { background: rgba(234,179,8,0.15); color:#eab308; border-color: rgba(234,179,8,0.5); }
+    .err { background: rgba(220,38,38,0.15); color:#dc2626; border-color: rgba(220,38,38,0.5); }
 </style>
 {% endblock %}
 
@@ -149,6 +153,11 @@
                 <span class="detail-label">SMTP:</span>
                 <span class="detail-value">{{ account.smtp_host }}:{{ account.smtp_port }}</span>
             </div>
+            <div class="detail-row">
+                <span class="detail-label">Watcher:</span>
+                <span class="detail-value"><span id="watcher-{{ account.id }}" class="mini-badge warn">Unknown</span></span>
+            </div>
+            
             {% if account.last_checked %}
             <div class="detail-row">
                 <span class="detail-label">Last Checked:</span>
@@ -166,11 +175,23 @@
             <button class="btn btn-primary btn-small" onclick="testAccount('{{ account.id }}')">
                 <i class="bi bi-play-circle"></i> Test
             </button>
+            <button class="btn btn-success btn-small" onclick="startWatcher('{{ account.id }}')">
+                <i class="bi bi-power"></i> Start Watcher
+            </button>
+            <button class="btn btn-secondary btn-small" onclick="stopWatcher('{{ account.id }}')">
+                <i class="bi bi-stop-circle"></i> Stop Watcher
+            </button>
             <button class="btn btn-warning btn-small" onclick="editAccount('{{ account.id }}')">
                 <i class="bi bi-pencil"></i> Edit
             </button>
             <button class="btn btn-info btn-small" onclick="runDiagnostics('{{ account.id }}')">
                 <i class="bi bi-heart-pulse"></i> Diagnostics
+            </button>
+            <button class="btn btn-outline-light btn-small" onclick="imapLiveTest('{{ account.id }}')">
+                <i class="bi bi-activity"></i> IMAP Live Test
+            </button>
+            <button class="btn btn-outline-warning btn-small" onclick="scanInbox('{{ account.id }}')">
+                <i class="bi bi-search"></i> Scan Inbox
             </button>
             <button class="btn btn-danger btn-small" onclick="deleteAccount('{{ account.id }}')">
                 <i class="bi bi-trash"></i> Delete
@@ -281,7 +302,40 @@
   </div>
 </div>
 
+<!-- Scan Inbox Modal -->
+<div class="modal fade" id="scanModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content" style="background:#1a1a1a;border:1px solid rgba(255,255,255,0.06);color:#fff;">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-search"></i> Scan Inbox</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="scanResults"></div>
+      </div>
+    </div>
+  </div>
+  </div>
+
 <script>
+async function refreshInfraStatus(){
+  try{
+    const [wsr] = await Promise.all([
+      fetch('/api/watchers/status')
+    ]);
+    const j1 = await wsr.json();
+    // Watchers
+    const active = new Set((j1.workers||[]).map(w=>String(w.worker_id||'')));
+    document.querySelectorAll('[id^="watcher-" ]').forEach(el=>{
+      const id = el.id.split('-')[1];
+      const key = 'imap_'+id;
+      const on = active.has(key);
+      el.textContent = on? 'Active' : 'Stopped';
+      el.className = 'mini-badge ' + (on? 'ok':'err');
+    });
+  }catch(e){ /* silent */ }
+}
+
 function testAccount(accountId) {
     // Show loading state
     const card = document.getElementById('account-' + accountId);
@@ -300,6 +354,23 @@ function testAccount(accountId) {
     .catch(error => {
         if (window.showError) showError('Error testing account: ' + error);
     });
+}
+
+async function startWatcher(accountId){
+  try{
+    const r = await fetch('/api/accounts/'+accountId+'/monitor/start',{method:'POST'});
+    const j = await r.json();
+    if(j.success){ if(window.showSuccess) showSuccess('Watcher started'); refreshInfraStatus(); }
+    else { if(window.showError) showError(j.error||'Failed to start watcher'); }
+  }catch(e){ if(window.showError) showError('Error: '+e.message); }
+}
+async function stopWatcher(accountId){
+  try{
+    const r = await fetch('/api/accounts/'+accountId+'/monitor/stop',{method:'POST'});
+    const j = await r.json();
+    if(j.success){ if(window.showSuccess) showSuccess('Watcher stopped'); refreshInfraStatus(); }
+    else { if(window.showError) showError(j.error||'Failed to stop watcher'); }
+  }catch(e){ if(window.showError) showError('Error: '+e.message); }
 }
 
 function editAccount(accountId) {
@@ -368,6 +439,40 @@ function runDiagnostics(accountId) {
         });
 }
 
+async function imapLiveTest(accountId){
+  try{
+    const r = await fetch('/api/accounts/'+accountId+'/imap-live-test',{method:'POST'});
+    const j = await r.json();
+    if(j.success){ if(window.showSuccess) showSuccess('IMAP live test passed'); }
+    else { if(window.showError) showError('IMAP live test failed: '+(j.error||'unknown')); }
+  }catch(e){ if(window.showError) showError('Error: '+e.message); }
+}
+async function scanInbox(accountId){
+  try{
+    const r = await fetch('/api/accounts/'+accountId+'/scan-inbox');
+    const j = await r.json();
+    if(!j.success){ if(window.showError) showError(j.error||'Scan failed'); return; }
+    const tgt = document.getElementById('scanResults');
+    const items = j.candidates||[];
+    if(!items.length){ tgt.innerHTML = '<div class="alert alert-info">No new items found.</div>'; new bootstrap.Modal(document.getElementById('scanModal')).show(); return; }
+    let html = '<table class="table table-dark table-hover"><thead><tr><th>UID</th><th>Subject</th><th></th></tr></thead><tbody>';
+    for(const c of items){
+      html += `<tr><td>${c.uid}</td><td>${(c.subject||'').replace(/</g,'&lt;')}</td><td><button class="btn btn-sm btn-outline-warning" onclick="interceptUid(${accountId}, '${c.uid}')"><i class=\"bi bi-shield-exclamation\"></i> Intercept</button></td></tr>`;
+    }
+    html += '</tbody></table>';
+    tgt.innerHTML = html;
+    new bootstrap.Modal(document.getElementById('scanModal')).show();
+  }catch(e){ if(window.showError) showError('Error: '+e.message); }
+}
+async function interceptUid(accountId, uid){
+  try{
+    const r = await fetch('/api/accounts/'+accountId+'/intercept-uid',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({uid})});
+    const j = await r.json();
+    if(j.success){ if(window.showSuccess) showSuccess('Intercepted UID '+uid); refreshInfraStatus(); }
+    else { if(window.showError) showError('Intercept failed: '+(j.error||'unknown')); }
+  }catch(e){ if(window.showError) showError('Error: '+e.message); }
+}
+
 function importAccounts() {
     if (window.showInfo) showInfo('Opening import page...');
     window.location.href = '/accounts/import';
@@ -430,5 +535,6 @@ async function saveAccountEdit(){
   }catch(e){ if(window.showError) showError('Update failed: '+e.message); }
 }
 (function(){ const id=getQueryParam('edit'); if(id) openEditModal(id); })();
+(function(){ refreshInfraStatus(); setInterval(refreshInfraStatus, 8000); })();
 </script>
 {% endblock %}

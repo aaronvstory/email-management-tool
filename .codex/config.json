@@ -1,0 +1,50 @@
+{
+  "name": "Email Management Tool",
+  "runtime": "python:3.11",
+  "entrypoint": "/workspace/entrypoint.sh",
+  "workdir": "/workspace",
+  "shell": "/bin/bash",
+  "keepAlive": true,
+  "persistent": true,
+  "environment": {
+    "FLASK_APP": "simple_app.py",
+    "FLASK_ENV": "development",
+    "PYTHONPATH": "/workspace",
+    "TERM": "xterm-256color",
+    "SHELL": "/bin/bash",
+    "DEBIAN_FRONTEND": "noninteractive"
+  },
+  "ports": [
+    {
+      "port": 5000,
+      "expose": true,
+      "label": "Flask App"
+    },
+    {
+      "port": 8587,
+      "expose": false,
+      "label": "SMTP Proxy"
+    }
+  ],
+  "postCreate": [
+    "chmod +x /workspace/entrypoint.sh",
+    "chmod +x /workspace/fix-terminal.sh"
+  ],
+  "postStart": [
+    "/workspace/entrypoint.sh"
+  ],
+  "customizations": {
+    "terminal": {
+      "defaultProfile": "bash",
+      "profiles": {
+        "bash": {
+          "path": "/bin/bash",
+          "args": ["--login", "-i"],
+          "env": {
+            "TERM": "xterm-256color"
+          }
+        }
+      }
+    }
+  }
+}

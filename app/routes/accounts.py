@@ -16,7 +16,17 @@ import csv
 from io import StringIO
 
 # Phase 3: Import consolidated email helpers
-from app.utils.email_helpers import detect_email_settings as _detect_email_settings, test_email_connection as _test_email_connection
+from app.utils.email_helpers import (
+    detect_email_settings as _detect_email_settings,
+    test_email_connection as _test_email_connection,
+    normalize_modes as _normalize_modes,
+    negotiate_smtp as _negotiate_smtp,
+    negotiate_imap as _negotiate_imap,
+)
+from email.message import EmailMessage
+import time
+import os
+import imaplib
 
 accounts_bp = Blueprint('accounts', __name__)
 
@@ -278,6 +288,279 @@ def diagnostics(account_id=None):
     return redirect(url_for('dashboard.dashboard', tab='diagnostics'))
 
 
+@accounts_bp.route('/api/diagnostics/<int:account_id>')
+@login_required
+def api_account_diagnostics(account_id: int):
+    """Return SMTP/IMAP test results for a specific account (JSON)."""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row
+    cur = conn.cursor(); acc = cur.execute("SELECT * FROM email_accounts WHERE id=?", (account_id,)).fetchone()
+    if not acc:
+        conn.close(); return jsonify({'error': 'Account not found'}), 404
+    imap_pwd = decrypt_credential(acc['imap_password']) if acc['imap_password'] else ''
+    smtp_pwd = decrypt_credential(acc['smtp_password']) if acc['smtp_password'] else ''
+    imap_ok, imap_msg = _test_email_connection('imap', str(acc['imap_host'] or ''), _to_int(acc['imap_port'], 993), str(acc['imap_username'] or ''), imap_pwd or '', bool(acc['imap_use_ssl']))
+    smtp_ok, smtp_msg = _test_email_connection('smtp', str(acc['smtp_host'] or ''), _to_int(acc['smtp_port'], 465), str(acc['smtp_username'] or ''), smtp_pwd or '', bool(acc['smtp_use_ssl']))
+    payload = {
+        'account_name': acc['account_name'],
+        'imap_test': {'success': imap_ok, 'message': imap_msg},
+        'smtp_test': {'success': smtp_ok, 'message': smtp_msg},
+        'timestamp': datetime.now().isoformat()
+    }
+    conn.close(); return jsonify(payload)
+
+
+@accounts_bp.route('/api/accounts/<int:account_id>/imap-live-test', methods=['POST'])
+@login_required
+def api_imap_live_test(account_id: int):
+    """Append a probe email to INBOX and verify watcher quarantines it and DB row appears as HELD."""
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Admin access required'}), 403
+    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row
+    cur = conn.cursor(); acc = cur.execute("SELECT * FROM email_accounts WHERE id=?", (account_id,)).fetchone()
+    if not acc:
+        conn.close(); return jsonify({'success': False, 'error': 'Account not found'}), 404
+    host, port, user = acc['imap_host'], _to_int(acc['imap_port'], 993), acc['imap_username'] or acc['email_address']
+    pwd = decrypt_credential(acc['imap_password']) if acc['imap_password'] else None
+    if not (host and user and pwd):
+        conn.close(); return jsonify({'success': False, 'error': 'IMAP credentials missing'}), 400
+    # Build unique probe
+    probe_id = f"probe-{account_id}-{int(time.time())}"
+    msg = EmailMessage(); msg['From']=user; msg['To']=user; msg['Subject']=f"[EMT-PROBE] {probe_id}"; msg.set_content('probe')
+    try:
+        import imaplib, imaplib as _imap
+        if port == 993:
+            imap = imaplib.IMAP4_SSL(host, port)
+        else:
+            imap = imaplib.IMAP4(host, port)
+            try: imap.starttls()
+            except Exception: pass
+        imap.login(user, pwd); imap.select('INBOX')
+        import time as _t
+        date_param = imaplib.Time2Internaldate(_t.localtime())
+        imap.append('INBOX', '', date_param, msg.as_bytes())
+        imap.logout()
+    except Exception as e:
+        conn.close(); return jsonify({'success': False, 'error': f'IMAP append failed: {e}'}), 500
+    # Poll for HELD entry in DB and verify server state
+    ok=False; attempts=10; last=None
+    while attempts>0 and not ok:
+        row = cur.execute("""
+            SELECT id, subject, interception_status FROM email_messages
+            WHERE account_id=? AND subject LIKE ? AND interception_status='HELD'
+            ORDER BY id DESC LIMIT 1
+        """, (account_id, f"%{probe_id}%")).fetchone()
+        if row:
+            last = dict(row)
+            # Double check IMAP: present in Quarantine, absent in INBOX
+            try:
+                port = _to_int(acc['imap_port'], 993)
+                imap = imaplib.IMAP4_SSL(acc['imap_host'], port) if port==993 else imaplib.IMAP4(acc['imap_host'], port)
+                try:
+                    if port!=993: imap.starttls()
+                except Exception:
+                    pass
+                imap.login(acc['imap_username'] or acc['email_address'], decrypt_credential(acc['imap_password']))
+                mid_hdr = last.get('subject') or f"[EMT-PROBE] {probe_id}"
+                # INBOX absent
+                imap.select('INBOX')
+                typ1, d1 = imap.search(None, 'SUBJECT', f'"{mid_hdr}"')
+                in_inbox = bool(d1 and d1[0] and len(d1[0].split())>0)
+                # Quarantine present
+                qname = os.getenv('IMAP_QUARANTINE_NAME', 'Quarantine')
+                try:
+                    imap.select(qname)
+                except Exception:
+                    try:
+                        imap.select(f'INBOX.{qname}')
+                    except Exception:
+                        imap.select(f'INBOX/{qname}')
+                typ2, d2 = imap.search(None, 'SUBJECT', f'"{mid_hdr}"')
+                in_quar = bool(d2 and d2[0] and len(d2[0].split())>0)
+                imap.logout()
+                ok = (in_quar and not in_inbox)
+                if ok:
+                    break
+            except Exception:
+                ok = False
+        time.sleep(2); attempts-=1
+    conn.close()
+    return jsonify({'success': ok, 'result': last, 'probe_id': probe_id})
+
+
+@accounts_bp.route('/api/accounts/<int:account_id>/scan-inbox')
+@login_required
+def api_scan_inbox(account_id: int):
+    """List recent emails in INBOX that are not yet in our DB (subject + uid)."""
+    n = _to_int(request.args.get('last'), 30) or 30
+    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row
+    cur = conn.cursor(); acc = cur.execute("SELECT * FROM email_accounts WHERE id=?", (account_id,)).fetchone()
+    if not acc:
+        conn.close(); return jsonify({'success': False, 'error': 'Account not found'}), 404
+    host, port, user = acc['imap_host'], _to_int(acc['imap_port'], 993), acc['imap_username'] or acc['email_address']
+    pwd = decrypt_credential(acc['imap_password']) if acc['imap_password'] else None
+    if not (host and user and pwd):
+        conn.close(); return jsonify({'success': False, 'error': 'IMAP credentials missing'}), 400
+    try:
+        imap = imaplib.IMAP4_SSL(host, port) if port==993 else imaplib.IMAP4(host, port)
+        try:
+            if port!=993: imap.starttls()
+        except Exception:
+            pass
+        imap.login(user, pwd); imap.select('INBOX')
+        typ, data = imap.search(None, 'ALL')
+        uids = []
+        if typ=='OK' and data and data[0]:
+            all_uids = [int(x) for x in data[0].split()]
+            uids = all_uids[-n:]
+        # Filter out those already in DB by original_uid
+        res=[]
+        if uids:
+            placeholders = ','.join(['?']*len(uids))
+            seen = set(x[0] for x in cur.execute(f"SELECT DISTINCT original_uid FROM email_messages WHERE account_id=? AND original_uid IN ({placeholders})", [account_id,*uids]).fetchall())
+            to_show = [u for u in uids if u not in seen]
+            if to_show:
+                # Fetch ENVELOPE for subject
+                for uid in to_show:
+                    try:
+                        typ2, d2 = imap.uid('FETCH', str(uid), '(ENVELOPE)')
+                        subj = f'UID {uid}'
+                        if typ2=='OK' and d2 and d2[0]:
+                            s = str(d2[0])
+                            # crude subject extract
+                            if 'ENVELOPE' in s:
+                                start = s.find('ENVELOPE')
+                        res.append({'uid': uid, 'subject': subj})
+                    except Exception:
+                        res.append({'uid': uid, 'subject': f'UID {uid}'})
+        imap.logout(); conn.close(); return jsonify({'success': True, 'candidates': res})
+    except Exception as e:
+        conn.close(); return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@accounts_bp.route('/api/accounts/<int:account_id>/intercept-uid', methods=['POST'])
+@login_required
+def api_intercept_uid(account_id: int):
+    """Move a specific UID from INBOX to Quarantine and store it as HELD if not already recorded."""
+    payload = request.get_json(silent=True) or {}
+    uid = str(payload.get('uid') or '').strip()
+    if not uid:
+        return jsonify({'success': False, 'error': 'uid required'}), 400
+    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row
+    cur = conn.cursor(); acc = cur.execute("SELECT * FROM email_accounts WHERE id=?", (account_id,)).fetchone()
+    if not acc:
+        conn.close(); return jsonify({'success': False, 'error': 'Account not found'}), 404
+    host, port, user = acc['imap_host'], _to_int(acc['imap_port'], 993), acc['imap_username'] or acc['email_address']
+    pwd = decrypt_credential(acc['imap_password']) if acc['imap_password'] else None
+    if not (host and user and pwd):
+        conn.close(); return jsonify({'success': False, 'error': 'IMAP credentials missing'}), 400
+    try:
+        imap = imaplib.IMAP4_SSL(host, port) if port==993 else imaplib.IMAP4(host, port)
+        try:
+            if port!=993: imap.starttls()
+        except Exception:
+            pass
+        imap.login(user, pwd); imap.select('INBOX')
+        # Fetch RFC822 for DB storage
+        typ0, d0 = imap.uid('FETCH', uid, '(RFC822 INTERNALDATE)')
+        raw_bytes = None; internal = None
+        if typ0=='OK' and d0 and isinstance(d0[0], tuple):
+            raw_bytes = d0[0][1]
+        # Move or copy+delete
+        moved=False
+        try:
+            typ1, _ = imap.uid('MOVE', uid, 'Quarantine')
+            moved = (typ1=='OK')
+        except Exception:
+            try:
+                typ2,_ = imap.uid('COPY', uid, 'Quarantine')
+                if typ2=='OK':
+                    imap.uid('STORE', uid, '+FLAGS', r'(\Deleted)'); imap.expunge(); moved=True
+            except Exception:
+                moved=False
+        # Insert into DB if not present
+        if raw_bytes:
+            from email import message_from_bytes, policy as _pol
+            emsg = message_from_bytes(raw_bytes, policy=_pol.default)
+            orig_mid = (emsg.get('Message-ID') or '').strip() or None
+            exists = None
+            if orig_mid:
+                exists = cur.execute('SELECT id FROM email_messages WHERE message_id=?', (orig_mid,)).fetchone()
+            if not exists:
+                sender = str(emsg.get('From','')); recips = str(emsg.get('To','') or '')
+                import json as _json
+                cur.execute('''
+                    INSERT INTO email_messages
+                    (message_id, sender, recipients, subject, body_text, body_html, raw_content,
+                     account_id, interception_status, direction, original_uid, original_message_id, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'HELD', 'inbound', ?, ?, datetime('now'))
+                ''', (
+                    orig_mid or f"imap_{uid}_{int(time.time())}",
+                    sender,
+                    _json.dumps([recips]) if recips else '[]',
+                    str(emsg.get('Subject','')), 
+                    '', '', raw_bytes,
+                    account_id,
+                    int(uid), orig_mid
+                ))
+                conn.commit()
+        imap.logout(); conn.close()
+        return jsonify({'success': True, 'moved': moved})
+    except Exception as e:
+        conn.close(); return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@accounts_bp.route('/api/accounts/<int:account_id>/resync', methods=['POST'])
+@login_required
+def api_resync_last(account_id: int):
+    """Force a sweep of the last N messages in INBOX for this account and quarantine them if new (idempotent)."""
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Admin access required'}), 403
+    n = _to_int(request.args.get('last'), 50) or 50
+    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row
+    cur = conn.cursor(); acc = cur.execute("SELECT * FROM email_accounts WHERE id=?", (account_id,)).fetchone()
+    if not acc:
+        conn.close(); return jsonify({'success': False, 'error': 'Account not found'}), 404
+    host, port, user = acc['imap_host'], _to_int(acc['imap_port'], 993), acc['imap_username'] or acc['email_address']
+    pwd = decrypt_credential(acc['imap_password']) if acc['imap_password'] else None
+    if not (host and user and pwd):
+        conn.close(); return jsonify({'success': False, 'error': 'IMAP credentials missing'}), 400
+    try:
+        import imaplib
+        imap = imaplib.IMAP4_SSL(host, port) if port==993 else imaplib.IMAP4(host, port)
+        try:
+            if port!=993: imap.starttls()
+        except Exception:
+            pass
+        imap.login(user, pwd); imap.select('INBOX')
+        typ, data = imap.search(None, 'ALL')
+        uids = []
+        if typ=='OK' and data and data[0]:
+            all_uids = [int(x) for x in data[0].split()]
+            uids = all_uids[-n:]
+        # Move to Quarantine; duplicates safely ignored by DB insert logic
+        moved=0
+        for uid in uids:
+            try:
+                typ2, _ = imap.uid('MOVE', str(uid), 'Quarantine')
+                if typ2!='OK':
+                    # fallback copy+delete
+                    typ3,_ = imap.uid('COPY', str(uid), 'Quarantine')
+                    if typ3=='OK':
+                        imap.uid('STORE', str(uid), '+FLAGS', r'(\Deleted)')
+                        imap.expunge()
+                        moved += 1
+                else:
+                    moved += 1
+            except Exception:
+                continue
+        imap.logout()
+        conn.close(); return jsonify({'success': True, 'moved': moved, 'checked': len(uids)})
+    except Exception as e:
+        conn.close(); return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @accounts_bp.route('/accounts')
 @login_required
 def email_accounts():
@@ -342,6 +625,18 @@ def add_email_account():
             smtp_host = auto['smtp_host']; smtp_port = auto['smtp_port']; smtp_use_ssl = auto['smtp_use_ssl']
             imap_username = email_address; smtp_username = email_address
             imap_password = request.form.get('imap_password'); smtp_password = request.form.get('smtp_password')
+            # Probe to self-heal if credentials provided
+            if imap_password and smtp_password:
+                try:
+                    imap_choice = _negotiate_imap(imap_host, imap_username, imap_password, imap_port, imap_use_ssl)
+                    imap_host = imap_choice['imap_host']; imap_port = imap_choice['imap_port']; imap_use_ssl = imap_choice['imap_use_ssl']
+                except Exception:
+                    pass
+                try:
+                    smtp_choice = _negotiate_smtp(smtp_host, smtp_username, smtp_password, smtp_port, smtp_use_ssl)
+                    smtp_host = smtp_choice['smtp_host']; smtp_port = smtp_choice['smtp_port']; smtp_use_ssl = smtp_choice['smtp_use_ssl']
+                except Exception:
+                    pass
         else:
             imap_host = request.form.get('imap_host')
             imap_port = _to_int(request.form.get('imap_port'), 993)
@@ -354,6 +649,22 @@ def add_email_account():
             smtp_username = request.form.get('smtp_username')
             smtp_password = request.form.get('smtp_password')
             smtp_use_ssl = request.form.get('smtp_use_ssl') == 'on'
+
+            # Normalize modes by ports
+            smtp_use_ssl, imap_use_ssl = _normalize_modes(int(smtp_port or 0), bool(smtp_use_ssl), int(imap_port or 0), bool(imap_use_ssl))
+            # Optional negotiation if creds present
+            if imap_password and imap_username and imap_host:
+                try:
+                    ch = _negotiate_imap(imap_host, imap_username, imap_password, imap_port, imap_use_ssl)
+                    imap_host = ch['imap_host']; imap_port = ch['imap_port']; imap_use_ssl = ch['imap_use_ssl']
+                except Exception:
+                    pass
+            if smtp_password and smtp_username and smtp_host:
+                try:
+                    ch = _negotiate_smtp(smtp_host, smtp_username, smtp_password, smtp_port, smtp_use_ssl)
+                    smtp_host = ch['smtp_host']; smtp_port = ch['smtp_port']; smtp_use_ssl = ch['smtp_use_ssl']
+                except Exception:
+                    pass
 
         imap_ok, imap_msg = _test_email_connection('imap', str(imap_host or ''), _to_int(imap_port, 993), str(imap_username or ''), imap_password or '', bool(imap_use_ssl))
         smtp_ok, smtp_msg = _test_email_connection('smtp', str(smtp_host or ''), _to_int(smtp_port, 465), str(smtp_username or ''), smtp_password or '', bool(smtp_use_ssl))

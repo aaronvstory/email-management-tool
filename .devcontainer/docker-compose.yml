@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  app:
+    image: mcr.microsoft.com/devcontainers/python:3.11
+    volumes:
+      - ..:/workspace:cached
+      - ~/.ssh:/root/.ssh:ro
+    environment:
+      - FLASK_APP=simple_app.py
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - PYTHONPATH=/workspace
+      - DB_PATH=/workspace/email_manager.db
+      - SHELL=/bin/bash
+      - TERM=xterm-256color
+    ports:
+      - "5000:5000"
+      - "8587:8587"
+    command: /bin/bash -c "while sleep 1000; do :; done"
+    stdin_open: true
+    tty: true
+    working_dir: /workspace
+    networks:
+      - email-network
+
+networks:
+  email-network:
+    driver: bridge
