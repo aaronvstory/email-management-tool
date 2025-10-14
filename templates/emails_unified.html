@@ -122,18 +122,19 @@
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
+    table-layout: fixed;
   }
 
   .email-table thead th {
     background: rgba(255,255,255,0.03);
     color: #9ca3af;
     font-weight: 600;
-    padding: 8px 10px;
+    padding: 10px 12px;
     text-align: left;
     border-bottom: 2px solid rgba(255,255,255,0.06);
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.45px;
   }
 
   .email-table tbody tr {
@@ -147,16 +148,19 @@
   }
 
   .email-table tbody td {
-    padding: 8px 10px;
+    padding: 8px 12px;
     color: #ffffff;
     vertical-align: middle;
-    line-height: 1.3;
+    line-height: 1.35;
   }
 
   .email-subject {
     font-weight: 600;
     color: #ffffff;
   }
+
+  .subject-cell { font-size: 0.95rem; font-weight: 600; color: #ffffff; margin-bottom: 2px; }
+  .subject-cell, .email-preview { word-break: break-word; }
 
   .email-preview {
     font-size: 0.8rem;
@@ -170,23 +174,80 @@
     white-space: normal;
   }
 
-  /* Two-line address cells */
-  .addr-two-line { 
-    white-space: normal !important; 
-    display: -webkit-box; 
-    -webkit-line-clamp: 2; 
-    -webkit-box-orient: vertical; 
-    overflow: hidden; 
-    line-height: 1.3; 
+  /* Correspondent cell shows From/To stacked */
+  .correspondent-cell { display:flex; flex-direction:column; gap:4px; }
+  .correspondent-line { display:flex; gap:6px; align-items:flex-start; font-size:0.82rem; }
+  .correspondent-label { font-size:0.7rem; letter-spacing:0.05em; color:#9ca3af; text-transform:uppercase; font-weight:600; flex-shrink:0; width:45px; }
+  .correspondent-value { color:#e5e7eb; line-height:1.3; word-break:break-word; }
+
+  /* Status & watcher layout */
+  .status-cell { display:flex; flex-direction:column; gap:6px; align-items:stretch; }
+  .status-main { width:100%; }
+  .status-badge { display:block; width:100%; text-transform:uppercase; font-weight:700; letter-spacing:0.05em; text-align:center; border-radius:8px; line-height:34px; height:34px; }
+  .status-meta { display:flex; flex-direction:column; align-items:stretch; gap:6px; }
+  .status-meta .watcher-chip {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    height:34px;
+    padding:0 10px;
+    border-radius:8px;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    border:1px solid rgba(148,163,184,0.35);
+    color:#cbd5f5;
+    background: rgba(148,163,184,0.16);
+    width:100%;
   }
+  .status-meta .watcher-chip.stopped { border-color: rgba(239,68,68,0.35); color:#fca5a5; background: rgba(239,68,68,0.14); }
+  .status-meta .watcher-chip.unknown { border-color: rgba(148,163,184,0.2); color:#9ca3af; background: rgba(148,163,184,0.08); }
+  .status-restart {
+    width:100%;
+    height:34px;
+    border-radius:8px;
+    border:1px solid rgba(148,163,184,0.35);
+    background: rgba(148,163,184,0.12);
+    color:#e5e7eb;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:0;
+  }
+  .status-restart:hover { background: rgba(148,163,184,0.2); }
+  .status-restart i { font-size:14px; }
 
-  /* Status stacked layout: main badge on first line, utilities on second */
-  .status-cell { display:flex; flex-direction: column; align-items:flex-start; gap:6px; }
-  .status-cell .subline { display:flex; align-items:center; gap:6px; flex-wrap: wrap; }
-
-  /* Actions: allow wrapping to a second line to prevent overlap */
-  .email-table .action-buttons { flex-wrap: wrap; gap:6px; justify-content:flex-start; }
-  .email-table .action-buttons .action-btn { min-width:28px !important; width:28px !important; height:28px !important; }
+  /* Actions: icon row with responsive wrap */
+  .action-buttons {
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    align-items:stretch;
+  }
+  .action-btn {
+    width:100%;
+    min-width:0;
+    height:34px;
+    border-radius:8px;
+    border:1px solid transparent;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    transition:all 0.15s ease;
+    background: rgba(148,163,184,0.12);
+    color:#e2e8f0;
+    cursor:pointer;
+  }
+  .action-btn i { margin:0; font-size:16px; }
+  .action-btn:hover { transform:translateY(-1px); }
+  .action-edit { background:rgba(59,130,246,0.16); border-color:rgba(59,130,246,0.28); color:#93c5fd; }
+  .action-release { background:rgba(16,185,129,0.16); border-color:rgba(16,185,129,0.3); color:#6ee7b7; }
+  .action-discard { background:rgba(239,68,68,0.16); border-color:rgba(239,68,68,0.3); color:#fecaca; }
+  .action-approve { background:rgba(34,197,94,0.18); border-color:rgba(34,197,94,0.32); color:#bbf7d0; }
+  .action-reject { background:rgba(248,113,113,0.16); border-color:rgba(248,113,113,0.32); color:#fecaca; }
+  .action-view { background:rgba(148,163,184,0.16); border-color:rgba(148,163,184,0.3); color:#e2e8f0; }
+  .action-btn:focus { outline:2px solid rgba(220,38,38,0.35); outline-offset:2px; }
 
   /* Status badge styling unified in main.css (.status-badge/.status-chip + .status-*) */
 
@@ -194,43 +255,6 @@
     background: rgba(59,130,246,0.15);
     color: #60a5fa;
     border: 1px solid rgba(59,130,246,0.3);
-  }
-
-  /* Action Buttons */
-  .action-buttons {
-    display: flex;
-    gap: 5px;
-  }
-
-  .action-btn {
-    padding: 6px 10px;
-    border-radius: 6px;
-    border: 1px solid rgba(255,255,255,0.12);
-    background: rgba(255,255,255,0.06);
-    color: #ffffff;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-size: 0.85rem;
-  }
-
-  .action-btn:hover {
-    background: rgba(255,255,255,0.12);
-    transform: translateY(-1px);
-  }
-
-  .action-btn.primary {
-    background: linear-gradient(135deg,#dc2626 0%,#991b1b 100%);
-    border: none;
-  }
-
-  .action-btn.success {
-    background: linear-gradient(135deg,#10b981 0%,#059669 100%);
-    border: none;
-  }
-
-  .action-btn.danger {
-    background: linear-gradient(135deg,#dc2626 0%,#991b1b 100%);
-    border: none;
   }
 
   /* Empty State */
@@ -386,11 +410,10 @@
             <input type="checkbox" class="form-check-input" id="selectAll" onchange="toggleSelectAll(this.checked)">
           </th>
           <th style="width: 150px;">Time</th>
-          <th style="width: 160px;">From</th>
-          <th style="width: 160px;">To</th>
+          <th style="width: 260px;">Correspondents</th>
           <th>Subject</th>
-          <th style="width: 140px;">Status</th>
-          <th style="width: 112px;">Actions</th>
+          <th style="width: 150px;">Status</th>
+          <th style="width: 150px;">Actions</th>
         </tr>
       </thead>
       <tbody id="emailTableBody">
@@ -689,48 +712,63 @@ function renderEmails(emails) {
     let actions = '';
     if (status === 'HELD') {
       actions = `
-        <button class="action-btn primary" onclick="editEmail(${email.id})" title="Edit">
+        <button class="action-btn action-edit" onclick="editEmail(${email.id})" title="Edit">
           <i class="bi bi-pencil"></i>
         </button>
-        <button class="action-btn success" onclick="releaseEmail(${email.id})" title="Release">
+        <button class="action-btn action-release" onclick="releaseEmail(${email.id})" title="Release">
           <i class="bi bi-unlock"></i>
         </button>
-        <button class="action-btn danger" onclick="discardEmail(${email.id})" title="Discard">
+        <button class="action-btn action-discard" onclick="discardEmail(${email.id})" title="Discard">
           <i class="bi bi-trash"></i>
         </button>
       `;
     } else if (status === 'PENDING') {
       actions = `
-        <button class="action-btn primary" onclick="editEmail(${email.id})" title="Edit">
+        <button class="action-btn action-edit" onclick="editEmail(${email.id})" title="Edit">
           <i class="bi bi-pencil"></i>
         </button>
-        <button class="action-btn success" onclick="approveEmail(${email.id})" title="Approve">
+        <button class="action-btn action-approve" onclick="approveEmail(${email.id})" title="Approve">
           <i class="bi bi-check"></i>
         </button>
-        <button class="action-btn danger" onclick="rejectEmail(${email.id})" title="Reject">
+        <button class="action-btn action-reject" onclick="rejectEmail(${email.id})" title="Reject">
           <i class="bi bi-x"></i>
         </button>
       `;
     } else {
       actions = `
-        <button class="action-btn primary" onclick="viewEmail(${email.id})" title="View">
+        <button class="action-btn action-view" onclick="viewEmail(${email.id})" title="View">
           <i class="bi bi-eye"></i>
         </button>
       `;
     }
     
-    const watcherState = watchersMap[email.account_id] || 'unknown';
-    const watcherBadge = `<span class=\"watcher-chip ${watcherState==='active' ? 'active' : (watcherState==='stopped' ? 'stopped' : 'unknown')}\" title=\"Watcher state\">${watcherState}</span>`;
+    const watcherStateRaw = watchersMap[email.account_id] || 'unknown';
+    const watcherClass = watcherStateRaw === 'active' ? 'active' : (watcherStateRaw === 'stopped' ? 'stopped' : 'unknown');
+    let watcherLabel = 'Unknown';
+    if (watcherStateRaw === 'active') {
+      watcherLabel = 'Active';
+    } else if (watcherStateRaw === 'stopped') {
+      watcherLabel = 'Stopped';
+    } else if (watcherStateRaw && watcherStateRaw !== 'unknown') {
+      watcherLabel = watcherStateRaw.charAt(0).toUpperCase() + watcherStateRaw.slice(1);
+    }
+    const watcherBadge = `<span class=\"watcher-chip ${watcherClass}\" title=\"Watcher state\">${watcherLabel}</span>`;
     tr.innerHTML = `
       <td>
         <input type="checkbox" class="form-check-input email-checkbox" value="${email.id}">
       </td>
       <td><span class="time-cell">${email.created_at ? new Date(email.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }) : 'N/A'}</span></td>
       <td>
-        <div class="email-addr-cell addr-two-line">${email.sender || 'Unknown'}</div>
-      </td>
-      <td>
-        <div class="email-addr-cell addr-two-line">${recipients}</div>
+        <div class="correspondent-cell">
+          <div class="correspondent-line">
+            <span class="correspondent-label">FROM</span>
+            <span class="correspondent-value">${email.sender || 'Unknown'}</span>
+          </div>
+          <div class="correspondent-line">
+            <span class="correspondent-label">TO</span>
+            <span class="correspondent-value">${recipients || '—'}</span>
+          </div>
+        </div>
       </td>
       <td onclick="viewEmail(${email.id})" style="cursor: pointer;">
         <div class="subject-cell ellipsis">${email.subject || '(No Subject)'}</div>
@@ -739,8 +777,8 @@ function renderEmails(emails) {
       <td>
         <div class="status-cell">
           <div class="status-main"><span class="status-badge status-${status}">${status}</span></div>
-          <div class="subline">${watcherBadge}
-            <button class="btn btn-sm btn-secondary btn-icon-only" title="Restart watcher" onclick="restartWatcherFor(${email.account_id})"><i class="bi bi-arrow-repeat"></i></button>
+          <div class="status-meta">${watcherBadge}
+            <button type="button" class="status-restart" title="Restart watcher" onclick="restartWatcherFor(${email.account_id})"><i class="bi bi-arrow-repeat"></i></button>
           </div>
         </div>
       </td>
