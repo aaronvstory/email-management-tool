@@ -21,6 +21,7 @@ import sqlite3
 import json
 from datetime import datetime
 from email import message_from_bytes, policy
+from email.utils import getaddresses
 from typing import Optional
 
 import backoff
@@ -389,7 +390,10 @@ class ImapWatcher:
                     # Extract envelope data
                     # Extract basic fields
                     sender = str(email_msg.get('From', ''))
-                    recipients = json.dumps([str(email_msg.get('To', ''))])
+                    addr_fields = email_msg.get_all('To', []) + email_msg.get_all('Cc', [])
+                    addr_list = [addr for _, addr in getaddresses(addr_fields)]
+                    recipients_list = [a for a in addr_list if a] or ([email_msg.get('To', '')] if email_msg.get('To') else [])
+                    recipients = json.dumps(recipients_list)
                     subject = str(email_msg.get('Subject', 'No Subject'))
                     original_msg_id = (email_msg.get('Message-ID') or '').strip() or None
                     # Use header Message-ID when available; otherwise stable fallback
@@ -443,7 +447,7 @@ class ImapWatcher:
                         internal_dt = None
 
                     # Evaluate moderation rules
-                    rule_eval = evaluate_rules(subject, body_text, sender, [])
+                    rule_eval = evaluate_rules(subject, body_text, sender, recipients_list)
                     interception_status = 'HELD' if rule_eval['should_hold'] else 'FETCHED'
                     risk_score = rule_eval['risk_score']
                     keywords_json = json.dumps(rule_eval['keywords'])

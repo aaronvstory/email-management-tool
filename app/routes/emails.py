@@ -47,7 +47,7 @@ def emails_unified():
 
     # Get counts for all statuses
     counts = fetch_counts(account_id=account_id if account_id else None)
-    
+
     conn.close()
 
     return render_template(
@@ -111,18 +111,18 @@ def api_emails_unified():
     email_list = []
     for email in emails:
         email_dict = dict(email)
-        
+
         # Add preview snippet
         body_text = email_dict.get('body_text') or ''
         email_dict['preview_snippet'] = ' '.join(body_text.split())[:160]
-        
+
         # Parse recipients if JSON
         try:
             if email_dict.get('recipients'):
                 email_dict['recipients'] = json.loads(email_dict['recipients'])
         except (json.JSONDecodeError, TypeError):
             pass
-        
+
         email_list.append(email_dict)
 
     conn.close()
@@ -148,18 +148,18 @@ def email_queue():
     """Legacy email queue - redirect to unified"""
     status_filter = request.args.get('status', 'PENDING')
     account_id = request.args.get('account_id', type=int)
-    
+
     # Redirect to unified view
     params = []
     if status_filter:
         params.append(f'status={status_filter}')
     if account_id:
         params.append(f'account_id={account_id}')
-    
+
     redirect_url = '/emails-unified'
     if params:
         redirect_url += '?' + '&'.join(params)
-    
+
     return redirect(redirect_url)
 
 
@@ -168,11 +168,11 @@ def email_queue():
 def inbox_redirect():
     """Legacy inbox - redirect to unified"""
     account_id = request.args.get('account_id', type=int)
-    
+
     redirect_url = '/emails-unified?status=ALL'
     if account_id:
         redirect_url += f'&account_id={account_id}'
-    
+
     return redirect(redirect_url)
 
 
@@ -405,25 +405,30 @@ def api_fetch_emails():
             recipients_list = [a for a in addr_list if a] or ([msg.get('To', '')] if msg.get('To') else [])
             recipients = json.dumps(recipients_list)
 
+                body_text = ''
+                body_html = ''
+                # Ensure body_text is always initialized before use
+                if msg.is_multipart():
+                    for part in msg.walk():
+                        ctype = part.get_content_type()
+                        payload = part.get_payload(decode=True)
+                        if not payload:
+                            continue
+                        if ctype == 'text/plain' and isinstance(payload, (bytes, bytearray)):
+                            body_text = payload.decode('utf-8', errors='ignore')
+                        elif ctype == 'text/html' and isinstance(payload, (bytes, bytearray)):
+                            body_html = payload.decode('utf-8', errors='ignore')
+                else:
+                    payload = msg.get_payload(decode=True)
+                    if isinstance(payload, (bytes, bytearray)):
+                        body_text = payload.decode('utf-8', errors='ignore')
+                    elif isinstance(payload, str):
+                        body_text = payload
+
             rule_eval = evaluate_rules(subject, body_text, sender, recipients_list)
             interception_status = 'HELD' if rule_eval['should_hold'] else 'FETCHED'
             risk_score = rule_eval['risk_score']
             keywords_json = json.dumps(rule_eval['keywords'])
-            body_text = ''; body_html = ''
-            if msg.is_multipart():
-                for part in msg.walk():
-                    ctype = part.get_content_type(); payload = part.get_payload(decode=True)
-                    if not payload: continue
-                    if ctype == 'text/plain' and isinstance(payload, (bytes, bytearray)):
-                        body_text = payload.decode('utf-8', errors='ignore')
-                    elif ctype == 'text/html' and isinstance(payload, (bytes, bytearray)):
-                        body_html = payload.decode('utf-8', errors='ignore')
-            else:
-                payload = msg.get_payload(decode=True)
-                if isinstance(payload, (bytes, bytearray)):
-                    body_text = payload.decode('utf-8', errors='ignore')
-                elif isinstance(payload, str):
-                    body_text = payload
             cur.execute(
                 """
                 INSERT OR IGNORE INTO email_messages
