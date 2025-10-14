@@ -15,10 +15,11 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email import policy
 from email import message_from_bytes
-from email.utils import parsedate_to_datetime
+from email.utils import parsedate_to_datetime, getaddresses
 from app.utils.db import DB_PATH, get_db, fetch_counts
 from app.extensions import csrf
 from app.utils.crypto import decrypt_credential
+from app.utils.rule_engine import evaluate_rules
 from app.services.audit import log_action
 
 emails_bp = Blueprint('emails', __name__)
@@ -397,7 +398,17 @@ def api_fetch_emails():
                 except Exception:
                     pass
             message_id = msg.get('Message-ID') or f"fetch_{account_id}_{uid}"
-            sender = msg.get('From', ''); subject = msg.get('Subject', 'No Subject'); recipients = json.dumps([msg.get('To', '')])
+            sender = msg.get('From', '')
+            subject = msg.get('Subject', 'No Subject')
+            addr_fields = msg.get_all('To', []) + msg.get_all('Cc', [])
+            addr_list = [addr for _, addr in getaddresses(addr_fields)]
+            recipients_list = [a for a in addr_list if a] or ([msg.get('To', '')] if msg.get('To') else [])
+            recipients = json.dumps(recipients_list)
+
+            rule_eval = evaluate_rules(subject, body_text, sender, recipients_list)
+            interception_status = 'HELD' if rule_eval['should_hold'] else 'FETCHED'
+            risk_score = rule_eval['risk_score']
+            keywords_json = json.dumps(rule_eval['keywords'])
             body_text = ''; body_html = ''
             if msg.is_multipart():
                 for part in msg.walk():
@@ -418,10 +429,10 @@ def api_fetch_emails():
                 INSERT OR IGNORE INTO email_messages
                 (message_id, sender, recipients, subject, body_text, body_html,
                  raw_content, account_id, direction, interception_status,
-                 original_uid, original_internaldate, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                 original_uid, original_internaldate, risk_score, keywords_matched, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
                 """,
-                (message_id, sender, recipients, subject, body_text, body_html, raw_email, account_id, 'inbound', 'FETCHED', uid, internaldate),
+                (message_id, sender, recipients, subject, body_text, body_html, raw_email, account_id, 'inbound', interception_status, uid, internaldate, risk_score, keywords_json),
             )
             row = cur.execute("SELECT id FROM email_messages WHERE message_id=? ORDER BY id DESC LIMIT 1", (message_id,)).fetchone()
             results.append({'id': row['id'] if row else None, 'message_id': message_id, 'uid': uid, 'subject': subject})

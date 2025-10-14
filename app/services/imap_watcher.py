@@ -26,6 +26,8 @@ from typing import Optional
 import backoff
 from imapclient import IMAPClient
 
+from app.utils.rule_engine import evaluate_rules
+
 
 log = logging.getLogger(__name__)
 
@@ -385,8 +387,6 @@ class ImapWatcher:
                     email_msg = message_from_bytes(raw_email, policy=policy.default)
 
                     # Extract envelope data
-                    envelope = data.get(b'ENVELOPE', {})
-
                     # Extract basic fields
                     sender = str(email_msg.get('From', ''))
                     recipients = json.dumps([str(email_msg.get('To', ''))])
@@ -442,14 +442,20 @@ class ImapWatcher:
                     except Exception:
                         internal_dt = None
 
+                    # Evaluate moderation rules
+                    rule_eval = evaluate_rules(subject, body_text, sender, [])
+                    interception_status = 'HELD' if rule_eval['should_hold'] else 'FETCHED'
+                    risk_score = rule_eval['risk_score']
+                    keywords_json = json.dumps(rule_eval['keywords'])
+
                     # Store in database with account_id
                     cursor.execute('''
                         INSERT INTO email_messages
                         (message_id, sender, recipients, subject, body_text, body_html,
                          raw_content, account_id, interception_status, direction,
                          original_uid, original_internaldate, original_message_id,
-                         created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                         risk_score, keywords_matched, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
                     ''', (
                         message_id,
                         sender,
@@ -459,11 +465,13 @@ class ImapWatcher:
                         body_html,
                         raw_email,
                         self.cfg.account_id,
-                        'HELD',
+                        interception_status,
                         'inbound',
                         int(uid),
                         internal_dt,
-                        original_msg_id
+                        original_msg_id,
+                        risk_score,
+                        keywords_json
                     ))
 
                     log.info(f"Stored email {subject} from {sender} for account {self.cfg.account_id}")

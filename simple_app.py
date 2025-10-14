@@ -232,6 +232,7 @@ def decrypt_password(val: Optional[str]) -> Optional[str]:
 
 # Import email helper functions (Phase 3: Helper Consolidation)
 from app.utils.email_helpers import detect_email_settings, test_email_connection
+from app.utils.rule_engine import evaluate_rules
 
 # Global registries for IMAP watcher control (per-account)
 from typing import Dict as _Dict, Optional as _Optional
@@ -570,7 +571,8 @@ class EmailModerationHandler:
 
             # Extract data
             sender = str(envelope.mail_from)
-            recipients = json.dumps([str(r) for r in envelope.rcpt_tos])
+            recipients_list = [str(r) for r in envelope.rcpt_tos]
+            recipients = json.dumps(recipients_list)
             subject = email_msg.get('Subject', 'No Subject')
             message_id = email_msg.get('Message-ID', f"msg_{datetime.now().timestamp()}")
 
@@ -599,7 +601,7 @@ class EmailModerationHandler:
                     body_text = payload
 
             # Check moderation rules
-            keywords_matched, risk_score = self.check_rules(subject, body_text)
+            keywords_matched, risk_score, _should_hold = self.check_rules(subject, body_text, sender, recipients_list)
 
             # Lookup account_id by matching recipient email addresses
             account_id = None
@@ -668,68 +670,9 @@ class EmailModerationHandler:
             traceback.print_exc()
             return f'500 Error: {e}'
 
-    def check_rules(self, subject, body):
-        """Check moderation rules from DB (fallback to defaults)."""
-        keywords = []
-        risk_score = 0
-        content = f"{subject} {body}".lower()
-
-        # 1) Load active rules from DB (supports legacy and extended schemas)
-        conn = None
-        try:
-            conn = sqlite3.connect(DB_PATH)
-            conn.row_factory = sqlite3.Row
-            cur = conn.cursor()
-            cols = [r[1] for r in cur.execute("PRAGMA table_info(moderation_rules)").fetchall()]
-            rows = cur.execute("SELECT * FROM moderation_rules WHERE is_active = 1 ORDER BY priority DESC").fetchall()
-            for r in rows:
-                d = dict(r)
-                # Extract pattern(s)
-                pattern = None
-                if 'condition_value' in cols:
-                    pattern = (d.get('condition_value') or '').strip()
-                elif 'keyword' in cols:
-                    pattern = (d.get('keyword') or '').strip()
-                if not pattern:
-                    continue
-                # Support comma-separated list
-                parts = [p.strip() for p in pattern.split(',') if p.strip()]
-                prio = int(d.get('priority') or 5)
-                for p in parts:
-                    p_l = p.lower()
-                    if p_l and p_l in content:
-                        keywords.append(p)
-                        risk_score += max(1, prio)
-        except Exception:
-            # Silent fallback — see defaults below
-            pass
-        finally:
-            if conn:
-                try:
-                    conn.close()
-                except Exception:
-                    pass
-
-        # 2) Fallback defaults if no matches and no rules configured
-        if not keywords:
-            default_keywords = {
-                'urgent': 5,
-                'confidential': 10,
-                'payment': 8,
-                'password': 10,
-                'account': 5,
-                'verify': 7,
-                'suspended': 9,
-                'click here': 8,
-                'act now': 7,
-                'limited time': 6
-            }
-            for k, pr in default_keywords.items():
-                if k in content:
-                    keywords.append(k)
-                    risk_score += pr
-
-        return keywords, min(risk_score, 100)
+    def check_rules(self, subject, body, sender='', recipients=None):
+        result = evaluate_rules(subject, body, sender, recipients)
+        return result['keywords'], result['risk_score'], result['should_hold']
 
 # Removed duplicate blueprint registration
 # if 'app' in globals() and bp_interception:

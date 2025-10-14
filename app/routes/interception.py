@@ -550,34 +550,40 @@ def api_email_intercept(email_id:int):
             except Exception:
                 pass
             if not password: raise RuntimeError('Decrypted password missing')
-            imap_obj.login(username, password); imap_obj.select('INBOX')
-            uid = row['original_uid']
-            if not uid and row['message_id']:
-                crit = f'(HEADER Message-ID "{row["message_id"]}")'
-                typ, data = imap_obj.uid('SEARCH', crit)
-                if typ == 'OK' and data and data[0]:
-                    found = data[0].split();
-                    if found: uid = found[-1].decode()
-            if not uid and row['subject']:
-                subj = (row['subject'] or '').replace('"', '')
-                typ, data = imap_obj.uid('SEARCH', f'(HEADER Subject "{subj}")')
-                if typ == 'OK' and data and data[0]:
-                    found = data[0].split();
-                    if found: uid = found[-1].decode()
-            # Ensure quarantine folder and move
-            if uid:
+            imap_obj.login(username, password)
+            try:
+                imap_obj.select('INBOX')
+            except Exception:
+                imap_obj.select()
+
+            def _search_uid(header: str, value: str | None) -> str | None:
+                if not value:
+                    return None
+                safe_value = value.replace('"', '\\"')
                 try:
-                    typ, _ = imap_obj.uid('MOVE', uid, 'Quarantine')
-                    remote_move = (typ == 'OK')
+                    typ, data = imap_obj.uid('SEARCH', None, 'HEADER', header, f'"{safe_value}"')
+                    if typ == 'OK' and data and data[0]:
+                        parts = data[0].split()
+                        if parts:
+                            return parts[-1].decode()
                 except Exception:
-                    try:
-                        typ, _ = imap_obj.uid('COPY', uid, 'Quarantine')
-                        if typ == 'OK':
-                            imap_obj.uid('STORE', uid, '+FLAGS', r'(\Deleted)'); imap_obj.expunge(); remote_move = True
-                    except Exception:
-                        remote_move = False
-                if remote_move and not row['original_uid']:
+                    return None
+                return None
+
+            uid = None
+            if row['original_uid']:
+                uid = str(row['original_uid'])
+            if not uid and row['message_id']:
+                uid = _search_uid('Message-ID', row['message_id'])
+            if not uid and row['subject']:
+                uid = _search_uid('Subject', row['subject'])
+            if uid:
+                moved = _move_uid_to_quarantine(imap_obj, uid, 'Quarantine')
+                remote_move = moved
+                if moved and not row['original_uid']:
                     cur.execute('UPDATE email_messages SET original_uid=? WHERE id=?', (uid, email_id))
+                if not moved:
+                    note = 'Remote move failed'
             else:
                 note = 'Remote UID not found (Message-ID/Subject search failed)'
             imap_obj.logout()

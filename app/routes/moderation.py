@@ -76,15 +76,26 @@ def api_create_rule():
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
     cols = [r[1] for r in cur.execute("PRAGMA table_info(moderation_rules)").fetchall()]
+    field_map = {
+        'KEYWORD': 'BODY',
+        'SENDER': 'SENDER',
+        'RECIPIENT': 'RECIPIENT',
+        'DOMAIN': 'SENDER_DOMAIN',
+        'ATTACHMENT': 'ATTACHMENT',
+        'SUBJECT': 'SUBJECT',
+        'REGEX': 'BODY',
+    }
+    operator = 'REGEX' if rule_type == 'REGEX' else 'CONTAINS'
+    condition_field = field_map.get(rule_type, 'BODY')
     try:
         if 'rule_type' in cols and 'condition_value' in cols:
             cur.execute(
                 """
                 INSERT INTO moderation_rules
                 (rule_name, rule_type, condition_field, condition_operator, condition_value, action, priority, is_active)
-                VALUES(?, ?, 'BODY', 'CONTAINS', ?, ?, ?, 1)
+                VALUES(?, ?, ?, ?, ?, ?, ?, 1)
                 """,
-                (name, rule_type, pattern, action, priority),
+                (name, rule_type, condition_field, operator, pattern, action, priority),
             )
         else:
             # Legacy keyword-based schema
@@ -120,9 +131,24 @@ def api_update_rule(rule_id: int):
     if 'is_active' in payload: fields.append('is_active=?'); values.append(1 if payload['is_active'] else 0)
     if 'action' in payload: fields.append('action=?'); values.append(str(payload['action']).upper())
     # Pattern/type may be stored in extended or legacy schema
-    if 'rule_type' in payload and 'condition_value' in payload and 'rule_type' in cols and 'condition_value' in cols:
-        fields.extend(['rule_type=?','condition_value=?']); values.extend([str(payload['rule_type']).upper(), payload['condition_value']])
-    elif 'pattern' in payload and 'keyword' in cols:
+    if 'rule_type' in cols and 'condition_value' in cols:
+        if 'rule_type' in payload:
+            field_map = {
+                'KEYWORD': 'BODY',
+                'SENDER': 'SENDER',
+                'RECIPIENT': 'RECIPIENT',
+                'DOMAIN': 'SENDER_DOMAIN',
+                'ATTACHMENT': 'ATTACHMENT',
+                'SUBJECT': 'SUBJECT',
+                'REGEX': 'BODY',
+            }
+            rtype = str(payload['rule_type']).upper()
+            operator = 'REGEX' if rtype == 'REGEX' else 'CONTAINS'
+            fields.extend(['rule_type=?', 'condition_field=?', 'condition_operator=?'])
+            values.extend([rtype, field_map.get(rtype, 'BODY'), operator])
+        if 'condition_value' in payload:
+            fields.append('condition_value=?'); values.append(payload['condition_value'])
+    if 'pattern' in payload and 'keyword' in cols:
         fields.append('keyword=?'); values.append(payload['pattern'])
     if not fields:
         conn.close(); return jsonify({'success': False, 'error': 'No fields to update'}), 400
