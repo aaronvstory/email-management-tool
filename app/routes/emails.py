@@ -4,6 +4,7 @@ Extracted from simple_app.py lines 721-2197
 Routes: /emails, /email/<id>, /email/<id>/action, /inbox, /compose, /api/held, /api/emails/pending
 Plus API routes for reply/forward, download, intercept
 """
+import logging
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, Response
 from flask_login import login_required, current_user
 import sqlite3
@@ -24,6 +25,7 @@ from app.utils.rule_engine import evaluate_rules
 from app.services.audit import log_action
 
 emails_bp = Blueprint('emails', __name__)
+log = logging.getLogger(__name__)
 
 @emails_bp.route('/emails-unified')
 @login_required
@@ -356,6 +358,7 @@ def api_fetch_emails():
         conn.close(); return jsonify({'success': False, 'error': 'Account not found'}), 404
     mail = None
     auto_move_enabled = str(os.environ.get('AUTO_MOVE_ON_FETCH', '0')).lower() in ('1', 'true', 'yes')
+    log.debug("[emails::fetch] start", extra={'account_id': account_id, 'count': fetch_count, 'offset': offset, 'auto_move': auto_move_enabled})
     try:
         password = decrypt_credential(acct['imap_password'])
         if not password:
@@ -438,6 +441,7 @@ def api_fetch_emails():
             should_hold = bool(rule_eval['should_hold'])
             risk_score = rule_eval['risk_score']
             keywords_json = json.dumps(rule_eval['keywords'])
+            log.debug("[emails::fetch] evaluated", extra={'account_id': account_id, 'uid': uid, 'should_hold': should_hold, 'risk': risk_score})
             cur.execute(
                 """
                 INSERT OR IGNORE INTO email_messages
@@ -471,8 +475,10 @@ def api_fetch_emails():
                         """,
                         (quarantine_folder, email_row_id),
                     )
+                    log.info("[emails::fetch] auto-held message", extra={'account_id': account_id, 'email_id': email_row_id, 'uid': uid, 'quarantine_folder': quarantine_folder})
                 else:
                     quarantine_folder = None
+                    log.debug("[emails::fetch] auto-move skipped", extra={'account_id': account_id, 'email_id': email_row_id, 'uid': uid})
 
             results.append({
                 'id': email_row_id,
@@ -483,8 +489,11 @@ def api_fetch_emails():
                 'held': moved_to_quarantine,
                 'quarantine_folder': quarantine_folder,
             })
-        conn.commit(); return jsonify({'success': True, 'total_available': total, 'fetched': len(results), 'emails': results})
+        conn.commit();
+        log.debug("[emails::fetch] completed", extra={'account_id': account_id, 'fetched': len(results), 'total': total})
+        return jsonify({'success': True, 'total_available': total, 'fetched': len(results), 'emails': results})
     except Exception as exc:
+        log.exception("[emails::fetch] failed", extra={'account_id': account_id})
         return jsonify({'success': False, 'error': str(exc)}), 500
     finally:
         if mail:

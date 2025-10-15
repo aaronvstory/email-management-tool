@@ -4,6 +4,7 @@ Extracted from simple_app.py lines 877-1760
 Routes: /accounts, /accounts/add, /api/accounts/*, /api/detect-email-settings, /api/test-connection
 Phase 3: Consolidated email helpers - using app.utils.email_helpers
 """
+import logging
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 import sqlite3
@@ -27,6 +28,8 @@ from email.message import EmailMessage
 import time
 import os
 import imaplib
+
+log = logging.getLogger(__name__)
 
 accounts_bp = Blueprint('accounts', __name__)
 
@@ -323,8 +326,11 @@ def api_imap_live_test(account_id: int):
         conn.close(); return jsonify({'success': False, 'error': 'Account not found'}), 404
     host, port, user = acc['imap_host'], _to_int(acc['imap_port'], 993), acc['imap_username'] or acc['email_address']
     pwd = decrypt_credential(acc['imap_password']) if acc['imap_password'] else None
-    if not (host and user and pwd):
+    if not (host and user):
         conn.close(); return jsonify({'success': False, 'error': 'IMAP credentials missing'}), 400
+    if pwd is None:
+        conn.close(); return jsonify({'success': False, 'error': 'IMAP credentials missing'}), 400
+    log.debug("[accounts::probe] starting probe", extra={'account_id': account_id, 'host': host, 'port': port})
     # Build unique probe
     probe_id = f"probe-{account_id}-{int(time.time())}"
     msg = EmailMessage(); msg['From']=user; msg['To']=user; msg['Subject']=f"[EMT-PROBE] {probe_id}"; msg.set_content('probe')
@@ -341,6 +347,7 @@ def api_imap_live_test(account_id: int):
         date_param = imaplib.Time2Internaldate(_t.localtime())
         imap.append('INBOX', '', date_param, msg.as_bytes())
         imap.logout()
+        log.debug("[accounts::probe] appended probe message", extra={'account_id': account_id, 'probe_id': probe_id})
     except Exception as e:
         conn.close(); return jsonify({'success': False, 'error': f'IMAP append failed: {e}'}), 500
     # Poll for HELD entry in DB and verify server state
@@ -361,7 +368,11 @@ def api_imap_live_test(account_id: int):
                     if port!=993: imap.starttls()
                 except Exception:
                     pass
-                imap.login(acc['imap_username'] or acc['email_address'], decrypt_credential(acc['imap_password']))
+                imap_pwd = decrypt_credential(acc['imap_password']) if acc['imap_password'] else None
+                if imap_pwd is None:
+                    log.warning("[accounts::probe] decrypted password missing during verification", extra={'account_id': account_id})
+                    break
+                imap.login(acc['imap_username'] or acc['email_address'], imap_pwd)
                 mid_hdr = last.get('subject') or f"[EMT-PROBE] {probe_id}"
                 # INBOX absent
                 imap.select('INBOX')
@@ -381,6 +392,7 @@ def api_imap_live_test(account_id: int):
                 imap.logout()
                 ok = (in_quar and not in_inbox)
                 if ok:
+                    log.info("[accounts::probe] probe quarantined successfully", extra={'account_id': account_id, 'probe_id': probe_id})
                     break
             except Exception:
                 ok = False
@@ -400,8 +412,11 @@ def api_scan_inbox(account_id: int):
         conn.close(); return jsonify({'success': False, 'error': 'Account not found'}), 404
     host, port, user = acc['imap_host'], _to_int(acc['imap_port'], 993), acc['imap_username'] or acc['email_address']
     pwd = decrypt_credential(acc['imap_password']) if acc['imap_password'] else None
-    if not (host and user and pwd):
+    if not (host and user):
         conn.close(); return jsonify({'success': False, 'error': 'IMAP credentials missing'}), 400
+    if pwd is None:
+        conn.close(); return jsonify({'success': False, 'error': 'IMAP credentials missing'}), 400
+    log.debug("[accounts::scan_inbox] scanning INBOX", extra={'account_id': account_id, 'limit': n})
     try:
         imap = imaplib.IMAP4_SSL(host, port) if port==993 else imaplib.IMAP4(host, port)
         try:
@@ -434,7 +449,9 @@ def api_scan_inbox(account_id: int):
                         res.append({'uid': uid, 'subject': subj})
                     except Exception:
                         res.append({'uid': uid, 'subject': f'UID {uid}'})
-        imap.logout(); conn.close(); return jsonify({'success': True, 'candidates': res})
+        imap.logout(); conn.close();
+        log.debug("[accounts::scan_inbox] completed", extra={'account_id': account_id, 'candidates': len(res)})
+        return jsonify({'success': True, 'candidates': res})
     except Exception as e:
         conn.close(); return jsonify({'success': False, 'error': str(e)}), 500
 

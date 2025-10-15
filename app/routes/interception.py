@@ -3,12 +3,13 @@
 Contains: healthz, interception dashboard APIs, inbox API, edit, release, discard.
 Diff and attachment scrubbing supported.
 """
+import logging
 import os
 import time
 import statistics
 from datetime import datetime
 import sqlite3
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, cast
 from flask import Blueprint, jsonify, render_template, request
 from flask_login import login_required, current_user
 from email.parser import BytesParser
@@ -21,7 +22,6 @@ from app.utils.crypto import decrypt_credential, encrypt_credential
 from app.utils.imap_helpers import _imap_connect_account, _ensure_quarantine, _move_uid_to_quarantine
 from app.services.audit import log_action
 import socket
-import os
 from app.extensions import csrf, limiter
 
 from functools import wraps
@@ -60,6 +60,7 @@ def simple_rate_limit(f):
     return wrapped
 
 bp_interception = Blueprint('interception_bp', __name__)
+log = logging.getLogger(__name__)
 
 def _db():
     """Get database connection with Row factory"""
@@ -80,7 +81,15 @@ def healthz():
     if _HEALTH_CACHE['payload'] and now - _HEALTH_CACHE['ts'] < 5:
         cached = dict(_HEALTH_CACHE['payload']); cached['cached'] = True
         return jsonify(cached), 200 if cached.get('ok') else 503
-    info = {'ok': True,'db': None,'held_count':0,'released_24h':0,'median_latency_ms':None,'workers':[], 'timestamp': datetime.utcnow().isoformat()+'Z'}
+    info: Dict[str, Any] = {
+        'ok': True,
+        'db': None,
+        'held_count': 0,
+        'released_24h': 0,
+        'median_latency_ms': None,
+        'workers': [],
+        'timestamp': datetime.utcnow().isoformat() + 'Z'
+    }
 
     # Add security configuration status (without exposing secret values)
     try:
@@ -149,6 +158,7 @@ def healthz():
         pass
     info['smtp'] = smtp_info
     _HEALTH_CACHE['ts'] = now; _HEALTH_CACHE['payload'] = info
+    log.debug("[interception::healthz] refreshed", extra={'ok': info.get('ok'), 'held_count': info.get('held_count'), 'workers': len(info.get('workers', []))})
     return jsonify(info), 200 if info.get('ok') else 503
 
 @bp_interception.route('/api/smtp-health')
@@ -264,6 +274,7 @@ def api_interception_release(msg_id:int):
     target_folder = payload.get('target_folder','INBOX')
     strip_attachments = bool(payload.get('strip_attachments'))
     conn = _db(); cur = conn.cursor()
+    log.debug("[interception::release] begin", extra={'email_id': msg_id, 'target': target_folder})
     # Fetch regardless of current interception_status to support idempotency
     row = cur.execute("""
         SELECT em.*, ea.imap_host, ea.imap_port, ea.imap_username, ea.imap_password, ea.imap_use_ssl
@@ -297,7 +308,9 @@ def api_interception_release(msg_id:int):
     elif raw_content:
         original_bytes = raw_content.encode('utf-8') if isinstance(raw_content, str) else raw_content
     else:
-        conn.close(); return jsonify({'ok':False,'reason':'raw-missing'}), 500
+        conn.close();
+        log.error("[interception::release] raw content missing", extra={'email_id': msg_id})
+        return jsonify({'ok':False,'reason':'raw-missing'}), 500
 
     msg = BytesParser(policy=default_policy).parsebytes(original_bytes)
     if edited_subject:
@@ -416,8 +429,7 @@ def api_interception_release(msg_id:int):
         # All good; close IMAP
         imap.logout()
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        log.exception("[interception::release] append failed", extra={'email_id': msg_id, 'target': target_folder})
         conn.close(); return jsonify({'ok':False,'reason':'append-failed','error':str(e)}), 500
     cur.execute("""
         UPDATE email_messages
@@ -434,6 +446,7 @@ def api_interception_release(msg_id:int):
         log_action('RELEASE', getattr(current_user, 'id', None), msg_id, f"Released to {target_folder}; edited={bool(edited_subject or edited_body)}; removed={removed}")
     except Exception:
         pass
+    log.info("[interception::release] success", extra={'email_id': msg_id, 'target': target_folder, 'attachments_removed': bool(removed)})
     return jsonify({'ok':True,'released_to':target_folder,'attachments_removed':removed})
 
 @bp_interception.route('/api/interception/discard/<int:msg_id>', methods=['POST'])
@@ -547,6 +560,7 @@ def api_email_intercept(email_id:int):
     note = None
     effective_quarantine = row['quarantine_folder'] if 'quarantine_folder' in row.keys() and row['quarantine_folder'] else 'Quarantine'
     resolved_uid = row['original_uid']
+    log.debug("[interception::manual_intercept] begin", extra={'email_id': email_id, 'account_id': row['account_id'], 'previous_status': previous, 'resolved_uid': resolved_uid})
 
     try:
         host = row['imap_host']; port = int(row['imap_port'] or 993)
@@ -572,7 +586,7 @@ def api_email_intercept(email_id:int):
                 return None
             for candidate in (value, f'"{value}"'):
                 try:
-                    typ, data = imap_obj.uid('SEARCH', None, 'HEADER', header, candidate)
+                    typ, data = cast(Any, imap_obj).uid('SEARCH', None, 'HEADER', header, candidate)
                     if typ == 'OK' and data and data[0]:
                         parts = data[0].split()
                         if parts:
@@ -587,7 +601,7 @@ def api_email_intercept(email_id:int):
                 return None
             query = f'rfc822msgid:{msg_id}'
             try:
-                typ, data = imap_obj.uid('SEARCH', None, 'X-GM-RAW', query)
+                typ, data = cast(Any, imap_obj).uid('SEARCH', None, 'X-GM-RAW', query)
                 if typ == 'OK' and data and data[0]:
                     parts = data[0].split()
                     if parts:
@@ -605,9 +619,12 @@ def api_email_intercept(email_id:int):
             resolved_uid = _search_gmail_rfc(row['message_id'])
 
         if resolved_uid:
-            remote_move = _move_uid_to_quarantine(imap_obj, str(resolved_uid), effective_quarantine)
+            uid_str = str(resolved_uid)
+            log.debug("[interception::manual_intercept] moving message", extra={'email_id': email_id, 'uid': uid_str, 'target': effective_quarantine})
+            remote_move = _move_uid_to_quarantine(imap_obj, uid_str, effective_quarantine)
         else:
             note = 'Remote UID not found for manual intercept'
+            log.warning("[interception::manual_intercept] UID not resolved", extra={'email_id': email_id, 'account_id': row['account_id']})
 
         try:
             imap_obj.logout()
@@ -619,6 +636,7 @@ def api_email_intercept(email_id:int):
     if not remote_move:
         conn.close()
         status_code = 502 if note and 'error' in note.lower() else 409
+        log.warning("[interception::manual_intercept] move failed", extra={'email_id': email_id, 'account_id': row['account_id'], 'note': note, 'status_code': status_code})
         return jsonify({'success': False, 'email_id': email_id, 'remote_move': False, 'previous_status': previous, 'note': note or 'Remote move failed'}), status_code
 
     if resolved_uid and not row['original_uid']:
@@ -635,6 +653,7 @@ def api_email_intercept(email_id:int):
         """,
         (effective_quarantine, email_id),
     ); conn.commit()
+    log.info("[interception::manual_intercept] success", extra={'email_id': email_id, 'account_id': row['account_id'], 'quarantine_folder': effective_quarantine})
 
     # Calculate latency_ms best-effort
     try:

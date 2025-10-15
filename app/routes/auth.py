@@ -4,6 +4,7 @@ Extracted from simple_app.py lines 567-607
 Routes: /, /login, /logout
 Phase 2: Added rate limiting for security hardening
 """
+import logging
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
@@ -16,6 +17,7 @@ from app.services.audit import log_action
 from app import extensions
 
 auth_bp = Blueprint('auth', __name__)
+log = logging.getLogger(__name__)
 
 
 @auth_bp.route('/')
@@ -40,15 +42,19 @@ def login():
                               (username,)).fetchone()
         conn.close()
 
-        if user and check_password_hash(user[2], password):
+        if not password:
+            log.warning("[auth::login] missing password input", extra={'username': username})
+        if user and password and check_password_hash(user[2], password):
             user_obj = SimpleUser(user[0], user[1], user[3])
             login_user(user_obj)
 
             # Log the action
             log_action('LOGIN', user[0], None, f"User {username} logged in")
+            log.info("[auth::login] login successful", extra={'user_id': user[0], 'username': username})
 
             return redirect(url_for('dashboard.dashboard'))
 
+        log.warning("[auth::login] login failed", extra={'username': username})
         flash('Invalid username or password', 'error')
 
     return render_template('login.html')

@@ -494,6 +494,7 @@ class ImapWatcher:
         if not self.cfg.account_id or not uids:
             return
         status_upper = str(new_status or '').upper()
+        conn: Optional[sqlite3.Connection] = None
         try:
             conn = sqlite3.connect(self.cfg.db_path)
             cursor = conn.cursor()
@@ -526,11 +527,11 @@ class ImapWatcher:
         except Exception as exc:
             log.error("Failed to update interception status for account %s UIDs %s: %s", self.cfg.account_id, uids, exc)
         finally:
-            try:
-                if 'conn' in locals() and conn:
+            if conn:
+                try:
                     conn.close()
-            except Exception:
-                pass
+                except Exception:
+                    pass
 
     def _update_heartbeat(self, status: str = "active"):
         """Best-effort upsert of a heartbeat record for /healthz."""
