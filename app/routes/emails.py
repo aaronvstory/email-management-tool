@@ -17,6 +17,7 @@ from email import policy
 from email import message_from_bytes
 from email.utils import parsedate_to_datetime, getaddresses
 from app.utils.db import DB_PATH, get_db, fetch_counts
+from app.utils.imap_helpers import _ensure_quarantine, _move_uid_to_quarantine
 from app.extensions import csrf
 from app.utils.crypto import decrypt_credential
 from app.utils.rule_engine import evaluate_rules
@@ -354,6 +355,7 @@ def api_fetch_emails():
     if not acct:
         conn.close(); return jsonify({'success': False, 'error': 'Account not found'}), 404
     mail = None
+    auto_move_enabled = str(os.environ.get('AUTO_MOVE_ON_FETCH', '0')).lower() in ('1', 'true', 'yes')
     try:
         password = decrypt_credential(acct['imap_password'])
         if not password:
@@ -405,28 +407,35 @@ def api_fetch_emails():
             recipients_list = [a for a in addr_list if a] or ([msg.get('To', '')] if msg.get('To') else [])
             recipients = json.dumps(recipients_list)
 
-                body_text = ''
-                body_html = ''
-                # Ensure body_text is always initialized before use
-                if msg.is_multipart():
-                    for part in msg.walk():
-                        ctype = part.get_content_type()
-                        payload = part.get_payload(decode=True)
-                        if not payload:
-                            continue
-                        if ctype == 'text/plain' and isinstance(payload, (bytes, bytearray)):
+            body_text = ''
+            body_html = ''
+            if msg.is_multipart():
+                for part in msg.walk():
+                    if part.is_multipart():
+                        continue
+                    ctype = part.get_content_type()
+                    payload = part.get_payload(decode=True)
+                    if payload is None:
+                        continue
+                    if ctype == 'text/plain':
+                        if isinstance(payload, (bytes, bytearray)):
                             body_text = payload.decode('utf-8', errors='ignore')
-                        elif ctype == 'text/html' and isinstance(payload, (bytes, bytearray)):
+                        elif isinstance(payload, str):
+                            body_text = payload
+                    elif ctype == 'text/html':
+                        if isinstance(payload, (bytes, bytearray)):
                             body_html = payload.decode('utf-8', errors='ignore')
-                else:
-                    payload = msg.get_payload(decode=True)
-                    if isinstance(payload, (bytes, bytearray)):
-                        body_text = payload.decode('utf-8', errors='ignore')
-                    elif isinstance(payload, str):
-                        body_text = payload
+                        elif isinstance(payload, str):
+                            body_html = payload
+            else:
+                payload = msg.get_payload(decode=True)
+                if isinstance(payload, (bytes, bytearray)):
+                    body_text = payload.decode('utf-8', errors='ignore')
+                elif isinstance(payload, str):
+                    body_text = payload
 
             rule_eval = evaluate_rules(subject, body_text, sender, recipients_list)
-            interception_status = 'HELD' if rule_eval['should_hold'] else 'FETCHED'
+            should_hold = bool(rule_eval['should_hold'])
             risk_score = rule_eval['risk_score']
             keywords_json = json.dumps(rule_eval['keywords'])
             cur.execute(
@@ -437,10 +446,43 @@ def api_fetch_emails():
                  original_uid, original_internaldate, risk_score, keywords_matched, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
                 """,
-                (message_id, sender, recipients, subject, body_text, body_html, raw_email, account_id, 'inbound', interception_status, uid, internaldate, risk_score, keywords_json),
+                (message_id, sender, recipients, subject, body_text, body_html, raw_email, account_id, 'inbound', 'FETCHED', uid, internaldate, risk_score, keywords_json),
             )
             row = cur.execute("SELECT id FROM email_messages WHERE message_id=? ORDER BY id DESC LIMIT 1", (message_id,)).fetchone()
-            results.append({'id': row['id'] if row else None, 'message_id': message_id, 'uid': uid, 'subject': subject})
+            email_row_id = row['id'] if row else None
+
+            moved_to_quarantine = False
+            quarantine_folder = None
+            if should_hold and auto_move_enabled and email_row_id:
+                try:
+                    quarantine_folder = _ensure_quarantine(mail, 'Quarantine')
+                    moved_to_quarantine = _move_uid_to_quarantine(mail, uid, quarantine_folder)
+                except Exception:
+                    moved_to_quarantine = False
+                if moved_to_quarantine:
+                    cur.execute(
+                        """
+                        UPDATE email_messages
+                        SET interception_status='HELD',
+                            status='PENDING',
+                            quarantine_folder=?,
+                            action_taken_at=datetime('now')
+                        WHERE id=?
+                        """,
+                        (quarantine_folder, email_row_id),
+                    )
+                else:
+                    quarantine_folder = None
+
+            results.append({
+                'id': email_row_id,
+                'message_id': message_id,
+                'uid': uid,
+                'subject': subject,
+                'should_hold': should_hold,
+                'held': moved_to_quarantine,
+                'quarantine_folder': quarantine_folder,
+            })
         conn.commit(); return jsonify({'success': True, 'total_available': total, 'fetched': len(results), 'emails': results})
     except Exception as exc:
         return jsonify({'success': False, 'error': str(exc)}), 500

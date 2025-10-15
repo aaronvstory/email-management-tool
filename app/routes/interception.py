@@ -8,7 +8,7 @@ import time
 import statistics
 from datetime import datetime
 import sqlite3
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from flask import Blueprint, jsonify, render_template, request
 from flask_login import login_required, current_user
 from email.parser import BytesParser
@@ -538,68 +538,102 @@ def api_email_intercept(email_id:int):
     if not row['account_id']:
         conn.close(); return jsonify({'success': False, 'error': 'No linked account'}), 400
 
-    previous = row['interception_status']; remote_move = False; note = None
-    if previous != 'HELD':
-        try:
-            # Connect to IMAP
-            host = row['imap_host']; port = int(row['imap_port'] or 993)
-            username = row['imap_username']; password = decrypt_credential(row['imap_password'])
-            imap_obj = imaplib.IMAP4_SSL(host, port) if port == 993 else imaplib.IMAP4(host, port)
-            try:
-                if port != 993: imap_obj.starttls()
-            except Exception:
-                pass
-            if not password: raise RuntimeError('Decrypted password missing')
-            imap_obj.login(username, password)
-            try:
-                imap_obj.select('INBOX')
-            except Exception:
-                imap_obj.select()
+    previous = (row['interception_status'] or '').upper()
+    if previous == 'HELD':
+        conn.close()
+        return jsonify({'success': True, 'email_id': email_id, 'remote_move': False, 'previous_status': previous, 'note': 'already-held'})
 
-            def _search_uid(header: str, value: str | None) -> str | None:
-                if not header or not value:
-                    return None
-                safe_value = value.replace('"', '\"')
+    remote_move = False
+    note = None
+    effective_quarantine = row['quarantine_folder'] if 'quarantine_folder' in row.keys() and row['quarantine_folder'] else 'Quarantine'
+    resolved_uid = row['original_uid']
+
+    try:
+        host = row['imap_host']; port = int(row['imap_port'] or 993)
+        username = row['imap_username']; password = decrypt_credential(row['imap_password'])
+        if not password:
+            raise RuntimeError('Decrypted password missing')
+        imap_obj = imaplib.IMAP4_SSL(host, port) if port == 993 else imaplib.IMAP4(host, port)
+        try:
+            if port != 993:
+                imap_obj.starttls()
+        except Exception:
+            pass
+        imap_obj.login(username, password)
+        try:
+            imap_obj.select('INBOX')
+        except Exception:
+            imap_obj.select()
+
+        effective_quarantine = _ensure_quarantine(imap_obj, effective_quarantine)
+
+        def _search_uid(header: str, value: Optional[str]) -> Optional[str]:
+            if not header or not value:
+                return None
+            for candidate in (value, f'"{value}"'):
                 try:
-                    typ, data = imap_obj.uid('SEARCH', 'UTF-8', 'HEADER', header, f'"{safe_value}"')
+                    typ, data = imap_obj.uid('SEARCH', None, 'HEADER', header, candidate)
                     if typ == 'OK' and data and data[0]:
                         parts = data[0].split()
                         if parts:
-                            return parts[-1].decode()
+                            last = parts[-1]
+                            return last.decode() if isinstance(last, bytes) else str(last)
                 except Exception:
-                    return None
-                return None
+                    continue
+            return None
 
-            uid = None
-            if row['original_uid']:
-                uid = str(row['original_uid'])
-            if not uid and row['message_id']:
-                uid = _search_uid('Message-ID', row['message_id'])
-            if not uid and row['subject']:
-                uid = _search_uid('Subject', row['subject'])
-            if uid:
-                moved = _move_uid_to_quarantine(imap_obj, uid, 'Quarantine')
-                remote_move = moved
-                if moved and not row['original_uid']:
-                    cur.execute('UPDATE email_messages SET original_uid=? WHERE id=?', (uid, email_id))
-                if not moved:
-                    note = 'Remote move failed'
-            else:
-                note = 'Remote UID not found (Message-ID/Subject search failed)'
+        def _search_gmail_rfc(msg_id: Optional[str]) -> Optional[str]:
+            if not msg_id or 'gmail' not in (host or '').lower():
+                return None
+            query = f'rfc822msgid:{msg_id}'
+            try:
+                typ, data = imap_obj.uid('SEARCH', None, 'X-GM-RAW', query)
+                if typ == 'OK' and data and data[0]:
+                    parts = data[0].split()
+                    if parts:
+                        last = parts[-1]
+                        return last.decode() if isinstance(last, bytes) else str(last)
+            except Exception:
+                return None
+            return None
+
+        if not resolved_uid and row['message_id']:
+            resolved_uid = _search_uid('Message-ID', row['message_id'])
+        if not resolved_uid and row['subject']:
+            resolved_uid = _search_uid('Subject', row['subject'])
+        if not resolved_uid and row['message_id']:
+            resolved_uid = _search_gmail_rfc(row['message_id'])
+
+        if resolved_uid:
+            remote_move = _move_uid_to_quarantine(imap_obj, str(resolved_uid), effective_quarantine)
+        else:
+            note = 'Remote UID not found for manual intercept'
+
+        try:
             imap_obj.logout()
-        except Exception as exc:
-            note = f'IMAP error: {exc}'
+        except Exception:
+            pass
+    except Exception as exc:
+        note = f'IMAP error: {exc}'
+
+    if not remote_move:
+        conn.close()
+        status_code = 502 if note and 'error' in note.lower() else 409
+        return jsonify({'success': False, 'email_id': email_id, 'remote_move': False, 'previous_status': previous, 'note': note or 'Remote move failed'}), status_code
+
+    if resolved_uid and not row['original_uid']:
+        cur.execute('UPDATE email_messages SET original_uid=? WHERE id=?', (int(resolved_uid), email_id))
 
     cur.execute(
         """
         UPDATE email_messages
         SET interception_status='HELD',
             status='PENDING',
-            quarantine_folder='Quarantine',
+            quarantine_folder=?,
             action_taken_at=datetime('now')
         WHERE id=?
         """,
-        (email_id,),
+        (effective_quarantine, email_id),
     ); conn.commit()
 
     # Calculate latency_ms best-effort
@@ -620,4 +654,4 @@ def api_email_intercept(email_id:int):
     except Exception:
         pass
 
-    return jsonify({'success': True, 'email_id': email_id, 'remote_move': remote_move, 'previous_status': previous, 'note': note})
+    return jsonify({'success': True, 'email_id': email_id, 'remote_move': True, 'previous_status': previous, 'note': note, 'quarantine_folder': effective_quarantine})
