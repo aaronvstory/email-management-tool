@@ -59,20 +59,52 @@ async function saveSettings(){
     updates[k]=v;
   });
   try{
+    console.log('[settings] Saving settings:', updates);
     const r = await fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({settings: updates})});
+    if (!r.ok) {
+      console.error('[settings] Save failed with status:', r.status);
+      throw new Error(`Server returned ${r.status}`);
+    }
     const j = await r.json();
+    console.log('[settings] Save response:', j);
     if(!j.success) throw new Error(j.error||'Save failed');
     if(window.showSuccess) showSuccess('Settings saved');
-  }catch(e){ if(window.showError) showError(e.message); }
+  }catch(e){
+    console.error('[settings] Error saving settings:', e);
+    if(window.showError) showError(e.message);
+  }
 }
 
 async function restartAllViaWatchers(){
   try{
-    const r = await fetch('/api/accounts'); const j = await r.json();
-    for(const acc of (j.accounts||[])){
-      try{ await fetch(`/api/accounts/${acc.id}/monitor/restart`, {method:'POST'}); }catch(e){}
+    const r = await fetch('/api/accounts');
+    if (!r.ok) {
+      console.error('[settings] Failed to fetch accounts:', r.status);
+      return;
     }
-  }catch(e){}
+    const j = await r.json();
+    console.log('[settings] Accounts response:', j);
+
+    if (!j.accounts || !Array.isArray(j.accounts)) {
+      console.error('[settings] Invalid accounts data:', j);
+      return;
+    }
+
+    for(const acc of j.accounts){
+      if (!acc || !acc.id) {
+        console.warn('[settings] Skipping account with no ID:', acc);
+        continue;
+      }
+      try{
+        console.log(`[settings] Restarting watcher for account ${acc.id}`);
+        await fetch(`/api/accounts/${acc.id}/monitor/restart`, {method:'POST'});
+      }catch(e){
+        console.error(`[settings] Failed to restart account ${acc.id}:`, e);
+      }
+    }
+  }catch(e){
+    console.error('[settings] Error in restartAllViaWatchers:', e);
+  }
 }
 
 document.addEventListener('DOMContentLoaded', renderSettings);

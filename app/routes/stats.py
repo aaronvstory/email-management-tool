@@ -42,7 +42,8 @@ def api_unified_stats():
     cur = conn.cursor()
     released = cur.execute("""
         SELECT COUNT(*) FROM email_messages
-        WHERE interception_status='RELEASED' OR status IN ('SENT','APPROVED','DELIVERED')
+        WHERE (interception_status='RELEASED' OR status IN ('APPROVED','DELIVERED'))
+          AND (direction IS NULL OR direction!='outbound')
     """).fetchone()[0]
     conn.close()
 

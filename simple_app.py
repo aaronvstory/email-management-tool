@@ -89,10 +89,12 @@ def check_port_available(port, host='localhost'):
                         print(f"Killed process {pid} using port {port}")
                         time.sleep(2)
                         return True, pid
-                    except:
-                        pass
-        except:
-            pass
+                    except Exception as e:
+                        import logging
+                        logging.getLogger(__name__).debug(f"[startup] Failed to kill process {pid} on port {port}: {e}")
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).debug(f"[startup] Port check command failed for port {port}: {e}")
     else:
         # Linux/Mac: use lsof
         try:
@@ -107,10 +109,12 @@ def check_port_available(port, host='localhost'):
                         print(f"Killed process {pid} using port {port}")
                         time.sleep(2)
                         return True, pid
-                    except:
-                        pass
-        except:
-            pass
+                    except Exception as e:
+                        import logging
+                        logging.getLogger(__name__).debug(f"[startup] Failed to kill process {pid} on port {port}: {e}")
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).debug(f"[startup] lsof command failed for port {port}: {e}")
 
     return False, None
 
@@ -696,8 +700,9 @@ def inject_template_context():
             pending_count = cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'PENDING'").fetchone()[0]
             conn.close()
             context['pending_count'] = pending_count
-    except:
-        pass
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).debug(f"[context] Failed to fetch pending count: {e}")
 
     # Add CSRF token
     context['csrf_token'] = generate_csrf
@@ -966,8 +971,9 @@ def cleanup_emergency_backups(days_to_keep=7):
                 try:
                     os.remove(filepath)
                     print(f"Cleaned up old backup: {filename}")
-                except:
-                    pass
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).debug(f"[cleanup] Failed to remove backup {filename}: {e}")
 
 # Schedule cleanup to run periodically
 def schedule_cleanup():

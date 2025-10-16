@@ -33,24 +33,25 @@ def dashboard(tab='overview'):
 
     # Get statistics (filtered by account if selected)
     if selected_account_id:
-        stats = fetch_counts(account_id=int(selected_account_id))
+        stats = fetch_counts(account_id=int(selected_account_id), include_outbound=False)
 
         # Get recent emails for selected account
         recent_emails = cursor.execute("""
             SELECT id, sender, recipients, subject, status, risk_score, created_at
             FROM email_messages
-            WHERE account_id = ?
+            WHERE account_id = ? AND (direction IS NULL OR direction!='outbound')
             ORDER BY created_at DESC
             LIMIT 10
         """, (selected_account_id,)).fetchall()
     else:
         # Get overall statistics
-        stats = fetch_counts()
+        stats = fetch_counts(include_outbound=False)
 
         # Get recent emails from all accounts
         recent_emails = cursor.execute("""
             SELECT id, sender, recipients, subject, status, risk_score, created_at
             FROM email_messages
+            WHERE (direction IS NULL OR direction!='outbound')
             ORDER BY created_at DESC
             LIMIT 10
         """).fetchall()

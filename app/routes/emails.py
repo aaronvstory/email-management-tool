@@ -19,13 +19,18 @@ from email import message_from_bytes
 from email.utils import parsedate_to_datetime, getaddresses
 from app.utils.db import DB_PATH, get_db, fetch_counts
 from app.utils.imap_helpers import _ensure_quarantine, _move_uid_to_quarantine
-from app.extensions import csrf
+from app.extensions import csrf, limiter
 from app.utils.crypto import decrypt_credential
 from app.utils.rule_engine import evaluate_rules
 from app.services.audit import log_action
+from app.utils.rate_limit import get_rate_limit_config, simple_rate_limit
 
 emails_bp = Blueprint('emails', __name__)
 log = logging.getLogger(__name__)
+
+
+_FETCH_RATE_LIMIT = get_rate_limit_config('fetch', default_requests=30)
+_FETCH_LIMIT_STRING = str(_FETCH_RATE_LIMIT['limit_string'])
 
 @emails_bp.route('/emails-unified')
 @login_required
@@ -48,8 +53,8 @@ def emails_unified():
         """
     ).fetchall()
 
-    # Get counts for all statuses
-    counts = fetch_counts(account_id=account_id if account_id else None)
+    # Get counts for all statuses (exclude outbound by default)
+    counts = fetch_counts(account_id=account_id if account_id else None, include_outbound=False)
 
     conn.close()
 
@@ -78,13 +83,13 @@ def api_emails_unified():
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    # Build query based on filters
+    # Build query based on filters (exclude outbound by default)
     query = """
         SELECT id, account_id, sender, recipients, subject, body_text,
                interception_status, status, created_at,
                latency_ms, risk_score, keywords_matched
         FROM email_messages
-        WHERE 1=1
+        WHERE (direction IS NULL OR direction!='outbound')
     """
     params = []
 
@@ -94,8 +99,8 @@ def api_emails_unified():
 
     if status_filter and status_filter != 'ALL':
         if status_filter == 'RELEASED':
-            # Treat released as either interception_status=RELEASED or legacy delivered/sent/approved
-            query += " AND (interception_status='RELEASED' OR status IN ('SENT','APPROVED','DELIVERED'))"
+            # Treat released as interception_status=RELEASED or legacy delivered/approved (exclude SENT/outbound)
+            query += " AND (interception_status='RELEASED' OR status IN ('APPROVED','DELIVERED'))"
         else:
             query += " AND (interception_status = ? OR status = ?)"
             params.extend([status_filter, status_filter])
@@ -107,8 +112,8 @@ def api_emails_unified():
 
     emails = cursor.execute(query, params).fetchall()
 
-    # Get counts
-    counts = fetch_counts(account_id=account_id if account_id else None)
+    # Get counts (exclude outbound by default)
+    counts = fetch_counts(account_id=account_id if account_id else None, include_outbound=False)
 
     # Process emails for response
     email_list = []
@@ -345,6 +350,8 @@ def email_action(email_id):
 
 @emails_bp.route('/api/fetch-emails', methods=['POST'])
 @csrf.exempt
+@limiter.limit(_FETCH_LIMIT_STRING)
+@simple_rate_limit('fetch', config=_FETCH_RATE_LIMIT)
 @login_required
 def api_fetch_emails():
     """Fetch emails from IMAP server using UID-based fetching (migrated)."""
@@ -368,7 +375,8 @@ def api_fetch_emails():
         else:
             mail = imaplib.IMAP4(acct['imap_host'], int(acct['imap_port']))
             try: mail.starttls()
-            except Exception: pass
+            except Exception as e:
+                log.warning("[emails::fetch] STARTTLS failed (non-SSL port, continuing)", extra={'account_id': account_id, 'error': str(e)})
         mail.login(acct['imap_username'], password); mail.select('INBOX')
         typ, data_uids = mail.uid('SEARCH', 'ALL')
         if typ != 'OK':
@@ -498,7 +506,8 @@ def api_fetch_emails():
     finally:
         if mail:
             try: mail.logout()
-            except Exception: pass
+            except Exception as e:
+                log.debug("[emails::fetch] IMAP logout failed (non-critical)", extra={'account_id': account_id, 'error': str(e)})
         conn.close()
 
 

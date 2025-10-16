@@ -119,9 +119,10 @@ def api_stats_quick_validate():
               COUNT(*) AS total,
               SUM(CASE WHEN status='PENDING' THEN 1 ELSE 0 END) AS pending,
               SUM(CASE WHEN interception_status='HELD' THEN 1 ELSE 0 END) AS held,
-              SUM(CASE WHEN interception_status='RELEASED' OR status IN ('SENT','APPROVED','DELIVERED') THEN 1 ELSE 0 END) AS released,
+              SUM(CASE WHEN interception_status='RELEASED' OR status IN ('APPROVED','DELIVERED') THEN 1 ELSE 0 END) AS released,
               SUM(CASE WHEN status='REJECTED' THEN 1 ELSE 0 END) AS rejected
             FROM email_messages
+            WHERE (direction IS NULL OR direction!='outbound')
             """
         ).fetchone()
         conn.close()

@@ -341,7 +341,8 @@ def api_imap_live_test(account_id: int):
         else:
             imap = imaplib.IMAP4(host, port)
             try: imap.starttls()
-            except Exception: pass
+            except Exception as e:
+                log.warning("[accounts::probe] STARTTLS failed (non-SSL port, continuing)", extra={'account_id': account_id, 'error': str(e)})
         imap.login(user, pwd); imap.select('INBOX')
         import time as _t
         date_param = imaplib.Time2Internaldate(_t.localtime())

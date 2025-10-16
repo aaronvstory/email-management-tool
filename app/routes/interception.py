@@ -23,41 +23,22 @@ from app.utils.imap_helpers import _imap_connect_account, _ensure_quarantine, _m
 from app.services.audit import log_action
 import socket
 from app.extensions import csrf, limiter
+from app.utils.rate_limit import get_rate_limit_config, simple_rate_limit
+
+# Prometheus metrics
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 
 from functools import wraps
 import shutil
 import threading
-from collections import defaultdict
 from contextlib import contextmanager
 
 
-# Simple rate limiter for API protection
-_rate_limit_buckets = defaultdict(lambda: {'count': 0, 'reset_time': 0})
+_RELEASE_RATE_LIMIT = get_rate_limit_config('release', default_requests=30)
+_EDIT_RATE_LIMIT = get_rate_limit_config('edit', default_requests=30)
+_RELEASE_LIMIT_STRING = str(_RELEASE_RATE_LIMIT['limit_string'])
+_EDIT_LIMIT_STRING = str(_EDIT_RATE_LIMIT['limit_string'])
 
-def simple_rate_limit(f):
-    """Basic rate limiting decorator - 30 requests per minute"""
-    @wraps(f)
-    def wrapped(*args, **kwargs):
-        import time
-        from flask import request, jsonify
-
-        client_id = request.remote_addr
-        now = time.time()
-        bucket = _rate_limit_buckets[client_id]
-
-        # Reset bucket if time window passed (60 seconds)
-        if now > bucket['reset_time']:
-            bucket['count'] = 0
-            bucket['reset_time'] = now + 60
-
-        # Check rate limit
-        if bucket['count'] >= 30:
-            wait_time = int(bucket['reset_time'] - now)
-            return jsonify({'error': 'Rate limit exceeded', 'retry_after': wait_time}), 429
-
-        bucket['count'] += 1
-        return f(*args, **kwargs)
-    return wrapped
 
 bp_interception = Blueprint('interception_bp', __name__)
 log = logging.getLogger(__name__)
@@ -191,6 +172,40 @@ def api_smtp_health():
         pass
     return jsonify({'ok': ok, 'listening': ok, 'last_selfcheck_ts': last_sc, 'last_inbound_ts': last_in})
 
+@bp_interception.route('/metrics')
+@limiter.exempt
+def metrics():
+    """
+    Prometheus metrics endpoint.
+
+    Exposes all instrumented metrics in Prometheus format.
+    Update gauge metrics with current system state before returning.
+    """
+    try:
+        # Update gauge metrics with current system state
+        from app.utils.metrics import update_held_count, update_pending_count
+        conn = _db()
+        cur = conn.cursor()
+
+        # Update held count
+        held_count = cur.execute(
+            "SELECT COUNT(*) FROM email_messages WHERE interception_status='HELD'"
+        ).fetchone()[0]
+        update_held_count(held_count)
+
+        # Update pending count
+        pending_count = cur.execute(
+            "SELECT COUNT(*) FROM email_messages WHERE status='PENDING'"
+        ).fetchone()[0]
+        update_pending_count(pending_count)
+
+        conn.close()
+    except Exception as e:
+        log.warning(f"Failed to update gauge metrics: {e}")
+
+    # Generate and return Prometheus metrics
+    return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
+
 @bp_interception.route('/interception')
 @login_required
 def interception_dashboard():
@@ -267,6 +282,8 @@ def api_interception_get(msg_id:int):
 
 @bp_interception.route('/api/interception/release/<int:msg_id>', methods=['POST'])
 @csrf.exempt
+@limiter.limit(_RELEASE_LIMIT_STRING)
+@simple_rate_limit('release', config=_RELEASE_RATE_LIMIT)
 @login_required
 def api_interception_release(msg_id:int):
     payload = request.get_json(silent=True) or {}
@@ -359,14 +376,16 @@ def api_interception_release(msg_id:int):
             if ctype == 'text/plain': new_container.set_content(part.get_content())
             elif ctype == 'text/html':
                 try: new_container.add_alternative(part.get_content(), subtype='html')
-                except Exception: pass
+                except Exception as e:
+                    log.warning("[interception::release] Failed to add HTML alternative", extra={'email_id': msg_id, 'error': str(e)})
         if removed:
             notice = '\n\n[Attachments removed: ' + ', '.join(removed) + ']'
             try:
                 body = new_container.get_body(preferencelist=('plain',))
                 if body:
                     new_container.set_content(body.get_content()+notice)
-            except Exception: pass
+            except Exception as e:
+                log.warning("[interception::release] Failed to add attachment removal notice", extra={'email_id': msg_id, 'error': str(e)})
         msg = new_container
     decrypted_pass = decrypt_credential(row['imap_password'])
     try:
@@ -423,7 +442,8 @@ def api_interception_release(msg_id:int):
 
         if not verify_ok:
             try: imap.logout()
-            except Exception: pass
+            except Exception as e:
+                log.debug("[interception::release] IMAP logout failed during verify failure (non-critical)", extra={'email_id': msg_id, 'error': str(e)})
             conn.close(); return jsonify({'ok': False, 'reason': 'verify-failed'}), 502
 
         # All good; close IMAP
@@ -500,6 +520,8 @@ def api_inbox():
 
 @bp_interception.route('/api/email/<int:email_id>/edit', methods=['POST'])
 @csrf.exempt
+@limiter.limit(_EDIT_LIMIT_STRING)
+@simple_rate_limit('edit', config=_EDIT_RATE_LIMIT)
 @login_required
 def api_email_edit(email_id:int):
     payload = request.get_json(silent=True) or {}

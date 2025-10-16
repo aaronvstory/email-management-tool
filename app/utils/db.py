@@ -112,18 +112,22 @@ def get_all_messages(status_filter=None, limit: int = 200, *, conn: Optional[sql
         ).fetchall()
 
 
-def fetch_counts(account_id: int | None = None, *, conn: Optional[sqlite3.Connection] = None) -> dict:
+def fetch_counts(account_id: int | None = None, *, conn: Optional[sqlite3.Connection] = None, include_outbound: bool = False) -> dict:
     """Single-pass aggregate counts with optional connection injection.
 
     Includes 'released' defined as interception_status='RELEASED' OR legacy
     statuses (SENT, APPROVED, DELIVERED).
     """
-    legacy_released_clause = "(interception_status='RELEASED' OR status IN ('SENT','APPROVED','DELIVERED'))"
+    # Treat 'released' as RELEASED/APPROVED/DELIVERED. Exclude SENT (outbound) by default.
+    legacy_released_clause = "(interception_status='RELEASED' OR status IN ('APPROVED','DELIVERED'))"
     clauses = []
     params: list = []
     if account_id is not None:
         clauses.append("account_id=?")
         params.append(account_id)
+    # Unless explicitly requested, exclude outbound (compose) records from counts/UI badges
+    if not include_outbound:
+        clauses.append("(direction IS NULL OR direction!='outbound')")
     where_sql = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     sql = f"""
         SELECT
