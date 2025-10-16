@@ -137,10 +137,34 @@
             }
 
             const w = document.getElementById('nav-watchers');
-            const count = Array.isArray(j.workers) ? j.workers.length : 0;
-            w.textContent = 'Watchers: ' + count;
-            w.classList.remove('badge-soft-success','badge-soft-danger','badge-soft-muted');
-            w.classList.add(count > 0 ? 'badge-soft-success' : 'badge-soft-muted');
+            // Enhanced status breakdown
+            let statusCounts = {};
+            if (Array.isArray(j.workers)) {
+                j.workers.forEach(worker => {
+                    const status = (worker.status || 'unknown').toLowerCase();
+                    statusCounts[status] = (statusCounts[status] || 0) + 1;
+                });
+            }
+            const polling = statusCounts['polling'] || 0;
+            const idle = statusCounts['idle'] || 0;
+            const active = statusCounts['active'] || 0;
+            const total = polling + idle + active;
+
+            // Build display text with status breakdown
+            if (total === 0) {
+                w.textContent = 'Watchers: 0';
+                w.classList.remove('badge-soft-success','badge-soft-danger','badge-soft-muted');
+                w.classList.add('badge-soft-muted');
+            } else {
+                let parts = [];
+                if (polling > 0) parts.push(`P:${polling}`);
+                if (idle > 0) parts.push(`I:${idle}`);
+                if (active > 0) parts.push(`A:${active}`);
+                w.textContent = `Watchers: ${total} (${parts.join(', ')})`;
+                w.classList.remove('badge-soft-success','badge-soft-danger','badge-soft-muted');
+                w.classList.add('badge-soft-success');
+                w.title = `Active watchers - P=Polling, I=IDLE, A=Active`;
+            }
         }catch(e){/* ignore */}
     }
     refreshTopbarHealth(); setInterval(refreshTopbarHealth, 10000);

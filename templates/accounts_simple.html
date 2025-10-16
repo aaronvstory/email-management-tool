@@ -188,9 +188,8 @@
                         <div style="color: #9ca3af; font-size: 0.9rem;">{{ account.email_address }}</div>
                     </div>
                     <div style="display:flex;align-items:center;gap:8px;">
-                        <span id="watcher-dot-{{ account.id }}" title="Watcher status" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#6b7280;border:1px solid rgba(255,255,255,0.25);"></span>
-                        <span class="account-status {% if account.is_active %}status-active{% else %}status-inactive{% endif %}">
-                            {% if account.is_active %}Active{% else %}Inactive{% endif %}
+                        <span id="watcher-status-{{ account.id }}" class="account-status status-inactive" title="Watcher operational status">
+                            STOPPED
                         </span>
                     </div>
                 </div>
@@ -543,19 +542,67 @@ async function restartMonitoring(accountId, btn){
 
 (function(){ const id = getQueryParam('edit'); if (id) openEditModal(id); })();
 
-// Annotate watcher status per account using /api/watchers/status
+// Annotate watcher status per account using /api/watchers/overview
 async function annotateWatchers(){
   try{
-    const r = await fetch('/api/watchers/status');
-    if(!r.ok) return; const j = await r.json();
-    const ids = (j.workers||[]).map(w=>String(w.worker_id||'').replace('imap_',''));
-    document.querySelectorAll('[id^="watcher-dot-"]').forEach(el=>{
-      const accId = el.id.replace('watcher-dot-','');
-      const active = ids.includes(accId);
-      el.style.background = active ? '#22c55e' : '#6b7280';
-      el.style.borderColor = active ? '#22c55e' : 'rgba(255,255,255,0.25)';
+    const r = await fetch('/api/watchers/overview');
+    if(!r.ok) return;
+    const j = await r.json();
+
+    // Build status map by account ID
+    const statusMap = {};
+    (j.accounts || []).forEach(acc => {
+      const state = (acc.watcher && acc.watcher.state) || (acc.is_active ? 'unknown' : 'stopped');
+      statusMap[acc.id] = state;
     });
-  }catch(e){}
+
+    // Update each account's status badge
+    document.querySelectorAll('[id^="watcher-status-"]').forEach(el=>{
+      const accId = el.id.replace('watcher-status-','');
+      const state = statusMap[accId] || 'stopped';
+
+      // Remove all status classes
+      el.classList.remove('status-active', 'status-inactive');
+
+      // Color coding and text
+      let displayText = state.toUpperCase();
+      let cssClass = 'status-inactive'; // Default red
+
+      if (state === 'polling') {
+        displayText = 'POLLING';
+        cssClass = 'status-active'; // Green
+      } else if (state === 'idle') {
+        displayText = 'IDLE';
+        el.style.background = 'rgba(251, 191, 36, 0.2)'; // Yellow
+        el.style.color = '#fbbf24';
+        el.style.border = '1px solid #fbbf24';
+      } else if (state === 'active') {
+        displayText = 'ACTIVE';
+        cssClass = 'status-active'; // Green
+      } else if (state === 'unknown') {
+        displayText = 'UNKNOWN';
+        el.style.background = 'rgba(59, 130, 246, 0.2)'; // Blue
+        el.style.color = '#3b82f6';
+        el.style.border = '1px solid #3b82f6';
+      } else if (state === 'stopped') {
+        displayText = 'STOPPED';
+        cssClass = 'status-inactive'; // Red
+      }
+
+      el.classList.add(cssClass);
+      el.textContent = displayText;
+      el.title = `Watcher operational status: ${displayText}`;
+
+      // Clear inline styles if using status-active/inactive classes
+      if (cssClass === 'status-active' || cssClass === 'status-inactive') {
+        el.style.background = '';
+        el.style.color = '';
+        el.style.border = '';
+      }
+    });
+  }catch(e){
+    console.error('Failed to annotate watchers:', e);
+  }
 }
 annotateWatchers();
 setInterval(annotateWatchers, 10000);

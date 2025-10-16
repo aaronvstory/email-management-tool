@@ -759,6 +759,14 @@ class ImapWatcher:
         log.info(f"Starting IDLE loop with _last_uidnext={self._last_uidnext} (db-resumed)")
         # initial heartbeat
         self._update_heartbeat("active"); self._last_hb = time.time()
+
+        # Get polling interval from environment (default 30 seconds) - define once outside loop
+        try:
+            poll_interval = int(os.getenv("IMAP_POLL_INTERVAL", "30"))
+            poll_interval = max(5, min(300, poll_interval))  # Clamp between 5-300 seconds
+        except Exception:
+            poll_interval = 30
+
         while True:
             # Stop if account was deactivated while running
             if self._should_stop():
@@ -781,18 +789,15 @@ class ImapWatcher:
                     time.sleep(10)
                     continue
 
-            # Check IDLE support
+            # Check IDLE support and IMAP_DISABLE_IDLE environment variable
             try:
                 can_idle = b"IDLE" in (client.capabilities() or [])
+                # Force polling mode if IMAP_DISABLE_IDLE is set
+                if str(os.getenv('IMAP_DISABLE_IDLE', '0')).lower() in ('1', 'true', 'yes'):
+                    can_idle = False
+                    log.info(f"IDLE disabled by IMAP_DISABLE_IDLE env var for account {self.cfg.account_id}")
             except Exception:
                 can_idle = False
-
-            # Get polling interval from environment (default 30 seconds)
-            try:
-                poll_interval = int(os.getenv("IMAP_POLL_INTERVAL", "30"))
-                poll_interval = max(5, min(300, poll_interval))  # Clamp between 5-300 seconds
-            except Exception:
-                poll_interval = 30
 
             if not can_idle:
                 # Poll fallback mode
@@ -804,7 +809,7 @@ class ImapWatcher:
                 except Exception as e:
                     log.error(f"Polling check failed for account {self.cfg.account_id}: {e}")
                 if time.time() - self._last_hb > 30:
-                    self._update_heartbeat("active"); self._last_hb = time.time()
+                    self._update_heartbeat("polling"); self._last_hb = time.time()
                 continue
 
             # Double-check client before IDLE
@@ -830,7 +835,7 @@ class ImapWatcher:
                         self._handle_new_messages(client, changed)
                     # periodic heartbeat
                     if time.time() - self._last_hb > 30:
-                        self._update_heartbeat("active"); self._last_hb = time.time()
+                        self._update_heartbeat("idle"); self._last_hb = time.time()
                     # Check stop request periodically during IDLE
                     if self._should_stop():
                         try:
@@ -914,9 +919,18 @@ class ImapWatcher:
                         break
             except Exception as e:
                 error_msg = str(e).lower()
-                # Check if this is an IDLE protocol violation (common with Gmail)
-                if "violates" in error_msg or "protocol" in error_msg:
-                    log.warning(f"IDLE protocol error for account {self.cfg.account_id}: {e}")
+                # Check if this is an IDLE failure that should trigger polling mode
+                # Common patterns: protocol violations, timeouts, connection issues
+                should_poll = any([
+                    "violates" in error_msg,
+                    "protocol" in error_msg,
+                    "timeout" in error_msg,
+                    "timed out" in error_msg,
+                    "read from timed" in error_msg
+                ])
+
+                if should_poll:
+                    log.warning(f"IDLE error for account {self.cfg.account_id}: {e}")
                     log.info(f"Switching to polling mode (interval: {poll_interval}s)")
                     # Force polling mode by clearing can_idle flag
                     can_idle = False

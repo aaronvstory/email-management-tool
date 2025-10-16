@@ -63,8 +63,17 @@ async function loadOverview(){
     let activeCount = 0;
     (j.accounts||[]).forEach(acc =>{
       const state = (acc.watcher && acc.watcher.state) || (acc.is_active ? 'unknown' : 'stopped');
-      const isActive = (state === 'active'); // count only true active (heartbeat-present) watchers
+      // Consider 'polling', 'idle', and 'active' as running states
+      const isActive = ['polling', 'idle', 'active'].includes(state);
       if(isActive) activeCount++;
+      // Color coding: green for polling/idle/active, blue for unknown, red for stopped
+      let stateColor = 'text-danger';
+      let stateDisplay = state.toUpperCase();
+      if (state === 'polling') { stateColor = 'text-success'; stateDisplay = 'POLLING'; }
+      else if (state === 'idle') { stateColor = 'text-warning'; stateDisplay = 'IDLE'; }
+      else if (state === 'active') { stateColor = 'text-success'; stateDisplay = 'ACTIVE'; }
+      else if (state === 'unknown') { stateColor = 'text-info'; stateDisplay = 'UNKNOWN'; }
+      else if (state === 'stopped') { stateColor = 'text-danger'; stateDisplay = 'STOPPED'; }
       const card = document.createElement('div');
       card.className = 'stat-card-modern watcher-card';
       card.innerHTML = `
@@ -72,7 +81,7 @@ async function loadOverview(){
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
           <div class="info" style="min-width:0;">
             <div class="email-clip" style="font-weight:600">${acc.email_address || ''}</div>
-            <div style="font-size:.8rem;color:#9ca3af">State: <span class="${isActive ? 'text-success' : 'text-danger'}">${state}</span></div>
+            <div style="font-size:.8rem;color:#9ca3af">State: <span class="${stateColor}">${stateDisplay}</span></div>
             <div style="font-size:.8rem;color:#9ca3af">Heartbeat: ${(acc.watcher && acc.watcher.last_heartbeat) || '—'}</div>
           </div>
           <div class="btn-group">
