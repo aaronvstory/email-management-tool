@@ -121,6 +121,10 @@ def check_port_available(port, host='localhost'):
 # Load environment from .env early
 load_dotenv()
 
+# FIX #1: Enable verbose IMAP logging globally (Phase 2 Fix)
+os.environ['IMAP_LOG_VERBOSE'] = '1'
+os.environ['IMAP_CIRCUIT_THRESHOLD'] = '10'  # Increase threshold to prevent false circuit breaks
+
 
 def _bool_env(name: str, default: bool = False) -> bool:
     """Parse boolean-like environment variables with a safe default."""

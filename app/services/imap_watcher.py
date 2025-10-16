@@ -124,6 +124,23 @@ class ImapWatcher:
         except Exception:
             pass
 
+    def _get_last_processed_uid(self) -> int:
+        """Get the last processed UID from database for this account."""
+        if not self.cfg.account_id:
+            return 0
+        try:
+            conn = sqlite3.connect(self.cfg.db_path)
+            cursor = conn.cursor()
+            row = cursor.execute(
+                "SELECT MAX(original_uid) FROM email_messages WHERE account_id=?",
+                (self.cfg.account_id,)
+            ).fetchone()
+            conn.close()
+            return int(row[0]) if row and row[0] else 0
+        except Exception as e:
+            log.warning("Failed to get last processed UID from database: %s", e)
+            return 0
+
     def _connect(self) -> Optional[IMAPClient]:
         try:
             log.info("Connecting to IMAP %s:%s (ssl=%s)", self.cfg.imap_host, self.cfg.imap_port, self.cfg.use_ssl)
@@ -218,12 +235,24 @@ class ImapWatcher:
                     self.cfg.quarantine = "INBOX.Quarantine"
                 except Exception:
                     pass
-            # Initialize UIDNEXT tracking for fast delta scans
+
+            # FIX #2: Initialize UIDNEXT tracking from database, not server UIDNEXT
+            # This ensures we don't skip UIDs that arrived while watcher was down
             try:
                 status = client.folder_status(self.cfg.inbox, [b'UIDNEXT'])
-                self._last_uidnext = int(status.get(b'UIDNEXT') or 1)
+                server_uidnext = int(status.get(b'UIDNEXT') or 1)
             except Exception:
-                self._last_uidnext = 1
+                server_uidnext = 1
+
+            # Check database for last processed UID
+            last_db_uid = self._get_last_processed_uid()
+
+            # Resume from max(database UID + 1, 1)
+            # This ensures we process ALL UIDs after the last one we stored
+            self._last_uidnext = max(1, last_db_uid + 1)
+
+            log.info(f"UIDNEXT tracking initialized: server={server_uidnext}, last_db_uid={last_db_uid}, resuming_from={self._last_uidnext}")
+
             return client
         except Exception as e:
             log.error(f"Failed to connect to IMAP for {self.cfg.username}: {e}")
@@ -381,6 +410,9 @@ class ImapWatcher:
             for uid, data in fetch_data.items():
                 uid_int = int(uid)
                 try:
+                    # FIX #3: Log at START of processing each UID
+                    log.info(f"🔍 [START] Processing UID={uid_int}")
+
                     raw_email = data[b'RFC822']
                     email_msg = message_from_bytes(raw_email, policy=policy.default)
 
@@ -392,6 +424,9 @@ class ImapWatcher:
                     subject = str(email_msg.get('Subject', 'No Subject'))
                     original_msg_id = (email_msg.get('Message-ID') or '').strip() or None
                     message_id = original_msg_id or f"imap_{uid_int}_{datetime.now().timestamp()}"
+
+                    log.info(f"   Message-ID: {original_msg_id if original_msg_id else '(none - will generate)'}")
+                    log.info(f"   Subject: {subject}")
 
                     body_text = ""
                     body_html = ""
@@ -420,7 +455,7 @@ class ImapWatcher:
                         if original_msg_id:
                             row = cursor.execute("SELECT id FROM email_messages WHERE message_id=?", (original_msg_id,)).fetchone()
                             if row:
-                                log.debug("Skipping duplicate message_id=%s (uid=%s)", original_msg_id, uid_int)
+                                log.info(f"⚠️ [DUPLICATE] Skipping duplicate message_id={original_msg_id} (uid={uid_int}, existing_id={row[0]})")
                                 continue
                     except Exception:
                         pass
@@ -441,6 +476,9 @@ class ImapWatcher:
                     interception_status = 'INTERCEPTED' if should_hold else 'FETCHED'
                     risk_score = rule_eval.get('risk_score', 0)
                     keywords_json = json.dumps(rule_eval.get('keywords', []))
+
+                    # FIX #3: Add INFO-level logging before INSERT to track status mapping
+                    log.info(f"[PRE-INSERT] UID={uid_int}, subject='{subject[:40]}...', rule_eval={rule_eval}, should_hold={should_hold}, interception_status='{interception_status}'")
 
                     cursor.execute('''
                         INSERT INTO email_messages
@@ -467,19 +505,24 @@ class ImapWatcher:
                         keywords_json
                     ))
 
+                    # FIX #3: Log successful INSERT with full details
                     if should_hold:
                         held_uids.append(uid_int)
-                        log.info("Stored INTERCEPTED email %s from %s for account %s (uid=%s)", subject, sender, self.cfg.account_id, uid_int)
+                        log.info("✅ [POST-INSERT] Stored INTERCEPTED email (UID=%s, subject='%s', sender=%s, account=%s)", uid_int, subject[:40], sender, self.cfg.account_id)
                     else:
-                        log.debug("Stored FETCHED email %s from %s for account %s (uid=%s)", subject, sender, self.cfg.account_id, uid_int)
+                        log.info("✅ [POST-INSERT] Stored FETCHED email (UID=%s, subject='%s', sender=%s, account=%s)", uid_int, subject[:40], sender, self.cfg.account_id)
 
                 except Exception as e:
-                    log.error("Failed to store email UID %s: %s", uid, e)
+                    # FIX #3: Enhanced error logging with full context
+                    log.error("❌ Failed to store email UID %s (subject='%s', sender=%s): %s", uid_int, subject[:40] if 'subject' in locals() else 'unknown', sender if 'sender' in locals() else 'unknown', e, exc_info=True)
 
             conn.commit()
 
+            # FIX #3: Summary logging to track success/failure ratio
+            log.info(f"📊 [STORAGE SUMMARY] Attempted={len(uids)}, Held={len(held_uids)}, Account={self.cfg.account_id}")
+
         except Exception as e:
-            log.error("Failed to store emails in database: %s", e)
+            log.error("Failed to store emails in database: %s", e, exc_info=True)
             return []
         finally:
             try:
@@ -682,9 +725,10 @@ class ImapWatcher:
         else:
             log.debug("No rule-matched messages require quarantine (acct=%s, uids=%s)", self.cfg.account_id, to_process)
 
-        # Advance tracker past the highest processed UID
+        # Advance tracker past the highest processed UID based on DB-visible progress
         try:
-            self._last_uidnext = max(self._last_uidnext, max(to_process) + 1)
+            last_db_uid = self._get_last_processed_uid()
+            self._last_uidnext = max(self._last_uidnext, last_db_uid + 1, max(to_process) + 1)
         except Exception:
             pass
 
@@ -707,12 +751,12 @@ class ImapWatcher:
             return  # Let backoff handle retry
 
         last_idle_break = time.time()
-        # Track UIDNEXT to reduce duplicate scans
+        # Ensure tracker resumes from DB state at loop start
         try:
-            status = client.folder_status(self.cfg.inbox, [b'UIDNEXT'])
-            self._last_uidnext = int(status.get(b'UIDNEXT') or 1)
+            self._last_uidnext = max(1, self._get_last_processed_uid() + 1)
         except Exception:
-            self._last_uidnext = 1
+            pass
+        log.info(f"Starting IDLE loop with _last_uidnext={self._last_uidnext} (db-resumed)")
         # initial heartbeat
         self._update_heartbeat("active"); self._last_hb = time.time()
         while True:
@@ -742,11 +786,23 @@ class ImapWatcher:
                 can_idle = b"IDLE" in (client.capabilities() or [])
             except Exception:
                 can_idle = False
+
+            # Get polling interval from environment (default 30 seconds)
+            try:
+                poll_interval = int(os.getenv("IMAP_POLL_INTERVAL", "30"))
+                poll_interval = max(5, min(300, poll_interval))  # Clamp between 5-300 seconds
+            except Exception:
+                poll_interval = 30
+
             if not can_idle:
-                # Poll fallback every few seconds
-                time.sleep(5)
-                client.select_folder(self.cfg.inbox, readonly=False)
-                self._handle_new_messages(client, {})
+                # Poll fallback mode
+                log.info(f"IDLE not supported for account {self.cfg.account_id}, using polling mode (interval: {poll_interval}s)")
+                time.sleep(poll_interval)
+                try:
+                    client.select_folder(self.cfg.inbox, readonly=False)
+                    self._handle_new_messages(client, {})
+                except Exception as e:
+                    log.error(f"Polling check failed for account {self.cfg.account_id}: {e}")
                 if time.time() - self._last_hb > 30:
                     self._update_heartbeat("active"); self._last_hb = time.time()
                 continue
@@ -857,9 +913,25 @@ class ImapWatcher:
                         last_idle_break = now
                         break
             except Exception as e:
-                log.error(f"IDLE failed: {e}, reconnecting...")
-                self._client = None
-                break  # Exit inner loop to reconnect
+                error_msg = str(e).lower()
+                # Check if this is an IDLE protocol violation (common with Gmail)
+                if "violates" in error_msg or "protocol" in error_msg:
+                    log.warning(f"IDLE protocol error for account {self.cfg.account_id}: {e}")
+                    log.info(f"Switching to polling mode (interval: {poll_interval}s)")
+                    # Force polling mode by clearing can_idle flag
+                    can_idle = False
+                    # Sleep and then poll
+                    time.sleep(poll_interval)
+                    try:
+                        client.select_folder(self.cfg.inbox, readonly=False)
+                        self._handle_new_messages(client, {})
+                    except Exception as poll_e:
+                        log.error(f"Polling after IDLE failure failed: {poll_e}")
+                    continue  # Continue loop in polling mode
+                else:
+                    log.error(f"IDLE failed: {e}, reconnecting...")
+                    self._client = None
+                    break  # Exit inner loop to reconnect
 
     def close(self):
         try:

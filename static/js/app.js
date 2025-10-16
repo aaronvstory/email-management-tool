@@ -155,7 +155,7 @@ function ensureToastStyles() {
             word-break: break-word;
             overflow-wrap: anywhere;
             margin: 0;
-            color: inherit;
+            color: #f9fafb !important;
             max-height: var(--toast-max-height, 220px);
             overflow-y: auto;
             padding-right: 4px;
@@ -214,6 +214,7 @@ function ensureToastStyles() {
         .toast-compact.toast-confirm .toast-header .toast-message {
             font-weight: 600;
             font-size: 1rem;
+            color: #f9fafb !important;
         }
 
         .toast-compact.toast-confirm .toast-actions {

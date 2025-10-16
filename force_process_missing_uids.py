@@ -58,10 +58,11 @@ if not client:
     exit(1)
 
 print(f"✅ Connected successfully")
+print(f"✅ _last_uidnext automatically set from database: {watcher._last_uidnext}")
+print(f"   (This means it will process all UIDs >= {watcher._last_uidnext})")
 
-# CRITICAL FIX: Override _last_uidnext to force processing of UIDs 120-123
-print(f"\n🔄 Resetting _last_uidnext from {watcher._last_uidnext} to {last_processed_uid}")
-watcher._last_uidnext = last_processed_uid  # Force it to check UIDs > 119
+# With Fix #2 applied, _last_uidnext is already set correctly from database
+# No need to manually override it - the fix ensures it starts from last_db_uid + 1
 
 # Manually trigger processing
 print(f"\n🔍 Manually triggering _handle_new_messages()...")
