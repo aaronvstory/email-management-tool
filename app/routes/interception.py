@@ -10,12 +10,6 @@ import statistics
 from datetime import datetime
 import sqlite3
 
-# DEBUG: Verify this file is being loaded
-import sys
-print("="*80, file=sys.stderr)
-print("[INTERCEPTION.PY] MODULE LOADED - Debug code active at lines 305-307", file=sys.stderr)
-print("="*80, file=sys.stderr)
-sys.stderr.flush()
 from typing import Dict, Any, Optional, cast
 from flask import Blueprint, jsonify, render_template, request
 from flask_login import login_required, current_user
@@ -308,18 +302,6 @@ def api_interception_get(msg_id:int):
 @simple_rate_limit('release', config=_RELEASE_RATE_LIMIT)
 @login_required
 def api_interception_release(msg_id:int):
-    # DEBUG: Log function entry
-    print(f"[DEBUG] RELEASE ENDPOINT CALLED for email_id={msg_id}", file=sys.stderr)
-    sys.stderr.flush()
-    try:
-        with open('release_entry.log', 'a') as f:
-            f.write(f"[{datetime.now()}] RELEASE CALLED: email_id={msg_id}\n")
-            f.flush()
-        print(f"[DEBUG] Entry log written successfully", file=sys.stderr)
-    except Exception as e:
-        print(f"[DEBUG] ERROR writing entry log: {e}", file=sys.stderr)
-    sys.stderr.flush()
-
     payload = request.get_json(silent=True) or {}
     edited_subject = payload.get('edited_subject'); edited_body = payload.get('edited_body')
     target_folder = payload.get('target_folder','INBOX')
@@ -483,23 +465,9 @@ def api_interception_release(msg_id:int):
         # CRITICAL: Remove email from Quarantine folder after successful release to INBOX
         # This prevents duplicates and ensures only the edited version is in INBOX
         original_uid = row['original_uid']
-        removed_from_quarantine = False
+        removed_from_quarantine = False        log.info(f"[interception::release] Attempting Quarantine cleanup for email {msg_id}, original_uid={original_uid}")
 
-        # DEBUG: Write to file since print() isn't showing up
-        with open('quarantine_debug.log', 'a') as f:
-            f.write(f"[{datetime.now()}] Quarantine cleanup START: email_id={msg_id}, original_uid={original_uid}, type={type(original_uid)}\n")
-            f.flush()
-
-        print(f"[DEBUG] Quarantine cleanup: email_id={msg_id}, original_uid={original_uid}, type={type(original_uid)}")
-        log.info(f"[interception::release] Attempting Quarantine cleanup for email {msg_id}, original_uid={original_uid}")
-
-        if original_uid is not None and original_uid != 0:
-            with open('quarantine_debug.log', 'a') as f:
-                f.write(f"[{datetime.now()}] Entering cleanup block, testing folders...\n")
-                f.flush()
-
-            print(f"[DEBUG] Entering quarantine cleanup block, will try folders: Quarantine, INBOX/Quarantine, INBOX.Quarantine")
-            try:
+        if original_uid is not None and original_uid != 0:            try:
                 # Try common Quarantine folder naming patterns
                 quarantine_candidates = [
                     'Quarantine',
@@ -508,60 +476,20 @@ def api_interception_release(msg_id:int):
                 ]
 
                 for qfolder in quarantine_candidates:
-                    with open('quarantine_debug.log', 'a') as f:
-                        f.write(f"[{datetime.now()}] Trying folder: {qfolder}\n")
-                        f.flush()
-
-                    print(f"[DEBUG] Trying to select folder: {qfolder}")
                     try:
                         log.debug(f"[interception::release] Trying to select folder: {qfolder}")
                         status, data = imap.select(qfolder)
                         log.debug(f"[interception::release] SELECT {qfolder} returned status={status}, data={data}")
 
-                        # DEBUG: Log SELECT result to file
-                        with open('quarantine_debug.log', 'a') as f:
-                            f.write(f"[{datetime.now()}] SELECT {qfolder} status={status}, data={data}\n")
-                            f.flush()
-
-                        # DEBUG: Explicit type and value checking
-                        with open('quarantine_debug.log', 'a') as f:
-                            f.write(f"[{datetime.now()}] DEBUG: status type={type(status)}, repr={repr(status)}, str={str(status)}\n")
-                            f.write(f"[{datetime.now()}] DEBUG: status == 'OK': {status == 'OK'}\n")
-                            f.write(f"[{datetime.now()}] DEBUG: str(status) == 'OK': {str(status) == 'OK'}\n")
-                            f.flush()
-
                         if status == 'OK':
-                            # DEBUG: Confirm we entered this block
-                            with open('quarantine_debug.log', 'a') as f:
-                                f.write(f"[{datetime.now()}] ENTERED OK BLOCK for {qfolder}, will delete UID {original_uid}\n")
-                                f.flush()
-
                             # Found the quarantine folder
                             log.info(f"[interception::release] Found quarantine folder: {qfolder}, removing UID {original_uid}")
-
-                            # Mark message as deleted
-                            with open('quarantine_debug.log', 'a') as f:
-                                f.write(f"[{datetime.now()}] About to STORE +FLAGS for UID {original_uid}\n")
-                                f.flush()
 
                             store_result = imap.uid('STORE', str(original_uid), '+FLAGS', '(\\Deleted)')
                             log.debug(f"[interception::release] UID STORE result: {store_result}")
 
-                            with open('quarantine_debug.log', 'a') as f:
-                                f.write(f"[{datetime.now()}] STORE result: {store_result}\n")
-                                f.flush()
-
-                            # Expunge to permanently remove
-                            with open('quarantine_debug.log', 'a') as f:
-                                f.write(f"[{datetime.now()}] About to EXPUNGE\n")
-                                f.flush()
-
                             expunge_result = imap.expunge()
                             log.debug(f"[interception::release] EXPUNGE result: {expunge_result}")
-
-                            with open('quarantine_debug.log', 'a') as f:
-                                f.write(f"[{datetime.now()}] EXPUNGE result: {expunge_result}\n")
-                                f.flush()
 
                             removed_from_quarantine = True
                             log.info(f"[interception::release] Successfully removed UID {original_uid} from {qfolder}", extra={'email_id': msg_id, 'uid': original_uid, 'folder': qfolder})
