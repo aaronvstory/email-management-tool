@@ -80,7 +80,14 @@
                     </div>
                     
                     <div class="mb-3">
-                        <label for="ruleType" class="form-label">Rule Type</label>
+                        <label for="ruleType" class="form-label">
+                            Rule Type
+                            <i class="bi bi-info-circle text-muted"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="right"
+                               title="KEYWORD matches subject + body text. SENDER/RECIPIENT check email addresses. DOMAIN checks sender's domain. REGEX allows advanced pattern matching.">
+                            </i>
+                        </label>
                         <select class="form-select" id="ruleType" required>
                             <option value="KEYWORD">Keyword</option>
                             <option value="SENDER">Sender</option>
@@ -92,13 +99,27 @@
                     </div>
                     
                     <div class="mb-3">
-                        <label for="pattern" class="form-label">Pattern</label>
+                        <label for="pattern" class="form-label">
+                            Pattern
+                            <i class="bi bi-info-circle text-muted"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="right"
+                               title="For KEYWORD rules, separate multiple terms with commas (e.g., invoice,payment,urgent). Matching is case-insensitive. For REGEX, use valid regular expression syntax.">
+                            </i>
+                        </label>
                         <input type="text" class="form-control" id="pattern" placeholder="e.g., invoice,payment,urgent" required>
                         <small class="text-muted">For keywords, separate with commas</small>
                     </div>
-                    
+
                     <div class="mb-3">
-                        <label for="action" class="form-label">Action</label>
+                        <label for="action" class="form-label">
+                            Action
+                            <i class="bi bi-info-circle text-muted"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="right"
+                               title="HOLD: Move to Quarantine for manual review. APPROVE: Bypass quarantine (allow through). REJECT: Block completely. QUARANTINE: Same as HOLD.">
+                            </i>
+                        </label>
                         <select class="form-select" id="action" required>
                             <option value="HOLD">Hold for Review</option>
                             <option value="APPROVE">Auto-Approve</option>
@@ -106,9 +127,16 @@
                             <option value="QUARANTINE">Quarantine</option>
                         </select>
                     </div>
-                    
+
                     <div class="mb-3">
-                        <label for="priority" class="form-label">Priority (0-100)</label>
+                        <label for="priority" class="form-label">
+                            Priority (0-100)
+                            <i class="bi bi-info-circle text-muted"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="right"
+                               title="Higher priority rules are evaluated first. Use 100 for critical security rules, 50 for moderate risk, 10 for low-priority monitoring.">
+                            </i>
+                        </label>
                         <input type="number" class="form-control" id="priority" min="0" max="100" value="50" required>
                     </div>
                 </form>
@@ -124,6 +152,12 @@
 
 {% block extra_js %}
 <script>
+// Initialize Bootstrap tooltips
+document.addEventListener('DOMContentLoaded', function() {
+  const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+  const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+});
+
 async function saveRule(){
   try{
     const name = document.getElementById('ruleName').value.trim();

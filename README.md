@@ -13,6 +13,26 @@ A comprehensive email moderation system for Windows that intercepts, holds, and 
 - **Real-time Updates**: Dashboard with live statistics and charts
 - **Windows Service**: Can run as a Windows service for production deployment
 
+## 📚 Documentation
+
+**Getting Started**:
+- **[User Guide](docs/USER_GUIDE.md)** - Complete step-by-step workflows for email interception, editing, and release
+- **[API Reference](docs/API_REFERENCE.md)** - REST API documentation with production-ready cURL examples
+- **[FAQ](docs/FAQ.md)** - Frequently asked questions about watchers, IDLE/polling modes, and workflows
+- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues, gotchas, and debugging guides
+
+**Architecture & Technical**:
+- **[Architecture Overview](docs/ARCHITECTURE.md)** - System design and component interactions
+- **[Database Schema](docs/DATABASE_SCHEMA.md)** - Complete database design with indices and relationships
+- **[IMAP Strategy](docs/HYBRID_IMAP_STRATEGY.md)** - Hybrid IDLE+polling implementation details
+- **[Security Guide](docs/SECURITY.md)** - CSRF protection, rate limiting, and hardening
+
+**Development**:
+- **[Development Guide](docs/DEVELOPMENT.md)** - Development workflow and best practices
+- **[Testing Guide](docs/TESTING.md)** - Test strategy and coverage guidelines
+- **[Style Guide](docs/STYLEGUIDE.md)** - UI/UX standards (mandatory for UI changes)
+- **[Test Scripts](scripts/README.md)** - Automated testing utilities and examples
+
 ## 📋 Requirements
 
 - Windows 10/11 or Windows Server 2016+

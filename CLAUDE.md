@@ -11,6 +11,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Last Updated**: October 18, 2025
 
 ### Recent Major Updates
+- ✅ **Comprehensive Documentation** - Added USER_GUIDE, API_REFERENCE, FAQ, expanded TROUBLESHOOTING
+- ✅ **UI Tooltips** - 9 tooltips across 3 templates explaining IDLE/polling, release mechanisms, rule matching
 - ✅ **Test Coverage Milestone** - 138/138 tests passing, 36% coverage (was 27%), pre-commit hooks enabled
 - ✅ **Hybrid IMAP Strategy** - IDLE+polling hybrid prevents timeout issues (See: [docs/HYBRID_IMAP_STRATEGY.md](docs/HYBRID_IMAP_STRATEGY.md))
 - ✅ **Security Hardening** - CSRF protection, rate limiting, strong SECRET_KEY generation (See: [docs/SECURITY.md](docs/SECURITY.md))
@@ -289,16 +291,26 @@ Routes are organized in `app/routes/`:
 
 For deeper technical information, see:
 
+**Getting Started**:
+- **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)** - Complete step-by-step workflows and walkthroughs
+- **[docs/API_REFERENCE.md](docs/API_REFERENCE.md)** - REST API documentation with cURL examples
+- **[docs/FAQ.md](docs/FAQ.md)** - Frequently asked questions
+- **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common issues, gotchas, and solutions
+
+**Architecture & Design**:
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture and design
 - **[docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)** - Database design and indices
-- **[docs/SECURITY.md](docs/SECURITY.md)** - Security configuration and validation
-- **[docs/STYLEGUIDE.md](docs/STYLEGUIDE.md)** - UI/UX standards (MANDATORY)
-- **[docs/HYBRID_IMAP_STRATEGY.md](docs/HYBRID_IMAP_STRATEGY.md)** - IMAP implementation
+- **[docs/TECHNICAL_DEEP_DIVE.md](docs/TECHNICAL_DEEP_DIVE.md)** - Architecture deep dive
+
+**Development & Deployment**:
 - **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** - Development workflow
 - **[docs/TESTING.md](docs/TESTING.md)** - Testing strategy
 - **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Production deployment guide
-- **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common issues and solutions
-- **[docs/TECHNICAL_DEEP_DIVE.md](docs/TECHNICAL_DEEP_DIVE.md)** - Architecture deep dive
+
+**Configuration & Security**:
+- **[docs/SECURITY.md](docs/SECURITY.md)** - Security configuration and validation
+- **[docs/STYLEGUIDE.md](docs/STYLEGUIDE.md)** - UI/UX standards (MANDATORY)
+- **[docs/HYBRID_IMAP_STRATEGY.md](docs/HYBRID_IMAP_STRATEGY.md)** - IMAP implementation
 
 ---
 

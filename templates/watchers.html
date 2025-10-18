@@ -20,7 +20,14 @@
     <div class="panel-actions"><button class="btn-ghost btn-sm" onclick="checkSmtp()"><i class="bi bi-heart-pulse"></i> Self-check</button></div>
   </div>
   <div class="stat-card-modern">
-    <div class="stat-label">IMAP Watchers Active</div>
+    <div class="stat-label">
+      IMAP Watchers Active
+      <i class="bi bi-info-circle text-muted"
+         data-bs-toggle="tooltip"
+         data-bs-placement="right"
+         title="Real-time monitoring via IDLE when supported (<1s detection). Automatically falls back to 30-second polling if IDLE fails 3 times. Check State column below for current mode.">
+      </i>
+    </div>
     <div id="watchersCount" class="stat-value">0</div>
     <div class="stat-delta">Across all accounts</div>
   </div>
@@ -37,7 +44,14 @@
 </div>
 
 <div class="panel">
-  <div class="panel-title">How it works</div>
+  <div class="panel-title">
+    How it works
+    <i class="bi bi-info-circle text-muted"
+       data-bs-toggle="tooltip"
+       data-bs-placement="right"
+       title="Watchers monitor the destination inbox only. For Gmail→Hostinger flow, only Hostinger needs a watcher (not both). IDLE provides <1s detection; polling is 30s fallback.">
+    </i>
+  </div>
   <div class="text-muted" style="font-size:.9rem">
     Each added mailbox has an IMAP watcher that monitors INBOX in real time. The watcher moves new mail to Quarantine for review. The SMTP proxy accepts incoming messages locally for interception and auditing. Use the controls above to start, stop, or restart watchers.
   </div>
@@ -47,6 +61,12 @@
 
 {% block extra_js %}
 <script>
+// Initialize Bootstrap tooltips
+document.addEventListener('DOMContentLoaded', function() {
+  const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+  const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+});
+
 async function loadOverview(){
   try{
     const r = await fetch('/api/watchers/overview');

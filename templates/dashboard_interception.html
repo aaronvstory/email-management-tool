@@ -81,8 +81,18 @@
       <div class="panel-header">
         <div class="panel-title">Preview & Actions</div>
         <div class="panel-actions">
-          <button class="btn-accent" id="btn-release" disabled>Release</button>
-          <button class="btn-ghost" id="btn-discard" disabled>Discard</button>
+          <button class="btn-accent" id="btn-release" disabled
+                  data-bs-toggle="tooltip"
+                  data-bs-placement="bottom"
+                  title="Releases email back to INBOX. Original in Quarantine will be deleted. Only the released copy appears in inbox (no duplicates).">
+            Release
+          </button>
+          <button class="btn-ghost" id="btn-discard" disabled
+                  data-bs-toggle="tooltip"
+                  data-bs-placement="bottom"
+                  title="Permanently discards this email. It will NOT be delivered to INBOX. Use this for spam or unwanted messages.">
+            Discard
+          </button>
           <button class="btn-ghost" id="btn-clear" onclick="clearSelection()" disabled>Clear</button>
         </div>
       </div>
@@ -125,7 +135,12 @@
           </div>
           <div class="col-12 d-flex gap-2 mt-2">
             <button class="btn btn-primary-modern" id="btn-save-edit" disabled>Save Edit</button>
-            <button class="btn btn-secondary" id="btn-release-edited" disabled>Release Edited</button>
+            <button class="btn btn-secondary" id="btn-release-edited" disabled
+                    data-bs-toggle="tooltip"
+                    data-bs-placement="bottom"
+                    title="Releases ONLY the edited version to INBOX. Original in Quarantine is deleted. Recipient sees only your modified content.">
+              Release Edited
+            </button>
           </div>
         </div>
       </div>
@@ -136,6 +151,12 @@
 
 {% block extra_js %}
 <script>
+// Initialize Bootstrap tooltips
+document.addEventListener('DOMContentLoaded', function() {
+  const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+  const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+});
+
 let heldAutoTimer = null;
 function toggleHeldAutoRefresh(on){
   if (heldAutoTimer){ clearInterval(heldAutoTimer); heldAutoTimer = null; }
