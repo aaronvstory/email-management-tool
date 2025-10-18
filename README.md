@@ -124,7 +124,7 @@ For production deployment, install as a Windows service:
 ```
 Email Management Tool/
 ├── app/                    # Application modules
-│   ├── models/            # SQLAlchemy models
+│   ├── models/            # Data models (unused - uses raw sqlite3)
 │   ├── routes/            # Flask routes
 │   └── services/          # Business logic
 ├── config/                # Configuration files
@@ -147,7 +147,7 @@ Email Management Tool/
 - Password hashing with bcrypt
 - Session management with Flask-Login
 - CSRF protection
-- SQL injection prevention via SQLAlchemy ORM
+- SQL injection prevention via parameterized queries
 - Rate limiting on login attempts
 - Secure session cookies
 - Audit logging of all actions
