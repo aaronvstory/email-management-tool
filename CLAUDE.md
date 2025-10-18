@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Version**: 2.8
 **Status**: 🟢 Fully functional — SMTP proxy running; IMAP watchers using hybrid IDLE+polling strategy; core UI accessible.
-**Last Updated**: October 17, 2025
+**Last Updated**: October 18, 2025
 
 ### Recent Major Updates
 - ✅ **Hybrid IMAP Strategy** - IDLE+polling hybrid prevents timeout issues (See: [docs/HYBRID_IMAP_STRATEGY.md](docs/HYBRID_IMAP_STRATEGY.md))
@@ -266,7 +266,7 @@ Routes are organized in `app/routes/`:
 
 ## Known Limitations
 
-⚠️ **Low Test Coverage**: Only 25% code coverage (target: 50%+)
+✅ **Test Coverage**: 36% code coverage, 138/138 tests passing (target: 50%+)
 ⚠️ **SMTP Proxy**: Must be running (check /api/smtp-health)
 ⚠️ **Port Conflicts**: May need cleanup_and_start.py if port 8587 is in use
 
