@@ -128,6 +128,107 @@ def api_test_verify_delivery():
     return jsonify({'success': bool(hit), 'source': 'local-db'})
 
 
+@diagnostics_bp.route('/api/test/send-bi-directional', methods=['POST'])
+@login_required
+def api_test_send_bi_directional():
+    """Send bi-directional test email (Hostinger↔Gmail) for automated interception testing"""
+    data = request.get_json(silent=True) or {}
+    direction = data.get('direction')  # 'hostinger-to-gmail' or 'gmail-to-hostinger'
+    subject = data.get('subject') or f'Test Email {datetime.now().strftime("%H:%M:%S")}'
+
+    if direction not in ['hostinger-to-gmail', 'gmail-to-hostinger']:
+        return jsonify({'success': False, 'error': 'Invalid direction parameter'}), 400
+
+    # Permanent account email addresses
+    HOSTINGER_EMAIL = 'mcintyre@corrinbox.com'
+    GMAIL_EMAIL = 'ndayijecika@gmail.com'
+
+    try:
+        conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row; cur = conn.cursor()
+
+        # Determine sender and recipient based on direction
+        if direction == 'hostinger-to-gmail':
+            sender_email = HOSTINGER_EMAIL
+            recipient_email = GMAIL_EMAIL
+        else:  # gmail-to-hostinger
+            sender_email = GMAIL_EMAIL
+            recipient_email = HOSTINGER_EMAIL
+
+        # Look up sender account
+        sender_account = cur.execute(
+            "SELECT * FROM email_accounts WHERE email_address=? AND is_active=1",
+            (sender_email,)
+        ).fetchone()
+
+        if not sender_account:
+            conn.close()
+            return jsonify({'success': False, 'error': f'Sender account not found: {sender_email}'}), 404
+
+        # Decrypt credentials
+        smtp_password = decrypt_credential(sender_account['smtp_password']) if sender_account['smtp_password'] else None
+        if not smtp_password:
+            conn.close()
+            return jsonify({'success': False, 'error': 'SMTP password not configured'}), 400
+
+        conn.close()
+
+        # Build email message
+        msg = MIMEMultipart()
+        msg['From'] = sender_email
+        msg['To'] = recipient_email
+        msg['Subject'] = subject
+        msg['Date'] = formatdate()
+        msg['Message-ID'] = make_msgid()
+
+        body = f"""This is a bi-directional test email for automatic interception validation.
+
+Direction: {direction}
+Sent from: {sender_email}
+Sent to: {recipient_email}
+Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+This email should be automatically intercepted by the polling watcher at the recipient's INBOX.
+
+Test flow:
+1. {sender_email} sends → {recipient_email} receives
+2. Email automatically intercepted (HELD status)
+3. Verify in database and UI
+"""
+        msg.attach(MIMEText(body, 'plain'))
+
+        # Send via provider SMTP (not proxy)
+        smtp_host = sender_account['smtp_host']
+        smtp_port = int(sender_account['smtp_port'])
+        smtp_use_ssl = bool(sender_account['smtp_use_ssl'])
+        smtp_username = sender_account['smtp_username'] or sender_email
+
+        if smtp_use_ssl and smtp_port == 465:
+            # Direct SSL connection
+            smtp = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=10)
+        else:
+            # STARTTLS connection (port 587)
+            smtp = smtplib.SMTP(smtp_host, smtp_port, timeout=10)
+            smtp.ehlo()
+            smtp.starttls()
+            smtp.ehlo()
+
+        smtp.login(smtp_username, smtp_password)
+        smtp.send_message(msg)
+        smtp.quit()
+
+        return jsonify({
+            'success': True,
+            'direction': direction,
+            'sender': sender_email,
+            'recipient': recipient_email,
+            'subject': subject,
+            'timestamp': datetime.now().isoformat()
+        })
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @diagnostics_bp.route('/api/diagnostics/<int:account_id>')
 @login_required
 def api_account_diagnostics(account_id: int):

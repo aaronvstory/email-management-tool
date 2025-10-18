@@ -520,6 +520,50 @@
         <p>Complete end-to-end testing of email interception, editing, and delivery flow</p>
     </div>
 
+    <!-- Quick Bi-Directional Tests -->
+    <div class="control-card">
+        <h3>
+            <i class="fas fa-bolt"></i>
+            Quick Bi-Directional Tests (Polling Mode)
+        </h3>
+        <p style="color: #9ca3af; margin-bottom: 20px;">Automated tests using permanent accounts with polling watcher interception</p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <button class="btn-primary" id="testHostingerToGmail" onclick="runBiDirectionalTest('hostinger-to-gmail')">
+                <i class="fas fa-arrow-right"></i>
+                Test Hostinger → Gmail
+            </button>
+            <button class="btn-primary" id="testGmailToHostinger" onclick="runBiDirectionalTest('gmail-to-hostinger')">
+                <i class="fas fa-arrow-left"></i>
+                Test Gmail → Hostinger
+            </button>
+        </div>
+
+        <!-- Watcher Status Display -->
+        <div id="watcherStatus" style="display: none; background: rgba(255,255,255,0.03); border-radius: 10px; padding: 15px; border: 1px solid rgba(255,255,255,0.08);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <strong style="color: #ffffff;">IMAP Watcher Status</strong>
+                <button class="btn-secondary" style="padding: 5px 10px; font-size: 0.85rem;" onclick="refreshWatcherStatus()">
+                    <i class="fas fa-sync"></i> Refresh
+                </button>
+            </div>
+            <div id="watcherStatusContent" style="color: #9ca3af;">
+                Loading...
+            </div>
+        </div>
+
+        <!-- Test Progress -->
+        <div id="biDirectionalProgress" style="display: none; margin-top: 20px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 10px; padding: 15px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <div class="spinner"></div>
+                <strong style="color: #60a5fa;" id="progressTitle">Running Test...</strong>
+            </div>
+            <div id="progressDetails" style="color: #9ca3af; font-size: 0.9rem;">
+                Initializing...
+            </div>
+        </div>
+    </div>
+
     <!-- Flow Visualization -->
     <div class="flow-container">
         <h2 style="color: #ffffff; margin-bottom: 20px;">
@@ -1128,6 +1172,206 @@ function clearResults() {
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Bi-Directional Testing Functions
+async function runBiDirectionalTest(direction) {
+    const progressDiv = document.getElementById('biDirectionalProgress');
+    const watcherDiv = document.getElementById('watcherStatus');
+    const progressTitle = document.getElementById('progressTitle');
+    const progressDetails = document.getElementById('progressDetails');
+
+    // Disable buttons during test
+    const buttons = ['testHostingerToGmail', 'testGmailToHostinger'];
+    buttons.forEach(id => {
+        document.getElementById(id).disabled = true;
+    });
+
+    // Show progress and watcher status
+    progressDiv.style.display = 'block';
+    watcherDiv.style.display = 'block';
+
+    try {
+        if (direction === 'hostinger-to-gmail') {
+            progressTitle.textContent = 'Testing Hostinger → Gmail';
+            progressDetails.textContent = 'Step 1/4: Checking watcher status...';
+
+            // Show watcher status
+            await refreshWatcherStatus();
+
+            // Send email
+            progressDetails.textContent = 'Step 2/4: Sending email from Hostinger to Gmail...';
+            addTimelineItem('info', 'Hostinger → Gmail Test', 'Sending test email...');
+
+            const sendResponse = await fetch('/api/test/send-bi-directional', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    direction: 'hostinger-to-gmail',
+                    subject: `INVOICE - Test Hostinger→Gmail ${new Date().toLocaleTimeString()}`
+                })
+            });
+            const sendResult = await sendResponse.json();
+
+            if (!sendResult.success) {
+                throw new Error(sendResult.error || 'Failed to send email');
+            }
+
+            addTimelineItem('success', 'Email Sent', `Subject: ${sendResult.subject}`);
+            progressDetails.textContent = 'Step 3/4: Waiting for interception (polling mode, ~15s)...';
+
+            // Poll for interception
+            let intercepted = false;
+            for (let i = 0; i < 30; i++) {
+                await sleep(1000);
+                progressDetails.textContent = `Step 3/4: Waiting for interception (${i + 1}s elapsed)...`;
+
+                const checkResponse = await fetch(`/api/test/check-interception?subject=${encodeURIComponent(sendResult.subject)}`);
+                const checkResult = await checkResponse.json();
+
+                if (checkResult.success && checkResult.email_id) {
+                    intercepted = true;
+                    progressDetails.textContent = `Step 4/4: Email intercepted! ID: ${checkResult.email_id}`;
+                    addTimelineItem('success', 'Email Intercepted', `Email ID: ${checkResult.email_id}, Status: ${checkResult.status}`);
+                    await sleep(2000);
+                    break;
+                }
+            }
+
+            if (!intercepted) {
+                throw new Error('Email not intercepted within 30 seconds');
+            }
+
+            progressTitle.textContent = '✓ Hostinger → Gmail Test Complete';
+            progressDetails.textContent = 'Email successfully sent and intercepted by polling watcher';
+            progressDiv.style.background = 'rgba(16, 185, 129, 0.1)';
+            progressDiv.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+
+        } else if (direction === 'gmail-to-hostinger') {
+            progressTitle.textContent = 'Testing Gmail → Hostinger';
+            progressDetails.textContent = 'Step 1/4: Checking watcher status...';
+
+            // Show watcher status
+            await refreshWatcherStatus();
+
+            // Send email
+            progressDetails.textContent = 'Step 2/4: Sending email from Gmail to Hostinger...';
+            addTimelineItem('info', 'Gmail → Hostinger Test', 'Sending test email...');
+
+            const sendResponse = await fetch('/api/test/send-bi-directional', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    direction: 'gmail-to-hostinger',
+                    subject: `INVOICE - Test Gmail→Hostinger ${new Date().toLocaleTimeString()}`
+                })
+            });
+            const sendResult = await sendResponse.json();
+
+            if (!sendResult.success) {
+                throw new Error(sendResult.error || 'Failed to send email');
+            }
+
+            addTimelineItem('success', 'Email Sent', `Subject: ${sendResult.subject}`);
+            progressDetails.textContent = 'Step 3/4: Waiting for interception (polling mode, ~15s)...';
+
+            // Poll for interception
+            let intercepted = false;
+            for (let i = 0; i < 30; i++) {
+                await sleep(1000);
+                progressDetails.textContent = `Step 3/4: Waiting for interception (${i + 1}s elapsed)...`;
+
+                const checkResponse = await fetch(`/api/test/check-interception?subject=${encodeURIComponent(sendResult.subject)}`);
+                const checkResult = await checkResponse.json();
+
+                if (checkResult.success && checkResult.email_id) {
+                    intercepted = true;
+                    progressDetails.textContent = `Step 4/4: Email intercepted! ID: ${checkResult.email_id}`;
+                    addTimelineItem('success', 'Email Intercepted', `Email ID: ${checkResult.email_id}, Status: ${checkResult.status}`);
+                    await sleep(2000);
+                    break;
+                }
+            }
+
+            if (!intercepted) {
+                throw new Error('Email not intercepted within 30 seconds');
+            }
+
+            progressTitle.textContent = '✓ Gmail → Hostinger Test Complete';
+            progressDetails.textContent = 'Email successfully sent and intercepted by polling watcher';
+            progressDiv.style.background = 'rgba(16, 185, 129, 0.1)';
+            progressDiv.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+        }
+
+    } catch (error) {
+        progressTitle.textContent = '✗ Test Failed';
+        progressDetails.textContent = error.message;
+        progressDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+        progressDiv.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+        addTimelineItem('error', 'Test Failed', error.message);
+    } finally {
+        // Re-enable buttons
+        buttons.forEach(id => {
+            document.getElementById(id).disabled = false;
+        });
+    }
+}
+
+async function refreshWatcherStatus() {
+    const statusContent = document.getElementById('watcherStatusContent');
+
+    try {
+        const response = await fetch('/api/watchers/overview');
+        const data = await response.json();
+
+        if (!data.accounts || data.accounts.length === 0) {
+            statusContent.innerHTML = '<span style="color: #f87171;">⚠ No active watchers found</span>';
+            return;
+        }
+
+        let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
+
+        data.accounts.forEach(acc => {
+            const watcher = acc.watcher || {};
+            const state = watcher.state || 'stopped';
+            const lastHb = watcher.last_heartbeat || 'Never';
+
+            let stateColor = '#f87171'; // red
+            let stateText = 'STOPPED';
+
+            if (state === 'polling') {
+                stateColor = '#10b981'; // green
+                stateText = 'POLLING';
+            } else if (state === 'idle') {
+                stateColor = '#fbbf24'; // yellow
+                stateText = 'IDLE';
+            } else if (state === 'active') {
+                stateColor = '#10b981'; // green
+                stateText = 'ACTIVE';
+            }
+
+            html += `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(255,255,255,0.02); border-radius: 6px;">
+                    <div>
+                        <strong style="color: #ffffff;">${acc.email_address || acc.account_name}</strong>
+                        <div style="font-size: 0.85rem; color: #6b7280; margin-top: 2px;">Account ID: ${acc.id}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <span class="status-badge" style="background: rgba(${stateColor === '#10b981' ? '16, 185, 129' : stateColor === '#fbbf24' ? '251, 191, 36' : '239, 68, 68'}, 0.15); border-color: ${stateColor}; color: ${stateColor};">
+                            ${stateText}
+                        </span>
+                        <div style="font-size: 0.8rem; color: #6b7280; margin-top: 4px;">Last: ${lastHb}</div>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += '</div>';
+        statusContent.innerHTML = html;
+
+    } catch (error) {
+        statusContent.innerHTML = `<span style="color: #f87171;">Error loading status: ${error.message}</span>`;
+    }
 }
 </script>
 {% endblock %}
