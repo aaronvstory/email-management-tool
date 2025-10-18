@@ -999,9 +999,13 @@ class ImapWatcher:
                     break  # Exit inner loop to reconnect
 
     def close(self):
+        client = self._client
         try:
-            if self._client:
-                self._client.logout()
+            if client:
+                try:
+                    client.logout()
+                except Exception as e:
+                    log.debug("IMAP logout failed during close", extra={'account_id': self.cfg.account_id, 'error': str(e)}, exc_info=True)
         finally:
             self._client = None
 

@@ -381,27 +381,71 @@ def api_interception_release(msg_id:int):
     removed = []
     if strip_attachments and msg.is_multipart():
         from email.message import EmailMessage
+
         new_container = EmailMessage()
-        for k,v in msg.items(): new_container[k] = v
+        for k, v in msg.items():
+            if k.lower() in {'content-type', 'content-transfer-encoding', 'mime-version'}:
+                continue
+            new_container[k] = v
+
+        plain_body = None
+        html_body = None
+
         for part in msg.walk():
-            if part.is_multipart(): continue
+            if part.is_multipart():
+                continue
             disp = (part.get_content_disposition() or '').lower()
             if disp == 'attachment':
-                removed.append(part.get_filename() or 'attachment.bin'); continue
+                removed.append(part.get_filename() or 'attachment.bin')
+                continue
+
             ctype = part.get_content_type()
-            if ctype == 'text/plain': new_container.set_content(part.get_content())
-            elif ctype == 'text/html':
-                try: new_container.add_alternative(part.get_content(), subtype='html')
-                except Exception as e:
-                    log.warning("[interception::release] Failed to add HTML alternative", extra={'email_id': msg_id, 'error': str(e)})
+            content = part.get_content()
+            charset = part.get_content_charset()
+
+            if ctype == 'text/plain' and plain_body is None:
+                plain_body = (content, charset)
+            elif ctype == 'text/html' and html_body is None:
+                html_body = (content, charset)
+
         if removed:
             notice = '\n\n[Attachments removed: ' + ', '.join(removed) + ']'
+            if plain_body is not None:
+                plain_body = (plain_body[0] + notice, plain_body[1])
+            else:
+                plain_body = (notice.strip(), 'utf-8')
+
+        plain_added = False
+        try:
+            if plain_body is not None:
+                content, charset = plain_body
+                if charset:
+                    new_container.set_content(content, subtype='plain', charset=charset)
+                else:
+                    new_container.set_content(content)
+                plain_added = True
+            elif html_body is not None:
+                content, charset = html_body
+                if charset:
+                    new_container.set_content(content, subtype='html', charset=charset)
+                else:
+                    new_container.set_content(content, subtype='html')
+            else:
+                new_container.set_content('Attachments removed', subtype='plain')
+        except Exception as e:
+            log.warning("[interception::release] Failed to build stripped message body", extra={'email_id': msg_id, 'error': str(e)})
+            new_container.set_content('Attachments removed', subtype='plain')
+
+        if plain_added and html_body is not None:
+            content, charset = html_body
             try:
-                body = new_container.get_body(preferencelist=('plain',))
-                if body:
-                    new_container.set_content(body.get_content()+notice)
+                if charset:
+                    new_container.add_alternative(content, subtype='html', charset=charset)
+                else:
+                    new_container.add_alternative(content, subtype='html')
             except Exception as e:
-                log.warning("[interception::release] Failed to add attachment removal notice", extra={'email_id': msg_id, 'error': str(e)})
+                log.warning("[interception::release] Failed to add HTML alternative", extra={'email_id': msg_id, 'error': str(e)})
+
         msg = new_container
     decrypted_pass = decrypt_credential(row['imap_password'])
     try:

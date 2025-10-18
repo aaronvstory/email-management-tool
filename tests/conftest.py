@@ -65,79 +65,96 @@ def _create_test_schema(conn: sqlite3.Connection) -> None:
     """Create minimal test schema for email management."""
     cursor = conn.cursor()
 
-    # Users table
+    # Users table - mirrors init_database()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
-            role TEXT DEFAULT 'user',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            role TEXT DEFAULT 'admin',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     ''')
 
-    # Email accounts table
+    # Email accounts table (keeps superset of production columns)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS email_accounts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_name TEXT,
             email_address TEXT UNIQUE NOT NULL,
             imap_host TEXT NOT NULL,
             imap_port INTEGER DEFAULT 993,
             imap_username TEXT,
             imap_password TEXT,
             imap_use_ssl INTEGER DEFAULT 1,
-            smtp_host TEXT NOT NULL,
+            smtp_host TEXT,
             smtp_port INTEGER DEFAULT 587,
             smtp_username TEXT,
             smtp_password TEXT,
-            smtp_use_ssl INTEGER DEFAULT 0,
+            smtp_use_ssl INTEGER DEFAULT 1,
             is_active INTEGER DEFAULT 1,
+            provider_type TEXT DEFAULT 'custom',
+            last_checked TEXT,
+            last_error TEXT,
             quarantine_folder TEXT DEFAULT 'Quarantine',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     ''')
 
-    # Email messages table
+    # Email messages table (align with production schema)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS email_messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            account_id INTEGER,
             message_id TEXT,
+            account_id INTEGER,
+            direction TEXT,
+            status TEXT DEFAULT 'PENDING',
+            interception_status TEXT,
             sender TEXT,
             recipients TEXT,
             subject TEXT,
             body_text TEXT,
             body_html TEXT,
-            raw_content BLOB,
-            raw_path TEXT,
-            status TEXT DEFAULT 'PENDING',
-            interception_status TEXT,
+            headers TEXT,
+            attachments TEXT,
             original_uid INTEGER,
+            original_internaldate TEXT,
+            original_message_id TEXT,
+            edited_message_id TEXT,
+            quarantine_folder TEXT,
+            raw_content TEXT,
+            raw_path TEXT,
             risk_score REAL DEFAULT 0.0,
             keywords_matched TEXT,
-            direction TEXT DEFAULT 'inbound',
-            latency_ms INTEGER,
-            quarantine_folder TEXT,
+            moderation_reason TEXT,
+            moderator_id INTEGER,
+            reviewer_id INTEGER,
             review_notes TEXT,
             approved_by TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            processed_at TIMESTAMP,
-            action_taken_at TIMESTAMP,
+            latency_ms INTEGER,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            processed_at TEXT,
+            action_taken_at TEXT,
+            reviewed_at TEXT,
+            sent_at TEXT,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (account_id) REFERENCES email_accounts (id)
         )
     ''')
 
-    # Moderation rules table (extended schema with rule_type support)
+    # Moderation rules table (include legacy + modern columns)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS moderation_rules (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
+            name TEXT,
             rule_name TEXT,
+            keyword TEXT,
             keywords TEXT,
             action TEXT DEFAULT 'HOLD',
             priority INTEGER DEFAULT 0,
             is_active INTEGER DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             rule_type TEXT,
             condition_field TEXT,
             condition_operator TEXT,
@@ -145,16 +162,35 @@ def _create_test_schema(conn: sqlite3.Connection) -> None:
         )
     ''')
 
-    # Audit log table
+    # Audit log table (match app.services.audit)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS audit_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            action TEXT NOT NULL,
+            action_type TEXT NOT NULL,
             user_id INTEGER,
-            details TEXT,
-            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            email_id INTEGER,
+            message TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users (id)
         )
+    ''')
+
+    # Worker heartbeats table (includes test-only should_stop flag)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS worker_heartbeats (
+            worker_id TEXT PRIMARY KEY,
+            should_stop INTEGER DEFAULT 0,
+            last_heartbeat TEXT DEFAULT CURRENT_TIMESTAMP,
+            status TEXT,
+            error_count INTEGER DEFAULT 0
+        )
+    ''')
+
+    # Helpful index for release logic (mirrors init_database)
+    cursor.execute('''
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_email_messages_msgid_unique
+        ON email_messages(message_id)
+        WHERE message_id IS NOT NULL
     ''')
 
     # Create test user (admin/admin123)
@@ -174,8 +210,14 @@ def app(test_db_path: str, monkeypatch) -> Flask:
 
     Uses test database and disables CSRF for easier testing.
     """
+    # Initialize database schema BEFORE setting up the app
+    conn = sqlite3.connect(test_db_path)
+    _create_test_schema(conn)
+    conn.close()
+    
     # Set test environment
     monkeypatch.setenv('DB_PATH', test_db_path)
+    monkeypatch.setenv('TEST_DB_PATH', test_db_path)
     monkeypatch.setenv('TESTING', '1')
     monkeypatch.setenv('ENABLE_WATCHERS', '0')  # Disable IMAP watchers in tests
     monkeypatch.setenv('FLASK_SECRET_KEY', 'test-secret-key-for-testing-only')

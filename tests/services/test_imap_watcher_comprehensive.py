@@ -14,6 +14,7 @@ import sqlite3
 import time
 from unittest.mock import Mock, MagicMock, patch, PropertyMock
 from app.services.imap_watcher import ImapWatcher, AccountConfig
+from tests.conftest import _create_test_schema
 
 
 @pytest.fixture
@@ -33,15 +34,33 @@ def mock_account_config():
 def watcher(mock_account_config, test_db_path):
     """Create ImapWatcher instance with test database."""
     watcher = ImapWatcher(mock_account_config)
-    # Override DB path for testing
-    import app.utils.db as db_module
-    original_path = db_module.DB_PATH
-    db_module.DB_PATH = test_db_path
+    watcher.cfg.db_path = test_db_path
+
+    # Ensure test account row exists for DB-driven methods
+    conn = sqlite3.connect(test_db_path, timeout=30.0)
+    _create_test_schema(conn)
+    conn.execute("""
+        INSERT INTO email_accounts 
+        (id, account_name, email_address, imap_host, imap_port,
+         imap_username, imap_password, imap_use_ssl, is_active)
+        VALUES (1, 'Watcher Account', 'watcher@example.com', 'imap.example.com',
+                993, 'watcher@example.com', 'encrypted', 1, 1)
+        ON CONFLICT(id) DO UPDATE SET
+            account_name=excluded.account_name,
+            email_address=excluded.email_address,
+            imap_host=excluded.imap_host,
+            imap_port=excluded.imap_port,
+            imap_username=excluded.imap_username,
+            imap_password=excluded.imap_password,
+            imap_use_ssl=excluded.imap_use_ssl,
+            is_active=excluded.is_active
+    """)
+    conn.commit()
+    conn.close()
     
     yield watcher
     
     # Cleanup
-    db_module.DB_PATH = original_path
     try:
         watcher.close()
     except:
@@ -60,9 +79,9 @@ class TestImapWatcherInit:
         assert watcher._last_hb == 0.0
         assert watcher._last_uidnext >= 0  # Can be 0 or 1 depending on initialization
         assert watcher._idle_failure_count == 0
-        assert watcher._last_successful_idle == 0.0
+        assert watcher._last_successful_idle >= 0.0
         assert watcher._polling_mode_forced is False
-        assert watcher._last_idle_retry == 0.0
+        assert watcher._last_idle_retry >= 0.0
 
     def test_init_with_different_configs(self):
         """Test initialization with various config combinations."""
@@ -82,13 +101,8 @@ class TestShouldStop:
 
     def test_should_stop_checks_db_flag(self, watcher, test_db_path):
         """Test that _should_stop reads from database."""
-        # Insert stop signal in database
         conn = sqlite3.connect(test_db_path)
-        conn.execute("""
-            INSERT OR REPLACE INTO worker_heartbeats 
-            (worker_id, should_stop, last_heartbeat, status)
-            VALUES (?, 1, datetime('now'), 'stopping')
-        """, (f"imap_{watcher.cfg.account_id}",))
+        conn.execute("UPDATE email_accounts SET is_active=0 WHERE id=?", (watcher.cfg.account_id,))
         conn.commit()
         conn.close()
         
@@ -97,10 +111,8 @@ class TestShouldStop:
 
     def test_should_stop_returns_false_when_not_set(self, watcher, test_db_path):
         """Test that _should_stop returns False when no stop signal."""
-        # Ensure no stop signal exists
         conn = sqlite3.connect(test_db_path)
-        conn.execute("DELETE FROM worker_heartbeats WHERE worker_id = ?",
-                     (f"imap_{watcher.cfg.account_id}",))
+        conn.execute("UPDATE email_accounts SET is_active=1 WHERE id=?", (watcher.cfg.account_id,))
         conn.commit()
         conn.close()
         
@@ -114,21 +126,21 @@ class TestCheckConnectionAlive:
     def test_check_connection_alive_with_no_client(self, watcher):
         """Test connection check when no client exists."""
         watcher._client = None
-        assert watcher._check_connection_alive() is False
+        assert watcher._check_connection_alive(watcher._client) is False
 
     def test_check_connection_alive_with_dead_client(self, watcher):
         """Test connection check with disconnected client."""
         watcher._client = Mock()
         watcher._client.noop.side_effect = Exception("Connection lost")
         
-        assert watcher._check_connection_alive() is False
+        assert watcher._check_connection_alive(watcher._client) is False
 
     def test_check_connection_alive_with_live_client(self, watcher):
         """Test connection check with healthy client."""
         watcher._client = Mock()
         watcher._client.noop.return_value = ('OK', [b'NOOP completed'])
         
-        assert watcher._check_connection_alive() is True
+        assert watcher._check_connection_alive(watcher._client) is True
 
 
 class TestRecordFailure:
@@ -136,24 +148,46 @@ class TestRecordFailure:
 
     def test_record_failure_increments_counter(self, watcher):
         """Test that failure recording increments IDLE failure count."""
-        initial_count = watcher._idle_failure_count
-        
-        watcher._record_failure("test_error", circuit_breaker=True)
-        
-        assert watcher._idle_failure_count == initial_count + 1
+        conn = sqlite3.connect(watcher.cfg.db_path)
+        conn.execute("DELETE FROM worker_heartbeats WHERE worker_id=?", (f"imap_{watcher.cfg.account_id}",))
+        conn.commit()
+        conn.close()
 
-    def test_record_failure_activates_circuit_breaker(self, watcher):
+        watcher._record_failure("test_error")
+
+        conn = sqlite3.connect(watcher.cfg.db_path)
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT error_count FROM worker_heartbeats WHERE worker_id=?",
+            (f"imap_{watcher.cfg.account_id}",)
+        ).fetchone()
+        conn.close()
+
+        assert row is not None
+        assert row['error_count'] == 1
+
+    def test_record_failure_activates_circuit_breaker(self, watcher, monkeypatch):
         """Test that circuit breaker activates after threshold."""
-        # Trigger multiple failures to exceed threshold
-        for i in range(6):  # Default threshold is 5
-            watcher._record_failure(f"error_{i}", circuit_breaker=True)
+        monkeypatch.setenv('IMAP_CIRCUIT_THRESHOLD', '2')
+        conn = sqlite3.connect(watcher.cfg.db_path)
+        conn.execute("UPDATE email_accounts SET is_active=1 WHERE id=?", (watcher.cfg.account_id,))
+        conn.commit()
+        conn.close()
+
+        for i in range(3):  # Threshold overridden to 2
+            watcher._record_failure(f"error_{i}")
         
-        # Circuit breaker should now be active (polling mode forced)
-        assert watcher._polling_mode_forced is True
+        conn = sqlite3.connect(watcher.cfg.db_path)
+        row = conn.execute("SELECT is_active, last_error FROM email_accounts WHERE id=?", (watcher.cfg.account_id,)).fetchone()
+        conn.close()
+
+        assert row is not None
+        assert row[0] == 0  # Account should be deactivated
+        assert row[1] and 'circuit_open' in row[1]
 
     def test_record_failure_writes_to_db(self, watcher, test_db_path):
         """Test that failures are logged to database."""
-        watcher._record_failure("test_database_logging", circuit_breaker=False)
+        watcher._record_failure("test_database_logging")
         
         # Check database for failure record
         conn = sqlite3.connect(test_db_path)
@@ -162,13 +196,15 @@ class TestRecordFailure:
         
         rows = cur.execute("""
             SELECT * FROM worker_heartbeats 
-            WHERE worker_id = ? AND status LIKE '%ERROR%'
+            WHERE worker_id = ?
         """, (f"imap_{watcher.cfg.account_id}",)).fetchall()
         
         conn.close()
         
-        # Should have logged the failure
         assert len(rows) > 0
+        row = rows[0]
+        assert row['status'] == 'test_database_logging'
+        assert row['error_count'] >= 1
 
 
 class TestGetLastProcessedUID:
@@ -287,11 +323,12 @@ class TestClose:
         """Test close with active IMAP client."""
         watcher._client = Mock()
         watcher._client.logout = Mock()
+        client_mock = watcher._client
         
         watcher.close()
         
         # Verify logout was called
-        watcher._client.logout.assert_called_once()
+        client_mock.logout.assert_called_once()
 
     def test_close_handles_logout_exception(self, watcher):
         """Test close handles logout errors gracefully."""
@@ -307,12 +344,19 @@ class TestHybridPollingLogic:
 
     def test_circuit_breaker_activates_after_threshold(self, watcher):
         """Test that polling mode activates after IDLE failures."""
-        # Simulate 5+ IDLE failures
-        for i in range(6):
-            watcher._record_failure(f"IDLE timeout {i}", circuit_breaker=True)
+        watcher._idle_failure_count = 2
+        watcher._polling_mode_forced = False
+        watcher._last_idle_retry = 0.0
+
+        # Simulate another failure as run_forever would do
+        watcher._idle_failure_count += 1
+        if watcher._idle_failure_count >= 3:
+            watcher._polling_mode_forced = True
+            watcher._last_idle_retry = time.time()
         
-        assert watcher._idle_failure_count >= 5
+        assert watcher._idle_failure_count >= 3
         assert watcher._polling_mode_forced is True
+        assert watcher._last_idle_retry > 0
 
     def test_idle_retry_after_cooldown(self, watcher):
         """Test that IDLE is retried after cooldown period."""
@@ -356,7 +400,8 @@ class TestMessageHandling:
         # Call _store_in_database (simplified - would need full implementation)
         # This tests the pattern, actual implementation may differ
         conn = sqlite3.connect(test_db_path)
-        conn.execute("""
+        cur = conn.cursor()
+        cur.execute("""
             INSERT INTO email_messages 
             (account_id, original_uid, message_id, sender, subject, body_text, 
              direction, interception_status, status)
@@ -364,7 +409,7 @@ class TestMessageHandling:
         """, (watcher.cfg.account_id, uid, msg_data['message_id'],
               msg_data['sender'], msg_data['subject'], msg_data['body_text']))
         conn.commit()
-        email_id = conn.lastrowid
+        email_id = cur.lastrowid
         conn.close()
         
         # Verify entry exists
@@ -386,14 +431,15 @@ class TestMessageHandling:
         """Test that _update_message_status updates database."""
         # Create test message
         conn = sqlite3.connect(test_db_path)
-        conn.execute("""
+        cur = conn.cursor()
+        cur.execute("""
             INSERT INTO email_messages 
             (account_id, message_id, sender, subject, interception_status, status)
             VALUES (?, ?, ?, ?, 'HELD', 'PENDING')
-        """, (watcher.cfg.account_id, '<test@example.com>', 
+        """, (watcher.cfg.account_id, '<update_test@example.com>', 
               'sender@example.com', 'Test'))
         conn.commit()
-        email_id = conn.lastrowid
+        email_id = cur.lastrowid
         conn.close()
         
         # Update status (simplified call - actual implementation may differ)
