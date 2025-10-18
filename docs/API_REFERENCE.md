@@ -252,13 +252,6 @@ curl -b cookie.txt http://localhost:5000/api/interception/held/42
 }
 ```
 
-**Query Parameters:**
-- `include_diff` (bool): Include diff if edited (0 or 1)
-
-**Example with diff:**
-```bash
-curl -b cookie.txt "http://localhost:5000/api/interception/held/42?include_diff=1"
-```
 
 ### Release Message to INBOX
 
@@ -518,59 +511,42 @@ curl http://localhost:5000/api/smtp-health
 }
 ```
 
-### Watchers Overview
+### Get Watchers Status
 
 **Endpoint:** `GET /api/watchers/overview`
 
-**Description:** Get status of all IMAP watchers
+**Description:** Returns IMAP watcher status and SMTP proxy health for all accounts.
 
-**Request:**
+**Example Request:**
 ```bash
 curl -b cookie.txt http://localhost:5000/api/watchers/overview
 ```
 
-**Response:**
+**Example Response:**
 ```json
 {
   "smtp": {
     "listening": true,
     "host": "127.0.0.1",
     "port": 8587,
-    "last_selfcheck_ts": "2025-10-18 14:20:00"
+    "last_selfcheck_ts": "2025-10-18 14:32:05"
   },
   "accounts": [
     {
       "id": 1,
-      "account_name": "Gmail Main",
+      "account_name": "Gmail Primary",
       "email_address": "user@gmail.com",
-      "is_active": 1,
+      "is_active": true,
       "watcher": {
         "state": "idle",
-        "last_heartbeat": "3 seconds ago",
-        "error_count": 0
-      }
-    },
-    {
-      "id": 2,
-      "account_name": "Hostinger",
-      "email_address": "user@corrinbox.com",
-      "is_active": 1,
-      "watcher": {
-        "state": "polling",
-        "last_heartbeat": "28 seconds ago",
-        "error_count": 2
+        "last_heartbeat": "3.2s ago"
       }
     }
   ]
 }
 ```
 
-**Watcher States:**
-- `idle`: Connected via IMAP IDLE (real-time, <1s detection)
-- `polling`: Polling mode (30s intervals)
-- `active`: Processing messages
-- `stopped`: Not running
-- `unknown`: Status unavailable
+**States:** `idle` (IDLE mode), `polling` (fallback mode), `stopped`, `unknown`
 
 ---
 

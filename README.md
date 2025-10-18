@@ -13,6 +13,12 @@ A comprehensive email moderation system for Windows that intercepts, holds, and 
 - **Real-time Updates**: Dashboard with live statistics and charts
 - **Windows Service**: Can run as a Windows service for production deployment
 
+## 🔐 Security Note
+
+**Credential Storage**: Email account passwords are encrypted at rest using Fernet symmetric encryption. The encryption key (`key.txt`) is automatically generated and **must NOT be committed to version control** (already in .gitignore).
+
+**⚠️ Important**: Never commit `key.txt`, `.env`, or any files containing credentials. All sensitive data is git-ignored by default.
+
 ## 📚 Documentation
 
 **Getting Started**:

@@ -41,6 +41,12 @@ The Email Management Tool intercepts, holds, and allows you to review emails **b
 
 ## Core Concepts
 
+### Security Note
+
+**Credential Storage**: Email account passwords are encrypted at rest using Fernet symmetric encryption. The encryption key (`key.txt`) is automatically generated and **must NOT be committed to version control**.
+
+**⚠️ Important**: Never commit `key.txt`, `.env`, or any files containing credentials. All sensitive data is git-ignored by default.
+
 ### 1. Watchers (IMAP Monitors)
 
 A **watcher** is a background process that monitors a specific email account's INBOX folder.
@@ -62,8 +68,8 @@ The watcher uses two modes to detect new emails:
 
 **Automatic Hybrid Strategy:**
 - Starts in IDLE mode for real-time detection
-- Falls back to polling after 3 consecutive IDLE failures
-- Retries IDLE every 15 minutes in polling mode
+- Falls back to polling if IDLE keeps failing
+- Retries IDLE periodically when in polling mode
 - You'll see current mode in Watchers page: "IDLE" (green) or "POLLING" (yellow)
 
 ### 3. Rule Matching
@@ -127,14 +133,16 @@ You have two options when releasing a held email:
 
 - Original email is **reconstructed** exactly as received
 - **APPENDed** to INBOX with original timestamp preserved
-- Original in Quarantine is **DELETED** (no duplicates)
+- Quarantine copy is **removed** (best-effort cleanup; no duplicates)
+- Raw `.eml` file retained for audit trail
 - User sees it as if interception never happened
 
 #### Option B: Edit Then Release
 
 - You modify subject, body, or strip attachments
 - **Only the edited version** is APPENDed to INBOX
-- Original in Quarantine is **DELETED**
+- Quarantine copy is **removed** (best-effort cleanup)
+- Raw data retained for audit
 - User sees only the edited version
 
 **Important**: After release, the email exists in ONLY one place (INBOX). The Quarantine copy is always removed to prevent duplicates.
@@ -300,7 +308,7 @@ You have two options when releasing a held email:
 2. Check Results:
    - Hostinger INBOX: ❌ Email does NOT appear
    - Web App Held page: ✅ Shows email with status "HELD"
-   - Hostinger Quarantine folder: ✅ Original email stored
+   - Hostinger Quarantine folder: ✅ Copy stored temporarily
 
 3. View Details:
    - Click on held email in web dashboard
@@ -322,8 +330,9 @@ You have two options when releasing a held email:
 4. Click **"Release"**
 5. Check Results:
    - Hostinger INBOX: ✅ Edited version appears
-   - Hostinger Quarantine: ❌ Original deleted (no duplicate)
+   - Hostinger Quarantine: ❌ Copy removed (no duplicate visible)
    - Web App status: Changed to "RELEASED"
+   - Raw audit data: ✅ Retained in `.eml` file
 
 ---
 
@@ -526,9 +535,9 @@ IMAP_FORCE_COPY_PURGE=1
 - Example: Use "Held" instead of "Quarantine"
 
 **Cleanup:**
-- Released emails are auto-deleted from Quarantine
-- Discarded emails remain in Quarantine (for audit)
-- Manual cleanup: Delete old Quarantine messages via email client
+- Released emails: Quarantine copy removed (best-effort), raw audit data retained
+- Discarded emails: Quarantine copy may remain depending on configuration
+- Manual cleanup: Delete old Quarantine messages via email client if needed
 
 ### IDLE Connection Management
 

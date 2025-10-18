@@ -30,8 +30,8 @@ For example:
 
 **Hybrid Strategy:**
 - Starts in IDLE mode for instant detection
-- Automatically falls back to polling after 3 consecutive IDLE failures
-- Retries IDLE every 15 minutes when in polling mode
+- Automatically falls back to polling if IDLE keeps failing
+- Retries IDLE periodically when in polling mode
 - Current mode shown in Watchers page UI
 
 ---
@@ -62,11 +62,11 @@ Rule: Pattern="invoice", Field=BODY
 
 ### Q: Which email providers are supported?
 
-**A:** Any provider with standard IMAP support:
+**A:** Validated with Gmail and Hostinger IMAP. Works with standard IMAP servers. Automatically falls back to polling if IDLE isn't supported.
 
 **Tested & Verified:**
-- ✅ Gmail (imap.gmail.com:993)
-- ✅ Hostinger (imap.hostinger.com:993)
+- ✅ Gmail (imap.gmail.com:993) - Full IDLE support
+- ✅ Hostinger (imap.hostinger.com:993) - Full IDLE support
 
 **Should Work (standard IMAP):**
 - Outlook/Office365
@@ -78,7 +78,7 @@ Rule: Pattern="invoice", Field=BODY
 **Requirements:**
 - IMAP access enabled
 - SSL/TLS support (port 993 typical)
-- IDLE capability (optional but recommended)
+- IDLE capability (optional - falls back to polling if unavailable)
 
 ---
 
@@ -104,13 +104,13 @@ Rule: Pattern="invoice", Field=BODY
 
 ### Q: What happens to the original email after I release it?
 
-**A:** The original in Quarantine is **permanently deleted**.
+**A:** The email leaves the Held queue. Only the released copy appears in INBOX; raw audit data may be retained.
 
 **Release Process:**
 1. **Edited or original** content is reconstructed as fresh email
 2. **APPENDed** to INBOX with original timestamp preserved
-3. **Original in Quarantine** is marked `\Deleted` and EXPUNGEd
-4. **Only released copy** exists in inbox
+3. **Quarantine copy** is marked `\Deleted` and EXPUNGEd (best-effort cleanup)
+4. **Only released copy** visible in inbox; raw `.eml` file retained for audit trail
 
 **Why?** To prevent duplicates. If we just "moved back," the user would see both the original (with Message-ID ABC) and the released version (Message-ID ABC or new ID), causing confusion.
 
@@ -139,7 +139,7 @@ The original email is reconstructed exactly as received and delivered to INBOX. 
 - Original stays in Quarantine until release
 - When you click "Release" after editing:
   - Only the edited version goes to INBOX
-  - Original in Quarantine is deleted
+  - Quarantine copy removed; raw data retained for audit
   - No trace of original in user's view
 
 **Use Case**: Clean up phishing attempts, remove suspicious links, sanitize content before delivery.
@@ -176,9 +176,9 @@ Original email body...
 **Automatic Fallback:**
 1. IDLE connection fails (timeout, server disconnect, protocol error)
 2. Failure counter increments
-3. After **3 consecutive failures** → force polling mode
+3. If IDLE **keeps failing** → force polling mode
 4. Polling continues at 30-second intervals
-5. Every **15 minutes** → retry IDLE mode
+5. Periodically retries IDLE mode
 6. If IDLE succeeds → reset failure counter and return to IDLE
 
 **Manual Recovery:**
@@ -411,7 +411,7 @@ Response includes:
 - Audit log: who released, when, what changes made
 
 **What's Deleted:**
-- Copy in Quarantine folder (to prevent duplicates)
+- Copy in Quarantine folder (to prevent duplicates; best-effort cleanup)
 - IMAP server representation in Quarantine
 
 **Result**: You can always review original via web dashboard (raw content viewer), but it won't exist in the email client's Quarantine folder.
