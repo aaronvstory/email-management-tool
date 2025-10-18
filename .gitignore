@@ -166,10 +166,13 @@ test_*.sqlite
 *.backup
 simple_app.py.backup*
 
-# MCP directories
+# MCP directories and config files (contain API keys)
 .serena/
 .playwright-mcp/
 .kilocode/
+.mcp.json
+mcp.json
+*.mcp.json
 
 # Development
 .claude-session
