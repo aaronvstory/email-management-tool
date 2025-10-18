@@ -15,6 +15,7 @@ from flask import Blueprint, jsonify, render_template, request
 from flask_login import login_required, current_user
 from email.parser import BytesParser
 from email.policy import default as default_policy
+from email.utils import make_msgid
 import difflib
 import imaplib, ssl
 
@@ -465,6 +466,19 @@ def api_interception_release(msg_id:int):
         imap.login(row['imap_username'], decrypted_pass)
         status,_ = imap.select(target_folder)
         if status != 'OK': imap.select('INBOX')
+        original_message_id = (row['message_id'] or '').strip()
+        message_id_hdr = (msg.get('Message-ID') or '').strip()
+        # Ensure Message-ID exists and is unique when edits were applied
+        if message_id_hdr:
+            if (edited_subject is not None or edited_body is not None or strip_attachments):
+                new_mid = make_msgid()
+                msg.replace_header('Message-ID', new_mid)
+                message_id_hdr = new_mid.strip()
+        else:
+            new_mid = make_msgid()
+            msg['Message-ID'] = new_mid
+            message_id_hdr = new_mid.strip()
+
         # Use internaldate if available; else use current time; format via IMAP internal date
         date_param = None
         try:
@@ -482,7 +496,6 @@ def api_interception_release(msg_id:int):
             import time as _t
             date_param = imaplib.Time2Internaldate(_t.localtime())
         # Idempotency guard: if a message with same Message-ID already exists, skip APPEND
-        message_id_hdr = (msg.get('Message-ID') or '').strip()
         already_present = False
         try:
             if message_id_hdr:
@@ -518,47 +531,78 @@ def api_interception_release(msg_id:int):
         # This prevents duplicates and ensures only the edited version is in INBOX
         original_uid = row['original_uid']
         removed_from_quarantine = False
+        header_candidates = []
+        for candidate in (message_id_hdr, original_message_id):
+            if candidate and candidate not in header_candidates:
+                header_candidates.append(candidate)
         log.info(f"[interception::release] Attempting Quarantine cleanup for email {msg_id}, original_uid={original_uid}")
 
-        if original_uid is not None and original_uid != 0:
-            try:
-                # Try common Quarantine folder naming patterns
-                quarantine_candidates = [
-                    'Quarantine',
-                    'INBOX/Quarantine',
-                    'INBOX.Quarantine'
-                ]
+        def _delete_matches(uids):
+            deleted = False
+            for uid in uids:
+                try:
+                    imap.uid('STORE', uid, '+FLAGS', '(\\Deleted)')
+                    deleted = True
+                except Exception as store_err:
+                    log.debug("[interception::release] UID STORE failed uid=%s err=%s", uid, store_err)
+            if deleted:
+                try:
+                    imap.expunge()
+                except Exception as expunge_err:
+                    log.debug("[interception::release] EXPUNGE failed err=%s", expunge_err)
+            return deleted
 
-                for qfolder in quarantine_candidates:
-                    try:
-                        log.debug(f"[interception::release] Trying to select folder: {qfolder}")
-                        status, data = imap.select(qfolder)
-                        log.debug(f"[interception::release] SELECT {qfolder} returned status={status}, data={data}")
+        quarantine_candidates = [
+            'Quarantine',
+            'INBOX/Quarantine',
+            'INBOX.Quarantine'
+        ]
 
-                        if status == 'OK':
-                            # Found the quarantine folder
-                            log.info(f"[interception::release] Found quarantine folder: {qfolder}, removing UID {original_uid}")
-
-                            store_result = imap.uid('STORE', str(original_uid), '+FLAGS', '(\\Deleted)')
-                            log.debug(f"[interception::release] UID STORE result: {store_result}")
-
-                            expunge_result = imap.expunge()
-                            log.debug(f"[interception::release] EXPUNGE result: {expunge_result}")
-
-                            removed_from_quarantine = True
-                            log.info(f"[interception::release] Successfully removed UID {original_uid} from {qfolder}", extra={'email_id': msg_id, 'uid': original_uid, 'folder': qfolder})
-                            break
-                        else:
-                            log.debug(f"[interception::release] Folder {qfolder} SELECT returned non-OK status: {status}")
-                    except Exception as e:
-                        log.warning(f"[interception::release] Folder {qfolder} not accessible: {e}", extra={'email_id': msg_id, 'folder': qfolder})
+        try:
+            for qfolder in quarantine_candidates:
+                try:
+                    log.debug(f"[interception::release] Trying to select folder: {qfolder}")
+                    status, data = imap.select(qfolder)
+                    if status != 'OK':
                         continue
 
-                if not removed_from_quarantine:
-                    log.warning(f"[interception::release] Could not remove UID {original_uid} from quarantine (folder not found)", extra={'email_id': msg_id, 'uid': original_uid})
+                    candidate_uids = []
+                    for header_val in header_candidates:
+                        try:
+                            typ, search_data = imap.uid('SEARCH', None, 'HEADER', 'Message-ID', header_val)
+                            if typ == 'OK' and search_data and search_data[0]:
+                                candidate_uids.extend(int(x) for x in search_data[0].split())
+                        except Exception as search_err:
+                            log.debug("[interception::release] HEADER search failed in %s (%s)", qfolder, search_err)
 
-            except Exception as e:
-                log.error(f"[interception::release] Failed to remove from quarantine: {e}", extra={'email_id': msg_id, 'uid': original_uid}, exc_info=True)
+                    if not candidate_uids and original_uid:
+                        try:
+                            typ_uid, search_uid = imap.uid('SEARCH', None, 'UID', str(original_uid))
+                            if typ_uid == 'OK' and search_uid and search_uid[0]:
+                                candidate_uids.extend(int(x) for x in search_uid[0].split())
+                        except Exception as uid_err:
+                            log.debug("[interception::release] UID search failed in %s (%s)", qfolder, uid_err)
+
+                    if candidate_uids:
+                        if _delete_matches(candidate_uids):
+                            removed_from_quarantine = True
+                            log.info("[interception::release] Removed %d message(s) from %s", len(candidate_uids), qfolder, extra={'email_id': msg_id, 'uids': candidate_uids})
+                            break
+                except Exception as e:
+                    log.warning(f"[interception::release] Folder {qfolder} not accessible: {e}", extra={'email_id': msg_id, 'folder': qfolder})
+                    continue
+
+            if not removed_from_quarantine:
+                log.warning(f"[interception::release] Could not remove original message from quarantine (uid={original_uid})", extra={'email_id': msg_id, 'message_ids': header_candidates})
+
+        except Exception as e:
+            log.error(f"[interception::release] Failed to remove from quarantine: {e}", extra={'email_id': msg_id, 'uid': original_uid}, exc_info=True)
+
+        # Reselect target folder for subsequent operations
+        try:
+            imap.select(target_folder)
+        except Exception:
+            pass
 
         # All good; close IMAP
         imap.logout()

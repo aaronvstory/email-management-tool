@@ -1,4 +1,6 @@
 from email.message import EmailMessage
+from email.parser import BytesParser
+from email.policy import default as default_policy
 from types import SimpleNamespace
 
 from app.routes import interception as route
@@ -11,26 +13,59 @@ class ReleaseIMAP:
     def __init__(self, host, port):
         self.host = host
         self.port = port
-        self.selected = []
+        self.current_folder = None
         self.appended = False
+        self.mailboxes = {
+            "INBOX": {},
+            "Quarantine": {}
+        }
+        self.deleted_uids = []
+
+    def preload(self, folder, uid, message_id):
+        self.mailboxes.setdefault(folder, {})[uid] = message_id
 
     def login(self, username, password):
         self.username = username
         self.password = password
 
     def select(self, mailbox):
-        self.selected.append(mailbox)
+        self.current_folder = mailbox
         return "OK", [b"1"]
 
-    def search(self, *args, **kwargs):
-        return "OK", [b"1"]
+    def search(self, charset, criterion, header, value):
+        if self.current_folder not in self.mailboxes:
+            return "NO", [b""]
+        matches = [uid for uid, msgid in self.mailboxes[self.current_folder].items() if msgid == value]
+        result = b" ".join(str(uid).encode() for uid in matches) if matches else b""
+        return "OK", [result]
 
-    def append(self, *args, **kwargs):
+    def append(self, folder, flags, date_time, message_bytes):
         self.appended = True
+        msg = BytesParser(policy=default_policy).parsebytes(message_bytes)
+        mid = (msg["Message-ID"] or "").strip()
+        mailbox = self.mailboxes.setdefault(folder, {})
+        new_uid = max(mailbox.keys() or [400]) + 1
+        mailbox[new_uid] = mid
         return "OK", [b"APPEND completed"]
 
-    def uid(self, *args, **kwargs):
-        return "OK", [b"1"]
+    def uid(self, command, *args):
+        if command == 'SEARCH':
+            _, criterion, data = args[0], args[1], args[2]
+            if criterion == 'HEADER' and self.current_folder in self.mailboxes:
+                value = args[3]
+                matches = [uid for uid, msgid in self.mailboxes[self.current_folder].items() if msgid == value]
+                return "OK", [b" ".join(str(uid).encode() for uid in matches) if matches else b""]
+            if criterion == 'UID':
+                value = int(args[2])
+                matches = [value] if value in self.mailboxes.get(self.current_folder, {}) else []
+                return "OK", [b" ".join(str(uid).encode() for uid in matches) if matches else b""]
+        if command == 'STORE':
+            uid = int(args[0])
+            if self.current_folder in self.mailboxes and uid in self.mailboxes[self.current_folder]:
+                self.mailboxes[self.current_folder].pop(uid, None)
+                self.deleted_uids.append(uid)
+            return "OK", [b"OK"]
+        return "OK", [b""]
 
     def expunge(self):
         return "OK", [b"1"]
@@ -77,6 +112,7 @@ def test_release_endpoint_strips_attachments(monkeypatch, client, tmp_path):
     _prepare_release_fixture(raw_file, account_id=42, email_id=77)
 
     fake_imap = ReleaseIMAP("imap.release.test", 993)
+    fake_imap.preload("Quarantine", 321, "<release-test@example.com>")
     monkeypatch.setattr(route, "imaplib", SimpleNamespace(IMAP4_SSL=lambda *args, **kwargs: fake_imap, Time2Internaldate=route.imaplib.Time2Internaldate, IMAP4=route.imaplib.IMAP4))
     monkeypatch.setattr(route, "_ensure_quarantine", lambda imap_obj, folder: folder)
 
@@ -90,6 +126,10 @@ def test_release_endpoint_strips_attachments(monkeypatch, client, tmp_path):
     assert data["attachments_removed"] == ["report.pdf"]
     row = get_db().execute("SELECT interception_status, status FROM email_messages WHERE id=77").fetchone()
     assert row["interception_status"] == "RELEASED"
+    assert fake_imap.mailboxes["Quarantine"] == {}
+    inbox_mids = list(fake_imap.mailboxes["INBOX"].values())
+    assert len(inbox_mids) == 1
+    assert inbox_mids[0] != "<release-test@example.com>"
 
 
 def test_release_endpoint_uses_raw_content(monkeypatch, client):
@@ -122,6 +162,7 @@ def test_release_endpoint_uses_raw_content(monkeypatch, client):
     conn.commit()
 
     fake_imap = ReleaseIMAP("imap.content.test", 993)
+    fake_imap.preload("Quarantine", 111, "<raw-content@example.com>")
     monkeypatch.setattr(route, "imaplib", SimpleNamespace(IMAP4_SSL=lambda *args, **kwargs: fake_imap, Time2Internaldate=route.imaplib.Time2Internaldate, IMAP4=route.imaplib.IMAP4))
     monkeypatch.setattr(route, "_ensure_quarantine", lambda imap_obj, folder: folder)
 
@@ -141,7 +182,7 @@ def test_release_quarantine_cleanup_handles_failures(monkeypatch, client):
     class QuarantineIMAP(ReleaseIMAP):
         def select(self, mailbox):
             if mailbox == "INBOX":
-                return "OK", [b"1"]
+                return super().select(mailbox)
             if mailbox == "INBOX/Quarantine":
                 raise RuntimeError("mailbox unavailable")
             if mailbox == "INBOX.Quarantine":
@@ -174,6 +215,7 @@ def test_release_quarantine_cleanup_handles_failures(monkeypatch, client):
     conn.commit()
 
     fake_imap = QuarantineIMAP("imap.cleanup.test", 993)
+    fake_imap.preload("Quarantine", 222, "<cleanup@example.com>")
     monkeypatch.setattr(route, "imaplib", SimpleNamespace(IMAP4_SSL=lambda *args, **kwargs: fake_imap, Time2Internaldate=route.imaplib.Time2Internaldate, IMAP4=route.imaplib.IMAP4))
     monkeypatch.setattr(route, "_ensure_quarantine", lambda imap_obj, folder: folder)
 
