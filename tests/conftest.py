@@ -17,6 +17,8 @@ import pytest
 from flask import Flask
 from flask.testing import FlaskClient
 
+from app.utils.db import get_db
+
 # Add project root to path for imports
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -246,11 +248,23 @@ def authenticated_client(client: FlaskClient) -> FlaskClient:
 
     Automatically logs in as admin user.
     """
+    # Seed dashboard data to avoid template failures during login redirect
+    conn = get_db()
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO email_messages
+        (id, interception_status, status, subject, body_text, recipients, direction, created_at)
+        VALUES (123456, 'HELD', 'PENDING', 'Seed Subject', 'Seed Body', 'seed@example.com', 'inbound', datetime('now'))
+        """
+    )
+    conn.commit()
+    conn.close()
+
     # Login
     client.post('/login', data={
         'username': 'admin',
         'password': 'admin123'
-    }, follow_redirects=True)
+    }, follow_redirects=False)
 
     return client
 
