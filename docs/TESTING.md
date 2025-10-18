@@ -2,20 +2,38 @@
 
 ## Test Suite Overview
 
-**Overall Status**: ✅ **100% pass rate (24/24 tests), 22% code coverage**
+**Overall Status**: ✅ **100% pass rate (138/138 tests), 36% code coverage**
 
 **Framework**: pytest with Flask fixtures
+
+**Recent Achievement**: Stabilized test suite from 40/82 passing → 138/138 passing, coverage improved from 27% → 36%
 
 ## Test Structure
 
 ```
 tests/
-├── conftest.py                    # Pytest configuration with Flask fixtures
-├── test_intercept_flow.py         # Interception lifecycle (3/3 pass) ✅
-├── test_unified_stats.py          # Dashboard stats (2/2 pass) ✅
-├── test_latency_stats.py          # Latency metrics (4/4 pass individually, 2/4 in suite)
-└── TEST_ISOLATION_STATUS.md       # Known test limitations
+├── conftest.py                                    # Pytest configuration and fixtures
+├── routes/
+│   ├── test_dashboard_view.py                     # Dashboard rendering (2 tests)
+│   ├── test_interception_additional.py            # Interception APIs (22 tests)
+│   ├── test_interception_release_flow.py          # Email release workflow (4 tests)
+│   ├── test_manual_intercept_logic.py             # Manual interception (5 tests)
+│   └── test_rate_limiting.py                      # Rate limit enforcement (3 tests)
+├── services/
+│   ├── test_imap_watcher_comprehensive.py         # IMAP watcher (35 tests)
+│   ├── test_imap_watcher_decision.py              # IMAP decision logic (15 tests)
+│   └── test_interception_comprehensive.py         # Interception service (20 tests)
+├── utils/
+│   ├── test_db_utils.py                           # Database utilities (7 tests)
+│   ├── test_email_helpers_unit.py                 # Email helpers (21 tests)
+│   └── test_rate_limiting.py                      # Rate limiting (4 tests)
+└── legacy/
+    ├── test_intercept_flow.py                     # Legacy interception tests
+    ├── test_unified_stats.py                      # Legacy stats tests
+    └── test_latency_stats.py                      # Legacy latency tests
 ```
+
+**Total**: 138 tests across 15 test files
 
 ## Test Coverage
 
@@ -92,16 +110,23 @@ python -m pytest tests/ -v -m live
 
 ## Coverage Goals
 
-**Current Coverage**: 22% overall
+**Current Coverage**: 36% overall (4663 statements, 2975 missing)
 
 **Target Coverage**: 50%+
 
-**Priority Areas** (sorted by critical path importance):
-1. **IMAP Watcher** (19% coverage) - Thread lifecycle, reconnection, IDLE loop
-2. **Email Routes** (19% coverage) - Fetch, viewer, reply/forward operations
+**High Coverage Modules** (80%+):
+- ✅ **app/routes/dashboard.py** - 96% coverage
+- ✅ **app/utils/logging.py** - 90% coverage
+- ✅ **app/utils/metrics.py** - 87% coverage
+- ✅ **app/routes/interception.py** - 85% coverage
+- ✅ **app/utils/db.py** - 80% coverage
+
+**Priority Areas for Improvement**:
+1. **Models** (0% coverage) - EmailMessage, User, Account, Role models
+2. **IMAP Watcher** (28% coverage) - Thread lifecycle, reconnection, IDLE loop
 3. **Accounts Management** (14% coverage) - CRUD operations, health checks
-4. **Interception Routes** (24% coverage) - Release, discard, edit operations
-5. **Security Features** (0% coverage) - CSRF bypass attempts, rate limit validation
+4. **Email Routes** (30% coverage) - Fetch, viewer, reply/forward operations
+5. **Moderation Routes** (22% coverage) - Rule management and enforcement
 
 ## Known Limitations
 

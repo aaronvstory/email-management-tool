@@ -11,6 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Last Updated**: October 18, 2025
 
 ### Recent Major Updates
+- ✅ **Test Coverage Milestone** - 138/138 tests passing, 36% coverage (was 27%), pre-commit hooks enabled
 - ✅ **Hybrid IMAP Strategy** - IDLE+polling hybrid prevents timeout issues (See: [docs/HYBRID_IMAP_STRATEGY.md](docs/HYBRID_IMAP_STRATEGY.md))
 - ✅ **Security Hardening** - CSRF protection, rate limiting, strong SECRET_KEY generation (See: [docs/SECURITY.md](docs/SECURITY.md))
 - ✅ **Blueprint Modularization** - Routes now in app/routes/* (9 active blueprints)
