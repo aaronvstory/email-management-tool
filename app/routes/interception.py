@@ -253,7 +253,15 @@ def api_interception_held():
     """).fetchone()[0]
     accounts_active = cur.execute("SELECT COUNT(DISTINCT account_id) FROM email_messages WHERE direction='inbound'").fetchone()[0]
     conn.close()
-    return jsonify({'messages':[dict(r) for r in rows], 'stats':{'held':len(rows),'released24h':released24,'median_latency_ms':median_latency,'accounts_active':accounts_active}})
+    # Fix timezone: SQLite datetime('now') returns UTC without 'Z', JavaScript needs 'Z' suffix
+    messages = []
+    for r in rows:
+        msg = dict(r)
+        if msg.get('created_at') and isinstance(msg['created_at'], str):
+            if not msg['created_at'].endswith('Z') and 'T' not in msg['created_at']:
+                msg['created_at'] = msg['created_at'].replace(' ', 'T') + 'Z'
+        messages.append(msg)
+    return jsonify({'messages':messages, 'stats':{'held':len(rows),'released24h':released24,'median_latency_ms':median_latency,'accounts_active':accounts_active}})
 
 @bp_interception.route('/api/interception/held/<int:msg_id>')
 @login_required

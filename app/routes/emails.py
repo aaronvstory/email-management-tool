@@ -120,6 +120,14 @@ def api_emails_unified():
     for email in emails:
         email_dict = dict(email)
 
+        # Fix timezone for created_at: SQLite datetime('now') returns UTC without 'Z' suffix
+        # JavaScript interprets timestamps without timezone as local time, causing display errors
+        # Append 'Z' to indicate UTC so browsers display correct local time
+        if email_dict.get('created_at') and isinstance(email_dict['created_at'], str):
+            if not email_dict['created_at'].endswith('Z') and 'T' not in email_dict['created_at']:
+                # SQLite format: "YYYY-MM-DD HH:MM:SS" → "YYYY-MM-DDTHH:MM:SSZ"
+                email_dict['created_at'] = email_dict['created_at'].replace(' ', 'T') + 'Z'
+
         # Add preview snippet
         body_text = email_dict.get('body_text') or ''
         email_dict['preview_snippet'] = ' '.join(body_text.split())[:160]
