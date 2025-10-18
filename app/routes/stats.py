@@ -7,7 +7,7 @@ from flask import Blueprint, jsonify, Response, stream_with_context
 from flask_login import login_required
 import time
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from app.utils.db import get_db, fetch_counts
 from app.extensions import csrf
 from app.services.stats import get_stats
@@ -128,7 +128,7 @@ def stream_stats():
             counts = get_stats()
             data = json.dumps({
                 'pending': counts.get('pending', 0),
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': datetime.now(timezone.utc).isoformat()
             })
             yield f"data: {data}\n\n"
             time.sleep(2)
@@ -144,7 +144,7 @@ def api_events():
         while True:
             counts = get_stats()
             pending = counts.get('pending', 0)
-            payload = json.dumps({'pending': pending, 'timestamp': datetime.utcnow().isoformat()})
+            payload = json.dumps({'pending': pending, 'timestamp': datetime.now(timezone.utc).isoformat()})
             yield f"data: {payload}\n\n"
             time.sleep(5)
     return Response(stream_with_context(generate()), mimetype='text/event-stream')

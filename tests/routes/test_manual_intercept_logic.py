@@ -1,6 +1,6 @@
 import os
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 
@@ -122,7 +122,7 @@ def _insert_email(db_path: str, *, interception_status: str = 'FETCHED') -> None
             'PENDING',
             None,
             None,
-            datetime.utcnow().isoformat(),
+            datetime.now(timezone.utc).isoformat(),
             456,
             '<test-message-id>',
             'Manual intercept test',

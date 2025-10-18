@@ -1,7 +1,7 @@
 """
 Email message and attachment models
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, String, Text, Boolean, DateTime, ForeignKey, Integer, LargeBinary, JSON, Enum
 from sqlalchemy.orm import relationship
 import enum
@@ -93,7 +93,7 @@ class EmailMessage(Base, UUIDMixin, TimestampMixin):
     def age_hours(self):
         """Get age of email in hours"""
         if self.created_at:
-            delta = datetime.utcnow() - self.created_at
+            delta = datetime.now(timezone.utc) - self.created_at
             return delta.total_seconds() / 3600
         return 0
     

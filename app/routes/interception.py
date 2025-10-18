@@ -7,7 +7,7 @@ import logging
 import os
 import time
 import statistics
-from datetime import datetime
+from datetime import datetime, timezone
 import sqlite3
 
 from typing import Dict, Any, Optional, cast
@@ -70,7 +70,7 @@ def healthz():
         'released_24h': 0,
         'median_latency_ms': None,
         'workers': [],
-        'timestamp': datetime.utcnow().isoformat() + 'Z'
+        'timestamp': datetime.now(timezone.utc).isoformat() + 'Z'
     }
 
     # Add security configuration status (without exposing secret values)

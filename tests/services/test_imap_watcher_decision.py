@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from email.message import EmailMessage
 
 import pytest
@@ -88,7 +88,7 @@ def test_db(tmp_path, monkeypatch):
 def test_store_in_database_returns_only_rule_matched_uids(test_db, monkeypatch):
     held_email = _make_email('Invoice update', 'Please review invoice ASAP')
     normal_email = _make_email('Hello', 'General update')
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     fetch_map = {
         1: {b'RFC822': held_email, b'INTERNALDATE': now},

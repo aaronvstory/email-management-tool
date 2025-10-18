@@ -1,7 +1,7 @@
 """
 User and Role models for authentication and authorization
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Table, Enum, Integer
 from sqlalchemy.orm import relationship
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -57,7 +57,7 @@ class User(Base, UUIDMixin, TimestampMixin, UserMixin):
     def set_password(self, password):
         """Hash and set password"""
         self.password_hash = generate_password_hash(password)
-        self.last_password_change = datetime.utcnow()
+        self.last_password_change = datetime.now(timezone.utc)
         
     def check_password(self, password):
         """Check password against hash"""
