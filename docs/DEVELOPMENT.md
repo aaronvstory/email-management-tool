@@ -271,6 +271,278 @@ Before committing UI changes:
 - [ ] **Toast notifications used** (not browser alerts) for all user feedback
 - [ ] Responsive design tested (desktop, tablet, mobile)
 
+## AI-Assisted Development with MCP Servers
+
+This project leverages **Model Context Protocol (MCP)** servers for enhanced development capabilities. MCP provides specialized tools for code intelligence, file operations, research, and more.
+
+### Active MCP Servers
+
+**Primary Development Tools**:
+
+1. **Serena** - Semantic Python code intelligence
+   - **Dashboard**: http://127.0.0.1:24282/dashboard/index.html
+   - **Capabilities**: Symbol-aware navigation, safe refactoring, dependency tracking
+   - **When to use**: Finding functions/classes, analyzing imports, project-wide changes
+
+2. **Desktop Commander** - File system and process management
+   - **Capabilities**: File operations, directory search, process management, bulk operations
+   - **When to use**: File I/O, search across files, system diagnostics
+
+3. **Memory** - Knowledge graph for persistent project context
+   - **Capabilities**: Store findings, create relationships, retrieve past learnings
+   - **When to use**: Documenting complex decisions, tracking architectural patterns
+
+4. **Sequential Thinking** - Complex multi-step analysis
+   - **Capabilities**: Structured problem-solving, chain-of-thought reasoning
+   - **When to use**: Debugging complex issues, planning refactorings
+
+5. **Context7** - Library documentation lookup
+   - **Capabilities**: Official docs for Flask, pytest, SQLite, etc.
+   - **When to use**: Questions about library usage, best practices, API references
+
+6. **Exa/Perplexity** - Web research and current information
+   - **Capabilities**: Real-time web search, current best practices
+   - **When to use**: New patterns, recent vulnerability info, latest framework features
+
+**Disabled Servers** (to save 46k context tokens):
+- ❌ **chrome-devtools** - Browser automation (enable manually when needed for E2E testing)
+- ❌ **shadcn-ui** - React components (not applicable to Flask/Jinja2 project)
+
+### `/sp` Command - SuperPower Orchestration
+
+**Primary command** for intelligent task orchestration across all MCP servers.
+
+```bash
+/sp [task description]
+```
+
+**How it works**:
+- Analyzes your task and automatically selects optimal MCP servers
+- Spawns expert sub-agents for complex tasks
+- Coordinates between servers intelligently
+- Caches research findings to `.claude/research/` for reuse
+- 87% token reduction through intelligent caching
+
+### Usage Examples
+
+#### Code Analysis with Serena
+
+```bash
+# Find all references to a function
+/sp find all places where encrypt_credential is called
+
+# Analyze SMTP authentication flow
+/sp analyze the SMTP proxy authentication flow in simple_app.py
+
+# Refactor with safety
+/sp refactor IMAP watcher to use better error handling with backoff
+```
+
+**What happens**:
+- Serena MCP activates automatically
+- Symbol-aware search finds exact function references (not just text search)
+- Shows call sites with context and file locations
+- Suggests safe refactoring approaches
+
+#### File Operations with Desktop Commander
+
+```bash
+# Search across all Python files
+/sp find all SQL queries and check for injection risks
+
+# Bulk file operations
+/sp rename all test files from test_*.py to *_test.py format
+
+# System diagnostics
+/sp check why port 8587 is already in use
+```
+
+**What happens**:
+- Desktop Commander handles file system operations
+- Efficient pattern matching across large codebases
+- Process management for system-level issues
+
+#### Research with Context7 and Exa
+
+```bash
+# Library documentation
+/sp how do I use pytest fixtures for Flask app testing?
+
+# Best practices research
+/sp what are current best practices for SQLite connection pooling in Flask?
+
+# Security patterns
+/sp find recent Flask CSRF protection patterns for AJAX requests
+```
+
+**What happens**:
+- Context7 fetches official pytest/Flask documentation
+- Exa searches for recent blog posts and patterns
+- Synthesizes information from multiple sources
+- Provides code examples with explanations
+
+#### Complex Analysis with Sequential Thinking
+
+```bash
+# Multi-step debugging
+/sp why are emails stuck in PENDING status after IMAP fetch?
+
+# Performance analysis
+/sp analyze database query performance and suggest optimizations
+
+# Security audit
+/sp comprehensive security review of authentication system
+```
+
+**What happens**:
+- Sequential Thinking breaks down complex problems
+- Coordinates with Serena (code analysis) + Desktop Commander (logs)
+- Systematic investigation with hypothesis testing
+- Detailed report with evidence and recommendations
+
+#### Project-Wide Changes
+
+```bash
+# Safe refactoring
+/sp add comprehensive logging to interception.py with proper error handling
+
+# Feature addition
+/sp add rate limiting to email release endpoint in interception.py
+
+# Migration tasks
+/sp update all database queries to use proper parameterization
+```
+
+**What happens**:
+- Serena finds all affected code locations
+- Desktop Commander handles file operations
+- Memory stores the refactoring plan
+- Changes applied with validation
+
+### MCP Server Selection Guide
+
+**Choose the right server for your task**:
+
+| Task Type | Primary Server | Secondary | Example |
+|-----------|---------------|-----------|---------|
+| Find function/class | Serena | - | "Find all uses of decrypt_credential" |
+| Refactor code | Serena | Memory | "Rename User to SimpleUser everywhere" |
+| Search files | Desktop Commander | - | "Find all TODO comments in Python files" |
+| Library questions | Context7 | Exa | "How to use pytest-asyncio?" |
+| Debug complex issue | Sequential Thinking | Serena | "Why is IMAP watcher disconnecting?" |
+| Research patterns | Exa/Perplexity | Context7 | "Best practices for email threading" |
+| System diagnostics | Desktop Commander | - | "Why is port 5000 in use?" |
+
+### Tips for Effective MCP Usage
+
+**1. Be specific in task descriptions**:
+```bash
+# ✅ Good
+/sp add type hints to app/utils/crypto.py functions
+
+# ❌ Too vague
+/sp improve the code
+```
+
+**2. Use natural language**:
+```bash
+# ✅ Good
+/sp find all places where we call IMAP MOVE command
+
+# ❌ Overly technical
+/sp grep -r "MOVE" --include="*.py" | xargs
+```
+
+**3. Trust intelligent routing**:
+- No need to specify which MCP server to use
+- `/sp` automatically detects the best tool for your task
+- Servers work together when needed (e.g., Serena + Desktop Commander for refactoring)
+
+**4. Leverage caching**:
+- Research findings saved to `.claude/research/`
+- Reuse previous analysis for similar tasks
+- Faster responses for repeated patterns
+
+### Example Workflows
+
+#### Adding a New Feature
+
+```bash
+# 1. Research the pattern
+/sp find similar implementations of rate limiting in the codebase
+
+# 2. Plan the implementation
+/sp outline implementation plan for adding email attachment scanning
+
+# 3. Implement with validation
+/sp add attachment scanning to email processing pipeline with tests
+
+# 4. Verify integration
+/sp verify attachment scanning integrates correctly with SMTP proxy
+```
+
+#### Debugging an Issue
+
+```bash
+# 1. Understand the problem
+/sp analyze why emails are not being released from HELD status
+
+# 2. Find related code
+/sp find all code paths that update email status to RELEASED
+
+# 3. Check for issues
+/sp check for race conditions in email status transitions
+
+# 4. Propose fix
+/sp suggest fix for status transition race condition with proper locking
+```
+
+#### Code Quality Improvements
+
+```bash
+# 1. Security scan
+/sp scan for SQL injection vulnerabilities in database queries
+
+# 2. Performance analysis
+/sp identify slow database queries and suggest indices
+
+# 3. Type safety
+/sp add type hints to all functions in app/routes/ directory
+
+# 4. Documentation
+/sp generate docstrings for all public functions in app/services/
+```
+
+### Serena Dashboard
+
+**Access**: http://127.0.0.1:24282/dashboard/index.html
+
+**Features**:
+- Visual code dependency graph
+- Symbol hierarchy browser
+- Find references across project
+- Safe rename refactoring
+
+**When to use directly**:
+- Exploring large codebases visually
+- Understanding module relationships
+- Planning complex refactorings
+
+**Note**: `/sp` command automatically uses Serena's capabilities - dashboard is optional for visual exploration.
+
+### Context Optimization
+
+**Token usage optimized** (2025-10-18):
+- SuperClaude framework: Archived (saves 24.8k tokens)
+- MCP tools: 53.6k tokens (chrome-devtools and shadcn-ui disabled)
+- Context usage: 122k/200k (61%) with 78k free space
+
+**Why this matters**:
+- More room for code context in conversations
+- Faster response times
+- Only essential tools loaded by default
+- Enable optional servers when needed via `/mcp` command
+
 ## Testing Strategy
 
 ### Test Structure

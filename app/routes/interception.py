@@ -465,9 +465,11 @@ def api_interception_release(msg_id:int):
         # CRITICAL: Remove email from Quarantine folder after successful release to INBOX
         # This prevents duplicates and ensures only the edited version is in INBOX
         original_uid = row['original_uid']
-        removed_from_quarantine = False        log.info(f"[interception::release] Attempting Quarantine cleanup for email {msg_id}, original_uid={original_uid}")
+        removed_from_quarantine = False
+        log.info(f"[interception::release] Attempting Quarantine cleanup for email {msg_id}, original_uid={original_uid}")
 
-        if original_uid is not None and original_uid != 0:            try:
+        if original_uid is not None and original_uid != 0:
+            try:
                 # Try common Quarantine folder naming patterns
                 quarantine_candidates = [
                     'Quarantine',
