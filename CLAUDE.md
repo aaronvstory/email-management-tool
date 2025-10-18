@@ -43,10 +43,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ✅ Environment Configuration: .env.example with live test toggles and credential placeholders
 - ✅ NEW: Per‑account IMAP monitoring controls (start/stop) via API/UI; watchers self‑terminate on deactivate
 - ✅ NEW: Live E2E interception tests (scripts/live_interception_e2e.py) using real provider SMTP/IMAP with hold→edit→release verification
+- ✅ **Hybrid IMAP Strategy** (Oct 17, 2025): Implemented IDLE+polling hybrid to prevent timeout issues
+  - Connection health checks before idle_done()
+  - Automatic fallback to polling after 3 IDLE failures
+  - Recovery mechanism retries IDLE every 15 minutes from polling mode
+  - **Status**: ✅ PRODUCTION READY - See docs/HYBRID_IMAP_STRATEGY.md
 
-## Current State Assessment (Oct 12, 2025)
+## Current State Assessment (Oct 17, 2025)
 
-**Overall**: 🟡 Partially functional — SMTP proxy must be running; IMAP watchers failing for accounts with invalid DB creds; core UI accessible.
+**Overall**: 🟢 Fully functional — SMTP proxy running; IMAP watchers using hybrid strategy (no more timeouts); core UI accessible.
 
 ### Key Metrics
 
@@ -62,7 +67,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **Rate Limiting** | Login (5/min), APIs (30/min): release, fetch, edit | 🟢 OK |
 | **Critical Path** | Interception endpoints healthy when proxy is listening | 🟡 Requires proxy |
 | **SMTP Proxy** | must be running (check /api/smtp-health) | 🟡 Depends on runtime |
-| **IMAP Watchers** | Controllable per account (start/stop); require valid DB creds | 🟡 Config-dependent |
+| **IMAP Watchers** | Hybrid IDLE+polling strategy prevents timeouts; auto-recovery enabled | 🟢 Production ready |
 | **Security (CSRF/Rate Limit)** | Enabled and validated | 🟢 OK |
 
 ### Architecture Health

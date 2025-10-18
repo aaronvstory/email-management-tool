@@ -55,6 +55,11 @@ class ImapWatcher:
         self._client: Optional[IMAPClient] = None  # set in _connect
         self._last_hb = 0.0
         self._last_uidnext = 1
+        # Hybrid IDLE+polling strategy tracking
+        self._idle_failure_count = 0
+        self._last_successful_idle = time.time()
+        self._polling_mode_forced = False
+        self._last_idle_retry = time.time()
 
     def _should_stop(self) -> bool:
         """Return True if the account is deactivated in DB (is_active=0)."""
@@ -71,6 +76,21 @@ class ImapWatcher:
             return is_active == 0
         except Exception:
             # On DB error, do not force stop
+            return False
+
+    def _check_connection_alive(self, client) -> bool:
+        """Check if IMAP connection is still alive using NOOP command.
+        
+        Returns:
+            True if connection is alive, False if dead/unresponsive
+        """
+        if not client:
+            return False
+        try:
+            client.noop()
+            return True
+        except Exception as e:
+            log.warning(f"Connection health check failed for account {self.cfg.account_id}: {e}")
             return False
 
     def _record_failure(self, reason: str = "error"):
@@ -796,12 +816,24 @@ class ImapWatcher:
                 if str(os.getenv('IMAP_DISABLE_IDLE', '0')).lower() in ('1', 'true', 'yes'):
                     can_idle = False
                     log.info(f"IDLE disabled by IMAP_DISABLE_IDLE env var for account {self.cfg.account_id}")
+                # Respect forced polling mode from repeated IDLE failures
+                if self._polling_mode_forced:
+                    can_idle = False
             except Exception:
                 can_idle = False
 
             if not can_idle:
                 # Poll fallback mode
                 log.info(f"IDLE not supported for account {self.cfg.account_id}, using polling mode (interval: {poll_interval}s)")
+                
+                # Retry IDLE mode every 15 minutes if we were forced into polling due to failures
+                if self._polling_mode_forced and (time.time() - self._last_idle_retry) > 900:  # 15 minutes
+                    log.info(f"Retrying IDLE mode for account {self.cfg.account_id} after polling period")
+                    self._polling_mode_forced = False
+                    self._idle_failure_count = 0
+                    self._last_idle_retry = time.time()
+                    continue  # Skip this poll iteration and try IDLE again
+                
                 time.sleep(poll_interval)
                 try:
                     client.select_folder(self.cfg.inbox, readonly=False)
@@ -833,6 +865,9 @@ class ImapWatcher:
                     changed = {k: v for (k, v) in responses} if responses else {}
                     if responses:
                         self._handle_new_messages(client, changed)
+                        # Track successful IDLE operation
+                        self._idle_failure_count = 0
+                        self._last_successful_idle = time.time()
                     # periodic heartbeat
                     if time.time() - self._last_hb > 30:
                         self._update_heartbeat("idle"); self._last_hb = time.time()
@@ -854,10 +889,19 @@ class ImapWatcher:
                     # Keep alive / break idle periodically
                     now = time.time()
                     if (now - start) > self.cfg.idle_timeout or (now - last_idle_break) > self.cfg.idle_ping_interval:
+                        # Check connection health BEFORE trying to exit IDLE
+                        if not self._check_connection_alive(client):
+                            log.warning(f"Connection dead before idle_done for account {self.cfg.account_id}, reconnecting")
+                            self._client = None
+                            break  # Exit inner loop to reconnect
+                        
                         try:
                             client.idle_done()
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            log.warning(f"idle_done() failed for account {self.cfg.account_id}: {e}, reconnecting")
+                            self._client = None
+                            break  # Exit inner loop to reconnect
+                        
                         client.noop()
                         # Opportunistic poll using UIDNEXT delta when possible
                         try:
@@ -918,6 +962,16 @@ class ImapWatcher:
                         last_idle_break = now
                         break
             except Exception as e:
+                # Track IDLE failure
+                self._idle_failure_count += 1
+                log.warning(f"IDLE failure #{self._idle_failure_count} for account {self.cfg.account_id}: {e}")
+                
+                # Force polling mode after 3 consecutive failures
+                if self._idle_failure_count >= 3:
+                    log.error(f"IDLE failed {self._idle_failure_count} times for account {self.cfg.account_id}, forcing polling mode")
+                    self._polling_mode_forced = True
+                    self._last_idle_retry = time.time()
+                
                 error_msg = str(e).lower()
                 # Check if this is an IDLE failure that should trigger polling mode
                 # Common patterns: protocol violations, timeouts, connection issues
@@ -929,11 +983,8 @@ class ImapWatcher:
                     "read from timed" in error_msg
                 ])
 
-                if should_poll:
-                    log.warning(f"IDLE error for account {self.cfg.account_id}: {e}")
+                if should_poll or self._polling_mode_forced:
                     log.info(f"Switching to polling mode (interval: {poll_interval}s)")
-                    # Force polling mode by clearing can_idle flag
-                    can_idle = False
                     # Sleep and then poll
                     time.sleep(poll_interval)
                     try:
