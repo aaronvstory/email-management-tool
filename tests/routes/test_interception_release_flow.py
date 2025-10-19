@@ -260,3 +260,62 @@ def test_release_missing_raw_content_returns_error(monkeypatch, client):
     )
     assert resp.status_code == 500
     assert resp.get_json()["reason"] == "raw-missing"
+
+
+def test_release_removes_original_from_inbox_if_present(monkeypatch, client, tmp_path):
+    _login(client)
+
+    # Build a basic raw message to store
+    msg = EmailMessage()
+    msg["Subject"] = "Orig Subject"
+    msg.set_content("Plain body")
+
+    raw_file = tmp_path / "release_inbox_cleanup.eml"
+    raw_file.write_bytes(msg.as_bytes())
+
+    # Prepare DB with HELD message and known original Message-ID
+    email_id = 171
+    account_id = 7
+    original_mid = "<inbox-cleanup@example.com>"
+
+    conn = get_db()
+    conn.execute("DELETE FROM email_messages")
+    conn.execute("DELETE FROM email_accounts")
+    conn.execute(
+        """
+        INSERT INTO email_accounts
+        (id, account_name, email_address, imap_host, imap_port, imap_username, imap_password, imap_use_ssl, is_active)
+        VALUES (?, 'Cleanup Account', 'cleanup7@example.com', 'imap.gmail.com', 993, 'cleanup_user', ?, 1, 1)
+        """,
+        (account_id, encrypt_credential("cleanup-secret")),
+    )
+    conn.execute(
+        """
+        INSERT INTO email_messages
+        (id, account_id, interception_status, status, subject, body_text, raw_path, direction, original_uid, message_id)
+        VALUES (?, ?, 'HELD', 'PENDING', 'Orig Subject', 'Body', ?, 'inbound', 999, ?)
+        """,
+        (email_id, account_id, str(raw_file), original_mid),
+    )
+    conn.commit()
+
+    # Fake IMAP with original present in both Quarantine and INBOX
+    fake_imap = ReleaseIMAP("imap.gmail.com", 993)
+    fake_imap.preload("Quarantine", 999, original_mid)
+    fake_imap.preload("INBOX", 555, original_mid)  # simulate stray original in INBOX
+
+    # Patch imaplib usage in route
+    monkeypatch.setattr(route, "imaplib", SimpleNamespace(IMAP4_SSL=lambda *args, **kwargs: fake_imap, Time2Internaldate=route.imaplib.Time2Internaldate, IMAP4=route.imaplib.IMAP4))
+    monkeypatch.setattr(route, "_ensure_quarantine", lambda imap_obj, folder: folder)
+
+    # Release
+    response = client.post(
+        f"/api/interception/release/{email_id}",
+        json={"target_folder": "INBOX"},
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == 200
+
+    # Original should be removed from INBOX and Quarantine; only the edited should remain in INBOX
+    assert original_mid not in list(fake_imap.mailboxes.get("INBOX", {}).values())
+    assert fake_imap.mailboxes.get("Quarantine", {}) == {}

@@ -536,14 +536,15 @@ def api_interception_release(msg_id:int):
                 log.debug("[interception::release] IMAP logout failed during verify failure (non-critical)", extra={'email_id': msg_id, 'error': str(e)})
             conn.close(); return jsonify({'ok': False, 'reason': 'verify-failed'}), 502
 
-        # CRITICAL: Remove email from Quarantine folder after successful release to INBOX
+        # CRITICAL: Remove any original copies from INBOX and Quarantine after successful release
         # This prevents duplicates and ensures only the edited version is in INBOX
         original_uid = row['original_uid']
         removed_from_quarantine = False
+        removed_original_from_inbox = False
+        # Only target the original message identifiers for cleanup (never the newly appended edited message)
         header_candidates = []
-        for candidate in (message_id_hdr, original_message_id):
-            if candidate and candidate not in header_candidates:
-                header_candidates.append(candidate)
+        if original_message_id:
+            header_candidates.append(original_message_id)
         log.info(f"[interception::release] Attempting Quarantine cleanup for email {msg_id}, original_uid={original_uid}")
 
         def _delete_matches(uids):
@@ -564,11 +565,18 @@ def api_interception_release(msg_id:int):
                     log.debug("[interception::release] EXPUNGE failed err=%s", expunge_err)
             return deleted
 
-        quarantine_candidates = [
+        # Prefer the recorded quarantine folder first (provider-specific), then common fallbacks
+        quarantine_candidates = []
+        try:
+            if 'quarantine_folder' in row.keys() and row['quarantine_folder']:
+                quarantine_candidates.append(row['quarantine_folder'])
+        except Exception:
+            pass
+        quarantine_candidates.extend([
             'Quarantine',
             'INBOX/Quarantine',
             'INBOX.Quarantine'
-        ]
+        ])
 
         def _extract_uids(search_segments):
             results = []
@@ -585,6 +593,35 @@ def api_interception_release(msg_id:int):
             return results
 
         try:
+            # 1) Proactively remove any original copy lingering in INBOX by Message-ID or original UID
+            try:
+                status_inbox, _ = imap.select('INBOX')
+                if status_inbox == 'OK':
+                    inbox_uids = []
+                    # Try header search with and without quotes (original only)
+                    for header_val in header_candidates:
+                        for probe in (header_val, f'"{header_val}"'):
+                            try:
+                                t_in, d_in = imap.uid('SEARCH', None, 'HEADER', 'Message-ID', probe)
+                                if t_in == 'OK':
+                                    inbox_uids.extend(_extract_uids(d_in))
+                            except Exception:
+                                continue
+                    # Fallback to UID match if we have it
+                    if not inbox_uids and original_uid:
+                        try:
+                            t_in2, d_in2 = imap.uid('SEARCH', None, 'UID', str(original_uid))
+                            if t_in2 == 'OK':
+                                inbox_uids.extend(_extract_uids(d_in2))
+                        except Exception:
+                            pass
+                    if inbox_uids:
+                        if _delete_matches(inbox_uids):
+                            removed_original_from_inbox = True
+            except Exception:
+                pass
+
+            # 2) Remove from Quarantine folder(s)
             for qfolder in quarantine_candidates:
                 try:
                     log.debug(f"[interception::release] Trying to select folder: {qfolder}")
@@ -595,9 +632,14 @@ def api_interception_release(msg_id:int):
                     candidate_uids = []
                     for header_val in header_candidates:
                         try:
+                            # Try both raw and quoted header values for robustness across providers (esp. Gmail)
                             typ, search_data = imap.uid('SEARCH', None, 'HEADER', 'Message-ID', header_val)
                             if typ == 'OK':
                                 candidate_uids.extend(_extract_uids(search_data))
+                            if not candidate_uids:
+                                typq, search_data_q = imap.uid('SEARCH', None, 'HEADER', 'Message-ID', f'"{header_val}"')
+                                if typq == 'OK':
+                                    candidate_uids.extend(_extract_uids(search_data_q))
                         except Exception as search_err:
                             log.debug("[interception::release] HEADER search failed in %s (%s)", qfolder, search_err)
 
@@ -621,6 +663,35 @@ def api_interception_release(msg_id:int):
 
             if not removed_from_quarantine:
                 log.warning(f"[interception::release] Could not remove original message from quarantine (uid={original_uid})", extra={'email_id': msg_id, 'message_ids': header_candidates})
+
+            # 3) Gmail-specific label cleanup (best-effort) to ensure original cannot retain \Inbox label
+            try:
+                host_l = ''
+                try:
+                    if 'imap_host' in row.keys() and row['imap_host']:
+                        host_l = str(row['imap_host']).lower()
+                except Exception:
+                    host_l = ''
+                # Check capability when possible (non-fatal if unsupported)
+                is_gmail = ('gmail' in host_l)
+                if is_gmail:
+                    try:
+                        imap.select('INBOX')
+                        for header_val in header_candidates:
+                            for probe in (header_val, f'"{header_val}"'):
+                                t_gm, d_gm = imap.uid('SEARCH', None, 'HEADER', 'Message-ID', probe)
+                                if t_gm != 'OK' or not d_gm:
+                                    continue
+                                gm_uids = _extract_uids(d_gm)
+                                for uid in gm_uids:
+                                    try:
+                                        imap.uid('STORE', str(uid), '-X-GM-LABELS', '(\\Inbox)')
+                                    except Exception:
+                                        pass
+                    except Exception:
+                        pass
+            except Exception:
+                pass
 
         except Exception as e:
             log.error(f"[interception::release] Failed to remove from quarantine: {e}", extra={'email_id': msg_id, 'uid': original_uid}, exc_info=True)
