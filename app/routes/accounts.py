@@ -576,14 +576,7 @@ def email_accounts():
 
     conn.close()
 
-    import os
-    base_templates = getattr(current_app, 'template_folder', None) or os.path.join(current_app.root_path, 'templates')
-    template_path = os.path.join(base_templates, 'accounts_simple.html')
-    if os.path.exists(template_path):
-        return render_template('accounts_simple.html', accounts=accounts)
-    else:
-        accounts_dict = {acc['id']: dict(acc) for acc in accounts}
-        return render_template('accounts.html', accounts=accounts_dict)
+    return render_template('accounts.html', accounts=accounts)
 
 
 @accounts_bp.route('/accounts/import', methods=['GET'])

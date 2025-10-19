@@ -4,20 +4,21 @@
 {% block title %}Email Accounts - Email Management Tool{% endblock %}
 
 {% block content %}
-<div class="panel mb-3">
-    <div class="panel-header">
-        <div class="panel-title"><i class="bi bi-envelope-at"></i> Email Accounts</div>
-        <div class="panel-actions">
-            <a href="/accounts/add" class="btn btn-secondary btn-sm">
-                <i class="bi bi-plus-circle"></i> Add Account
-            </a>
-            <a href="/accounts/import" class="btn btn-secondary btn-sm">
-                <i class="bi bi-cloud-upload"></i> Import
-            </a>
-            <button class="btn btn-secondary btn-sm" onclick="exportAccounts()">
-                <i class="bi bi-cloud-download"></i> Export
-            </button>
-        </div>
+<div class="page-header">
+    <div>
+        <h1><i class="bi bi-envelope-at"></i> Email Accounts</h1>
+        <p class="text-muted mb-0">Manage email accounts for SMTP sending and IMAP monitoring.</p>
+    </div>
+    <div class="header-actions">
+        <a href="/accounts/add" class="btn btn-secondary btn-sm">
+            <i class="bi bi-plus-circle"></i> Add Account
+        </a>
+        <a href="/accounts/import" class="btn btn-secondary btn-sm">
+            <i class="bi bi-cloud-upload"></i> Import
+        </a>
+        <button class="btn btn-secondary btn-sm" onclick="exportAccounts()">
+            <i class="bi bi-cloud-download"></i> Export
+        </button>
     </div>
 </div>
 
@@ -28,7 +29,7 @@
 async function refreshInfraStatus(){
   try{
     const [wsr] = await Promise.all([
-      fetch('/api/watchers/status')
+      fetch('/api/watchers/status', { credentials: 'same-origin' })
     ]);
     const j1 = await wsr.json();
     // Watchers
@@ -44,11 +45,19 @@ async function refreshInfraStatus(){
 }
 
 function testAccount(accountId) {
+    if(!accountId) {
+        if(window.showError) showError('Account ID is required');
+        return;
+    }
+
     // Show loading state
     const card = document.getElementById('account-' + accountId);
-    const originalContent = card.innerHTML;
-    
-    fetch('/api/accounts/' + accountId + '/test', { method: 'POST' })
+    if (!card) {
+        if(window.showError) showError('Account card not found');
+        return;
+    }
+
+    fetch('/api/accounts/' + accountId + '/test', { method: 'POST', credentials: 'same-origin' })
     .then(response => response.json())
     .then(data => {
         if (data && data.success) {
@@ -64,16 +73,24 @@ function testAccount(accountId) {
 }
 
 async function startWatcher(accountId){
+  if(!accountId) {
+    if(window.showError) showError('Account ID is required');
+    return;
+  }
   try{
-    const r = await fetch('/api/accounts/'+accountId+'/monitor/start',{method:'POST'});
+    const r = await fetch('/api/accounts/'+accountId+'/monitor/start',{method:'POST', credentials: 'same-origin'});
     const j = await r.json();
     if(j.success){ if(window.showSuccess) showSuccess('Watcher started'); refreshInfraStatus(); }
     else { if(window.showError) showError(j.error||'Failed to start watcher'); }
   }catch(e){ if(window.showError) showError('Error: '+e.message); }
 }
 async function stopWatcher(accountId){
+  if(!accountId) {
+    if(window.showError) showError('Account ID is required');
+    return;
+  }
   try{
-    const r = await fetch('/api/accounts/'+accountId+'/monitor/stop',{method:'POST'});
+    const r = await fetch('/api/accounts/'+accountId+'/monitor/stop',{method:'POST', credentials: 'same-origin'});
     const j = await r.json();
     if(j.success){ if(window.showSuccess) showSuccess('Watcher stopped'); refreshInfraStatus(); }
     else { if(window.showError) showError(j.error||'Failed to stop watcher'); }
@@ -87,7 +104,7 @@ function editAccount(accountId) {
 function deleteAccount(accountId) {
     if (window.confirmToast) {
         confirmToast('Delete this account?', () => {
-            fetch('/api/accounts/' + accountId, { method: 'DELETE' })
+            fetch('/api/accounts/' + accountId, { method: 'DELETE', credentials: 'same-origin' })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -120,7 +137,7 @@ function runDiagnostics(accountId) {
     const modal = new bootstrap.Modal(document.getElementById('diagnosticsModal'));
     modal.show();
     
-    fetch('/api/diagnostics/' + accountId)
+    fetch('/api/diagnostics/' + accountId, { credentials: 'same-origin' })
         .then(response => response.json())
         .then(data => {
             let html = '<h6>Account: ' + data.account_name + '</h6>';
@@ -146,40 +163,6 @@ function runDiagnostics(accountId) {
         });
 }
 
-async function imapLiveTest(accountId){
-  try{
-    const r = await fetch('/api/accounts/'+accountId+'/imap-live-test',{method:'POST'});
-    const j = await r.json();
-    if(j.success){ if(window.showSuccess) showSuccess('IMAP live test passed'); }
-    else { if(window.showError) showError('IMAP live test failed: '+(j.error||'unknown')); }
-  }catch(e){ if(window.showError) showError('Error: '+e.message); }
-}
-async function scanInbox(accountId){
-  try{
-    const r = await fetch('/api/accounts/'+accountId+'/scan-inbox');
-    const j = await r.json();
-    if(!j.success){ if(window.showError) showError(j.error||'Scan failed'); return; }
-    const tgt = document.getElementById('scanResults');
-    const items = j.candidates||[];
-    if(!items.length){ tgt.innerHTML = '<div class="alert alert-info">No new items found.</div>'; new bootstrap.Modal(document.getElementById('scanModal')).show(); return; }
-    let html = '<div class="table-modern"><table class="table"><thead><tr><th>UID</th><th>Subject</th><th></th></tr></thead><tbody>';
-    for(const c of items){
-      html += `<tr><td>${c.uid}</td><td>${(c.subject||'').replace(/</g,'&lt;')}</td><td><button class="btn btn-sm btn-outline-warning" onclick="interceptUid(${accountId}, '${c.uid}')"><i class=\"bi bi-shield-exclamation\"></i> Intercept</button></td></tr>`;
-    }
-    html += '</tbody></table></div>';
-    tgt.innerHTML = html;
-    new bootstrap.Modal(document.getElementById('scanModal')).show();
-  }catch(e){ if(window.showError) showError('Error: '+e.message); }
-}
-async function interceptUid(accountId, uid){
-  try{
-    const r = await fetch('/api/accounts/'+accountId+'/intercept-uid',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({uid})});
-    const j = await r.json();
-    if(j.success){ if(window.showSuccess) showSuccess('Intercepted UID '+uid); refreshInfraStatus(); }
-    else { if(window.showError) showError('Intercept failed: '+(j.error||'unknown')); }
-  }catch(e){ if(window.showError) showError('Error: '+e.message); }
-}
-
 function importAccounts() {
     if (window.showInfo) showInfo('Opening import page...');
     window.location.href = '/accounts/import';
@@ -194,7 +177,7 @@ function exportAccounts() {
 function getQueryParam(name){ const u=new URL(window.location.href); return u.searchParams.get(name); }
 async function openEditModal(accountId){
   try{
-    const r=await fetch('/api/accounts/'+accountId);
+    const r=await fetch('/api/accounts/'+accountId, { credentials: 'same-origin' });
     if(!r.ok) throw new Error('HTTP '+r.status);
     const a=await r.json();
     document.getElementById('edit_account_id').value=a.id||accountId;
@@ -233,7 +216,7 @@ async function saveAccountEdit(){
   if(imap_pwd) payload.imap_password=imap_pwd;
   if(smtp_pwd) payload.smtp_password=smtp_pwd;
   try{
-    const r=await fetch('/api/accounts/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const r=await fetch('/api/accounts/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload), credentials: 'same-origin'});
     const j=await r.json();
     if(!r.ok||j.error) throw new Error(j.error||('HTTP '+r.status));
     if(window.showSuccess) showSuccess('Account updated');

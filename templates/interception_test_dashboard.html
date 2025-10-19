@@ -510,15 +510,22 @@
 {% endblock %}
 
 {% block content %}
-<div class="test-container">
-    <!-- Header -->
-    <div class="test-header">
-        <h1>
-            <i class="fas fa-vial"></i>
-            Email Interception & Editing Test Suite
-        </h1>
-        <p>Complete end-to-end testing of email interception, editing, and delivery flow</p>
+<div class="page-header">
+    <div>
+        <h1><i class="bi bi-bug-fill"></i> Interception Test Suite</h1>
+        <p class="text-muted mb-0">Complete end-to-end testing of email interception, editing, and delivery flow.</p>
     </div>
+    <div class="header-actions">
+        <button class="btn btn-secondary btn-sm" onclick="clearAllResults()">
+            <i class="bi bi-trash"></i> Clear Results
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="location.reload()">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+    </div>
+</div>
+
+<div class="test-container">
 
     <!-- Quick Bi-Directional Tests -->
     <div class="control-card">
@@ -748,6 +755,13 @@ Original content has been modified to verify the editing functionality works cor
 let testInProgress = false;
 let currentEmailId = null;
 let accounts = [];
+
+// Clear all test results
+function clearAllResults() {
+    document.getElementById('testResults').innerHTML = '';
+    document.getElementById('flowDiagram').innerHTML = '';
+    if (window.showSuccess) showSuccess('Test results cleared');
+}
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {

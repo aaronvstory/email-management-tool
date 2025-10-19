@@ -14,18 +14,27 @@
 {% endblock %}
 
 {% block content %}
-<div id="styleguide" class="container mt-3">
-  <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-      <h3 class="mb-0">Design System & Style Guide</h3>
-      <div class="d-flex gap-2">
-        <button class="btn btn-secondary btn-sm" onclick="showSuccess('Toast: success')">Success Toast</button>
-        <button class="btn btn-secondary btn-sm" onclick="showError('Toast: error')">Error Toast</button>
-        <button class="btn btn-secondary btn-sm" onclick="confirmToast('Confirm action?', ()=>showSuccess('Confirmed'))">Confirm</button>
-      </div>
-    </div>
-    <div class="card-body">
-      <p class="text-muted mb-3">Canonical tokens, components, and patterns. Use these everywhere for a consistent accessible UI.</p>
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-palette"></i> Style Guide</h1>
+    <p class="text-muted mb-0">Design system tokens, components, and patterns for consistent UI.</p>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-secondary btn-sm" onclick="showSuccess('Toast: success')">
+      <i class="bi bi-check-circle"></i> Success Toast
+    </button>
+    <button class="btn btn-secondary btn-sm" onclick="showError('Toast: error')">
+      <i class="bi bi-x-circle"></i> Error Toast
+    </button>
+    <button class="btn btn-secondary btn-sm" onclick="confirmToast('Confirm action?', ()=>showSuccess('Confirmed'))">
+      <i class="bi bi-question-circle"></i> Confirm
+    </button>
+  </div>
+</div>
+
+<div id="styleguide">
+  <div class="panel">
+    <div class="panel-body">
 
       <h5 class="mt-2">1) Design Tokens</h5>
       <div class="row token-grid">

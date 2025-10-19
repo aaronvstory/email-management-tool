@@ -2,14 +2,23 @@
 {% block title %}Watchers - Email Management Tool{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 style="font-size:1.4rem"><i class="bi bi-activity"></i> Watchers</h1>
-  <div class="d-flex" style="gap:.5rem">
-    <a href="/settings" class="btn-ghost btn-sm"><i class="bi bi-sliders"></i> Settings</a>
-    <button class="btn-secondary btn-sm" onclick="refreshAll()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
-    <button class="btn-secondary btn-sm" onclick="validateCounts()"><i class="bi bi-check2-circle"></i> Validate Counts</button>
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-activity"></i> Watchers</h1>
+    <p class="text-muted mb-0">Monitor and manage IMAP watchers for real-time email interception.</p>
   </div>
+  <div class="header-actions">
+    <a href="/settings" class="btn btn-ghost btn-sm">
+      <i class="bi bi-sliders"></i> Settings
+    </a>
+    <button class="btn btn-secondary btn-sm" onclick="refreshAll()">
+      <i class="bi bi-arrow-clockwise"></i> Refresh
+    </button>
+    <button class="btn btn-secondary btn-sm" onclick="validateCounts()">
+      <i class="bi bi-check2-circle"></i> Validate Counts
+    </button>
   </div>
+</div>
 
 <!-- System overview -->
 <div class="cards-grid">

@@ -45,11 +45,18 @@
 {% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 style="font-size:1.4rem;">Inbox</h1>
-  <div style="display:flex; gap:.5rem;">
-    <a href="/compose" class="btn-primary">Compose</a>
-    <a href="/interception" class="btn-secondary">Held</a>
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-inbox"></i> Inbox</h1>
+    <p class="text-muted mb-0">View and manage received email messages from monitored accounts.</p>
+  </div>
+  <div class="header-actions">
+    <a href="/compose" class="btn btn-secondary btn-sm">
+      <i class="bi bi-envelope-plus"></i> Compose
+    </a>
+    <a href="/interception" class="btn btn-ghost btn-sm">
+      <i class="bi bi-shield-lock"></i> Held Messages
+    </a>
   </div>
 </div>
 
@@ -79,10 +86,10 @@
           <option value="100">100</option>
         </select>
       </div>
-      <button class="btn-primary" onclick="fetchEmails()" style="margin-top: 20px;">
+      <button class="btn btn-secondary btn-sm" onclick="fetchEmails()" style="margin-top: 20px;">
         <i class="bi bi-cloud-download"></i> Fetch Emails
       </button>
-      <button class="btn-secondary" onclick="fetchMore()" style="margin-top: 20px;">
+      <button class="btn btn-ghost btn-sm" onclick="fetchMore()" style="margin-top: 20px;">
         <i class="bi bi-plus-circle"></i> Load More
       </button>
     </div>
@@ -104,7 +111,7 @@
       <option value="PENDING">PENDING</option>
     </select>
     <input id="searchBox" class="input-modern search-input" placeholder="Search subject or sender" style="background: rgba(255,255,255,0.06); color: #ffffff;" />
-    <button class="btn-secondary" onclick="reloadInbox()">Apply</button>
+    <button class="btn btn-ghost btn-sm" onclick="reloadInbox()">Apply</button>
   </div>
   <div id="inboxList"></div>
 </div>

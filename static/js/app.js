@@ -120,7 +120,7 @@ function ensureToastStyles() {
             max-width: 400px;
             width: max-content;
             padding: 0;
-            overflow: hidden;
+            overflow: visible;
             backdrop-filter: blur(14px);
             animation: slideInRight 0.25s ease-out;
         }
@@ -136,9 +136,8 @@ function ensureToastStyles() {
             display: flex;
             align-items: flex-start;
             gap: 14px;
-            padding: 14px 18px;
+            padding: 14px 36px 14px 18px;
             flex-wrap: nowrap;
-            position: relative;
         }
 
         .toast-compact .toast-icon {
@@ -159,6 +158,7 @@ function ensureToastStyles() {
             max-height: var(--toast-max-height, 220px);
             overflow-y: auto;
             padding-right: 4px;
+            flex: 1;
         }
 
         .toast-compact .toast-message::-webkit-scrollbar {
@@ -174,21 +174,28 @@ function ensureToastStyles() {
             background: rgba(255,255,255,0.25);
         }
 
-        .toast-compact .toast-close {
-            position: absolute;
-            top: 10px;
-            right: 12px;
-            transform: scale(0.9);
-            opacity: 0.85;
+        .toast-compact > .btn-close {
+            position: absolute !important;
+            top: 8px !important;
+            right: 8px !important;
+            width: 24px !important;
+            height: 24px !important;
+            padding: 4px !important;
+            margin: 0 !important;
+            opacity: 0.6 !important;
+            z-index: 10 !important;
+            background-size: 12px !important;
+            border-radius: 4px !important;
         }
 
-        .toast-compact .toast-close:hover {
-            opacity: 1;
+        .toast-compact > .btn-close:hover {
+            opacity: 1 !important;
+            background-color: rgba(255,255,255,0.1) !important;
         }
 
-        .toast-compact .toast-close:focus {
-            outline: none;
-            box-shadow: none;
+        .toast-compact > .btn-close:focus {
+            outline: none !important;
+            box-shadow: none !important;
         }
 
         .toast-compact.toast-confirm {
@@ -328,10 +335,10 @@ function showToast(message, type = 'info', duration = 4000) {
     toastEl.style.setProperty('--toast-bg', config.bg);
 
     toastEl.innerHTML = `
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
         <div class="toast-inner">
             <i class="toast-icon bi ${config.icon}"></i>
-            <div class="toast-message toast-body flex-grow-1">${normalizedMessage}</div>
-            <button type="button" class="btn-close btn-close-white toast-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            <div class="toast-message toast-body">${normalizedMessage}</div>
         </div>
     `;
 

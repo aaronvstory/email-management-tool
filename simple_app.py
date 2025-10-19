@@ -770,11 +770,20 @@ def log_security_events(response):
 @app.route('/diagnostics')
 @login_required
 def diagnostics():
-    """Canonical diagnostics entry - redirects to Dashboard Diagnostics tab."""
-    account_id = request.args.get('account_id', type=int)
-    if account_id:
-        return redirect(url_for('dashboard.dashboard', tab='diagnostics') + f'?account_id={account_id}')
-    return redirect(url_for('dashboard.dashboard', tab='diagnostics'))
+    """System diagnostics page with account testing capabilities."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    accounts = cursor.execute(
+        """SELECT id, account_name, email_address, is_active
+           FROM email_accounts
+           ORDER BY account_name"""
+    ).fetchall()
+
+    conn.close()
+
+    return render_template('diagnostics.html', accounts=accounts)
 
 # Routes
 # ============================================================================

@@ -1,15 +1,23 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="container mt-4">
-  <div class="card" style="border-radius:16px;">
-    <div class="card-header d-flex align-items-center justify-content-between">
-      <h3 class="mb-0 text-white">Import Accounts (CSV)</h3>
-      <div>
-        <button class="btn btn-sm btn-secondary" type="button" id="downloadTemplate">Download CSV Template</button>
-      </div>
-    </div>
-    <div class="card-body">
-      <p class="text-muted mb-3">Upload a CSV to add/update accounts. Minimum columns: <code>email_address, imap_password, smtp_password</code>. Optional: <code>account_name, imap_host, imap_port, imap_use_ssl, smtp_host, smtp_port, smtp_use_ssl, imap_username, smtp_username, is_active</code>.</p>
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-cloud-upload"></i> Import Accounts</h1>
+    <p class="text-muted mb-0">Bulk import email accounts from a CSV file.</p>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-secondary btn-sm" type="button" id="downloadTemplate">
+      <i class="bi bi-download"></i> Download Template
+    </button>
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('accounts.email_accounts') }}">
+      <i class="bi bi-arrow-left"></i> Back to Accounts
+    </a>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-body">
+    <p class="mb-3">Upload a CSV to add/update accounts. Minimum columns: <code>email_address, imap_password, smtp_password</code>. Optional: <code>account_name, imap_host, imap_port, imap_use_ssl, smtp_host, smtp_port, smtp_use_ssl, imap_username, smtp_username, is_active</code>.</p>
 
       <form id="importForm" action="{{ url_for('accounts.api_import_accounts') }}" method="post" enctype="multipart/form-data" class="mt-2">
         <div class="mb-3">
@@ -21,8 +29,9 @@
           <label class="form-check-label text-white" for="auto_detect">Auto-detect server settings when missing</label>
         </div>
         <div class="d-flex gap-2">
-          <button class="btn btn-primary-modern" type="submit">Import</button>
-          <a class="btn btn-secondary" href="{{ url_for('accounts.email_accounts') }}">Back</a>
+          <button class="btn btn-secondary" type="submit">
+            <i class="bi bi-upload"></i> Import
+          </button>
         </div>
       </form>
 

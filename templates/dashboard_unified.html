@@ -2,13 +2,211 @@
 {% import 'partials/account_components.html' as account_ui %}
 {% import 'partials/rule_components.html' as rule_ui %}
 
-{% block title %}Unified Dashboard - Email Management Tool{% endblock %}
+{% block title %}Dashboard - Email Management Tool{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Compact account selector */
+  .account-selector {
+    background: rgba(26,26,26,0.9);
+    border-radius: 12px;
+    padding: 12px 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 4px -1px rgba(0,0,0,.6),0 1px 2px rgba(0,0,0,.4);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .account-selector label {
+    color: #9ca3af;
+    font-weight: 500;
+    margin-bottom: 6px;
+    display: block;
+    font-size: 0.85rem;
+  }
+
+  .account-selector select {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: #ffffff;
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.95rem;
+  }
+
+  .account-selector select option {
+    background: #1a1a1a;
+    color: #ffffff;
+  }
+
+  /* Compact stats grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .stat-card {
+    background: linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 15px;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  .stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #ffffff;
+    display: block;
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 5px;
+    display: block;
+  }
+
+  .stat-card.pending .stat-value {
+    color: #fbbf24;
+  }
+
+  .stat-card.held .stat-value {
+    color: #f87171;
+  }
+
+  .stat-card.released .stat-value {
+    color: #34d399;
+  }
+
+  /* Recent emails section */
+  .recent-emails-panel {
+    background: linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%);
+    border-radius: 18px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+
+  #emailsList {
+    max-height: 600px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #emailsList::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  #emailsList::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.03);
+    border-radius: 4px;
+  }
+
+  #emailsList::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.15);
+    border-radius: 4px;
+  }
+
+  #emailsList::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.25);
+  }
+
+  .panel-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .email-list-item {
+    display: grid;
+    grid-template-columns: minmax(150px, 200px) 1fr 100px 150px;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    transition: background 0.2s;
+    gap: 15px;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 50px;
+  }
+
+  .email-list-item:hover {
+    background: rgba(255,255,255,0.03);
+    cursor: pointer;
+  }
+
+  .email-list-item:last-child {
+    border-bottom: none;
+  }
+
+  .email-from {
+    color: #ffffff;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .email-subject {
+    color: #d1d5db;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .email-status {
+    justify-self: center;
+  }
+
+  .email-time {
+    color: #9ca3af;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    text-align: right;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #9ca3af;
+  }
+
+  .empty-state i {
+    font-size: 3rem;
+    color: #6b7280;
+    margin-bottom: 15px;
+  }
+
+  /* Reduce header spacing */
+  .page-header {
+    margin-bottom: 15px !important;
+  }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="page-header">
   <div>
-    <h1><i class="bi bi-speedometer2"></i> Unified Dashboard</h1>
-    <p class="text-muted mb-0">Track interception throughput, account health, and moderation rules from a single view.</p>
+    <h1><i class="bi bi-speedometer2"></i> Dashboard</h1>
+    <p class="text-muted mb-0">Track email activity and manage your monitored accounts.</p>
   </div>
   <div class="header-actions">
     <button class="btn btn-secondary btn-sm" type="button" onclick="location.reload()">
@@ -17,397 +215,236 @@
   </div>
 </div>
 
-<div class="panel mb-4">
-  <div class="panel-header">
-    <div class="panel-title"><i class="bi bi-diagram-3"></i> Scope</div>
-    <div class="panel-actions">
-      <a href="{{ url_for('accounts.email_accounts') }}" class="btn btn-ghost btn-sm">
-        <i class="bi bi-envelope-at"></i> Manage Accounts
-      </a>
-    </div>
-  </div>
-  <div class="panel-body">
-    <div class="row g-3 align-items-end">
-      <div class="col-md-6">
-        <label for="accountSelector" class="form-label">Filter by account</label>
-        <select class="form-select" id="accountSelector" onchange="switchAccount(this.value)">
-          <option value="">All accounts (overview)</option>
-          {% for account in accounts %}
-          <option value="{{ account.id }}" {% if selected_account_id == account.id|string %}selected{% endif %}>
-            {{ account.account_name }} ({{ account.email_address }})
-          </option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-md-6">
-        {% if selected_account_id %}
-          {% for account in accounts %}
-            {% if account.id|string == selected_account_id %}
-            <div class="d-flex flex-column gap-2">
-              <span class="status-indicator {% if account.is_active %}success{% else %}danger{% endif %}">
-                {% if account.is_active %}Active{% else %}Inactive{% endif %}
-              </span>
-              <span class="text-muted small">Last checked: {{ account.last_checked or 'Never' }}</span>
-            </div>
-            {% endif %}
-          {% endfor %}
-        {% else %}
-        <div class="panel-note">
-          Showing aggregated telemetry across all active mailboxes.
-        </div>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-</div>
+<div class="account-selector">
+  <div style="display: flex; gap: 10px; align-items: center;">
+    <label class="form-label" style="margin: 0; flex-shrink: 0;">Filter by account:</label>
+    <select class="form-select" id="accountSelector" onchange="switchAccount(this.value)" style="flex: 1; max-width: 600px;">
+      <option value="">All accounts</option>
+      {% for account in accounts %}
+      <option value="{{ account.id }}" {% if selected_account_id == account.id|string %}selected{% endif %}>
+        {{ account.account_name }} - {{ account.email_address }}
+      </option>
+      {% endfor %}
+    </select>
 
-<nav class="nav-tabs-unified mb-4">
-  <a class="nav-tab-unified {% if active_tab == 'overview' %}active{% endif %}"
-     href="{{ url_for('dashboard.dashboard', tab='overview') }}{% if selected_account_id %}?account_id={{ selected_account_id }}{% endif %}">
-    <i class="bi bi-grid-3x3-gap"></i> Overview
-  </a>
-  <a class="nav-tab-unified {% if active_tab == 'emails' %}active{% endif %}"
-     href="{{ url_for('dashboard.dashboard', tab='emails') }}{% if selected_account_id %}?account_id={{ selected_account_id }}{% endif %}">
-    <i class="bi bi-envelope"></i> Emails
-    {% if stats.pending > 0 %}
-    <span class="badge badge-soft-danger">{{ stats.pending }}</span>
-    {% endif %}
-  </a>
-  <a class="nav-tab-unified {% if active_tab == 'accounts' %}active{% endif %}"
-     href="{{ url_for('dashboard.dashboard', tab='accounts') }}">
-    <i class="bi bi-person-lines-fill"></i> Accounts
-  </a>
-  <a class="nav-tab-unified {% if active_tab == 'diagnostics' %}active{% endif %}"
-     href="{{ url_for('dashboard.dashboard', tab='diagnostics') }}{% if selected_account_id %}?account_id={{ selected_account_id }}{% endif %}">
-    <i class="bi bi-heart-pulse"></i> Diagnostics
-  </a>
-  <a class="nav-tab-unified {% if active_tab == 'rules' %}active{% endif %}"
-     href="{{ url_for('dashboard.dashboard', tab='rules') }}{% if selected_account_id %}?account_id={{ selected_account_id }}{% endif %}">
-    <i class="bi bi-shield-check"></i> Rules
-  </a>
-</nav>
-
-{% if active_tab == 'overview' %}
-<section class="cards-grid" id="statsGrid">
-  <div class="stat-card-modern">
-    <span class="stat-label">Total Messages</span>
-    <span class="stat-value" id="statTotal">--</span>
-    <span class="stat-delta text-muted small">Captured within the selected scope</span>
-  </div>
-  <div class="stat-card-modern">
-    <span class="stat-label">Pending Review</span>
-    <span class="stat-value" id="statPending">--</span>
-    <span class="stat-delta text-muted small">Held for analyst action</span>
-  </div>
-  <div class="stat-card-modern">
-    <span class="stat-label">Held Messages</span>
-    <span class="stat-value" id="statHeld">--</span>
-    <span class="stat-delta text-muted small">Quarantined in the last 24h</span>
-  </div>
-  <div class="stat-card-modern">
-    <span class="stat-label">Released</span>
-    <span class="stat-value" id="statReleased">--</span>
-    <span class="stat-delta text-muted small">Delivered after review</span>
-  </div>
-</section>
-
-<div class="panel">
-  <div class="panel-header">
-    <div class="panel-title"><i class="bi bi-map"></i> Workflow Shortcuts</div>
-    <div class="panel-actions">
-      <span class="status-indicator info">Active Rules: {{ active_rules }}</span>
-    </div>
-  </div>
-  <div class="panel-body">
-    <div class="btn-group-unified mb-3">
-      <a href="{{ url_for('emails.emails_unified') }}" class="btn btn-secondary btn-sm">
-        <i class="bi bi-inbox"></i> Review Queue
-      </a>
-      <a href="{{ url_for('compose.compose_email') }}" class="btn btn-ghost btn-sm">
-        <i class="bi bi-envelope-plus"></i> Compose
-      </a>
-      <a href="{{ url_for('diagnostics') }}" class="btn btn-ghost btn-sm">
-        <i class="bi bi-heart-pulse"></i> Diagnostics
-      </a>
-      <a href="{{ url_for('moderation.rules') }}" class="btn btn-ghost btn-sm">
-        <i class="bi bi-sliders"></i> Manage Rules
-      </a>
-    </div>
-    <p class="panel-note mb-0">Counts update in real time via server-sent events. Use the shortcuts above to dive deeper into each workflow.</p>
-  </div>
-</div>
-
-{% elif active_tab == 'emails' %}
-<div class="panel">
-  <div class="panel-header">
-    <div class="panel-title"><i class="bi bi-envelope"></i> Recent Emails</div>
-    <div class="panel-actions">
-      <a href="{{ url_for('emails.emails_unified') }}" class="btn btn-secondary btn-sm">
-        <i class="bi bi-box-arrow-up-right"></i> Open full queue
-      </a>
-    </div>
-  </div>
-  <div class="panel-body p-0">
-    <div class="table-toolbar">
-      <div class="bulk-actions">
-        <span class="text-muted small">Latency</span>
-        <span class="text-muted small" id="latencyBucket">—</span>
-      </div>
-      <div class="bulk-actions">
-        <div class="input-group input-group-sm">
-          <span class="input-group-text"><i class="bi bi-search"></i></span>
-          <input type="search" class="form-control" placeholder="Quick filter (subject, from, to)" aria-label="Filter recent emails">
-        </div>
-      </div>
-    </div>
-    <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
-        <thead>
-          <tr>
-            <th>From</th>
-            <th>To</th>
-            <th>Subject</th>
-            <th>Status</th>
-            <th>Time</th>
-            <th class="text-end">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for email in recent_emails %}
-          <tr>
-            <td class="truncate-inline">{{ email.sender }}</td>
-            <td class="truncate-inline">{{ email.recipients }}</td>
-            <td class="truncate-inline">{{ email.subject[:80] }}{% if email.subject|length > 80 %}…{% endif %}</td>
-            <td>
-              {% set status = (email.status or '').lower() %}
-              {% if status == 'pending' %}
-              <span class="status-indicator warning">{{ email.status }}</span>
-              {% elif status == 'held' %}
-              <span class="status-indicator danger">{{ email.status }}</span>
-              {% elif status == 'released' %}
-              <span class="status-indicator success">{{ email.status }}</span>
-              {% else %}
-              <span class="status-indicator info">{{ email.status }}</span>
-              {% endif %}
-            </td>
-            <td class="text-muted small">{{ email.created_at }}</td>
-            <td class="text-end">
-              <a href="{{ url_for('emails.view_email', email_id=email.id) }}" class="btn btn-ghost btn-sm">
-                <i class="bi bi-eye"></i> View
-              </a>
-            </td>
-          </tr>
-          {% else %}
-          <tr>
-            <td colspan="6" class="table-empty-cell">
-              <div class="empty-state-unified">
-                <i class="bi bi-envelope-open"></i>
-                <div class="empty-title">No email traffic yet</div>
-                <div class="empty-description">
-                  <a href="{{ url_for('compose.compose_email') }}" class="text-accent">Compose your first message</a> or connect an account to start capturing mail.
-                </div>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <div class="table-toolbar table-toolbar-bottom">
-      <div class="bulk-actions">
-        <span class="text-muted small">Showing {{ recent_emails|length }} results</span>
-      </div>
-      <div class="bulk-actions">
-        <button class="btn btn-ghost btn-sm" type="button" onclick="loadUnifiedStats()">
-          <i class="bi bi-arrow-repeat"></i> Refresh counts
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-{% elif active_tab == 'accounts' %}
-<div class="panel mb-3">
-  <div class="panel-header">
-    <div class="panel-title"><i class="bi bi-envelope-at"></i> Email Accounts</div>
-    <div class="panel-actions">
-      <a href="{{ url_for('accounts.add_email_account') }}" class="btn btn-secondary btn-sm">
-        <i class="bi bi-plus-circle"></i> Add Account
-      </a>
-      <a href="{{ url_for('accounts.accounts_import_page') }}" class="btn btn-ghost btn-sm">
-        <i class="bi bi-cloud-upload"></i> Import
-      </a>
-    </div>
-  </div>
-</div>
-{{ account_ui.account_cards(accounts) }}
-{{ account_ui.account_modals() }}
-
-{% elif active_tab == 'diagnostics' %}
-<div class="panel">
-  <div class="panel-header">
-    <div class="panel-title"><i class="bi bi-heart-pulse"></i> Diagnostics</div>
-    <div class="panel-actions">
-      {% if selected_account_id %}
-      <button class="btn btn-secondary btn-sm" type="button" onclick="runDiagnostics('{{ selected_account_id }}')">
-        <i class="bi bi-activity"></i> Run Diagnostics
-      </button>
-      {% endif %}
-      <a href="{{ url_for('diagnostics') }}" class="btn btn-ghost btn-sm">
-        <i class="bi bi-box-arrow-up-right"></i> Full diagnostics
-      </a>
-    </div>
-  </div>
-  <div class="panel-body">
     {% if selected_account_id %}
-    <div id="diagnosticsResults" class="table-modern">
-      <div class="loading-state-unified">
-        <div class="loading-spinner-unified"></div>
-        <span>Fetching diagnostics…</span>
-      </div>
-    </div>
-    {% else %}
-    <div class="empty-state-unified">
-      <i class="bi bi-arrow-down-circle"></i>
-      <div class="empty-title">Select an account</div>
-      <div class="empty-description">Choose an account to run SMTP and IMAP self checks.</div>
-    </div>
+      {% for account in accounts %}
+        {% if account.id|string == selected_account_id %}
+        <span class="status-indicator {% if account.is_active %}success{% else %}danger{% endif %}">
+          {% if account.is_active %}Active{% else %}Inactive{% endif %}
+        </span>
+        {% endif %}
+      {% endfor %}
     {% endif %}
+
+    <a href="{{ url_for('accounts.email_accounts') }}" class="btn btn-ghost btn-sm">
+      <i class="bi bi-gear"></i> Manage
+    </a>
   </div>
 </div>
 
-{% elif active_tab == 'rules' %}
-<div class="panel">
-  <div class="panel-header">
-    <div class="panel-title"><i class="bi bi-shield-check"></i> Moderation Rules</div>
-    <div class="panel-actions">
-      <span class="status-indicator info">Active: {{ active_rules }}</span>
-      <a href="{{ url_for('moderation.rules') }}" class="btn btn-secondary btn-sm">
-        <i class="bi bi-box-arrow-up-right"></i> Manage Rules
-      </a>
-    </div>
+<!-- Compact Stats Grid -->
+<div class="stats-grid" id="statsGrid">
+  <div class="stat-card">
+    <span class="stat-value" id="statTotal">{{ stats.total|default(0) }}</span>
+    <span class="stat-label">Total</span>
   </div>
-  <div class="panel-body">
-    <p class="text-muted mb-0">Rules execute from highest to lowest priority. Use the dedicated Rules screen to edit thresholds and actions.</p>
+  <div class="stat-card pending">
+    <span class="stat-value" id="statPending">{{ stats.pending|default(0) }}</span>
+    <span class="stat-label">Pending</span>
   </div>
-  {{ rule_ui.rules_table(rules, show_actions=False) }}
+  <div class="stat-card held">
+    <span class="stat-value" id="statHeld">{{ stats.held|default(0) }}</span>
+    <span class="stat-label">Held</span>
+  </div>
+  <div class="stat-card released">
+    <span class="stat-value" id="statReleased">{{ stats.released|default(0) }}</span>
+    <span class="stat-label">Released</span>
+  </div>
 </div>
-{% endif %}
+
+<!-- Recent Emails -->
+<div class="recent-emails-panel">
+  <div class="panel-title">
+    <span><i class="bi bi-envelope"></i> Recent Emails</span>
+    <a href="{{ url_for('emails.emails_unified') }}" class="btn btn-ghost btn-sm">
+      View All <i class="bi bi-arrow-right"></i>
+    </a>
+  </div>
+
+  <div id="emailsList">
+    {% if recent_emails %}
+      {% for email in recent_emails[:20] %}
+      <div class="email-list-item" onclick="window.location.href='/email/{{ email.id }}'">
+        <div class="email-from">{{ email.sender[:30] }}{% if email.sender|length > 30 %}...{% endif %}</div>
+        <div class="email-subject">{{ email.subject[:60] }}{% if email.subject|length > 60 %}...{% endif %}</div>
+        <div class="email-status">
+          {% set status = (email.status or '').lower() %}
+          {% if status == 'pending' %}
+          <span class="status-indicator warning">Pending</span>
+          {% elif status == 'held' %}
+          <span class="status-indicator danger">Held</span>
+          {% elif status == 'released' %}
+          <span class="status-indicator success">Released</span>
+          {% else %}
+          <span class="status-indicator info">{{ email.status }}</span>
+          {% endif %}
+        </div>
+        <div class="email-time">{{ email.created_at }}</div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state">
+        <i class="bi bi-envelope-open"></i>
+        <p>No emails to display</p>
+        <a href="{{ url_for('compose.compose_email') }}" class="btn btn-secondary btn-sm">
+          <i class="bi bi-envelope-plus"></i> Compose Email
+        </a>
+      </div>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+let currentAccountId = '{{ selected_account_id or "" }}';
+
 function switchAccount(accountId) {
-  const currentTab = '{{ active_tab }}';
+  currentAccountId = accountId;
   const searchParams = accountId ? '?account_id=' + accountId : '';
-  window.location.href = `/dashboard/${currentTab}${searchParams}`;
+  window.location.href = `/dashboard${searchParams}`;
 }
 
-let useSSE = true;
-
-function applyStats(payload) {
-  const mapValue = (id, value) => {
-    const node = document.getElementById(id);
-    if (node) node.textContent = value;
-  };
-  const data = (payload.unified) ? payload.unified : payload;
-  mapValue('statTotal', data.total ?? 0);
-  mapValue('statPending', data.pending ?? 0);
-  mapValue('statHeld', data.held ?? 0);
-  mapValue('statReleased', data.released ?? 0);
-
-  if (payload.latency) {
-    const latencyNode = document.getElementById('latencyBucket');
-    if (latencyNode) {
-      const latency = payload.latency;
-      latencyNode.textContent = latency.count
-        ? `${latency.p50}ms p50 • ${latency.p95}ms p95 • ${latency.max}ms max`
-        : '—';
+// Load stats with account filtering
+async function loadStats() {
+  try {
+    let url = '/api/unified-stats';
+    if (currentAccountId) {
+      url += '?account_id=' + currentAccountId;
     }
-  }
-}
 
-async function loadUnifiedStats() {
-  try {
-    const [unifiedResponse, latencyResponse] = await Promise.all([
-      fetch('/api/unified-stats'),
-      fetch('/api/latency-stats')
-    ]);
-    if (!unifiedResponse.ok) return;
-    const unified = await unifiedResponse.json();
-    const latency = latencyResponse.ok ? await latencyResponse.json() : null;
-    applyStats({ unified, latency });
+    const response = await fetch(url);
+    if (!response.ok) return;
+
+    const data = await response.json();
+
+    document.getElementById('statTotal').textContent = data.total || 0;
+    document.getElementById('statPending').textContent = data.pending || 0;
+    document.getElementById('statHeld').textContent = data.held || 0;
+    document.getElementById('statReleased').textContent = data.released || 0;
   } catch (error) {
-    console.warn('Stats fetch failed', error);
+    console.error('Error loading stats:', error);
   }
 }
 
-function startSSE() {
+// Load recent emails with account filtering
+async function loadRecentEmails() {
   try {
-    const stream = new EventSource('/stream/stats');
-    stream.onmessage = (event) => {
-      try {
-        applyStats(JSON.parse(event.data));
-      } catch (err) {
-        console.warn('SSE parse error', err);
-      }
-    };
-    stream.onerror = () => {
-      stream.close();
-      useSSE = false;
-      setInterval(loadUnifiedStats, 10000);
-    };
-  } catch (error) {
-    console.warn('SSE start failed', error);
-    useSSE = false;
-    setInterval(loadUnifiedStats, 10000);
-  }
-}
+    let url = '/api/inbox';
+    const params = new URLSearchParams();
+    if (currentAccountId) {
+      params.append('account_id', currentAccountId);
+    }
+    params.append('limit', '20');
 
-if (document.getElementById('statsGrid')) {
-  startSSE();
-  if (!useSSE) {
-    loadUnifiedStats();
-  }
-}
+    const response = await fetch(url + '?' + params.toString());
+    if (!response.ok) return;
 
-function runDiagnostics(accountId) {
-  const resultsDiv = document.getElementById('diagnosticsResults');
-  if (!resultsDiv) return;
-  resultsDiv.innerHTML = '<div class="loading-state-unified"><div class="loading-spinner-unified"></div><span>Running diagnostics…</span></div>';
+    const data = await response.json();
+    const emails = data.messages || [];
 
-  fetch(`/api/diagnostics/${accountId}`)
-    .then((response) => response.json())
-    .then((data) => {
-      let html = '';
-      html += `<div class="alert ${data.smtp_test.success ? 'alert-success' : 'alert-danger'}"><strong>SMTP:</strong> ${data.smtp_test.message}</div>`;
-      html += `<div class="alert ${data.imap_test.success ? 'alert-success' : 'alert-danger'}"><strong>IMAP:</strong> ${data.imap_test.message}</div>`;
-      resultsDiv.innerHTML = html;
-    })
-    .catch((error) => {
-      resultsDiv.innerHTML = `<div class="alert alert-danger">Error running diagnostics: ${error}</div>`;
-    });
-}
+    const container = document.getElementById('emailsList');
 
-function testAccount(accountId) {
-  if (window.showInfo) showInfo('Testing account ' + accountId);
-  fetch('/api/accounts/' + accountId + '/test', { method: 'POST' })
-    .then((response) => response.json())
-    .then((data) => {
-      if (data && data.success) {
-        if (window.showSuccess) showSuccess('Account test successful');
+    if (emails.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <i class="bi bi-envelope-open"></i>
+          <p>No emails to display</p>
+          <a href="/compose" class="btn btn-secondary btn-sm">
+            <i class="bi bi-envelope-plus"></i> Compose Email
+          </a>
+        </div>
+      `;
+      return;
+    }
+
+    // Clear and rebuild the container
+    container.innerHTML = '';
+
+    emails.slice(0, 20).forEach(email => {
+      const status = (email.status || email.interception_status || '').toLowerCase();
+      let statusBadge = '';
+
+      if (status === 'pending') {
+        statusBadge = '<span class="status-indicator warning">Pending</span>';
+      } else if (status === 'held') {
+        statusBadge = '<span class="status-indicator danger">Held</span>';
+      } else if (status === 'released') {
+        statusBadge = '<span class="status-indicator success">Released</span>';
       } else {
-        const message = (data && (data.error || (data.smtp && data.smtp.message) || (data.imap && data.imap.message))) || 'Test failed';
-        if (window.showError) showError('Account test failed: ' + message);
+        statusBadge = `<span class="status-indicator info">${email.status || 'Unknown'}</span>`;
       }
-    })
-    .catch((error) => {
-      if (window.showError) showError('Error testing account: ' + error.message);
+
+      const sender = email.sender || 'Unknown';
+      const subject = email.subject || '(No Subject)';
+      const time = email.created_at || '';
+
+      // Create element instead of using innerHTML to avoid parsing issues
+      const emailDiv = document.createElement('div');
+      emailDiv.className = 'email-list-item';
+      emailDiv.onclick = () => window.location.href = `/email/${email.id}`;
+
+      emailDiv.innerHTML = `
+        <div class="email-from">${sender.substring(0, 30)}${sender.length > 30 ? '...' : ''}</div>
+        <div class="email-subject">${subject.substring(0, 60)}${subject.length > 60 ? '...' : ''}</div>
+        <div class="email-status">${statusBadge}</div>
+        <div class="email-time">${time}</div>
+      `;
+
+      container.appendChild(emailDiv);
     });
+  } catch (error) {
+    console.error('Error loading emails:', error);
+  }
 }
 
-function editAccount(accountId) {
-  window.location.href = `/accounts?edit=${accountId}`;
+// Initialize and set up auto-refresh
+loadStats();
+loadRecentEmails();
+
+// Auto-refresh every 30 seconds
+setInterval(() => {
+  loadStats();
+  loadRecentEmails();
+}, 30000);
+
+// Try to use SSE for real-time updates
+try {
+  const eventSource = new EventSource('/stream/stats');
+
+  eventSource.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+
+      // Only update if it matches our current filter
+      if (!currentAccountId || data.account_id === currentAccountId) {
+        document.getElementById('statTotal').textContent = data.total || 0;
+        document.getElementById('statPending').textContent = data.pending || 0;
+        document.getElementById('statHeld').textContent = data.held || 0;
+        document.getElementById('statReleased').textContent = data.released || 0;
+      }
+    } catch (err) {
+      console.warn('SSE parse error:', err);
+    }
+  };
+
+  eventSource.onerror = () => {
+    eventSource.close();
+    // Fall back to polling
+  };
+} catch (error) {
+  console.warn('SSE not supported, using polling');
 }
 </script>
 {% endblock %}

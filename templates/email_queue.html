@@ -55,24 +55,24 @@
 
     .nav-tabs .nav-link:hover {
         color: #ffffff !important;
-        background: rgba(220,38,38,0.15);
-        border-color: #dc2626;
+        background: rgba(255,255,255,0.1);
+        border-color: rgba(255,255,255,0.2);
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     }
 
     .nav-tabs .nav-link.active {
         color: white !important;
-        background: linear-gradient(135deg,#dc2626 0%,#991b1b 50%,#7f1d1d 100%);
+        background: var(--bs-primary);
         font-weight: 600;
         border-color: transparent;
-        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
     }
 
     .nav-tabs .nav-link.active:hover {
         color: white !important;
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(220, 38, 38, 0.5);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
         filter: brightness(1.1);
     }
     
@@ -114,11 +114,17 @@
 {% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="bi bi-inbox-fill"></i> Email Queue</h1>
+<div class="page-header">
     <div>
-        <input id="queue-search" type="text" class="search-box" placeholder="Search emails..." style="width: 300px; display: inline-block;" oninput="filterQueue()">
-        <button class="btn btn-modern btn-primary-modern ms-2">
+        <h1><i class="bi bi-inbox-fill"></i> Email Queue</h1>
+        <p class="text-muted mb-0">Review and manage pending emails in the moderation queue.</p>
+    </div>
+    <div class="header-actions">
+        <div class="input-group input-group-sm" style="width: 250px;">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input id="queue-search" type="text" class="form-control" placeholder="Search emails..." oninput="filterQueue()">
+        </div>
+        <button class="btn btn-ghost btn-sm">
             <i class="bi bi-funnel"></i> Filter
         </button>
     </div>

@@ -163,7 +163,7 @@ body {
 
 .table-modern .table thead,
 .table-modern thead {
-    background: var(--gradient-header) !important;
+    background: rgba(220, 38, 38, 0.08) !important;
     color: var(--text-primary) !important;
 }
 
@@ -408,6 +408,26 @@ form h4, form h5, form h6 {
     background: rgba(255,255,255,0.06) !important;
     border: 1px solid var(--border-default) !important;
     color: var(--text-primary) !important;
+}
+
+/* Fix for input-group form controls */
+.input-group .form-control {
+    margin-bottom: 0 !important;  /* Remove margin in groups */
+    border-radius: 0 var(--radius-md) var(--radius-md) 0 !important;  /* Right corners rounded */
+}
+
+.input-group .input-group-text {
+    border-radius: var(--radius-md) 0 0 var(--radius-md) !important;  /* Left corners rounded */
+}
+
+.input-group-sm .form-control {
+    padding: 6px 12px !important;  /* Smaller padding for small groups */
+    font-size: 0.875rem;
+}
+
+.input-group-sm .input-group-text {
+    padding: 6px 12px !important;
+    font-size: 0.875rem;
 }
 
 /* Checkboxes and Radio Buttons */
@@ -1381,6 +1401,15 @@ a:focus-visible,
     align-items: center;
 }
 
+.panel-body {
+    padding: var(--space-md);
+    background: transparent;
+}
+
+.panel-body.compact {
+    padding: 8px 12px;  /* Very compact for scope panel */
+}
+
 /* Cards grid layout */
 .cards-grid {
     display: grid;
@@ -1546,6 +1575,21 @@ a:focus-visible,
     margin-bottom: 30px;
     border: 1px solid var(--border-subtle);
     box-shadow: var(--shadow-md);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-md);
+}
+
+.page-header > div:first-child {
+    flex: 1;
+}
+
+.page-header .header-actions {
+    display: flex;
+    gap: var(--space-sm);
+    flex-shrink: 0;
+    margin-top: 4px;
 }
 
 .page-header h1, .page-header h2 {

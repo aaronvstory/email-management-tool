@@ -32,19 +32,42 @@ def api_stats():
 @stats_bp.route('/api/unified-stats')
 @login_required
 def api_unified_stats():
-    """Get unified statistics with released count"""
-    now = time.time()
-    if now - _UNIFIED_CACHE['t'] < 5 and _UNIFIED_CACHE['v'] is not None:
-        return jsonify(_UNIFIED_CACHE['v'])
+    """Get unified statistics with released count, optionally filtered by account"""
+    from flask import request
 
-    counts = get_stats()
+    account_id = request.args.get('account_id')
+
+    # Don't use cache if filtering by account
+    if not account_id:
+        now = time.time()
+        if now - _UNIFIED_CACHE['t'] < 5 and _UNIFIED_CACHE['v'] is not None:
+            return jsonify(_UNIFIED_CACHE['v'])
+
+    # Get counts with optional account filtering
+    if account_id:
+        from app.utils.db import fetch_counts
+        counts = fetch_counts(account_id=int(account_id), include_outbound=False)
+    else:
+        counts = get_stats()
+
+    # Get released count with optional account filtering
     conn = get_db()
     cur = conn.cursor()
-    released = cur.execute("""
-        SELECT COUNT(*) FROM email_messages
-        WHERE (interception_status='RELEASED' OR status IN ('APPROVED','DELIVERED'))
-          AND (direction IS NULL OR direction!='outbound')
-    """).fetchone()[0]
+
+    if account_id:
+        released = cur.execute("""
+            SELECT COUNT(*) FROM email_messages
+            WHERE (interception_status='RELEASED' OR status IN ('APPROVED','DELIVERED'))
+              AND (direction IS NULL OR direction!='outbound')
+              AND account_id = ?
+        """, (account_id,)).fetchone()[0]
+    else:
+        released = cur.execute("""
+            SELECT COUNT(*) FROM email_messages
+            WHERE (interception_status='RELEASED' OR status IN ('APPROVED','DELIVERED'))
+              AND (direction IS NULL OR direction!='outbound')
+        """).fetchone()[0]
+
     conn.close()
 
     val = {
@@ -53,8 +76,13 @@ def api_unified_stats():
         'held': counts['held'],
         'released': released
     }
-    _UNIFIED_CACHE['t'] = now
-    _UNIFIED_CACHE['v'] = val
+
+    # Only cache if not filtering by account
+    if not account_id:
+        now = time.time()
+        _UNIFIED_CACHE['t'] = now
+        _UNIFIED_CACHE['v'] = val
+
     return jsonify(val)
 
 

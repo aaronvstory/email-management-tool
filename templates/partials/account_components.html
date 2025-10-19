@@ -54,12 +54,6 @@
         <button class="btn btn-ghost btn-sm" onclick="runDiagnostics('{{ account.id }}')">
           <i class="bi bi-heart-pulse"></i> Diagnostics
         </button>
-        <button class="btn btn-ghost btn-sm" onclick="imapLiveTest('{{ account.id }}')">
-          <i class="bi bi-activity"></i> IMAP Test
-        </button>
-        <button class="btn btn-ghost btn-sm" onclick="scanInbox('{{ account.id }}')">
-          <i class="bi bi-search"></i> Scan
-        </button>
         <button class="btn btn-danger btn-sm" onclick="deleteAccount('{{ account.id }}')">
           <i class="bi bi-trash"></i> Delete
         </button>
@@ -168,18 +162,4 @@
   </div>
 </div>
 
-<!-- Scan Inbox Modal -->
-<div class="modal fade" id="scanModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title"><i class="bi bi-search"></i> Scan Inbox</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div id="scanResults"></div>
-      </div>
-    </div>
-  </div>
-</div>
 {% endmacro %}

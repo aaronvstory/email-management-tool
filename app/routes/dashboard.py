@@ -41,7 +41,7 @@ def dashboard(tab='overview'):
             FROM email_messages
             WHERE account_id = ? AND (direction IS NULL OR direction!='outbound')
             ORDER BY created_at DESC
-            LIMIT 10
+            LIMIT 20
         """, (selected_account_id,)).fetchall()
     else:
         # Get overall statistics
@@ -53,7 +53,7 @@ def dashboard(tab='overview'):
             FROM email_messages
             WHERE (direction IS NULL OR direction!='outbound')
             ORDER BY created_at DESC
-            LIMIT 10
+            LIMIT 20
         """).fetchall()
 
     # Get active rules count

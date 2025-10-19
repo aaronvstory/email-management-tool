@@ -1,153 +1,35 @@
 {% extends "base.html" %}
+{% import 'partials/rule_components.html' as rule_ui %}
 
 {% block title %}Moderation Rules - Email Management Tool{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="page-header">
+  <div>
     <h1><i class="bi bi-shield-check"></i> Moderation Rules</h1>
-    <button class="btn btn-modern btn-primary-modern" data-bs-toggle="modal" data-bs-target="#addRuleModal">
-        <i class="bi bi-plus-circle"></i> Add Rule
+    <p class="text-muted mb-0">Define filtering rules to automatically hold, approve, or reject incoming messages based on keywords, senders, domains, or regex patterns.</p>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#addRuleModal">
+      <i class="bi bi-plus-circle"></i> Add Rule
     </button>
+  </div>
 </div>
 
-<div class="table-modern">
-    <table class="table table-hover mb-0">
-        <thead>
-            <tr>
-                <th>Priority</th>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Pattern</th>
-                <th>Action</th>
-                <th>Status</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for rule in rules %}
-            <tr data-rule='{{ rule|tojson|safe }}' data-id='{{ rule.id }}'>
-                <td>
-                    <span class="badge bg-primary">{{ rule.priority }}</span>
-                </td>
-                <td><strong>{{ rule.rule_name }}</strong></td>
-                <td>
-                    <span class="badge bg-info">{{ rule.rule_type }}</span>
-                </td>
-                <td>
-                    <code>{{ rule.condition_value[:50] }}{% if rule.condition_value|length > 50 %}...{% endif %}</code>
-                </td>
-                <td>
-                    <span class="badge bg-{{ 'danger' if rule.action == 'REJECT' else 'warning' if rule.action == 'HOLD' else 'success' }}">
-                        {{ rule.action }}
-                    </span>
-                </td>
-                <td>
-                    {% if rule.is_active %}
-                        <span class="badge bg-success">Active</span>
-                    {% else %}
-                        <span class="badge bg-secondary">Inactive</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <div class="btn-group" role="group">
-                        <button class="btn btn-sm btn-outline-primary" onclick="editRule(this)">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteRule(this)">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-
-<!-- Add Rule Modal -->
-<div class="modal fade" id="addRuleModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Add Moderation Rule</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="addRuleForm">
-                    <div class="mb-3">
-                        <label for="ruleName" class="form-label">Rule Name</label>
-                        <input type="text" class="form-control" id="ruleName" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="ruleType" class="form-label">
-                            Rule Type
-                            <i class="bi bi-info-circle text-muted"
-                               data-bs-toggle="tooltip"
-                               data-bs-placement="right"
-                               title="KEYWORD matches subject + body text. SENDER/RECIPIENT check email addresses. DOMAIN checks sender's domain. REGEX allows advanced pattern matching.">
-                            </i>
-                        </label>
-                        <select class="form-select" id="ruleType" required>
-                            <option value="KEYWORD">Keyword</option>
-                            <option value="SENDER">Sender</option>
-                            <option value="RECIPIENT">Recipient</option>
-                            <option value="ATTACHMENT">Attachment</option>
-                            <option value="DOMAIN">Domain</option>
-                            <option value="REGEX">Regular Expression</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="pattern" class="form-label">
-                            Pattern
-                            <i class="bi bi-info-circle text-muted"
-                               data-bs-toggle="tooltip"
-                               data-bs-placement="right"
-                               title="For KEYWORD rules, separate multiple terms with commas (e.g., invoice,payment,urgent). Matching is case-insensitive. For REGEX, use valid regular expression syntax.">
-                            </i>
-                        </label>
-                        <input type="text" class="form-control" id="pattern" placeholder="e.g., invoice,payment,urgent" required>
-                        <small class="text-muted">For keywords, separate with commas</small>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="action" class="form-label">
-                            Action
-                            <i class="bi bi-info-circle text-muted"
-                               data-bs-toggle="tooltip"
-                               data-bs-placement="right"
-                               title="HOLD: Move to Quarantine for manual review. APPROVE: Bypass quarantine (allow through). REJECT: Block completely. QUARANTINE: Same as HOLD.">
-                            </i>
-                        </label>
-                        <select class="form-select" id="action" required>
-                            <option value="HOLD">Hold for Review</option>
-                            <option value="APPROVE">Auto-Approve</option>
-                            <option value="REJECT">Auto-Reject</option>
-                            <option value="QUARANTINE">Quarantine</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="priority" class="form-label">
-                            Priority (0-100)
-                            <i class="bi bi-info-circle text-muted"
-                               data-bs-toggle="tooltip"
-                               data-bs-placement="right"
-                               title="Higher priority rules are evaluated first. Use 100 for critical security rules, 50 for moderate risk, 10 for low-priority monitoring.">
-                            </i>
-                        </label>
-                        <input type="number" class="form-control" id="priority" min="0" max="100" value="50" required>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="saveRule()">Save Rule</button>
-            </div>
-        </div>
+<div class="panel">
+  <div class="panel-header">
+    <div class="panel-title">
+      <i class="bi bi-list-check"></i> Active Rules
+      <span class="badge badge-soft-info ms-2">{{ rules|selectattr('is_active')|list|length }} active</span>
     </div>
+    <div class="panel-actions">
+      <span class="text-muted small">Priority: High → Low</span>
+    </div>
+  </div>
+  {{ rule_ui.rules_table(rules, show_actions=True) }}
 </div>
+
+{{ rule_ui.add_rule_modal() }}
 {% endblock %}
 
 {% block extra_js %}
@@ -198,6 +80,7 @@ async function editRule(btn){
   if(r2.ok && jd.success){ if(window.showSuccess) showSuccess('Rule updated'); setTimeout(()=>window.location.reload(),600); }
   else { if(window.showError) showError('Update failed: '+(jd.error||'unknown')); }
 }
+
 async function deleteRule(btn){
   const tr = btn.closest('tr'); const r = JSON.parse(tr.getAttribute('data-rule'));
   const id = tr.getAttribute('data-id');
