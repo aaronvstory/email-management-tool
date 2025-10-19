@@ -1192,20 +1192,36 @@ a:focus-visible,
 /* =============================
    SOFT BADGES FOR STATUS CHIPS
    ============================= */
+.badge-soft-success,
+.badge-soft-danger,
+.badge-soft-muted{
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 6px 12px !important;
+    border-radius: var(--radius-md) !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    border-width: 1px !important;
+    border-style: solid !important;
+    text-transform: none !important;
+    letter-spacing: 0.02em !important;
+    line-height: 1 !important;
+}
 .badge-soft-success{
-    border-color: var(--success-color) !important;
-    background: rgba(16,185,129,0.15) !important;
-    color: #fff !important;
+    background: rgba(16,185,129,0.16) !important;
+    border-color: rgba(16,185,129,0.32) !important;
+    color: #6ee7b7 !important;
 }
 .badge-soft-danger{
-    border-color: var(--danger-color) !important;
-    background: rgba(220,38,38,0.15) !important;
-    color: #fff !important;
+    background: rgba(220,38,38,0.16) !important;
+    border-color: rgba(220,38,38,0.36) !important;
+    color: #fca5a5 !important;
 }
 .badge-soft-muted{
-    border-color: rgba(255,255,255,0.25) !important;
-    background: rgba(255,255,255,0.08) !important;
-    color: #fff !important;
+    background: rgba(148,163,184,0.08) !important;
+    border-color: rgba(148,163,184,0.25) !important;
+    color: var(--text-muted) !important;
 }
 
 /* =============================
@@ -1900,9 +1916,9 @@ a:focus-visible,
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 4px 10px;
-    border-radius: var(--radius-sm);
-    font-size: 0.75rem;
+    padding: 6px 12px;
+    border-radius: var(--radius-md);
+    font-size: 0.8rem;
     font-weight: 600;
     letter-spacing: 0.02em;
     background: rgba(255, 255, 255, 0.06);
@@ -2033,6 +2049,62 @@ a:focus-visible,
     padding: var(--space-xl);
     color: var(--text-muted);
     background: transparent !important;
+}
+
+/* Dashboard + Email helpers */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+}
+
+.table-scroll {
+    max-height: 460px;
+    overflow-y: auto;
+}
+
+.table-scroll table {
+    margin-bottom: 0;
+}
+
+.action-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-subtle);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.meta-grid {
+    display: grid;
+    gap: var(--space-xs);
+}
+
+.meta-row {
+    display: flex;
+    gap: var(--space-xs);
+    align-items: flex-start;
+}
+
+.meta-label {
+    min-width: 110px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.meta-value {
+    color: var(--text-secondary);
+    flex: 1;
+    word-break: break-word;
+}
+
+.subject-display {
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
 

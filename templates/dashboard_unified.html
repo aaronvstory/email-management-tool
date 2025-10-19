@@ -10,13 +10,28 @@
   .account-selector {
     background: rgba(26,26,26,0.9);
     border-radius: 12px;
-    padding: 12px 15px;
-    margin-bottom: 15px;
+    padding: 16px;
+    margin-bottom: 20px;
     box-shadow: 0 2px 4px -1px rgba(0,0,0,.6),0 1px 2px rgba(0,0,0,.4);
     border: 1px solid rgba(255,255,255,0.06);
   }
 
-  .account-selector label {
+  .account-selector .selector-grid {
+    display: grid;
+    grid-template-columns: minmax(260px, 2fr) auto;
+    grid-template-areas:
+      "select actions"
+      "meta meta";
+    column-gap: 20px;
+    row-gap: 14px;
+    align-items: center;
+  }
+
+  .selector-field {
+    grid-area: select;
+  }
+
+  .selector-field label {
     color: #9ca3af;
     font-weight: 500;
     margin-bottom: 6px;
@@ -24,27 +39,97 @@
     font-size: 0.85rem;
   }
 
-  .account-selector select {
+  .selector-field select {
     background: rgba(255,255,255,0.06);
     border: 1px solid rgba(255,255,255,0.12);
     color: #ffffff;
     width: 100%;
-    padding: 8px 12px;
-    border-radius: 6px;
+    padding: 10px 14px;
+    border-radius: 8px;
     font-size: 0.95rem;
   }
 
-  .account-selector select option {
+  .selector-field select option {
     background: #1a1a1a;
     color: #ffffff;
+  }
+
+  .selector-meta {
+    grid-area: meta;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .selector-meta .selector-note {
+    color: #9ca3af;
+    font-size: 0.85rem;
+    flex: 1 1 auto;
+  }
+
+  .selector-actions {
+    grid-area: actions;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .selector-actions .btn {
+    min-width: 110px;
+    justify-content: center;
+  }
+
+  .selector-actions label {
+    color: #9ca3af;
+    font-weight: 500;
+    font-size: 0.85rem;
+    margin: 0;
+  }
+
+  @media (max-width: 992px) {
+    .account-selector .selector-grid {
+      grid-template-columns: 1fr;
+      grid-template-areas:
+        "select"
+        "meta"
+        "actions";
+      grid-template-columns: 1fr;
+      align-items: stretch;
+    }
+
+    .selector-actions {
+      justify-content: flex-start;
+      align-items: flex-start;
+      flex-direction: row;
+      gap: 10px;
+    }
+
+    .selector-actions label {
+      display: none;
+    }
   }
 
   /* Compact stats grid */
   .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
     margin-bottom: 20px;
+  }
+
+  .stats-grid .stat-card-modern {
+    min-height: 100%;
+  }
+
+  .stat-card-modern.held .stat-value {
+    color: #f87171;
+  }
+
+  .stat-card-modern.released .stat-value {
+    color: #34d399;
   }
 
   .stat-card {
@@ -133,15 +218,15 @@
 
   .email-list-item {
     display: grid;
-    grid-template-columns: 250px 1fr 80px 140px;
+    grid-template-columns: 280px 1fr 110px 150px;
     align-items: center;
-    padding: 12px;
+    padding: 14px;
     border-bottom: 1px solid rgba(255,255,255,0.06);
     transition: background 0.2s;
-    gap: 12px;
+    gap: 18px;
     width: 100%;
     box-sizing: border-box;
-    min-height: 50px;
+    min-height: 64px;
     max-width: 100%;
     overflow: hidden;
   }
@@ -157,12 +242,12 @@
 
   .email-list-header {
     display: grid;
-    grid-template-columns: 250px 1fr 80px 140px;
-    gap: 12px;
-    padding: 10px 12px;
+    grid-template-columns: 280px 1fr 110px 150px;
+    gap: 18px;
+    padding: 12px 14px;
     border-bottom: 2px solid rgba(255,255,255,0.08);
     background: rgba(255,255,255,0.02);
-    margin-bottom: 5px;
+    margin-bottom: 6px;
   }
 
   .email-list-header > div {
@@ -173,13 +258,36 @@
     letter-spacing: 0.05em;
   }
 
-  .email-from {
-    color: #ffffff;
-    font-weight: 500;
-    white-space: nowrap;
+  .email-correspondents {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .correspondent-line {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+  }
+
+  .correspondent-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #9ca3af;
+    font-weight: 600;
+    flex-shrink: 0;
+    min-width: 42px;
+  }
+
+  .correspondent-value {
+    color: #e5e7eb;
+    font-size: 0.85rem;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 250px;
+    white-space: nowrap;
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .email-subject {
@@ -193,7 +301,7 @@
   .email-status {
     justify-self: center;
     text-align: center;
-    width: 80px;
+    width: 110px;
   }
 
   /* Consistent status badge styling */
@@ -210,12 +318,12 @@
 
   .email-time {
     color: #9ca3af;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     white-space: nowrap;
     text-align: right;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 140px;
+    max-width: 150px;
   }
 
   .empty-state {
@@ -239,30 +347,31 @@
   @media (max-width: 768px) {
     .email-list-header,
     .email-list-item {
-      grid-template-columns: 180px 1fr 70px 100px;
-      gap: 10px;
-      padding: 10px;
+      grid-template-columns: 1.2fr 1fr 90px 120px;
+      gap: 14px;
+      padding: 12px;
     }
 
-    .email-from {
-      max-width: 180px;
+    .correspondent-value {
+      max-width: 220px;
     }
 
     .email-status {
-      width: 70px;
+      width: 90px;
     }
 
     .email-time {
-      max-width: 100px;
-      font-size: 0.8rem;
+      max-width: 120px;
+      font-size: 0.82rem;
     }
   }
 
   @media (max-width: 576px) {
     .email-list-header,
     .email-list-item {
-      grid-template-columns: 150px 1fr 65px;
-      gap: 8px;
+      grid-template-columns: minmax(0, 1fr) 1fr 75px;
+      gap: 10px;
+      padding: 10px;
     }
 
     .email-list-header > div:last-child,
@@ -270,15 +379,15 @@
       display: none;
     }
 
-    .email-from {
-      max-width: 150px;
-    }
-
     .email-status {
-      width: 65px;
+      width: 75px;
     }
 
-    .stat-value {
+    .correspondent-label {
+      min-width: 38px;
+    }
+
+    .stats-grid .stat-card-modern .stat-value {
       font-size: 1.5rem;
     }
   }
@@ -299,45 +408,64 @@
 </div>
 
 <div class="account-selector">
-  <div style="display: flex; gap: 10px; align-items: center;">
-    <label class="form-label" style="margin: 0; flex-shrink: 0;">Filter by account:</label>
-    <select class="form-select" id="accountSelector" onchange="switchAccount(this.value)" style="flex: 1; max-width: 600px;">
-      <option value="">All accounts</option>
-      {% for account in accounts %}
-      <option value="{{ account.id }}" {% if selected_account_id == account.id|string %}selected{% endif %}>
-        {{ account.account_name }} - {{ account.email_address }}
-      </option>
-      {% endfor %}
-    </select>
+  <div class="selector-grid">
+    <div class="selector-field">
+      <label for="accountSelector">Filter by account</label>
+      <select class="form-select" id="accountSelector" onchange="switchAccount(this.value)">
+        <option value="">All accounts</option>
+        {% for account in accounts %}
+        <option value="{{ account.id }}" {% if selected_account_id == account.id|string %}selected{% endif %}>
+          {{ account.account_name }} ({{ account.email_address }})
+        </option>
+        {% endfor %}
+      </select>
+    </div>
 
-    {% if selected_account_id %}
-      {% for account in accounts %}
-        {% if account.id|string == selected_account_id %}
-        <span class="status-indicator {% if account.is_active %}success{% else %}danger{% endif %}">
-          {% if account.is_active %}Active{% else %}Inactive{% endif %}
-        </span>
-        {% endif %}
-      {% endfor %}
-    {% endif %}
+    <div class="selector-meta">
+      {% if selected_account_id %}
+        {% for account in accounts %}
+          {% if account.id|string == selected_account_id %}
+          <span class="tag-chip {% if account.is_active %}success{% else %}accent{% endif %}">
+            {% if account.is_active %}Active{% else %}Inactive{% endif %}
+          </span>
+          <span class="selector-note">
+            Last checked: {{ account.last_checked or 'Never' }}
+          </span>
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        <span class="selector-note">Showing aggregated telemetry across all monitored accounts.</span>
+      {% endif %}
+    </div>
 
-    <a href="{{ url_for('accounts.email_accounts') }}" class="btn btn-ghost btn-sm">
-      <i class="bi bi-gear"></i> Manage
-    </a>
+    <div class="selector-actions">
+      <label class="form-label">Actions</label>
+      <a href="{{ url_for('accounts.email_accounts') }}" class="btn btn-ghost btn-sm">
+        <i class="bi bi-gear"></i> Manage
+      </a>
+    </div>
   </div>
 </div>
 
+{% set totals = namespace(value = stats.total if stats.total is not none else 0, held = 0, released = 0) %}
+{% set totals.held = (stats.held|default(0)) + (stats.pending|default(0)) %}
+{% set totals.released = (stats.released|default(0)) + (stats.approved|default(0)) + (stats.delivered|default(0)) %}
+{% if totals.value == 0 %}
+  {% set totals.value = totals.held + totals.released + (stats.rejected|default(0)) + (stats.discarded|default(0)) %}
+{% endif %}
+
 <!-- Compact Stats Grid -->
 <div class="stats-grid" id="statsGrid">
-  <div class="stat-card">
-    <span class="stat-value" id="statTotal">{{ stats.total|default(0) }}</span>
+  <div class="stat-card-modern">
+    <span class="stat-value" id="statTotal">{{ totals.value }}</span>
     <span class="stat-label">Total</span>
   </div>
-  <div class="stat-card held">
-    <span class="stat-value" id="statHeld">{{ (stats.held|default(0)) + (stats.pending|default(0)) }}</span>
+  <div class="stat-card-modern held">
+    <span class="stat-value" id="statHeld">{{ totals.held }}</span>
     <span class="stat-label">Held</span>
   </div>
-  <div class="stat-card released">
-    <span class="stat-value" id="statReleased">{{ stats.released|default(0) }}</span>
+  <div class="stat-card-modern released">
+    <span class="stat-value" id="statReleased">{{ totals.released }}</span>
     <span class="stat-label">Released</span>
   </div>
 </div>
@@ -353,23 +481,42 @@
 
   <div id="emailsList">
     <!-- Column Headers -->
-    <div class="email-list-header">
-      <div>From</div>
-      <div>Subject</div>
-      <div style="text-align: center;">Status</div>
-      <div style="text-align: right;">Time</div>
-    </div>
+      <div class="email-list-header">
+        <div>Correspondents</div>
+        <div>Subject</div>
+        <div style="text-align: center;">Status</div>
+        <div style="text-align: right;">Time</div>
+      </div>
 
-    {% if recent_emails %}
-      {% for email in recent_emails[:20] %}
-      <div class="email-list-item" onclick="window.location.href='/email/{{ email.id }}'">
-        <div class="email-from">{{ email.sender[:35] }}{% if email.sender|length > 35 %}...{% endif %}</div>
-        <div class="email-subject">{{ email.subject[:50] }}{% if email.subject|length > 50 %}...{% endif %}</div>
-        <div class="email-status">
-          {% set status = (email.status or '').lower() %}
-          {% if status == 'pending' or status == 'held' %}
-          <span class="status-badge status-HELD">Held</span>
-          {% elif status == 'released' or status == 'approved' or status == 'delivered' %}
+      {% if recent_emails %}
+        {% for email in recent_emails[:20] %}
+        {% set sender_text = email.sender or '—' %}
+        {% set recipients = email.recipients %}
+        {% set recipient_text = '—' %}
+        {% if recipients %}
+          {% if recipients is string %}
+            {% set recipient_text = recipients %}
+          {% else %}
+            {% set recipient_text = recipients|join(', ') %}
+          {% endif %}
+        {% endif %}
+        <div class="email-list-item" onclick="window.location.href='/email/{{ email.id }}'">
+          <div class="email-correspondents">
+            <div class="correspondent-line">
+              <span class="correspondent-label">From</span>
+              <span class="correspondent-value">{{ sender_text[:42] }}{% if sender_text|length > 42 %}...{% endif %}</span>
+            </div>
+            <div class="correspondent-line">
+              <span class="correspondent-label">To</span>
+              <span class="correspondent-value">{{ recipient_text[:42] }}{% if recipient_text|length > 42 %}...{% endif %}</span>
+            </div>
+          </div>
+          <div class="email-subject">{{ email.subject[:60] }}{% if email.subject|length > 60 %}...{% endif %}</div>
+          <div class="email-status">
+            {% set status = (email.status or '').lower() %}
+            {% if status == 'pending' or status == 'held' %}
+            <span class="status-badge status-HELD">Held</span>
+            {% elif status == 'released' or status == 'approved' or status == 'delivered' %}
           <span class="status-badge status-RELEASED">Released</span>
           {% elif status == 'rejected' or status == 'discarded' %}
           <span class="status-badge status-REJECTED">Rejected</span>
@@ -397,6 +544,24 @@
 <script>
 let currentAccountId = '{{ selected_account_id or "" }}';
 
+function updateStatsFromPayload(payload) {
+  if (!payload) return;
+  const toNumber = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const heldTotal = toNumber(payload.held) + toNumber(payload.pending);
+  const releasedTotal = toNumber(payload.released) + toNumber(payload.approved) + toNumber(payload.delivered);
+  const totalCandidate = toNumber(payload.total);
+  const rejectedTotal = toNumber(payload.rejected) + toNumber(payload.discarded);
+  const totalValue = totalCandidate > 0 ? totalCandidate : heldTotal + releasedTotal + rejectedTotal;
+
+  document.getElementById('statTotal').textContent = totalValue;
+  document.getElementById('statHeld').textContent = heldTotal;
+  document.getElementById('statReleased').textContent = releasedTotal;
+}
+
 function switchAccount(accountId) {
   currentAccountId = accountId;
   const searchParams = accountId ? '?account_id=' + accountId : '';
@@ -415,12 +580,8 @@ async function loadStats() {
     if (!response.ok) return;
 
     const data = await response.json();
-
-    document.getElementById('statTotal').textContent = data.total || 0;
-    // Combine pending and held into single "Held" stat
-    const heldTotal = (data.held || 0) + (data.pending || 0);
-    document.getElementById('statHeld').textContent = heldTotal;
-    document.getElementById('statReleased').textContent = data.released || 0;
+    const payload = data && data.unified ? data.unified : data;
+    updateStatsFromPayload(payload || {});
   } catch (error) {
     console.error('Error loading stats:', error);
   }
@@ -463,39 +624,71 @@ async function loadRecentEmails() {
     // Add header row
     const headerDiv = document.createElement('div');
     headerDiv.className = 'email-list-header';
-    headerDiv.innerHTML = `
-      <div>From</div>
-      <div>Subject</div>
-      <div style="text-align: center;">Status</div>
-      <div style="text-align: right;">Time</div>
-    `;
+      headerDiv.innerHTML = `
+        <div>Correspondents</div>
+        <div>Subject</div>
+        <div style="text-align: center;">Status</div>
+        <div style="text-align: right;">Time</div>
+      `;
     container.appendChild(headerDiv);
+
+    const truncate = (text, length = 42) => {
+      if (!text) return '—';
+      const str = String(text);
+      return str.length > length ? `${str.slice(0, length)}…` : str;
+    };
 
     emails.slice(0, 20).forEach(email => {
       const status = (email.status || email.interception_status || '').toLowerCase();
       const sender = email.sender || 'Unknown';
       const subject = email.subject || '(No Subject)';
       const time = email.created_at || '';
+      const rawRecipients = email.recipients || email.to || email.to_address || email.recipient;
+      let recipients = '—';
+      if (Array.isArray(rawRecipients) && rawRecipients.length > 0) {
+        recipients = rawRecipients.join(', ');
+      } else if (typeof rawRecipients === 'string' && rawRecipients.trim() !== '') {
+        recipients = rawRecipients;
+      }
 
-      // Create element using DOM methods for reliable construction
       const emailDiv = document.createElement('div');
       emailDiv.className = 'email-list-item';
       emailDiv.onclick = () => window.location.href = `/email/${email.id}`;
 
-      // Create sender column
-      const senderDiv = document.createElement('div');
-      senderDiv.className = 'email-from';
-      senderDiv.textContent = sender.substring(0, 35) + (sender.length > 35 ? '...' : '');
+      const correspondentsDiv = document.createElement('div');
+      correspondentsDiv.className = 'email-correspondents';
 
-      // Create subject column
+      const fromLine = document.createElement('div');
+      fromLine.className = 'correspondent-line';
+      const fromLabel = document.createElement('span');
+      fromLabel.className = 'correspondent-label';
+      fromLabel.textContent = 'From';
+      const fromValue = document.createElement('span');
+      fromValue.className = 'correspondent-value';
+      fromValue.textContent = truncate(sender, 48);
+      fromLine.appendChild(fromLabel);
+      fromLine.appendChild(fromValue);
+
+      const toLine = document.createElement('div');
+      toLine.className = 'correspondent-line';
+      const toLabel = document.createElement('span');
+      toLabel.className = 'correspondent-label';
+      toLabel.textContent = 'To';
+      const toValue = document.createElement('span');
+      toValue.className = 'correspondent-value';
+      toValue.textContent = truncate(recipients, 48);
+      toLine.appendChild(toLabel);
+      toLine.appendChild(toValue);
+
+      correspondentsDiv.appendChild(fromLine);
+      correspondentsDiv.appendChild(toLine);
+
       const subjectDiv = document.createElement('div');
       subjectDiv.className = 'email-subject';
-      subjectDiv.textContent = subject.substring(0, 50) + (subject.length > 50 ? '...' : '');
+      subjectDiv.textContent = truncate(subject, 70);
 
-      // Create status column with badge - Consolidate PENDING and HELD
       const statusDiv = document.createElement('div');
       statusDiv.className = 'email-status';
-
       const statusBadge = document.createElement('span');
       if (status === 'pending' || status === 'held') {
         statusBadge.className = 'status-badge status-HELD';
@@ -512,13 +705,11 @@ async function loadRecentEmails() {
       }
       statusDiv.appendChild(statusBadge);
 
-      // Create time column
       const timeDiv = document.createElement('div');
       timeDiv.className = 'email-time';
       timeDiv.textContent = time;
 
-      // Append all columns to the row
-      emailDiv.appendChild(senderDiv);
+      emailDiv.appendChild(correspondentsDiv);
       emailDiv.appendChild(subjectDiv);
       emailDiv.appendChild(statusDiv);
       emailDiv.appendChild(timeDiv);
@@ -546,15 +737,14 @@ try {
 
   eventSource.onmessage = (event) => {
     try {
-      const data = JSON.parse(event.data);
+      const raw = JSON.parse(event.data);
+      const payload = raw && raw.unified ? raw.unified : raw;
+      const targetAccount = raw && raw.account_id !== undefined
+        ? String(raw.account_id)
+        : (payload && payload.account_id !== undefined ? String(payload.account_id) : null);
 
-      // Only update if it matches our current filter
-      if (!currentAccountId || data.account_id === currentAccountId) {
-        document.getElementById('statTotal').textContent = data.total || 0;
-        // Combine pending and held
-        const heldTotal = (data.held || 0) + (data.pending || 0);
-        document.getElementById('statHeld').textContent = heldTotal;
-        document.getElementById('statReleased').textContent = data.released || 0;
+      if (!currentAccountId || targetAccount === null || String(currentAccountId) === targetAccount) {
+        updateStatsFromPayload(payload || {});
       }
     } catch (err) {
       console.warn('SSE parse error:', err);
@@ -570,3 +760,7 @@ try {
 }
 </script>
 {% endblock %}
+
+
+
+
