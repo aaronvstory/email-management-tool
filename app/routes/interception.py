@@ -690,6 +690,49 @@ def api_interception_release(msg_id:int):
                                         pass
                     except Exception:
                         pass
+                    
+                    # 4) Gmail defense-in-depth: purge any remaining original from All Mail
+                    # Can be disabled via GMAIL_ALL_MAIL_PURGE=0 for emergency rollback
+                    gmail_purge_enabled = str(os.getenv('GMAIL_ALL_MAIL_PURGE', '1')).lower() in ('1', 'true', 'yes')
+                    if header_candidates and gmail_purge_enabled:
+                        all_mail_variants = ['[Gmail]/All Mail', '[Google Mail]/All Mail']
+                        for mbox in all_mail_variants:
+                            try:
+                                typ, _ = imap.select(mbox, readonly=False)
+                                if typ != 'OK':
+                                    continue
+                                # Search by original Message-ID only (Droid fix ensures this)
+                                for hdr in header_candidates:
+                                    try:
+                                        # Use UID SEARCH to find the original(s)
+                                        s_typ, s_data = imap.uid('SEARCH', None, 'HEADER', 'Message-ID', hdr)
+                                        if s_typ != 'OK' or not s_data or not s_data[0]:
+                                            continue
+                                        uids = [u.decode() if isinstance(u, bytes) else u for u in s_data[0].split()]
+                                        if not uids:
+                                            continue
+                                        # Remove Inbox/Quarantine labels and send to Trash
+                                        for uid in uids:
+                                            # Keep parentheses: imaplib expects a parenthesized label list
+                                            imap.uid('STORE', uid, '-X-GM-LABELS', r'(\Inbox)')
+                                            imap.uid('STORE', uid, '-X-GM-LABELS', r'(Quarantine)')
+                                            imap.uid('STORE', uid, '+X-GM-LABELS', r'(\Trash)')
+                                        log.info("[Gmail] Original purged from All Mail",
+                                                 extra={
+                                                     'email_id': msg_id,
+                                                     'account_id': row['account_id'],
+                                                     'message_id': hdr,
+                                                     'uids': uids,
+                                                     'mbox': mbox
+                                                 })
+                                        break  # done once we acted on a variant
+                                    except Exception as e:
+                                        log.debug(f"[Gmail] All Mail SEARCH/STORE failed: {e}", exc_info=False)
+                                else:
+                                    continue
+                                break
+                            except Exception as e:
+                                log.debug(f"[Gmail] Could not select {mbox}: {e}", exc_info=False)
             except Exception:
                 pass
 

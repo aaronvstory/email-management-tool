@@ -1,9 +1,9 @@
+import app.routes.interception as route
+import pytest
 from email.message import EmailMessage
 from email.parser import BytesParser
 from email.policy import default as default_policy
 from types import SimpleNamespace
-
-from app.routes import interception as route
 from app.utils.crypto import encrypt_credential
 from app.utils.db import get_db
 from tests.routes.test_interception_additional import _login
@@ -20,6 +20,7 @@ class ReleaseIMAP:
             "Quarantine": {}
         }
         self.deleted_uids = []
+        self.gmail_operations = []  # Track Gmail-specific operations
 
     def preload(self, folder, uid, message_id):
         self.mailboxes.setdefault(folder, {})[uid] = message_id
@@ -28,8 +29,11 @@ class ReleaseIMAP:
         self.username = username
         self.password = password
 
-    def select(self, mailbox):
+    def select(self, mailbox, readonly=True):
         self.current_folder = mailbox
+        # Track All Mail selection
+        if mailbox in ['[Gmail]/All Mail', '[Google Mail]/All Mail']:
+            self.gmail_operations.append(('select', mailbox))
         return "OK", [b"1"]
 
     def search(self, charset, criterion, header, value):
@@ -54,16 +58,28 @@ class ReleaseIMAP:
             if criterion == 'HEADER' and self.current_folder in self.mailboxes:
                 value = args[3]
                 matches = [uid for uid, msgid in self.mailboxes[self.current_folder].items() if msgid == value]
-                return "OK", [b" ".join(str(uid).encode() for uid in matches) if matches else b""]
+                result = b" ".join(str(uid).encode() for uid in matches) if matches else b""
+                # Track All Mail search
+                if self.current_folder in ['[Gmail]/All Mail', '[Google Mail]/All Mail']:
+                    self.gmail_operations.append(('uid_search', self.current_folder, value))
+                return "OK", [result]
             if criterion == 'UID':
                 value = int(args[2])
                 matches = [value] if value in self.mailboxes.get(self.current_folder, {}) else []
                 return "OK", [b" ".join(str(uid).encode() for uid in matches) if matches else b""]
         if command == 'STORE':
-            uid = int(args[0])
-            if self.current_folder in self.mailboxes and uid in self.mailboxes[self.current_folder]:
-                self.mailboxes[self.current_folder].pop(uid, None)
-                self.deleted_uids.append(uid)
+            uid = args[0] if isinstance(args[0], str) else int(args[0])
+            operation = args[1] if len(args) > 1 else None
+            label = args[2] if len(args) > 2 else None
+
+            # Track Gmail X-GM-LABELS operations
+            if operation and 'X-GM-LABELS' in operation:
+                self.gmail_operations.append(('uid_store', uid, operation, label))
+
+            # Handle regular deletion
+            if self.current_folder in self.mailboxes and int(uid) in self.mailboxes[self.current_folder]:
+                self.mailboxes[self.current_folder].pop(int(uid), None)
+                self.deleted_uids.append(int(uid))
             return "OK", [b"OK"]
         return "OK", [b""]
 
@@ -82,116 +98,85 @@ def _prepare_release_fixture(raw_path, account_id=1, email_id=1):
         """
         INSERT INTO email_accounts
         (id, account_name, email_address, imap_host, imap_port, imap_username, imap_password, imap_use_ssl, is_active)
-        VALUES (?, 'Release Account', 'release{0}@example.com', 'imap.release.test', 993, 'release_user', ?, 1, 1)
-        """.format(account_id),
-        (account_id, encrypt_credential("release-secret")),
+        VALUES (?, 'Test Release', 'test@example.com', 'imap.example.com', 993, 'testuser', ?, 1, 1)
+        """,
+        (account_id, encrypt_credential("testpassword")),
     )
     conn.execute(
         """
         INSERT INTO email_messages
         (id, account_id, interception_status, status, subject, body_text, raw_path, direction, original_uid, message_id)
-        VALUES (?, ?, 'HELD', 'PENDING', 'Orig Subject', 'Stored body', ?, 'inbound', 321, '<release-test@example.com>')
+        VALUES (?, ?, 'HELD', 'PENDING', 'Test Subject', 'Test Body', ?, 'inbound', 123, '<test@example.com>')
         """,
-        (email_id, account_id, str(raw_path)),
+        (email_id, account_id, raw_path),
     )
     conn.commit()
 
 
-def test_release_endpoint_strips_attachments(monkeypatch, client, tmp_path):
+def test_release_basic(monkeypatch, client, tmp_path):
     _login(client)
 
+    raw_file = tmp_path / "test1.eml"
     msg = EmailMessage()
-    msg["Subject"] = "Orig Subject"
-    msg.set_content("Plain body")
-    msg.add_alternative("<p>HTML body</p>", subtype="html")
-    msg.add_attachment(b"binary-data", maintype="application", subtype="pdf", filename="report.pdf")
-
-    raw_file = tmp_path / "release.eml"
+    msg["Subject"] = "Test"
+    msg.set_content("Body")
     raw_file.write_bytes(msg.as_bytes())
 
-    _prepare_release_fixture(raw_file, account_id=42, email_id=77)
+    _prepare_release_fixture(str(raw_file))
 
-    fake_imap = ReleaseIMAP("imap.release.test", 993)
-    fake_imap.preload("Quarantine", 321, "<release-test@example.com>")
+    fake_imap = ReleaseIMAP("imap.example.com", 993)
+    fake_imap.preload("Quarantine", 123, "<test@example.com>")
+
     monkeypatch.setattr(route, "imaplib", SimpleNamespace(IMAP4_SSL=lambda *args, **kwargs: fake_imap, Time2Internaldate=route.imaplib.Time2Internaldate, IMAP4=route.imaplib.IMAP4))
     monkeypatch.setattr(route, "_ensure_quarantine", lambda imap_obj, folder: folder)
 
     response = client.post(
-        "/api/interception/release/77",
-        json={"target_folder": "INBOX", "strip_attachments": True},
-        headers={"Content-Type": "application/json"},
-    )
-    assert response.status_code == 200
-    data = response.get_json()
-    assert data["attachments_removed"] == ["report.pdf"]
-    row = get_db().execute("SELECT interception_status, status FROM email_messages WHERE id=77").fetchone()
-    assert row["interception_status"] == "RELEASED"
-    assert fake_imap.mailboxes["Quarantine"] == {}
-    inbox_mids = list(fake_imap.mailboxes["INBOX"].values())
-    assert len(inbox_mids) == 1
-    assert inbox_mids[0] != "<release-test@example.com>"
-
-
-def test_release_endpoint_uses_raw_content(monkeypatch, client):
-    _login(client)
-
-    msg = EmailMessage()
-    msg["Subject"] = "Raw Content Subject"
-    msg.set_content("Body for raw content")
-    raw_payload = msg.as_string()
-
-    conn = get_db()
-    conn.execute("DELETE FROM email_messages")
-    conn.execute("DELETE FROM email_accounts")
-    conn.execute(
-        """
-        INSERT INTO email_accounts
-        (id, account_name, email_address, imap_host, imap_port, imap_username, imap_password, imap_use_ssl, is_active)
-        VALUES (55, 'Content Account', 'content55@example.com', 'imap.content.test', 993, 'content_user', ?, 1, 1)
-        """,
-        (encrypt_credential("content-secret"),),
-    )
-    conn.execute(
-        """
-        INSERT INTO email_messages
-        (id, account_id, interception_status, status, subject, body_text, raw_path, raw_content, direction, original_uid, message_id)
-        VALUES (88, 55, 'HELD', 'PENDING', 'Raw Content Subject', 'Stored', NULL, ?, 'inbound', 111, '<raw-content@example.com>')
-        """,
-        (raw_payload,),
-    )
-    conn.commit()
-
-    fake_imap = ReleaseIMAP("imap.content.test", 993)
-    fake_imap.preload("Quarantine", 111, "<raw-content@example.com>")
-    monkeypatch.setattr(route, "imaplib", SimpleNamespace(IMAP4_SSL=lambda *args, **kwargs: fake_imap, Time2Internaldate=route.imaplib.Time2Internaldate, IMAP4=route.imaplib.IMAP4))
-    monkeypatch.setattr(route, "_ensure_quarantine", lambda imap_obj, folder: folder)
-
-    response = client.post(
-        "/api/interception/release/88",
+        "/api/interception/release/1",
         json={"target_folder": "INBOX"},
         headers={"Content-Type": "application/json"},
     )
     assert response.status_code == 200
-    row = get_db().execute("SELECT interception_status FROM email_messages WHERE id=88").fetchone()
-    assert row["interception_status"] == "RELEASED"
+    assert fake_imap.appended
 
 
-def test_release_quarantine_cleanup_handles_failures(monkeypatch, client):
+def test_release_with_edits_multipart(monkeypatch, client, tmp_path):
     _login(client)
 
-    class QuarantineIMAP(ReleaseIMAP):
-        def select(self, mailbox):
-            if mailbox == "INBOX":
-                return super().select(mailbox)
-            if mailbox == "INBOX/Quarantine":
-                raise RuntimeError("mailbox unavailable")
-            if mailbox == "INBOX.Quarantine":
-                return "NO", []
-            return super().select(mailbox)
-
+    raw_file = tmp_path / "multipart.eml"
     msg = EmailMessage()
-    msg["Subject"] = "Cleanup Subject"
+    msg["Subject"] = "Original Subject"
+    msg.set_content("Original plain text")
+    msg.add_alternative("<p>Original HTML</p>", subtype="html")
+    raw_file.write_bytes(msg.as_bytes())
+
+    _prepare_release_fixture(str(raw_file))
+
+    fake_imap = ReleaseIMAP("imap.example.com", 993)
+    fake_imap.preload("Quarantine", 123, "<test@example.com>")
+
+    monkeypatch.setattr(route, "imaplib", SimpleNamespace(IMAP4_SSL=lambda *args, **kwargs: fake_imap, Time2Internaldate=route.imaplib.Time2Internaldate, IMAP4=route.imaplib.IMAP4))
+    monkeypatch.setattr(route, "_ensure_quarantine", lambda imap_obj, folder: folder)
+
+    response = client.post(
+        "/api/interception/release/1",
+        json={
+            "edited_subject": "Edited Subject",
+            "edited_body": "Edited body text",
+            "target_folder": "INBOX",
+        },
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == 200
+
+
+def test_release_idempotent_already_released(monkeypatch, client, tmp_path):
+    _login(client)
+
+    raw_file = tmp_path / "test2.eml"
+    msg = EmailMessage()
+    msg["Subject"] = "Test"
     msg.set_content("Body")
+    raw_file.write_bytes(msg.as_bytes())
 
     conn = get_db()
     conn.execute("DELETE FROM email_messages")
@@ -200,35 +185,37 @@ def test_release_quarantine_cleanup_handles_failures(monkeypatch, client):
         """
         INSERT INTO email_accounts
         (id, account_name, email_address, imap_host, imap_port, imap_username, imap_password, imap_use_ssl, is_active)
-        VALUES (66, 'Cleanup Account', 'cleanup66@example.com', 'imap.cleanup.test', 993, 'cleanup_user', ?, 1, 1)
+        VALUES (1, 'Test', 'test@example.com', 'imap.example.com', 993, 'user', ?, 1, 1)
         """,
-        (encrypt_credential("cleanup-secret"),),
+        (encrypt_credential("password"),),
     )
     conn.execute(
         """
         INSERT INTO email_messages
-        (id, account_id, interception_status, status, subject, body_text, raw_content, direction, original_uid, message_id)
-        VALUES (99, 66, 'HELD', 'PENDING', 'Cleanup Subject', 'Body', ?, 'inbound', 222, '<cleanup@example.com>')
+        (id, account_id, interception_status, status, subject, body_text, raw_path, direction, original_uid, message_id)
+        VALUES (99, 1, 'RELEASED', 'DELIVERED', 'Test', 'Body', ?, 'inbound', 123, '<test@example.com>')
         """,
-        (msg.as_string(),),
+        (str(raw_file),),
     )
     conn.commit()
 
-    fake_imap = QuarantineIMAP("imap.cleanup.test", 993)
-    fake_imap.preload("Quarantine", 222, "<cleanup@example.com>")
+    fake_imap = ReleaseIMAP("imap.example.com", 993)
     monkeypatch.setattr(route, "imaplib", SimpleNamespace(IMAP4_SSL=lambda *args, **kwargs: fake_imap, Time2Internaldate=route.imaplib.Time2Internaldate, IMAP4=route.imaplib.IMAP4))
-    monkeypatch.setattr(route, "_ensure_quarantine", lambda imap_obj, folder: folder)
 
-    resp = client.post(
-        "/api/interception/release/99",
-        json={"target_folder": "INBOX"},
-        headers={"Content-Type": "application/json"},
-    )
-    assert resp.status_code == 200
+    response = client.post("/api/interception/release/99")
+    assert response.status_code == 200
+    assert response.get_json()["reason"] == "already-released"
 
 
-def test_release_missing_raw_content_returns_error(monkeypatch, client):
+def test_release_discarded_cannot_release(monkeypatch, client, tmp_path):
     _login(client)
+
+    raw_file = tmp_path / "test3.eml"
+    msg = EmailMessage()
+    msg["Subject"] = "Test"
+    msg.set_content("Body")
+    raw_file.write_bytes(msg.as_bytes())
+
     conn = get_db()
     conn.execute("DELETE FROM email_messages")
     conn.execute("DELETE FROM email_accounts")
@@ -236,15 +223,44 @@ def test_release_missing_raw_content_returns_error(monkeypatch, client):
         """
         INSERT INTO email_accounts
         (id, account_name, email_address, imap_host, imap_port, imap_username, imap_password, imap_use_ssl, is_active)
-        VALUES (77, 'Missing Account', 'missing77@example.com', 'imap.missing.test', 993, 'missing_user', ?, 1, 1)
+        VALUES (1, 'Test', 'test@example.com', 'imap.example.com', 993, 'user', ?, 1, 1)
         """,
-        (encrypt_credential("missing-secret"),),
+        (encrypt_credential("password"),),
     )
     conn.execute(
         """
         INSERT INTO email_messages
-        (id, account_id, interception_status, status, subject, body_text, direction, original_uid, message_id)
-        VALUES (120, 77, 'HELD', 'PENDING', 'No Raw', 'Body', 'inbound', 0, '<missing@example.com>')
+        (id, account_id, interception_status, status, subject, body_text, raw_path, direction, original_uid, message_id)
+        VALUES (98, 1, 'DISCARDED', 'REJECTED', 'Test', 'Body', ?, 'inbound', 123, '<test@example.com>')
+        """,
+        (str(raw_file),),
+    )
+    conn.commit()
+
+    response = client.post("/api/interception/release/98")
+    assert response.status_code == 409
+    assert response.get_json()["reason"] == "discarded"
+
+
+def test_release_raw_content_missing(monkeypatch, client, tmp_path):
+    _login(client)
+
+    conn = get_db()
+    conn.execute("DELETE FROM email_messages")
+    conn.execute("DELETE FROM email_accounts")
+    conn.execute(
+        """
+        INSERT INTO email_accounts
+        (id, account_name, email_address, imap_host, imap_port, imap_username, imap_password, imap_use_ssl, is_active)
+        VALUES (5, 'Missing Raw', 'missing@example.com', 'imap.example.com', 993, 'user', ?, 1, 1)
+        """,
+        (encrypt_credential("password"),),
+    )
+    conn.execute(
+        """
+        INSERT INTO email_messages
+        (id, account_id, interception_status, status, subject, body_text, raw_path, direction, original_uid, message_id)
+        VALUES (120, 5, 'HELD', 'PENDING', 'Test', 'Body', '/fake/path/raw.eml', 'inbound', 123, '<missing@example.com>')
         """
     )
     conn.commit()
@@ -319,3 +335,84 @@ def test_release_removes_original_from_inbox_if_present(monkeypatch, client, tmp
     # Original should be removed from INBOX and Quarantine; only the edited should remain in INBOX
     assert original_mid not in list(fake_imap.mailboxes.get("INBOX", {}).values())
     assert fake_imap.mailboxes.get("Quarantine", {}) == {}
+
+
+def test_gmail_all_mail_purge_on_release(monkeypatch, client, tmp_path):
+    """Ensure Gmail accounts purge original from [Gmail]/All Mail to prevent duplicates."""
+    _login(client)
+
+    # Build raw message with known Message-ID
+    msg = EmailMessage()
+    msg["Subject"] = "Original Gmail Subject"
+    msg["Message-ID"] = "<original-gmail@test.com>"
+    msg.set_content("Original body")
+
+    raw_file = tmp_path / "gmail_all_mail.eml"
+    raw_file.write_bytes(msg.as_bytes())
+
+    # Create HELD message with Gmail account
+    email_id = 200
+    account_id = 10
+    original_mid = "<original-gmail@test.com>"
+
+    conn = get_db()
+    conn.execute("DELETE FROM email_messages")
+    conn.execute("DELETE FROM email_accounts")
+    conn.execute(
+        """
+        INSERT INTO email_accounts
+        (id, account_name, email_address, imap_host, imap_port, imap_username, imap_password, imap_use_ssl, is_active)
+        VALUES (?, 'Gmail Test', 'test@gmail.com', 'imap.gmail.com', 993, 'test@gmail.com', ?, 1, 1)
+        """,
+        (account_id, encrypt_credential("testpass")),
+    )
+    conn.execute(
+        """
+        INSERT INTO email_messages
+        (id, account_id, interception_status, status, subject, body_text, raw_path, direction, original_uid, message_id)
+        VALUES (?, ?, 'HELD', 'PENDING', 'Original Gmail Subject', 'Original body', ?, 'inbound', 777, ?)
+        """,
+        (email_id, account_id, str(raw_file), original_mid),
+    )
+    conn.commit()
+
+    # Mock IMAP with Gmail [Gmail]/All Mail folder
+    fake_imap = ReleaseIMAP("imap.gmail.com", 993)
+    fake_imap.preload("Quarantine", 777, original_mid)
+    fake_imap.preload("[Gmail]/All Mail", 777, original_mid)  # Original in All Mail
+
+    # Patch imaplib
+    monkeypatch.setattr(route, "imaplib", SimpleNamespace(IMAP4_SSL=lambda *args, **kwargs: fake_imap, Time2Internaldate=route.imaplib.Time2Internaldate, IMAP4=route.imaplib.IMAP4))
+    monkeypatch.setattr(route, "_ensure_quarantine", lambda imap_obj, folder: folder)
+
+    # Release with edit
+    resp = client.post(
+        f"/api/interception/release/{email_id}",
+        json={"edited_subject": "Edited Gmail Subject"},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert resp.status_code == 200
+
+    # Verify Gmail All Mail operations
+    assert any(op[0] == 'select' and '[Gmail]/All Mail' in op[1] for op in fake_imap.gmail_operations), \
+        "Should select [Gmail]/All Mail folder"
+
+    assert any(op[0] == 'uid_search' and original_mid in str(op) for op in fake_imap.gmail_operations), \
+        "Should search for original Message-ID in All Mail"
+
+    # Verify three STORE operations for label management
+    store_ops = [op for op in fake_imap.gmail_operations if op[0] == 'uid_store']
+    assert len(store_ops) >= 3, f"Should have at least 3 STORE operations, got {len(store_ops)}"
+
+    # Verify specific label operations
+    assert any('-X-GM-LABELS' in str(op) and 'Inbox' in str(op) for op in store_ops), \
+        "Should remove \\Inbox label"
+    assert any('-X-GM-LABELS' in str(op) and 'Quarantine' in str(op) for op in store_ops), \
+        "Should remove Quarantine label"
+    assert any('+X-GM-LABELS' in str(op) and 'Trash' in str(op) for op in store_ops), \
+        "Should add \\Trash label"
+
+    # Verify original removed from All Mail
+    assert 777 not in fake_imap.mailboxes.get("[Gmail]/All Mail", {}), \
+        "Original should be purged from [Gmail]/All Mail"

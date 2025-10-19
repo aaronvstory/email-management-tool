@@ -44,6 +44,46 @@ python scripts/migrations/20251001_add_interception_indices.py
 python -c "import sqlite3; conn = sqlite3.connect('email_manager.db'); cursor = conn.cursor(); cursor.execute('PRAGMA table_info(email_messages)'); print(cursor.fetchall())"
 ```
 
+### Duplicate Emails After Release (Gmail Only)
+
+**Symptom**: After editing and releasing an email on Gmail, BOTH the original and edited versions appear in INBOX
+
+**Root Cause**: Gmail's label-based IMAP system keeps messages in `[Gmail]/All Mail` even after removal from Quarantine. If the original isn't purged from All Mail, Gmail may re-apply the `\Inbox` label.
+
+**Solution**:
+
+1. **Verify the fix is working** - Check logs for:
+   ```
+   [Gmail] Original purged from All Mail
+   ```
+
+2. **If log line is missing**, ensure:
+   - IMAP is enabled in Gmail Settings → Forwarding and POP/IMAP
+   - `[Gmail]/All Mail` folder is accessible over IMAP
+   - Auto-Expunge is enabled in Gmail IMAP settings
+   - Environment variable `GMAIL_ALL_MAIL_PURGE` is NOT set to `0`
+
+3. **Manual cleanup** (if needed):
+   - In Gmail web interface, go to All Mail
+   - Search for the original email by Message-ID
+   - Move to Trash manually
+
+4. **Check application version**: This fix was added in v2.8. If running older version, update to latest.
+
+**Prevention**: The system now automatically:
+- Searches `[Gmail]/All Mail` for the original Message-ID
+- Removes `\Inbox` and `Quarantine` labels
+- Adds `\Trash` label to permanently purge the original
+
+**Emergency Rollback**: If this causes issues:
+```bash
+# Temporarily disable Gmail All Mail purge
+GMAIL_ALL_MAIL_PURGE=0
+```
+Restart the application. This keeps INBOX/Quarantine cleanup but skips All Mail purge.
+
+---
+
 ### IMAP Authentication Failures (All Accounts)
 **Symptoms**:
 - All IMAP watchers fail to connect
