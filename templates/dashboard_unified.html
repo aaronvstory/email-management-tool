@@ -78,10 +78,6 @@
     display: block;
   }
 
-  .stat-card.pending .stat-value {
-    color: #fbbf24;
-  }
-
   .stat-card.held .stat-value {
     color: #f87171;
   }
@@ -103,8 +99,8 @@
     max-height: 600px;
     overflow-y: auto;
     overflow-x: hidden;
-    display: flex;
-    flex-direction: column;
+    display: block;
+    width: 100%;
   }
 
   #emailsList::-webkit-scrollbar {
@@ -137,15 +133,17 @@
 
   .email-list-item {
     display: grid;
-    grid-template-columns: minmax(150px, 200px) 1fr 100px 150px;
+    grid-template-columns: 250px 1fr 80px 140px;
     align-items: center;
     padding: 12px;
     border-bottom: 1px solid rgba(255,255,255,0.06);
     transition: background 0.2s;
-    gap: 15px;
+    gap: 12px;
     width: 100%;
     box-sizing: border-box;
     min-height: 50px;
+    max-width: 100%;
+    overflow: hidden;
   }
 
   .email-list-item:hover {
@@ -157,12 +155,31 @@
     border-bottom: none;
   }
 
+  .email-list-header {
+    display: grid;
+    grid-template-columns: 250px 1fr 80px 140px;
+    gap: 12px;
+    padding: 10px 12px;
+    border-bottom: 2px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.02);
+    margin-bottom: 5px;
+  }
+
+  .email-list-header > div {
+    color: #9ca3af;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
   .email-from {
     color: #ffffff;
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 250px;
   }
 
   .email-subject {
@@ -170,10 +187,25 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    min-width: 0;
   }
 
   .email-status {
     justify-self: center;
+    text-align: center;
+    width: 80px;
+  }
+
+  /* Consistent status badge styling */
+  .email-status .status-badge {
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 1px solid;
+    display: inline-block;
   }
 
   .email-time {
@@ -181,6 +213,9 @@
     font-size: 0.85rem;
     white-space: nowrap;
     text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
   }
 
   .empty-state {
@@ -198,6 +233,54 @@
   /* Reduce header spacing */
   .page-header {
     margin-bottom: 15px !important;
+  }
+
+  /* Responsive adjustments for smaller screens */
+  @media (max-width: 768px) {
+    .email-list-header,
+    .email-list-item {
+      grid-template-columns: 180px 1fr 70px 100px;
+      gap: 10px;
+      padding: 10px;
+    }
+
+    .email-from {
+      max-width: 180px;
+    }
+
+    .email-status {
+      width: 70px;
+    }
+
+    .email-time {
+      max-width: 100px;
+      font-size: 0.8rem;
+    }
+  }
+
+  @media (max-width: 576px) {
+    .email-list-header,
+    .email-list-item {
+      grid-template-columns: 150px 1fr 65px;
+      gap: 8px;
+    }
+
+    .email-list-header > div:last-child,
+    .email-time {
+      display: none;
+    }
+
+    .email-from {
+      max-width: 150px;
+    }
+
+    .email-status {
+      width: 65px;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+    }
   }
 </style>
 {% endblock %}
@@ -249,12 +332,8 @@
     <span class="stat-value" id="statTotal">{{ stats.total|default(0) }}</span>
     <span class="stat-label">Total</span>
   </div>
-  <div class="stat-card pending">
-    <span class="stat-value" id="statPending">{{ stats.pending|default(0) }}</span>
-    <span class="stat-label">Pending</span>
-  </div>
   <div class="stat-card held">
-    <span class="stat-value" id="statHeld">{{ stats.held|default(0) }}</span>
+    <span class="stat-value" id="statHeld">{{ (stats.held|default(0)) + (stats.pending|default(0)) }}</span>
     <span class="stat-label">Held</span>
   </div>
   <div class="stat-card released">
@@ -273,21 +352,29 @@
   </div>
 
   <div id="emailsList">
+    <!-- Column Headers -->
+    <div class="email-list-header">
+      <div>From</div>
+      <div>Subject</div>
+      <div style="text-align: center;">Status</div>
+      <div style="text-align: right;">Time</div>
+    </div>
+
     {% if recent_emails %}
       {% for email in recent_emails[:20] %}
       <div class="email-list-item" onclick="window.location.href='/email/{{ email.id }}'">
-        <div class="email-from">{{ email.sender[:30] }}{% if email.sender|length > 30 %}...{% endif %}</div>
-        <div class="email-subject">{{ email.subject[:60] }}{% if email.subject|length > 60 %}...{% endif %}</div>
+        <div class="email-from">{{ email.sender[:35] }}{% if email.sender|length > 35 %}...{% endif %}</div>
+        <div class="email-subject">{{ email.subject[:50] }}{% if email.subject|length > 50 %}...{% endif %}</div>
         <div class="email-status">
           {% set status = (email.status or '').lower() %}
-          {% if status == 'pending' %}
-          <span class="status-indicator warning">Pending</span>
-          {% elif status == 'held' %}
-          <span class="status-indicator danger">Held</span>
-          {% elif status == 'released' %}
-          <span class="status-indicator success">Released</span>
+          {% if status == 'pending' or status == 'held' %}
+          <span class="status-badge status-HELD">Held</span>
+          {% elif status == 'released' or status == 'approved' or status == 'delivered' %}
+          <span class="status-badge status-RELEASED">Released</span>
+          {% elif status == 'rejected' or status == 'discarded' %}
+          <span class="status-badge status-REJECTED">Rejected</span>
           {% else %}
-          <span class="status-indicator info">{{ email.status }}</span>
+          <span class="status-badge">{{ email.status }}</span>
           {% endif %}
         </div>
         <div class="email-time">{{ email.created_at }}</div>
@@ -330,8 +417,9 @@ async function loadStats() {
     const data = await response.json();
 
     document.getElementById('statTotal').textContent = data.total || 0;
-    document.getElementById('statPending').textContent = data.pending || 0;
-    document.getElementById('statHeld').textContent = data.held || 0;
+    // Combine pending and held into single "Held" stat
+    const heldTotal = (data.held || 0) + (data.pending || 0);
+    document.getElementById('statHeld').textContent = heldTotal;
     document.getElementById('statReleased').textContent = data.released || 0;
   } catch (error) {
     console.error('Error loading stats:', error);
@@ -372,35 +460,68 @@ async function loadRecentEmails() {
     // Clear and rebuild the container
     container.innerHTML = '';
 
+    // Add header row
+    const headerDiv = document.createElement('div');
+    headerDiv.className = 'email-list-header';
+    headerDiv.innerHTML = `
+      <div>From</div>
+      <div>Subject</div>
+      <div style="text-align: center;">Status</div>
+      <div style="text-align: right;">Time</div>
+    `;
+    container.appendChild(headerDiv);
+
     emails.slice(0, 20).forEach(email => {
       const status = (email.status || email.interception_status || '').toLowerCase();
-      let statusBadge = '';
-
-      if (status === 'pending') {
-        statusBadge = '<span class="status-indicator warning">Pending</span>';
-      } else if (status === 'held') {
-        statusBadge = '<span class="status-indicator danger">Held</span>';
-      } else if (status === 'released') {
-        statusBadge = '<span class="status-indicator success">Released</span>';
-      } else {
-        statusBadge = `<span class="status-indicator info">${email.status || 'Unknown'}</span>`;
-      }
-
       const sender = email.sender || 'Unknown';
       const subject = email.subject || '(No Subject)';
       const time = email.created_at || '';
 
-      // Create element instead of using innerHTML to avoid parsing issues
+      // Create element using DOM methods for reliable construction
       const emailDiv = document.createElement('div');
       emailDiv.className = 'email-list-item';
       emailDiv.onclick = () => window.location.href = `/email/${email.id}`;
 
-      emailDiv.innerHTML = `
-        <div class="email-from">${sender.substring(0, 30)}${sender.length > 30 ? '...' : ''}</div>
-        <div class="email-subject">${subject.substring(0, 60)}${subject.length > 60 ? '...' : ''}</div>
-        <div class="email-status">${statusBadge}</div>
-        <div class="email-time">${time}</div>
-      `;
+      // Create sender column
+      const senderDiv = document.createElement('div');
+      senderDiv.className = 'email-from';
+      senderDiv.textContent = sender.substring(0, 35) + (sender.length > 35 ? '...' : '');
+
+      // Create subject column
+      const subjectDiv = document.createElement('div');
+      subjectDiv.className = 'email-subject';
+      subjectDiv.textContent = subject.substring(0, 50) + (subject.length > 50 ? '...' : '');
+
+      // Create status column with badge - Consolidate PENDING and HELD
+      const statusDiv = document.createElement('div');
+      statusDiv.className = 'email-status';
+
+      const statusBadge = document.createElement('span');
+      if (status === 'pending' || status === 'held') {
+        statusBadge.className = 'status-badge status-HELD';
+        statusBadge.textContent = 'Held';
+      } else if (status === 'released' || status === 'approved' || status === 'delivered') {
+        statusBadge.className = 'status-badge status-RELEASED';
+        statusBadge.textContent = 'Released';
+      } else if (status === 'rejected' || status === 'discarded') {
+        statusBadge.className = 'status-badge status-REJECTED';
+        statusBadge.textContent = 'Rejected';
+      } else {
+        statusBadge.className = 'status-badge';
+        statusBadge.textContent = email.status || 'Unknown';
+      }
+      statusDiv.appendChild(statusBadge);
+
+      // Create time column
+      const timeDiv = document.createElement('div');
+      timeDiv.className = 'email-time';
+      timeDiv.textContent = time;
+
+      // Append all columns to the row
+      emailDiv.appendChild(senderDiv);
+      emailDiv.appendChild(subjectDiv);
+      emailDiv.appendChild(statusDiv);
+      emailDiv.appendChild(timeDiv);
 
       container.appendChild(emailDiv);
     });
@@ -430,8 +551,9 @@ try {
       // Only update if it matches our current filter
       if (!currentAccountId || data.account_id === currentAccountId) {
         document.getElementById('statTotal').textContent = data.total || 0;
-        document.getElementById('statPending').textContent = data.pending || 0;
-        document.getElementById('statHeld').textContent = data.held || 0;
+        // Combine pending and held
+        const heldTotal = (data.held || 0) + (data.pending || 0);
+        document.getElementById('statHeld').textContent = heldTotal;
         document.getElementById('statReleased').textContent = data.released || 0;
       }
     } catch (err) {

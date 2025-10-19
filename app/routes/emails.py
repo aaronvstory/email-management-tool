@@ -101,6 +101,9 @@ def api_emails_unified():
         if status_filter == 'RELEASED':
             # Treat released as interception_status=RELEASED or legacy delivered/approved (exclude SENT/outbound)
             query += " AND (interception_status='RELEASED' OR status IN ('APPROVED','DELIVERED'))"
+        elif status_filter == 'HELD':
+            # HELD now includes both PENDING and HELD statuses
+            query += " AND (interception_status IN ('HELD', 'PENDING') OR status IN ('HELD', 'PENDING'))"
         else:
             query += " AND (interception_status = ? OR status = ?)"
             params.extend([status_filter, status_filter])

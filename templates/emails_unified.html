@@ -301,19 +301,11 @@
     </button>
     <button class="status-tab" data-status="HELD" onclick="switchStatus('HELD')">
       <i class="bi bi-hand-stop"></i> Held
-      <span class="badge" id="badge-held">{{ held_count }}</span>
-    </button>
-    <button class="status-tab" data-status="PENDING" onclick="switchStatus('PENDING')">
-      <i class="bi bi-clock"></i> Pending
-      <span class="badge" id="badge-pending">{{ pending_count }}</span>
-    </button>
-    <button class="status-tab" data-status="APPROVED" onclick="switchStatus('APPROVED')">
-      <i class="bi bi-check-circle"></i> Approved
-      <span class="badge" id="badge-approved">{{ approved_count }}</span>
+      <span class="badge" id="badge-held">{{ (held_count|default(0)) + (pending_count|default(0)) }}</span>
     </button>
     <button class="status-tab" data-status="RELEASED" onclick="switchStatus('RELEASED')">
       <i class="bi bi-send-check"></i> Released
-      <span class="badge" id="badge-released">{{ released_count }}</span>
+      <span class="badge" id="badge-released">{{ (released_count|default(0)) + (approved_count|default(0)) }}</span>
     </button>
     <button class="status-tab" data-status="REJECTED" onclick="switchStatus('REJECTED')">
       <i class="bi bi-x-circle"></i> Rejected
@@ -605,12 +597,12 @@ async function reloadEmails() {
     const data = await response.json();
     currentEmails = data.emails || [];
     
-    // Update counts
+    // Update counts (combine PENDING and HELD)
     document.getElementById('badge-all').textContent = data.counts.total || 0;
-    document.getElementById('badge-held').textContent = data.counts.held || 0;
-    document.getElementById('badge-pending').textContent = data.counts.pending || 0;
-    document.getElementById('badge-approved').textContent = data.counts.approved || 0;
-    document.getElementById('badge-released').textContent = data.counts.released || 0;
+    const heldCount = (data.counts.held || 0) + (data.counts.pending || 0);
+    document.getElementById('badge-held').textContent = heldCount;
+    const releasedCount = (data.counts.released || 0) + (data.counts.approved || 0);
+    document.getElementById('badge-released').textContent = releasedCount;
     document.getElementById('badge-rejected').textContent = data.counts.rejected || 0;
     
     renderEmails(currentEmails);
