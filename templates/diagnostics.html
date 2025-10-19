@@ -21,7 +21,7 @@
   <div class="stat-card-modern">
     <span class="stat-label">SMTP Status</span>
     <span class="stat-value" id="smtpStatus">
-      <span class="status-indicator info">Checking...</span>
+      <span class="tag-chip muted">Checking...</span>
     </span>
   </div>
   <div class="stat-card-modern">
@@ -112,9 +112,10 @@ async function loadSystemStatus() {
     // Check SMTP
     const smtpResp = await fetch('/api/smtp-health', { credentials: 'same-origin' });
     const smtpData = await smtpResp.json();
-    document.getElementById('smtpStatus').innerHTML = smtpData.status === 'running'
-      ? '<span class="status-indicator success">Running</span>'
-      : '<span class="status-indicator danger">Stopped</span>';
+    const smtpChip = smtpData.status === 'running'
+      ? '<span class="tag-chip success"><i class="bi bi-check-circle"></i> Running</span>'
+      : '<span class="tag-chip accent"><i class="bi bi-exclamation-triangle"></i> Stopped</span>';
+    document.getElementById('smtpStatus').innerHTML = smtpChip;
 
     // Check watchers
     const watcherResp = await fetch('/api/watchers/status', { credentials: 'same-origin' });
@@ -218,3 +219,4 @@ function clearLogs() {
 document.addEventListener('DOMContentLoaded', loadSystemStatus);
 </script>
 {% endblock %}
+

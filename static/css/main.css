@@ -1343,24 +1343,25 @@ a:focus-visible,
 
 /* System overview cards */
 .stat-card-modern {
-    background: var(--gradient-surface);
-    border-radius: var(--radius-xl);
-    padding: 20px;
-    box-shadow: var(--shadow-sm);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    background: var(--surface-highest);
+    border-radius: var(--radius-lg);
+    padding: 18px;
     border: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 
 .stat-card-modern:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-emphasis);
 }
 
 .stat-card-modern .stat-label {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -1368,16 +1369,16 @@ a:focus-visible,
 }
 
 .stat-card-modern .stat-value {
-    font-size: 1.8rem;
+    font-size: 1.75rem;
     font-weight: 700;
     color: var(--text-primary);
-    line-height: 1.2;
+    line-height: 1.1;
 }
 
 .stat-card-modern .stat-delta {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: var(--text-disabled);
-    margin-top: 4px;
+    margin-top: 2px;
 }
 
 .panel-actions {
@@ -2057,6 +2058,24 @@ a:focus-visible,
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: var(--space-sm);
     margin-bottom: var(--space-md);
+}
+
+.stats-grid .stat-card-modern {
+    min-height: 100%;
+}
+
+.stat-card-modern.held .stat-value {
+    color: var(--danger-light);
+}
+
+.stat-card-modern.released .stat-value {
+    color: var(--success-light);
+}
+
+@media (max-width: 768px) {
+    .stats-grid .stat-card-modern .stat-value {
+        font-size: 1.5rem;
+    }
 }
 
 .table-scroll {
