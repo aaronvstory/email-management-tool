@@ -5,10 +5,10 @@
   "description": "Linting and formatting for static assets and templates",
   "scripts": {
     "lint": "npm run lint:js && npm run lint:css",
-    "lint:js": "eslint \\"static/js/**/*.js\\" --max-warnings=0",
-    "lint:css": "stylelint \\"static/**/*.css\\"",
-    "format": "prettier --write \\"{templates,static}/**/*.{html,css,js}\\"",
-    "format:check": "prettier --check \\"{templates,static}/**/*.{html,css,js}\\""
+    "lint:js": "eslint \"static/js/**/*.js\" --max-warnings=0",
+    "lint:css": "stylelint \"static/**/*.css\"",
+    "format": "prettier --write \"{templates,static}/**/*.{html,css,js}\"",
+    "format:check": "prettier --check \"{templates,static}/**/*.{html,css,js}\""
   },
   "devDependencies": {
     "eslint": "^9.13.0",
