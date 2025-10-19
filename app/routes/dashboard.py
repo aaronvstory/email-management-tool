@@ -6,6 +6,7 @@ Routes: /dashboard, /dashboard/<tab>, /test-dashboard
 from flask import Blueprint, render_template, request, redirect, url_for
 from flask_login import login_required, current_user
 import sqlite3
+import json
 from app.utils.db import DB_PATH, get_db, fetch_counts
 
 dashboard_bp = Blueprint('dashboard', __name__)
@@ -37,7 +38,7 @@ def dashboard(tab='overview'):
 
         # Get recent emails for selected account
         recent_emails = cursor.execute("""
-            SELECT id, sender, recipients, subject, status, risk_score, created_at
+            SELECT id, sender, recipients, subject, status, interception_status, created_at, body_text
             FROM email_messages
             WHERE account_id = ? AND (direction IS NULL OR direction!='outbound')
             ORDER BY created_at DESC
@@ -49,7 +50,7 @@ def dashboard(tab='overview'):
 
         # Get recent emails from all accounts
         recent_emails = cursor.execute("""
-            SELECT id, sender, recipients, subject, status, risk_score, created_at
+            SELECT id, sender, recipients, subject, status, interception_status, created_at, body_text
             FROM email_messages
             WHERE (direction IS NULL OR direction!='outbound')
             ORDER BY created_at DESC
@@ -67,11 +68,38 @@ def dashboard(tab='overview'):
         ORDER BY priority DESC, rule_name
     """).fetchall()
 
+    # Normalize data for template
+    email_payload = []
+    for row in recent_emails:
+        record = dict(row)
+        recipients = record.get('recipients')
+        if recipients:
+            try:
+                if isinstance(recipients, str):
+                    # Attempt JSON parse, fallback to CSV
+                    parsed = json.loads(recipients)
+                    if isinstance(parsed, list):
+                        record['recipients'] = parsed
+                    else:
+                        record['recipients'] = [recipients]
+                else:
+                    record['recipients'] = list(recipients)
+            except json.JSONDecodeError:
+                record['recipients'] = [addr.strip() for addr in recipients.split(',') if addr.strip()]
+        else:
+            record['recipients'] = []
+
+        body = record.get('body_text') or ''
+        preview = ' '.join(body.split())[:160]
+        record['preview_snippet'] = preview
+
+        email_payload.append(record)
+
     conn.close()
 
     return render_template('dashboard_unified.html',
                          stats=stats,
-                         recent_emails=recent_emails,
+                         recent_emails=email_payload,
                          active_rules=active_rules,
                          rules=rules,
                          accounts=accounts,

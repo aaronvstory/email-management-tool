@@ -141,7 +141,7 @@ async function loadOverview(){
         : '';
 
       const card = document.createElement('div');
-      card.className = 'stat-card-modern watcher-card';
+      card.className = 'card-unified watcher-card';
       card.innerHTML = `
         <div class="stat-label">${accountName}</div>
         <div class="meta-grid">
@@ -215,7 +215,17 @@ async function validateCounts(){
     const j = await r.json();
     if(!j.success) throw new Error(j.error||'Failed');
     const c = j.counts;
-    if(window.showInfo) showInfo(`Counts → total:${c.total} held:${c.held} pending:${c.pending} released:${c.released} rejected:${c.rejected}`);
+    if(window.showInfo) {
+      const lines = [
+        'Counts →',
+        `• Total: ${c.total}`,
+        `• Held: ${c.held}`,
+        `• Pending: ${c.pending}`,
+        `• Released: ${c.released}`,
+        `• Rejected: ${c.rejected}`
+      ];
+      showInfo(lines.join('\n'));
+    }
   }catch(e){ if(window.showError) showError('Validation failed'); }
 }
 </script>

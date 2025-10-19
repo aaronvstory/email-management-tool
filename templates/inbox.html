@@ -33,7 +33,7 @@
     color: #ffffff;
   }
 
-  .inbox-panel { background: linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%); backdrop-filter: blur(10px); border:1px solid rgba(255,255,255,0.06); border-radius:18px; padding:20px; }
+  .inbox-panel { background: var(--surface-highest); border:1px solid var(--border-subtle); border-radius: var(--radius-lg); padding:20px; box-shadow: var(--shadow-sm); }
   .email-row { display:grid; grid-template-columns: 70px 1fr 120px 90px; gap:1rem; padding:.75rem 1rem; border-bottom:1px solid rgba(255,255,255,0.06); cursor:pointer; transition: background .2s; }
   .email-row:hover { background: rgba(255,255,255,0.05); }
   .email-row:last-child { border-bottom:none; }

@@ -146,12 +146,12 @@ def api_emails_unified():
 
     conn.close()
 
-    # Keep counts consistent with current filter for the UI badges
-    total_for_ui = len(email_list) if (status_filter is None or status_filter == 'ALL') else counts.get('total', 0)
+    # Return accurate counts from database, not len(email_list) which is limited by LIMIT clause
+    # The "total" count should ALWAYS be >= individual status counts (held, released, rejected)
     return jsonify({
         'emails': email_list,
         'counts': {
-            'total': total_for_ui,
+            'total': counts.get('total', 0),
             'held': counts.get('held', 0),
             'pending': counts.get('pending', 0),
             'approved': counts.get('approved', 0),
@@ -271,7 +271,16 @@ def view_email(email_id):
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    email_row = cursor.execute("SELECT * FROM email_messages WHERE id = ?", (email_id,)).fetchone()
+    # Join with accounts to show meaningful account info in the viewer
+    email_row = cursor.execute(
+        """
+        SELECT em.*, ea.account_name, ea.email_address
+        FROM email_messages em
+        LEFT JOIN email_accounts ea ON em.account_id = ea.id
+        WHERE em.id = ?
+        """,
+        (email_id,)
+    ).fetchone()
 
     if not email_row:
         conn.close()

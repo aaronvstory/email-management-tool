@@ -54,16 +54,16 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
     <div class="provider-grid">
-      <button type="button" class="provider-btn" onclick="setProvider(event, 'gmail')">
+      <button type="button" class="provider-btn" data-provider="gmail" onclick="setProvider(event, 'gmail')">
         <i class="fab fa-google"></i> Gmail
       </button>
-      <button type="button" class="provider-btn" onclick="setProvider(event, 'outlook')">
+      <button type="button" class="provider-btn" data-provider="outlook" onclick="setProvider(event, 'outlook')">
         <i class="fab fa-microsoft"></i> Outlook
       </button>
-      <button type="button" class="provider-btn" onclick="setProvider(event, 'hostinger')">
+      <button type="button" class="provider-btn" data-provider="hostinger" onclick="setProvider(event, 'hostinger')">
         <i class="fas fa-server"></i> Hostinger
       </button>
-      <button type="button" class="provider-btn" onclick="setProvider(event, 'custom')">
+      <button type="button" class="provider-btn" data-provider="custom" onclick="setProvider(event, 'custom')">
         <i class="fas fa-cog"></i> Custom
       </button>
     </div>
@@ -163,20 +163,27 @@
 
 {% block extra_js %}
 <script>
-const providerSettings = {
+  const providerSettings = {
   gmail: { imap_host: 'imap.gmail.com', imap_port: 993, smtp_host: 'smtp.gmail.com', smtp_port: 587 },
   outlook: { imap_host: 'outlook.office365.com', imap_port: 993, smtp_host: 'smtp.office365.com', smtp_port: 587 },
   hostinger: { imap_host: 'imap.hostinger.com', imap_port: 993, smtp_host: 'smtp.hostinger.com', smtp_port: 465 }
 };
 
-function setProvider(evt, provider) {
+function setProvider(arg, maybeProvider) {
+  const evt = (arg && arg.currentTarget) ? arg : null;
+  const provider = typeof arg === 'string' && !maybeProvider ? arg : maybeProvider;
+  const selectedProvider = provider || (evt && evt.currentTarget && evt.currentTarget.dataset.provider) || 'custom';
+
   document.querySelectorAll('.provider-btn').forEach(btn => btn.classList.remove('active'));
-  if (evt && evt.currentTarget) {
+  if (evt) {
     evt.currentTarget.classList.add('active');
+  } else if (selectedProvider) {
+    const targetBtn = document.querySelector(`.provider-btn[data-provider="${selectedProvider}"]`);
+    if (targetBtn) targetBtn.classList.add('active');
   }
 
-  if (provider !== 'custom' && providerSettings[provider]) {
-    const settings = providerSettings[provider];
+  if (selectedProvider !== 'custom' && providerSettings[selectedProvider]) {
+    const settings = providerSettings[selectedProvider];
     document.getElementById('imap_host').value = settings.imap_host;
     document.getElementById('imap_port').value = settings.imap_port;
     document.getElementById('smtp_host').value = settings.smtp_host;

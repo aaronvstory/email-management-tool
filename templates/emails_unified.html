@@ -74,7 +74,7 @@
   }
 
   .status-tab.active {
-    background: rgba(220,38,38,0.16);
+    background: var(--brand-primary-tint);
     border-color: rgba(220,38,38,0.32);
     color: var(--text-primary);
     box-shadow: none;
@@ -299,11 +299,11 @@
     </button>
     <button class="status-tab" data-status="HELD" onclick="switchStatus('HELD')">
       <i class="bi bi-hand-stop"></i> Held
-      <span class="badge" id="badge-held">{{ (held_count|default(0)) + (pending_count|default(0)) }}</span>
+      <span class="badge" id="badge-held">{{ held_count|default(0) }}</span>
     </button>
     <button class="status-tab" data-status="RELEASED" onclick="switchStatus('RELEASED')">
       <i class="bi bi-send-check"></i> Released
-      <span class="badge" id="badge-released">{{ (released_count|default(0)) + (approved_count|default(0)) }}</span>
+      <span class="badge" id="badge-released">{{ released_count|default(0) }}</span>
     </button>
     <button class="status-tab" data-status="REJECTED" onclick="switchStatus('REJECTED')">
       <i class="bi bi-x-circle"></i> Rejected
@@ -369,9 +369,9 @@
 
 <!-- Edit Email Modal -->
 <div class="modal fade" id="editEmailModal" tabindex="-1" aria-labelledby="editEmailModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content" style="background:linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%);border:1px solid rgba(255,255,255,0.06);">
-      <div class="modal-header" style="background:linear-gradient(135deg,#dc2626 0%,#991b1b 50%,#7f1d1d 100%);">
+  <div class="modal-dialog modal-lg modal-unified">
+    <div class="modal-content">
+      <div class="modal-header">
         <h5 class="modal-title text-white" id="editEmailModalLabel">
           <i class="bi bi-pencil-square"></i> Edit Email
         </h5>
@@ -596,12 +596,10 @@ async function reloadEmails() {
     const data = await response.json();
     currentEmails = data.emails || [];
     
-    // Update counts (combine PENDING and HELD)
+    // Update counts - backend already combines PENDING and HELD, RELEASED includes APPROVED
     document.getElementById('badge-all').textContent = data.counts.total || 0;
-    const heldCount = (data.counts.held || 0) + (data.counts.pending || 0);
-    document.getElementById('badge-held').textContent = heldCount;
-    const releasedCount = (data.counts.released || 0) + (data.counts.approved || 0);
-    document.getElementById('badge-released').textContent = releasedCount;
+    document.getElementById('badge-held').textContent = data.counts.held || 0;
+    document.getElementById('badge-released').textContent = data.counts.released || 0;
     document.getElementById('badge-rejected').textContent = data.counts.rejected || 0;
     
     renderEmails(currentEmails);
@@ -1098,3 +1096,4 @@ async function performBulkAction(action, emailIds) {
 }
 </script>
 {% endblock %}
+

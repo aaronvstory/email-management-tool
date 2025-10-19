@@ -34,11 +34,12 @@ from app.routes.diagnostics import diagnostics_bp
 from app.routes.legacy import legacy_bp
 from app.routes.styleguide import styleguide_bp
 from app.routes.watchers import watchers_bp
+from app.routes.system import system_bp
 from datetime import datetime
 from email import policy
 from email import message_from_bytes
 
-from flask import Flask, request, redirect, url_for, flash, render_template, jsonify
+from flask import Flask, request, redirect, url_for, flash, render_template, jsonify, g
 from flask_login import (
     LoginManager, login_user, login_required, logout_user,
     current_user, UserMixin
@@ -561,6 +562,7 @@ app.register_blueprint(emails_bp)        # Email queue + viewer: /emails, /email
 app.register_blueprint(diagnostics_bp)   # Diagnostics & tests
 app.register_blueprint(legacy_bp)        # Legacy compatibility routes
 app.register_blueprint(styleguide_bp)    # UI style guide showcase
+app.register_blueprint(system_bp)        # System diagnostics APIs
 app.register_blueprint(watchers_bp)      # Watchers & Settings management
 
         # (Legacy inline IMAP loop removed during refactor)

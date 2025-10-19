@@ -112,11 +112,17 @@ def get_all_messages(status_filter=None, limit: int = 200, *, conn: Optional[sql
         ).fetchall()
 
 
-def fetch_counts(account_id: int | None = None, *, conn: Optional[sqlite3.Connection] = None, include_outbound: bool = False) -> dict:
+def fetch_counts(account_id: int | None = None, *, conn: Optional[sqlite3.Connection] = None, include_outbound: bool = False, exclude_discarded: bool = True) -> dict:
     """Single-pass aggregate counts with optional connection injection.
 
     Includes 'released' defined as interception_status='RELEASED' OR legacy
     statuses (SENT, APPROVED, DELIVERED).
+    
+    Args:
+        account_id: Filter by specific account ID
+        conn: Optional database connection to reuse
+        include_outbound: Include outbound/sent emails in counts (default: False)
+        exclude_discarded: Exclude DISCARDED emails from total count (default: True)
     """
     # Treat 'released' as RELEASED/APPROVED/DELIVERED. Exclude SENT (outbound) by default.
     legacy_released_clause = "(interception_status='RELEASED' OR status IN ('APPROVED','DELIVERED'))"
@@ -128,16 +134,21 @@ def fetch_counts(account_id: int | None = None, *, conn: Optional[sqlite3.Connec
     # Unless explicitly requested, exclude outbound (compose) records from counts/UI badges
     if not include_outbound:
         clauses.append("(direction IS NULL OR direction!='outbound')")
+    # Exclude DISCARDED emails from total count by default (matches ALL view query)
+    if exclude_discarded:
+        clauses.append("(interception_status IS NULL OR interception_status != 'DISCARDED')")
     where_sql = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+    # Count each email only once per category - use OR logic to avoid double-counting
+    # when both interception_status and legacy status fields are set
     sql = f"""
         SELECT
             COUNT(*) AS total,
-            SUM(CASE WHEN status='PENDING' THEN 1 ELSE 0 END) AS pending,
-            SUM(CASE WHEN status='APPROVED' THEN 1 ELSE 0 END) AS approved,
-            SUM(CASE WHEN status='REJECTED' THEN 1 ELSE 0 END) AS rejected,
+            SUM(CASE WHEN interception_status IN ('HELD', 'PENDING') OR status IN ('HELD', 'PENDING') THEN 1 ELSE 0 END) AS held,
+            SUM(CASE WHEN {legacy_released_clause} THEN 1 ELSE 0 END) AS released,
+            SUM(CASE WHEN interception_status='REJECTED' OR status IN ('REJECTED', 'DISCARDED') THEN 1 ELSE 0 END) AS rejected,
             SUM(CASE WHEN status='SENT' THEN 1 ELSE 0 END) AS sent,
-            SUM(CASE WHEN interception_status='HELD' THEN 1 ELSE 0 END) AS held,
-            SUM(CASE WHEN {legacy_released_clause} THEN 1 ELSE 0 END) AS released
+            SUM(CASE WHEN status='APPROVED' THEN 1 ELSE 0 END) AS approved,
+            SUM(CASE WHEN status='PENDING' THEN 1 ELSE 0 END) AS pending
         FROM email_messages
         {where_sql}
     """

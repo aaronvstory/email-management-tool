@@ -79,7 +79,9 @@ function normalizeToastMessage(raw) {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
 
-    return escaped.replace(/\r?\n/g, '<br>');
+    return escaped
+        .replace(/\r?\n/g, '<br>')
+        .replace(/\s{2,}/g, match => '&nbsp;'.repeat(match.length));
 }
 
 function ensureToastStyles() {
@@ -110,7 +112,7 @@ function ensureToastStyles() {
 
         .toast-compact {
             position: relative;
-            background: linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 55%, #242424 100%);
+            background: var(--surface-highest);
             background-color: var(--toast-bg, rgba(26,26,26,0.94));
             border: 1px solid var(--toast-border-color, #dc2626);
             border-radius: 12px;
@@ -134,17 +136,20 @@ function ensureToastStyles() {
 
         .toast-compact .toast-inner {
             display: flex;
-            align-items: flex-start;
-            gap: 14px;
-            padding: 14px 36px 14px 18px;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 44px 14px 18px;
             flex-wrap: nowrap;
         }
 
         .toast-compact .toast-icon {
             font-size: 1.1rem;
             color: var(--toast-icon-color, #dc2626);
-            margin-top: 2px;
             flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
         }
 
         .toast-compact .toast-message {
@@ -174,29 +179,9 @@ function ensureToastStyles() {
             background: rgba(255,255,255,0.25);
         }
 
-        .toast-compact > .btn-close {
-            position: absolute !important;
-            top: 8px !important;
-            right: 8px !important;
-            width: 24px !important;
-            height: 24px !important;
-            padding: 4px !important;
-            margin: 0 !important;
-            opacity: 0.6 !important;
-            z-index: 10 !important;
-            background-size: 12px !important;
-            border-radius: 4px !important;
-        }
-
-        .toast-compact > .btn-close:hover {
-            opacity: 1 !important;
-            background-color: rgba(255,255,255,0.1) !important;
-        }
-
-        .toast-compact > .btn-close:focus {
-            outline: none !important;
-            box-shadow: none !important;
-        }
+        /* Removed close button entirely to prevent overlap issues */
+        .toast-compact > .btn-close { display: none !important; }
+        .toast-compact .btn-close { display: none !important; }
 
         .toast-compact.toast-confirm {
             border-color: var(--toast-border-color, #f59e0b);
@@ -204,8 +189,9 @@ function ensureToastStyles() {
 
         .toast-compact.toast-confirm .toast-inner {
             flex-direction: column;
+            align-items: stretch;
             gap: 16px;
-            padding: 18px;
+            padding: 20px 20px 18px 20px;
         }
 
         .toast-compact.toast-confirm .toast-header {
@@ -251,8 +237,9 @@ function ensureToastStyles() {
         }
 
         .toast-compact.toast-confirm .toast-actions .btn-primary-modern {
-            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
-            border: none;
+            background: rgba(220,38,38,0.18);
+            border: 1px solid rgba(220,38,38,0.35);
+            color: #fef2f2;
         }
     `;
 
@@ -322,7 +309,7 @@ function showToast(message, type = 'info', duration = 4000) {
     };
 
     const config = typeConfig[type] || typeConfig.info;
-    const normalizedMessage = normalizeToastMessage(message);
+        const normalizedMessage = normalizeToastMessage(message);
 
     // Create toast element with dark theme styling
     const toastEl = document.createElement('div');
@@ -335,9 +322,8 @@ function showToast(message, type = 'info', duration = 4000) {
     toastEl.style.setProperty('--toast-bg', config.bg);
 
     toastEl.innerHTML = `
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
         <div class="toast-inner">
-            <i class="toast-icon bi ${config.icon}"></i>
+            <span class="toast-icon bi ${config.icon}" aria-hidden="true"></span>
             <div class="toast-message toast-body">${normalizedMessage}</div>
         </div>
     `;

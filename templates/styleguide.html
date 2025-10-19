@@ -3,13 +3,50 @@
 
 {% block extra_css %}
 <style>
-  /* Scoped styles for the styleguide page only */
-  #styleguide .token{border-radius:8px;padding:10px 12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12)}
-  #styleguide .swatch{height:34px;border-radius:8px;border:1px solid rgba(255,255,255,0.15)}
-  #styleguide .code{background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:12px 14px;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;font-size:.85rem;white-space:pre-wrap}
-  #styleguide .section-title{margin-top:10px;margin-bottom:6px}
-  #styleguide .grid-demo>div{background:rgba(255,255,255,0.06);border:1px dashed rgba(255,255,255,0.15);border-radius:8px;padding:10px;text-align:center}
-  #styleguide .token-grid .col{padding:8px !important}
+  #styleguide .token {
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    background: var(--surface-base);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+  }
+
+  #styleguide .swatch {
+    height: 34px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
+    margin-bottom: 6px;
+  }
+
+  #styleguide .code {
+    background: var(--surface-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .85rem;
+    white-space: pre-wrap;
+  }
+
+  #styleguide .section-title{
+    margin-top: 10px;
+    margin-bottom: 6px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  #styleguide .grid-demo>div{
+    background: var(--surface-base);
+    border: 1px dashed var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 10px;
+    text-align: center;
+    color: var(--text-muted);
+  }
+
+  #styleguide .token-grid .col{
+    padding: 8px !important;
+  }
 </style>
 {% endblock %}
 
@@ -38,24 +75,24 @@
 
       <h5 class="mt-2">1) Design Tokens</h5>
       <div class="row token-grid">
-        <div class="col-6 col-md-4 col-lg-2"><div class="token"><div class="swatch" style="background:#dc2626"></div><small>--primary-color<br>#dc2626</small></div></div>
-        <div class="col-6 col-md-4 col-lg-2"><div class="token"><div class="swatch" style="background:#991b1b"></div><small>--secondary-color<br>#991b1b</small></div></div>
-        <div class="col-6 col-md-4 col-lg-2"><div class="token"><div class="swatch" style="background:#10b981"></div><small>--success-color<br>#10b981</small></div></div>
-        <div class="col-6 col-md-4 col-lg-2"><div class="token"><div class="swatch" style="background:#f59e0b"></div><small>--warning-color<br>#f59e0b</small></div></div>
-        <div class="col-6 col-md-4 col-lg-2"><div class="token"><div class="swatch" style="background:#1a1a1a"></div><small>--card-bg<br>#1a1a1a</small></div></div>
-        <div class="col-6 col-md-4 col-lg-2"><div class="token"><div class="swatch" style="background:#0a0a0a"></div><small>--dark-bg<br>#0a0a0a</small></div></div>
+        <div class="col-6 col-md-4 col-lg-2"><div class="token"><div class="swatch" style="background:var(--brand-primary)"></div><small>--brand-primary<br>#dc2626</small></div></div>
+        <div class="col-6 col-md-4 col-lg-2"><div class="token"><div class="swatch" style="background:var(--brand-primary-dark)"></div><small>--brand-primary-dark<br>#991b1b</small></div></div>
+        <div class="col-6 col-md-4 col-lg-2"><div class="token"><div class="swatch" style="background:var(--success-base)"></div><small>--success-base<br>#10b981</small></div></div>
+        <div class="col-6 col-md-4 col-lg-2"><div class="token"><div class="swatch" style="background:var(--warning-base)"></div><small>--warning-base<br>#f59e0b</small></div></div>
+        <div class="col-6 col-md-4 col-lg-2"><div class="token"><div class="swatch" style="background:var(--surface-highest)"></div><small>--surface-highest<br>#242424</small></div></div>
+        <div class="col-6 col-md-4 col-lg-2"><div class="token"><div class="swatch" style="background:var(--surface-base)"></div><small>--surface-base<br>#1a1a1a</small></div></div>
       </div>
       <div class="row mt-2">
         <div class="col-md-6">
           <div class="alert alert-warning mb-2">Use white text (#fff) on dark surfaces (≥4.5:1). Avoid low-contrast light grays.</div>
-          <div class="code">/* Usage */
-button.btn-primary-modern { background: linear-gradient(135deg, var(--primary-color) 0%, #991b1b 50%, #7f1d1d 100%); }
+      <div class="code">/* Usage */
+.btn-primary-modern { background: rgba(220,38,38,0.18); border: 1px solid rgba(220,38,38,0.35); }
 .input-modern { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); color:#fff; }
-.table-modern thead { background: linear-gradient(135deg, var(--primary-color) 0%, #991b1b 50%, #7f1d1d 100%); }</div>
+.table-modern thead { background: rgba(220,38,38,0.12); }</div>
         </div>
         <div class="col-md-6">
-          <div class="token mb-2"><strong>Spacing scale</strong><br><small>.mb-0/1/2/3/4/5 (0, 8, 15, 25, 35, 50px)</small></div>
-          <div class="token"><strong>Radii</strong><br><small>Buttons 6px • Inputs 8px • Cards 10-20px</small></div>
+      <div class="token mb-2"><strong>Spacing scale</strong><br><small>--space-xs/sm/md/lg/xl (8, 12, 20, 30, 40px)</small></div>
+      <div class="token"><strong>Radii</strong><br><small>--radius-sm/md/lg/xl (6px, 8px, 12px, 15px)</small></div>
         </div>
       </div>
 
@@ -91,8 +128,8 @@ button.btn-primary-modern { background: linear-gradient(135deg, var(--primary-co
       </div>
       <div class="row">
         <div class="col-md-6"><div class="alert alert-info mb-2">Use one primary action per area; use confirmToast for destructive actions.</div></div>
-        <div class="col-md-6"><div class="code">&lt;button class="btn btn-primary-modern"&gt;Save&lt;/button&gt;
-&lt;button class="btn btn-secondary"&gt;Cancel&lt;/button&gt;</div></div>
+        <div class="col-md-6"><div class="code">&lt;button class=&quot;btn btn-primary-modern&quot;&gt;Save&lt;/button&gt;
+&lt;button class=&quot;btn btn-secondary&quot;&gt;Cancel&lt;/button&gt;</div></div>
       </div>
 
       <h5 class="mt-4">4) Forms & Validation</h5>
@@ -187,3 +224,4 @@ confirmToast('Are you sure?', onConfirm)</div>
   </div>
 </div>
 {% endblock %}
+

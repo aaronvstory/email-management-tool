@@ -72,10 +72,6 @@ def setup_app_logging(app, log_dir: str = "logs", log_level: str = "INFO") -> No
     try:
         logger: Logger = app.logger  # type: ignore
 
-        # Only setup if no handlers exist (avoid duplicates)
-        if logger.handlers:
-            return
-
         # Get log level from environment or parameter
         level_name = os.getenv("LOG_LEVEL", log_level).upper()
         level = getattr(logging, level_name, logging.INFO)
@@ -85,29 +81,34 @@ def setup_app_logging(app, log_dir: str = "logs", log_level: str = "INFO") -> No
         log_path = Path(log_dir)
         log_path.mkdir(parents=True, exist_ok=True)
 
-        # 1. JSON File Handler with Rotation (10MB max, 5 backups)
+        # If no handlers yet, attach file handlers; otherwise reuse existing ones
         json_log_file = log_path / "app.json.log"
-        json_handler = RotatingFileHandler(
-            json_log_file,
-            maxBytes=10 * 1024 * 1024,  # 10MB
-            backupCount=5,
-            encoding="utf-8"
-        )
-        json_handler.setLevel(level)
-        json_handler.setFormatter(JSONFormatter())
-        logger.addHandler(json_handler)
-
-        # 2. Plain Text File Handler with Rotation (for backward compatibility)
         text_log_file = log_path / "app.log"
-        text_handler = RotatingFileHandler(
-            text_log_file,
-            maxBytes=10 * 1024 * 1024,  # 10MB
-            backupCount=5,
-            encoding="utf-8"
-        )
-        text_handler.setLevel(level)
-        text_handler.setFormatter(_Formatter(_DEF_FORMAT))
-        logger.addHandler(text_handler)
+        if not logger.handlers:
+            # 1. JSON File Handler with Rotation (10MB max, 5 backups)
+            json_handler = RotatingFileHandler(
+                json_log_file,
+                maxBytes=10 * 1024 * 1024,  # 10MB
+                backupCount=5,
+                encoding="utf-8"
+            )
+            json_handler.setLevel(level)
+            json_handler.setFormatter(JSONFormatter())
+            logger.addHandler(json_handler)
+
+            # 2. Plain Text File Handler with Rotation (for backward compatibility)
+            text_handler = RotatingFileHandler(
+                text_log_file,
+                maxBytes=10 * 1024 * 1024,  # 10MB
+                backupCount=5,
+                encoding="utf-8"
+            )
+            text_handler.setLevel(level)
+            text_handler.setFormatter(_Formatter(_DEF_FORMAT))
+            logger.addHandler(text_handler)
+        else:
+            # Ensure our level and filenames are still known for the info line below
+            pass
 
         # 3. Console Handler (for development)
         if os.getenv("TESTING") != "1":  # Skip console in tests
@@ -116,7 +117,33 @@ def setup_app_logging(app, log_dir: str = "logs", log_level: str = "INFO") -> No
             console_handler.setFormatter(_Formatter(_DEF_FORMAT))
             logger.addHandler(console_handler)
 
+        # Add request/response logging via before/after hooks if Flask app context supports it
+        try:
+            from flask import request
+            @app.before_request
+            def _log_request():
+                logger.info(f"HTTP {request.method} {request.path}")
+            @app.after_request
+            def _log_response(resp):
+                try:
+                    logger.info(f"HTTP {request.method} {request.path} -> {resp.status_code}")
+                except Exception:
+                    pass
+                return resp
+        except Exception:
+            pass
+
         logger.propagate = False
+
+        # Also capture Werkzeug (HTTP request) logs into the same files
+        try:
+            wz = logging.getLogger('werkzeug')
+            wz.setLevel(level)
+            for h in logger.handlers:
+                wz.addHandler(h)
+            wz.propagate = False
+        except Exception:
+            pass
 
         logger.info(f"Logging initialized: level={level_name}, json_log={json_log_file}, text_log={text_log_file}")
 

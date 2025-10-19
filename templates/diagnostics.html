@@ -17,24 +17,24 @@
   </div>
 </div>
 
-<div class="cards-grid mb-4">
+<div class="stats-grid diagnostics-grid mb-4">
   <div class="stat-card-modern">
-    <span class="stat-label">SMTP Status</span>
     <span class="stat-value" id="smtpStatus">
       <span class="tag-chip muted">Checking...</span>
     </span>
+    <span class="stat-label">SMTP Status</span>
   </div>
   <div class="stat-card-modern">
-    <span class="stat-label">Active Watchers</span>
     <span class="stat-value" id="watcherCount">--</span>
+    <span class="stat-label">Active Watchers</span>
   </div>
   <div class="stat-card-modern">
-    <span class="stat-label">Database Size</span>
     <span class="stat-value" id="dbSize">--</span>
+    <span class="stat-label">Database Size</span>
   </div>
   <div class="stat-card-modern">
-    <span class="stat-label">System Uptime</span>
     <span class="stat-value" id="uptime">--</span>
+    <span class="stat-label">System Uptime</span>
   </div>
 </div>
 
@@ -60,6 +60,12 @@
   <div class="panel-header">
     <div class="panel-title"><i class="bi bi-clipboard-data"></i> System Logs</div>
     <div class="panel-actions">
+      <button class="btn btn-ghost btn-sm" onclick="copyLogs()">
+        <i class="bi bi-clipboard"></i> Copy All
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="downloadLogs()">
+        <i class="bi bi-download"></i> Save JSON
+      </button>
       <button class="btn btn-ghost btn-sm" onclick="clearLogs()">
         <i class="bi bi-trash"></i> Clear
       </button>
@@ -110,31 +116,96 @@
 async function loadSystemStatus() {
   try {
     // Check SMTP
-    const smtpResp = await fetch('/api/smtp-health', { credentials: 'same-origin' });
+    const smtpResp = await fetch('/api/system/smtp-health', { credentials: 'same-origin' });
     const smtpData = await smtpResp.json();
-    const smtpChip = smtpData.status === 'running'
+    const smtpStatusText = smtpData.listening ? 'Running' : 'Stopped';
+    const smtpChip = smtpData.listening
       ? '<span class="tag-chip success"><i class="bi bi-check-circle"></i> Running</span>'
       : '<span class="tag-chip accent"><i class="bi bi-exclamation-triangle"></i> Stopped</span>';
     document.getElementById('smtpStatus').innerHTML = smtpChip;
 
     // Check watchers
-    const watcherResp = await fetch('/api/watchers/status', { credentials: 'same-origin' });
+    const watcherResp = await fetch('/api/system/watchers/status', { credentials: 'same-origin' });
     const watcherData = await watcherResp.json();
     document.getElementById('watcherCount').textContent = (watcherData.workers || []).length;
 
     // Load other stats
-    const statsResp = await fetch('/api/stats/summary', { credentials: 'same-origin' });
-    const statsData = await statsResp.json();
+    try {
+      const statsResp = await fetch('/api/system/summary', { credentials: 'same-origin' });
+      if (statsResp.ok) {
+        const statsData = await statsResp.json();
+        if (statsData && statsData.database_size_bytes !== undefined) {
+          document.getElementById('dbSize').textContent = formatBytes(statsData.database_size_bytes);
+        } else {
+          document.getElementById('dbSize').textContent = '--';
+        }
 
-    // Mock some values for now
-    document.getElementById('dbSize').textContent = '12.3 MB';
-    document.getElementById('uptime').textContent = '2d 14h';
+        if (statsData && statsData.uptime_seconds !== undefined) {
+          document.getElementById('uptime').textContent = formatDuration(statsData.uptime_seconds);
+        } else {
+          document.getElementById('uptime').textContent = '--';
+        }
+      } else {
+        document.getElementById('dbSize').textContent = '--';
+        document.getElementById('uptime').textContent = '--';
+      }
+    } catch (err) {
+      document.getElementById('dbSize').textContent = '--';
+      document.getElementById('uptime').textContent = '--';
+    }
 
     // Load logs
-    loadSystemLogs();
+    await loadSystemLogs();
   } catch (e) {
     console.error('Error loading system status:', e);
   }
+}
+
+function formatBytes(value) {
+  if (!Number.isFinite(value) || value < 0) return '--';
+  if (value === 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const idx = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
+  const sized = value / Math.pow(1024, idx);
+  return `${sized >= 100 ? sized.toFixed(0) : sized.toFixed(1)} ${units[idx]}`;
+}
+
+function formatDuration(seconds) {
+  if (!Number.isFinite(seconds) || seconds < 0) return '--';
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const parts = [];
+  if (d) parts.push(`${d}d`);
+  if (h) parts.push(`${h}h`);
+  if (m || (!d && !h)) parts.push(`${m}m`);
+  return parts.join(' ');
+}
+
+function formatTimestamp(ts) {
+  if (window.MailOps && window.MailOps.formatTimestamp) {
+    return window.MailOps.formatTimestamp(ts);
+  }
+  try {
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) return ts || '—';
+    return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+  } catch (_) {
+    return ts || '—';
+  }
+}
+
+function escapeHtml(value) {
+  if (window.MailOps && window.MailOps.escapeHtml) {
+    return window.MailOps.escapeHtml(value);
+  }
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 async function loadAccountDiagnostics(accountId) {
@@ -186,37 +257,85 @@ async function runFullDiagnostics() {
   if (window.showSuccess) showSuccess('Diagnostics complete');
 }
 
-function loadSystemLogs() {
-  // Mock some log entries for now
-  const logs = [
-    { time: '21:52:14', level: 'info', msg: 'SMTP Proxy started on 127.0.0.1:8587' },
-    { time: '21:52:14', level: 'info', msg: 'Starting IMAP monitor for account 2' },
-    { time: '21:52:14', level: 'info', msg: 'Starting IMAP monitor for account 3' },
-    { time: '21:52:15', level: 'success', msg: 'Connected to imap.hostinger.com:993' },
-    { time: '21:52:15', level: 'success', msg: 'Connected to imap.gmail.com:993' },
-    { time: '21:52:16', level: 'warning', msg: 'SMTP Proxy port already in use - likely from previous instance' },
-  ];
+let latestLogPayload = [];
 
-  let html = '';
-  for (const log of logs) {
-    const levelClass = 'log-level-' + log.level;
-    html += '<div class="log-entry">';
-    html += '<span class="log-timestamp">' + log.time + '</span>';
-    html += '<span class="' + levelClass + '">[' + log.level.toUpperCase() + ']</span> ';
-    html += log.msg;
-    html += '</div>';
+async function loadSystemLogs() {
+  try {
+    const resp = await fetch('/api/system/logs?limit=200', { credentials: 'same-origin' });
+    if (!resp.ok) throw new Error(resp.statusText);
+    const data = await resp.json();
+    latestLogPayload = Array.isArray(data.logs) ? data.logs : [];
+    renderLogs(latestLogPayload);
+  } catch (err) {
+    console.error('Failed to load logs', err);
+    document.getElementById('systemLogs').innerHTML = '<div class="text-danger">Failed to load logs</div>';
+  }
+}
+
+function renderLogs(logs) {
+  if (!logs || logs.length === 0) {
+    document.getElementById('systemLogs').innerHTML = '<div class="text-muted">No logs available</div>';
+    return;
   }
 
-  document.getElementById('systemLogs').innerHTML = html;
+  const rows = logs.map(entry => {
+    const timestamp = formatTimestamp(entry.timestamp || entry.time || entry.ts);
+    const level = (entry.level || 'info').toLowerCase();
+    const levelClass = 'log-level-' + level;
+    const source = entry.source ? `<span class="log-source">(${escapeHtml(entry.source)})</span>` : '';
+    const message = escapeHtml(entry.message || entry.msg || '');
+    return `
+      <div class="log-entry">
+        <span class="log-timestamp">${timestamp}</span>
+        <span class="${levelClass}">[${level.toUpperCase()}]</span>
+        ${source}
+        <span class="log-message">${message}</span>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('systemLogs').innerHTML = rows;
 }
 
 function clearLogs() {
+  latestLogPayload = [];
   document.getElementById('systemLogs').innerHTML = '<div class="text-muted">Logs cleared</div>';
   if (window.showSuccess) showSuccess('Logs cleared');
 }
 
-// Load on page load
-document.addEventListener('DOMContentLoaded', loadSystemStatus);
+function copyLogs() {
+  if (!navigator.clipboard) {
+    if (window.showError) showError('Clipboard API unavailable');
+    return;
+  }
+  const text = latestLogPayload.length ? JSON.stringify(latestLogPayload, null, 2) : document.getElementById('systemLogs').innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    if (window.showSuccess) showSuccess('Logs copied');
+  }).catch(() => {
+    if (window.showError) showError('Failed to copy logs');
+  });
+}
+
+function downloadLogs() {
+  const data = latestLogPayload.length ? latestLogPayload : [{ message: document.getElementById('systemLogs').innerText.trim() }];
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `diagnostics_logs_${new Date().toISOString().replace(/[:]/g, '-')}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+// Load on page load with live polling
+let __logsPollTimer = null;
+document.addEventListener('DOMContentLoaded', () => {
+  loadSystemStatus();
+  try { if (__logsPollTimer) clearInterval(__logsPollTimer); } catch(_) {}
+  __logsPollTimer = setInterval(loadSystemLogs, 3000);
+});
 </script>
 {% endblock %}
 

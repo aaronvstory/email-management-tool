@@ -683,19 +683,29 @@ def api_interception_discard(msg_id:int):
 @login_required
 def api_inbox():
     status_filter = request.args.get('status','').strip().upper() or None
+    account_id = request.args.get('account_id', type=int)
     q = (request.args.get('q') or '').strip()
+    limit = request.args.get('limit', type=int)
+    if not limit or limit <= 0:
+        limit = 200
+    limit = max(10, min(limit, 500))
     conn = _db(); cur = conn.cursor(); params=[]; clauses=[]
     if status_filter:
         clauses.append("(interception_status = ? OR status = ?)"); params.extend([status_filter,status_filter])
+    if account_id:
+        clauses.append("account_id = ?"); params.append(account_id)
     if q:
         like=f"%{q}%"; clauses.append("(sender LIKE ? OR subject LIKE ?)"); params.extend([like,like])
     where = ('WHERE '+ ' AND '.join(clauses)) if clauses else ''
-    rows = cur.execute(f"""
-        SELECT id, sender, recipients, subject, interception_status, status, created_at, latency_ms, body_text, raw_path
+    rows = cur.execute(
+        f"""
+        SELECT id, account_id, sender, recipients, subject, interception_status, status, created_at, latency_ms, body_text, raw_path
         FROM email_messages
         {where}
-        ORDER BY id DESC LIMIT 200
-    """, params).fetchall()
+        ORDER BY id DESC LIMIT ?
+        """,
+        (*params, limit)
+    ).fetchall()
     msgs=[]
     for r in rows:
         d=dict(r); body_txt=(d.get('body_text') or '')
