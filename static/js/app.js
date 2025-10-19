@@ -528,3 +528,58 @@ function extractErrorMessage(payload, fallback) {
 
 window.parseResponseBody = parseResponseBody;
 window.extractErrorMessage = extractErrorMessage;
+
+// ============================================================================
+// Formatting & HTML helpers
+// ============================================================================
+window.MailOps = window.MailOps || {};
+
+(function(util) {
+  util.escapeHtml = function(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  };
+
+  util.normalizeTimestamp = function(value) {
+    if (!value) return null;
+    const raw = typeof value === 'string' ? value.trim() : value;
+    if (typeof raw === 'string' && raw.length && raw.includes(' ') && !raw.includes('T')) {
+      return raw.replace(' ', 'T');
+    }
+    return raw;
+  };
+
+  util.formatTimestamp = function(ts, options) {
+    if (!ts) return '—';
+    const normalized = util.normalizeTimestamp(ts);
+    const date = new Date(normalized);
+    if (Number.isNaN(date.getTime())) return ts;
+    const formatterOptions = options || { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true };
+    return date.toLocaleString('en-US', formatterOptions);
+  };
+
+  util.renderTimeCell = function(ts, fallback = '—') {
+    if (!ts) return fallback;
+    const normalized = util.normalizeTimestamp(ts) || ts;
+    return `<span class="time-cell" data-ts="${util.escapeHtml(normalized)}">${util.escapeHtml(String(ts))}</span>`;
+  };
+
+  util.applyTimeFormatting = function(root) {
+    const scope = root || document;
+    scope.querySelectorAll('.time-cell').forEach(node => {
+      const ts = node.dataset.ts || node.textContent;
+      if (!ts) {
+        node.textContent = '—';
+        return;
+      }
+      node.dataset.ts = ts;
+      node.textContent = util.formatTimestamp(ts);
+    });
+  };
+})(window.MailOps);
+

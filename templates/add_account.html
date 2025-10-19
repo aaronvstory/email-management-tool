@@ -4,419 +4,287 @@
 
 {% block extra_css %}
 <style>
-    .form-container {
-        background: linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%);
-        border: 1px solid rgba(255,255,255,0.06);
-        border-radius: 15px;
-        padding: 40px;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-        max-width: 90%;
-        width: 1200px;
-        margin: 0 auto;
-    }
-    
-    .provider-buttons {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 15px;
-        margin-bottom: 30px;
-    }
-    
-    .provider-btn {
-        padding: 15px;
-        border: 2px solid rgba(255,255,255,0.12);
-        border-radius: 8px;
-        background: rgba(255,255,255,0.06);
-        color: #ffffff;
-        cursor: pointer;
-        transition: all 0.3s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        font-size: 16px;
-    }
-    
-    .provider-btn:hover, .provider-btn.active {
-        border-color: #dc2626;
-        background: rgba(220, 38, 38, 0.2);
-        color: #ffffff;
-    }
-    
-    .form-section {
-        margin-bottom: 30px;
-        padding: 20px;
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.06);
-        border-radius: 10px;
-    }
-    
-    .form-section h4 {
-        color: #ffffff;
-        margin-bottom: 20px;
-        font-size: 1.2em;
-    }
-    
-    .form-row {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 20px;
-        margin-bottom: 20px;
-    }
-    
-    .form-group {
-        display: flex;
-        flex-direction: column;
-    }
-    
-    .form-group label {
-        color: #ffffff;
-        margin-bottom: 8px;
-        font-weight: 500;
-    }
-    
-    .form-group input, .form-group select {
-        padding: 10px;
-        border: 1px solid rgba(255,255,255,0.12) !important;
-        background: rgba(255,255,255,0.06) !important;
-        color: #ffffff !important;
-        border-radius: 5px;
-        font-size: 14px;
-        transition: border-color 0.3s;
-    }
-    
-    .form-group input:focus, .form-group select:focus {
-        outline: none;
-        border-color: #dc2626 !important;
-        background: rgba(255,255,255,0.08) !important;
-        box-shadow: 0 0 0 0.2rem rgba(220, 38, 38, 0.25) !important;
-    }
-    
-    .form-group input::placeholder {
-        color: #6b7280;
-    }
-    
-    .form-group select option {
-        background: #1a1a1a !important;
-        color: #ffffff !important;
-    }
+  .provider-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+  }
 
-    /* Force dark inputs throughout this page (covers any Bootstrap/browser overrides) */
-    .form-container input,
-    .form-container select,
-    .form-container textarea {
-        background: rgba(255,255,255,0.06) !important;
-        border: 1px solid rgba(255,255,255,0.12) !important;
-        color: #ffffff !important;
-    }
-    /* Autofill fix (Chrome/Edge) */
-    .form-container input:-webkit-autofill,
-    .form-container input:-webkit-autofill:hover,
-    .form-container input:-webkit-autofill:focus,
-    .form-container select:-webkit-autofill,
-    .form-container textarea:-webkit-autofill {
-        -webkit-box-shadow: 0 0 0px 1000px rgba(255,255,255,0.06) inset !important;
-        -webkit-text-fill-color: #ffffff !important;
-        caret-color: #ffffff !important;
-    }
-    
-    .form-check {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-top: 10px;
-    }
-    
-    .btn-group {
-        display: flex;
-        gap: 15px;
-        justify-content: flex-end;
-        margin-top: 30px;
-    }
-    
-    .test-status {
-        padding: 10px;
-        border-radius: 5px;
-        margin-top: 10px;
-        display: none;
-    }
-    
-    .test-success {
-        background: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
-    }
-    
-    .test-error {
-        background: #6c757d;
-        color: #ffffff;
-        border: 1px solid #545b62;
-    }
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+  }
+
+  .test-status {
+    display: none;
+    padding: var(--space-xs);
+    border-radius: var(--radius-md);
+    margin-top: var(--space-xs);
+    border: 1px solid var(--border-subtle);
+    background: var(--surface-base);
+    color: var(--text-primary);
+  }
+
+  .test-status.test-success {
+    border-color: var(--success-border);
+    background: var(--success-bg);
+    color: var(--success-light);
+  }
+
+  .test-status.test-error {
+    border-color: var(--danger-border);
+    background: var(--danger-bg);
+    color: var(--danger-light);
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="form-container">
-    <h2><i class="bi bi-envelope-plus"></i> Add Email Account</h2>
-    
-    <form method="POST" id="addAccountForm">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <!-- Provider Selection -->
-        <div class="provider-buttons">
-            <button type="button" class="provider-btn" onclick="setProvider('gmail')">
-                <i class="fab fa-google"></i> Gmail
-            </button>
-            <button type="button" class="provider-btn" onclick="setProvider('outlook')">
-                <i class="fab fa-microsoft"></i> Outlook
-            </button>
-            <button type="button" class="provider-btn" onclick="setProvider('hostinger')">
-                <i class="fas fa-server"></i> Hostinger
-            </button>
-            <button type="button" class="provider-btn" onclick="setProvider('custom')">
-                <i class="fas fa-cog"></i> Custom
-            </button>
-        </div>
-        
-        <!-- Account Details -->
-        <div class="form-section">
-            <h4>Account Details</h4>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="account_name">Account Name <span class="text-danger">*</span></label>
-                    <input type="text" id="account_name" name="account_name" required 
-                           placeholder="e.g., Work Email, Personal Gmail">
-                </div>
-                <div class="form-group">
-                    <label for="email_address">Email Address <span class="text-danger">*</span></label>
-                    <input type="email" id="email_address" name="email_address" required
-                           placeholder="your@email.com">
-                </div>
-            </div>
-            <div class="mt-2" style="display:flex; gap:10px;">
-                <button type="button" class="btn btn-sm btn-secondary" onclick="autoDetect()">
-                    <i class="bi bi-magic"></i> Auto-detect settings
-                </button>
-                <button type="button" class="btn btn-sm btn-secondary" onclick="autoDetectAndTest()">
-                    <i class="bi bi-activity"></i> Auto-detect & Test
-                </button>
-            </div>
-        </div>
-        
-        <!-- IMAP Settings -->
-        <div class="form-section">
-            <h4><i class="bi bi-inbox"></i> IMAP Settings (Incoming Mail)</h4>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="imap_host">IMAP Server <span class="text-danger">*</span></label>
-                    <input type="text" id="imap_host" name="imap_host" required
-                           placeholder="imap.gmail.com">
-                </div>
-                <div class="form-group">
-                    <label for="imap_port">IMAP Port <span class="text-danger">*</span></label>
-                    <input type="number" id="imap_port" name="imap_port" value="993" required>
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="imap_username">IMAP Username <span class="text-danger">*</span></label>
-                    <input type="text" id="imap_username" name="imap_username" required
-                           placeholder="Usually your email address">
-                </div>
-                <div class="form-group">
-                    <label for="imap_password">IMAP Password <span class="text-danger">*</span></label>
-                    <input type="password" id="imap_password" name="imap_password" required
-                           placeholder="Your email password or app password">
-                </div>
-            </div>
-            <div class="form-check">
-                <input type="checkbox" id="imap_use_ssl" name="imap_use_ssl" checked>
-                <label for="imap_use_ssl">Use SSL/TLS</label>
-            </div>
-            <button type="button" class="btn btn-sm btn-secondary mt-3" onclick="testConnection('imap')">
-                <i class="bi bi-play-circle"></i> Test IMAP Connection
-            </button>
-            <div id="imap_test_status" class="test-status"></div>
-        </div>
-        
-        <!-- SMTP Settings -->
-        <div class="form-section">
-            <h4><i class="bi bi-send"></i> SMTP Settings (Outgoing Mail)</h4>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="smtp_host">SMTP Server <span class="text-danger">*</span></label>
-                    <input type="text" id="smtp_host" name="smtp_host" required
-                           placeholder="smtp.gmail.com">
-                </div>
-                <div class="form-group">
-                    <label for="smtp_port">SMTP Port <span class="text-danger">*</span></label>
-                    <input type="number" id="smtp_port" name="smtp_port" value="465" required>
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="smtp_username">SMTP Username <span class="text-danger">*</span></label>
-                    <input type="text" id="smtp_username" name="smtp_username" required
-                           placeholder="Usually your email address">
-                </div>
-                <div class="form-group">
-                    <label for="smtp_password">SMTP Password <span class="text-danger">*</span></label>
-                    <input type="password" id="smtp_password" name="smtp_password" required
-                           placeholder="Your email password or app password">
-                </div>
-            </div>
-            <div class="form-check">
-                <input type="checkbox" id="smtp_use_ssl" name="smtp_use_ssl" checked>
-                <label for="smtp_use_ssl">Use SSL/TLS</label>
-            </div>
-            <button type="button" class="btn btn-sm btn-secondary mt-3" onclick="testConnection('smtp')">
-                <i class="bi bi-play-circle"></i> Test SMTP Connection
-            </button>
-            <div id="smtp_test_status" class="test-status"></div>
-        </div>
-        
-        <!-- Form Actions -->
-        <div class="btn-group">
-            <button type="button" class="btn btn-secondary" onclick="window.location.href='/accounts'">
-                <i class="bi bi-x-circle"></i> Cancel
-            </button>
-            <button type="submit" class="btn btn-primary">
-                <i class="bi bi-check-circle"></i> Add Account
-            </button>
-        </div>
-    </form>
-</div>
+<div class="form-shell form-shell-wide">
+  <div class="page-header mb-4">
+    <div>
+      <h2><i class="bi bi-envelope-plus"></i> Add Email Account</h2>
+      <p class="text-muted mb-0">Configure inbound and outbound settings for a new mailbox.</p>
+    </div>
+  </div>
 
+  <form method="POST" id="addAccountForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="provider-grid">
+      <button type="button" class="provider-btn" onclick="setProvider(event, 'gmail')">
+        <i class="fab fa-google"></i> Gmail
+      </button>
+      <button type="button" class="provider-btn" onclick="setProvider(event, 'outlook')">
+        <i class="fab fa-microsoft"></i> Outlook
+      </button>
+      <button type="button" class="provider-btn" onclick="setProvider(event, 'hostinger')">
+        <i class="fas fa-server"></i> Hostinger
+      </button>
+      <button type="button" class="provider-btn" onclick="setProvider(event, 'custom')">
+        <i class="fas fa-cog"></i> Custom
+      </button>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Account Details</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="account_name">Account Name <span class="text-danger">*</span></label>
+          <input type="text" id="account_name" name="account_name" required placeholder="e.g., Work Email, Personal Gmail">
+        </div>
+        <div class="form-group">
+          <label for="email_address">Email Address <span class="text-danger">*</span></label>
+          <input type="email" id="email_address" name="email_address" required placeholder="your@email.com">
+        </div>
+        <div class="form-group">
+          <label for="friendly_name">Friendly Name</label>
+          <input type="text" id="friendly_name" name="friendly_name" placeholder="Display name for outgoing emails">
+        </div>
+      </div>
+      <div class="action-bar">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="autoDetect()">
+          <i class="bi bi-magic"></i> Auto-detect settings
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="autoDetectAndTest()">
+          <i class="bi bi-activity"></i> Auto-detect &amp; Test
+        </button>
+      </div>
+      <div id="autodetectStatus" class="test-status"></div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">IMAP Settings</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="imap_host">IMAP Host <span class="text-danger">*</span></label>
+          <input type="text" id="imap_host" name="imap_host" required placeholder="imap.example.com">
+        </div>
+        <div class="form-group">
+          <label for="imap_port">IMAP Port <span class="text-danger">*</span></label>
+          <input type="number" id="imap_port" name="imap_port" required placeholder="993">
+        </div>
+        <div class="form-group">
+          <label for="imap_username">IMAP Username <span class="text-danger">*</span></label>
+          <input type="text" id="imap_username" name="imap_username" required placeholder="username">
+        </div>
+        <div class="form-group">
+          <label for="imap_password">IMAP Password <span class="text-danger">*</span></label>
+          <input type="password" id="imap_password" name="imap_password" required placeholder="password">
+        </div>
+      </div>
+      <div class="form-check mt-2">
+        <input class="form-check-input" type="checkbox" value="true" id="imap_use_ssl" name="imap_use_ssl" checked>
+        <label class="form-check-label" for="imap_use_ssl">Use SSL/TLS for IMAP</label>
+      </div>
+      <div id="imap_test_status" class="test-status"></div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">SMTP Settings</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="smtp_host">SMTP Host <span class="text-danger">*</span></label>
+          <input type="text" id="smtp_host" name="smtp_host" required placeholder="smtp.example.com">
+        </div>
+        <div class="form-group">
+          <label for="smtp_port">SMTP Port <span class="text-danger">*</span></label>
+          <input type="number" id="smtp_port" name="smtp_port" required placeholder="465">
+        </div>
+        <div class="form-group">
+          <label for="smtp_username">SMTP Username <span class="text-danger">*</span></label>
+          <input type="text" id="smtp_username" name="smtp_username" required placeholder="username">
+        </div>
+        <div class="form-group">
+          <label for="smtp_password">SMTP Password <span class="text-danger">*</span></label>
+          <input type="password" id="smtp_password" name="smtp_password" required placeholder="password">
+        </div>
+      </div>
+      <div class="form-check mt-2">
+        <input class="form-check-input" type="checkbox" value="true" id="smtp_use_ssl" name="smtp_use_ssl" checked>
+        <label class="form-check-label" for="smtp_use_ssl">Use SSL/TLS for SMTP</label>
+      </div>
+      <div id="smtp_test_status" class="test-status"></div>
+    </div>
+
+    <div class="action-bar justify-content-end">
+      <button type="button" class="btn btn-ghost" onclick="window.history.back()">
+        <i class="bi bi-arrow-left"></i> Cancel
+      </button>
+      <button type="submit" class="btn btn-secondary">
+        <i class="bi bi-save"></i> Save Account
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-// Provider presets
 const providerSettings = {
-    gmail: {
-        imap_host: 'imap.gmail.com',
-        imap_port: 993,
-        smtp_host: 'smtp.gmail.com',
-        smtp_port: 587
-    },
-    outlook: {
-        imap_host: 'outlook.office365.com',
-        imap_port: 993,
-        smtp_host: 'smtp.office365.com',
-        smtp_port: 587
-    },
-    hostinger: {
-        imap_host: 'imap.hostinger.com',
-        imap_port: 993,
-        smtp_host: 'smtp.hostinger.com',
-        smtp_port: 465
-    }
+  gmail: { imap_host: 'imap.gmail.com', imap_port: 993, smtp_host: 'smtp.gmail.com', smtp_port: 587 },
+  outlook: { imap_host: 'outlook.office365.com', imap_port: 993, smtp_host: 'smtp.office365.com', smtp_port: 587 },
+  hostinger: { imap_host: 'imap.hostinger.com', imap_port: 993, smtp_host: 'smtp.hostinger.com', smtp_port: 465 }
 };
 
-function setProvider(provider) {
-    // Update button states
-    document.querySelectorAll('.provider-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    event.target.closest('.provider-btn').classList.add('active');
-    
-    // Apply settings if not custom
-    if (provider !== 'custom' && providerSettings[provider]) {
-        const settings = providerSettings[provider];
-        document.getElementById('imap_host').value = settings.imap_host;
-        document.getElementById('imap_port').value = settings.imap_port;
-        document.getElementById('smtp_host').value = settings.smtp_host;
-        document.getElementById('smtp_port').value = settings.smtp_port;
-        
-        // Auto-fill username if email is entered
-        const email = document.getElementById('email_address').value;
-        if (email) {
-            document.getElementById('imap_username').value = email;
-            document.getElementById('smtp_username').value = email;
-        }
+function setProvider(evt, provider) {
+  document.querySelectorAll('.provider-btn').forEach(btn => btn.classList.remove('active'));
+  if (evt && evt.currentTarget) {
+    evt.currentTarget.classList.add('active');
+  }
+
+  if (provider !== 'custom' && providerSettings[provider]) {
+    const settings = providerSettings[provider];
+    document.getElementById('imap_host').value = settings.imap_host;
+    document.getElementById('imap_port').value = settings.imap_port;
+    document.getElementById('smtp_host').value = settings.smtp_host;
+    document.getElementById('smtp_port').value = settings.smtp_port;
+
+    const email = document.getElementById('email_address').value;
+    if (email) {
+      document.getElementById('imap_username').value = email;
+      document.getElementById('smtp_username').value = email;
     }
+  }
 }
 
 function autoDetect() {
-    const email = document.getElementById('email_address').value.trim();
-    if (!email || !email.includes('@')) {
-        alert('Enter a valid email first.');
-        return;
+  const email = document.getElementById('email_address').value.trim();
+  if (!email || !email.includes('@')) {
+    alert('Enter a valid email first.');
+    return;
+  }
+  fetch('/api/detect-email-settings', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({email})
+  })
+  .then(r => r.json())
+  .then(cfg => {
+    if (!cfg || !cfg.smtp_host) throw new Error('Detection failed');
+    document.getElementById('imap_host').value = cfg.imap_host;
+    document.getElementById('imap_port').value = cfg.imap_port;
+    document.getElementById('imap_use_ssl').checked = !!cfg.imap_use_ssl;
+    document.getElementById('smtp_host').value = cfg.smtp_host;
+    document.getElementById('smtp_port').value = cfg.smtp_port;
+    document.getElementById('smtp_use_ssl').checked = !!cfg.smtp_use_ssl;
+    const emailField = document.getElementById('email_address').value;
+    if (emailField) {
+      if (!document.getElementById('imap_username').value) document.getElementById('imap_username').value = emailField;
+      if (!document.getElementById('smtp_username').value) document.getElementById('smtp_username').value = emailField;
     }
-    fetch('/api/detect-email-settings', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({email})
-    })
-    .then(r => r.json())
-    .then(cfg => {
-        if (!cfg || !cfg.smtp_host) throw new Error('Detection failed');
-        document.getElementById('imap_host').value = cfg.imap_host;
-        document.getElementById('imap_port').value = cfg.imap_port;
-        document.getElementById('imap_use_ssl').checked = !!cfg.imap_use_ssl;
-        document.getElementById('smtp_host').value = cfg.smtp_host;
-        document.getElementById('smtp_port').value = cfg.smtp_port;
-        document.getElementById('smtp_use_ssl').checked = !!cfg.smtp_use_ssl;
-        // Set usernames to email if empty
-        if (!document.getElementById('imap_username').value) document.getElementById('imap_username').value = email;
-        if (!document.getElementById('smtp_username').value) document.getElementById('smtp_username').value = email;
-    })
-    .catch(err => alert('Auto-detect failed: ' + err));
+    showStatus('autodetectStatus', true, 'Settings detected.');
+  })
+  .catch(err => showStatus('autodetectStatus', false, 'Auto-detect failed: ' + err.message));
 }
 
 function autoDetectAndTest() {
-    autoDetect();
-    // Give a short delay to let fields populate
-    setTimeout(() => { testConnection('imap'); testConnection('smtp'); }, 400);
+  autoDetect();
+  setTimeout(() => { testConnection('imap'); testConnection('smtp'); }, 400);
 }
 
-// Auto-fill usernames when email changes
-document.getElementById('email_address').addEventListener('change', function() {
+function showStatus(id, success, message) {
+  const div = document.getElementById(id);
+  if (!div) return;
+  div.style.display = 'block';
+  div.className = 'test-status ' + (success ? 'test-success' : 'test-error');
+  div.innerHTML = success
+    ? <i class="bi bi-check-circle"></i> 
+    : <i class="bi bi-x-circle"></i> ;
+}
+
+const emailField = document.getElementById('email_address');
+if (emailField) {
+  emailField.addEventListener('change', function() {
     if (!document.getElementById('imap_username').value) {
-        document.getElementById('imap_username').value = this.value;
+      document.getElementById('imap_username').value = this.value;
     }
     if (!document.getElementById('smtp_username').value) {
-        document.getElementById('smtp_username').value = this.value;
+      document.getElementById('smtp_username').value = this.value;
     }
-});
+  });
+}
 
-// Sync passwords if they're the same
 document.getElementById('imap_password').addEventListener('change', function() {
-    if (!document.getElementById('smtp_password').value) {
-        document.getElementById('smtp_password').value = this.value;
-    }
+  if (!document.getElementById('smtp_password').value) {
+    document.getElementById('smtp_password').value = this.value;
+  }
 });
 
 function testConnection(type) {
-    const statusDiv = document.getElementById(type + '_test_status');
-    statusDiv.style.display = 'block';
-    statusDiv.className = 'test-status';
-    statusDiv.innerHTML = '<i class="bi bi-hourglass-split"></i> Testing connection...';
-    
-    // Gather connection details
-    const data = {
-        host: document.getElementById(type + '_host').value,
-        port: document.getElementById(type + '_port').value,
-        username: document.getElementById(type + '_username').value,
-        password: document.getElementById(type + '_password').value,
-        use_ssl: document.getElementById(type + '_use_ssl').checked
-    };
-    
-    // Make API call to test connection
-    fetch('/api/test-connection/' + type, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(data)
-    })
-    .then(response => response.json())
-    .then(result => {
-        if (result.success) {
-            statusDiv.className = 'test-status test-success';
-            statusDiv.innerHTML = '<i class="bi bi-check-circle"></i> Connection successful!';
-        } else {
-            statusDiv.className = 'test-status test-error';
-            statusDiv.innerHTML = '<i class="bi bi-x-circle"></i> Connection failed: ' + result.error;
-        }
-    })
-    .catch(error => {
-        statusDiv.className = 'test-status test-error';
-        statusDiv.innerHTML = '<i class="bi bi-x-circle"></i> Test failed: ' + error;
-    });
+  const statusDiv = document.getElementById(type + '_test_status');
+  statusDiv.style.display = 'block';
+  statusDiv.className = 'test-status';
+  statusDiv.innerHTML = '<i class="bi bi-hourglass-split"></i> Testing connection...';
+
+  const data = {
+    host: document.getElementById(type + '_host').value,
+    port: document.getElementById(type + '_port').value,
+    username: document.getElementById(type + '_username').value,
+    password: document.getElementById(type + '_password').value,
+    use_ssl: document.getElementById(type + '_use_ssl').checked
+  };
+
+  fetch('/api/test-connection/' + type, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  })
+  .then(response => response.json())
+  .then(result => {
+    if (result.success) {
+      statusDiv.className = 'test-status test-success';
+      statusDiv.innerHTML = '<i class="bi bi-check-circle"></i> Connection successful!';
+    } else {
+      statusDiv.className = 'test-status test-error';
+      statusDiv.innerHTML = '<i class="bi bi-x-circle"></i> Connection failed: ' + (result.error || 'Unknown error');
+    }
+  })
+  .catch(error => {
+    statusDiv.className = 'test-status test-error';
+    statusDiv.innerHTML = '<i class="bi bi-x-circle"></i> Test failed: ' + error.message;
+  });
 }
 </script>
 {% endblock %}

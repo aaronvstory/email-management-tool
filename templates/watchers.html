@@ -26,7 +26,7 @@
     <div class="stat-label">SMTP Proxy</div>
     <div id="smtpStatus" class="stat-value">--</div>
     <div id="smtpMeta" class="stat-delta"></div>
-    <div class="panel-actions"><button class="btn-ghost btn-sm" onclick="checkSmtp()"><i class="bi bi-heart-pulse"></i> Self-check</button></div>
+    <div class="action-bar"><button class="btn btn-ghost btn-sm" onclick="checkSmtp()"><i class="bi bi-heart-pulse"></i> Self-check</button></div>
   </div>
   <div class="stat-card-modern">
     <div class="stat-label">
@@ -46,23 +46,27 @@
   <div class="panel-header">
     <div class="panel-title">Per-Account Watchers</div>
     <div class="panel-actions">
-      <button class="btn-secondary btn-sm" onclick="restartAll()"><i class="bi bi-arrow-repeat"></i> Restart All</button>
+      <button class="btn btn-secondary btn-sm" onclick="restartAll()"><i class="bi bi-arrow-repeat"></i> Restart All</button>
     </div>
   </div>
   <div id="accountsGrid" class="cards-grid"></div>
 </div>
 
 <div class="panel">
-  <div class="panel-title">
-    How it works
-    <i class="bi bi-info-circle text-muted"
-       data-bs-toggle="tooltip"
-       data-bs-placement="right"
-       title="Watchers monitor the destination inbox only. For Gmail→Hostinger flow, only Hostinger needs a watcher (not both). IDLE provides <1s detection; polling is the fallback when IDLE is unavailable.">
-    </i>
+  <div class="panel-header">
+    <div class="panel-title">
+      How it works
+      <i class="bi bi-info-circle text-muted"
+         data-bs-toggle="tooltip"
+         data-bs-placement="right"
+         title="Watchers monitor the destination inbox only. For Gmail→Hostinger flow, only Hostinger needs a watcher (not both). IDLE provides <1s detection; polling is the fallback when IDLE is unavailable.">
+      </i>
+    </div>
   </div>
-  <div class="text-muted" style="font-size:.9rem">
-    Each added mailbox has an IMAP watcher that monitors INBOX in real time. The watcher moves new mail to Quarantine for review. The SMTP proxy accepts incoming messages locally for interception and auditing. Use the controls above to start, stop, or restart watchers.
+  <div class="panel-body">
+    <p class="panel-note">
+      Each added mailbox has an IMAP watcher that monitors INBOX in real time. The watcher moves new mail to Quarantine for review. The SMTP proxy accepts incoming messages locally for interception and auditing. Use the controls above to start, stop, or restart watchers.
+    </p>
   </div>
 </div>
 
@@ -76,6 +80,25 @@ document.addEventListener('DOMContentLoaded', function() {
   const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
 });
 
+const WATCHER_STATE_CHIPS = {
+  active: { cls: 'success', icon: 'bi-lightning-charge', label: 'Active' },
+  polling: { cls: 'success', icon: 'bi-wifi', label: 'Polling' },
+  idle: { cls: 'warning', icon: 'bi-hourglass-split', label: 'Idle' },
+  stopped: { cls: 'accent', icon: 'bi-exclamation-octagon', label: 'Stopped' },
+  unknown: { cls: 'muted', icon: 'bi-question-circle', label: 'Unknown' }
+};
+
+const { escapeHtml, renderTimeCell, applyTimeFormatting } = window.MailOps;
+
+function renderStateChip(state) {
+  const normalized = (state || 'unknown').toString().toLowerCase();
+  const mapping = WATCHER_STATE_CHIPS[normalized];
+  const cls = mapping ? mapping.cls : 'muted';
+  const icon = mapping ? mapping.icon : 'bi-question-circle';
+  const label = mapping ? mapping.label : escapeHtml(normalized.toUpperCase());
+  return `<span class="tag-chip ${cls}"><i class="bi ${icon}"></i> ${label}</span>`;
+}
+
 async function loadOverview(){
   try{
     const r = await fetch('/api/watchers/overview');
@@ -83,45 +106,68 @@ async function loadOverview(){
     const j = await r.json();
     // SMTP
     const smtpOk = j.smtp && j.smtp.listening;
-    document.getElementById('smtpStatus').textContent = smtpOk ? 'OK' : 'DOWN';
-    document.getElementById('smtpStatus').style.webkitTextFillColor = 'initial';
-    document.getElementById('smtpMeta').textContent = `${j.smtp.host}:${j.smtp.port}` + (j.smtp.last_selfcheck_ts ? ` • last self-check ${j.smtp.last_selfcheck_ts}` : '');
-    // Accounts
+    const smtpStatusEl = document.getElementById('smtpStatus');
+    const smtpMetaEl = document.getElementById('smtpMeta');
+    const smtpChip = smtpOk
+      ? '<span class="tag-chip success"><i class="bi bi-check-circle"></i> Running</span>'
+      : '<span class="tag-chip accent"><i class="bi bi-exclamation-triangle"></i> Stopped</span>';
+    smtpStatusEl.innerHTML = smtpChip;
+
+    const metaParts = [];
+    if (j.smtp && j.smtp.host) {
+      const host = escapeHtml(j.smtp.host);
+      const port = escapeHtml(j.smtp.port || '');
+      metaParts.push(port ? `${host}:${port}` : host);
+    }
+    if (j.smtp && j.smtp.last_selfcheck_ts) {
+      metaParts.push(`Last check ${renderTimeCell(j.smtp.last_selfcheck_ts)}`);
+    }
+    smtpMetaEl.innerHTML = metaParts.join(' • ') || 'Awaiting status';
+
     const grid = document.getElementById('accountsGrid');
-    grid.innerHTML='';
+    grid.innerHTML = '';
     let activeCount = 0;
-    (j.accounts||[]).forEach(acc =>{
+    (j.accounts || []).forEach(acc => {
       const state = (acc.watcher && acc.watcher.state) || (acc.is_active ? 'unknown' : 'stopped');
-      // Consider 'polling', 'idle', and 'active' as running states
-      const isActive = ['polling', 'idle', 'active'].includes(state);
-      if(isActive) activeCount++;
-      // Color coding: green for polling/idle/active, blue for unknown, red for stopped
-      let stateColor = 'text-danger';
-      let stateDisplay = state.toUpperCase();
-      if (state === 'polling') { stateColor = 'text-success'; stateDisplay = 'POLLING'; }
-      else if (state === 'idle') { stateColor = 'text-warning'; stateDisplay = 'IDLE'; }
-      else if (state === 'active') { stateColor = 'text-success'; stateDisplay = 'ACTIVE'; }
-      else if (state === 'unknown') { stateColor = 'text-info'; stateDisplay = 'UNKNOWN'; }
-      else if (state === 'stopped') { stateColor = 'text-danger'; stateDisplay = 'STOPPED'; }
+      if (['polling', 'idle', 'active'].includes(state)) {
+        activeCount++;
+      }
+      const stateChip = renderStateChip(state);
+      const heartbeatHtml = renderTimeCell(acc.watcher && acc.watcher.last_heartbeat);
+      const accountName = escapeHtml(acc.account_name || '');
+      const emailAddress = escapeHtml(acc.email_address || '');
+      const lastErrorHtml = acc.last_error
+        ? `<div class="meta-row"><span class="meta-label">Last Error</span><span class="meta-value text-danger">${escapeHtml(acc.last_error)}</span></div>`
+        : '';
+
       const card = document.createElement('div');
       card.className = 'stat-card-modern watcher-card';
       card.innerHTML = `
-        <div class="stat-label">${acc.account_name || ''}</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-          <div class="info" style="min-width:0;">
-            <div class="email-clip" style="font-weight:600">${acc.email_address || ''}</div>
-            <div style="font-size:.8rem;color:#9ca3af">State: <span class="${stateColor}">${stateDisplay}</span></div>
-            <div style="font-size:.8rem;color:#9ca3af">Heartbeat: ${(acc.watcher && acc.watcher.last_heartbeat) || '—'}</div>
+        <div class="stat-label">${accountName}</div>
+        <div class="meta-grid">
+          <div class="meta-row">
+            <span class="meta-label">Address</span>
+            <span class="meta-value email-clip">${emailAddress}</span>
           </div>
-          <div class="btn-group">
-            <button class="btn-secondary btn-sm" onclick="startWatcher(${acc.id}, this)"><i class="bi bi-play-fill"></i> Start</button>
-            <button class="btn-secondary btn-sm" onclick="stopWatcher(${acc.id}, this)"><i class="bi bi-stop-fill"></i> Stop</button>
-            <button class="btn-secondary btn-sm" onclick="restartWatcher(${acc.id}, this)"><i class="bi bi-arrow-repeat"></i> Restart</button>
+          <div class="meta-row">
+            <span class="meta-label">State</span>
+            <span class="meta-value">${stateChip}</span>
           </div>
+          <div class="meta-row">
+            <span class="meta-label">Heartbeat</span>
+            <span class="meta-value">${heartbeatHtml}</span>
+          </div>
+          ${lastErrorHtml}
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-secondary btn-sm" onclick="startWatcher(${acc.id}, this)"><i class="bi bi-play-fill"></i> Start</button>
+          <button class="btn btn-secondary btn-sm" onclick="stopWatcher(${acc.id}, this)"><i class="bi bi-stop-fill"></i> Stop</button>
+          <button class="btn btn-ghost btn-sm" onclick="restartWatcher(${acc.id}, this)"><i class="bi bi-arrow-repeat"></i> Restart</button>
         </div>`;
       grid.appendChild(card);
     });
     document.getElementById('watchersCount').textContent = activeCount;
+    applyTimeFormatting();
   }catch(e){
     if(window.showError) showError('Failed to load watchers overview');
   }
@@ -157,7 +203,11 @@ async function checkSmtp(){ try{ const r=await fetch('/api/smtp-health'); const 
 
 function refreshAll(){ loadOverview(); }
 
-document.addEventListener('DOMContentLoaded', ()=>{ loadOverview(); setInterval(loadOverview, 10000); });
+document.addEventListener('DOMContentLoaded', ()=>{
+  applyTimeFormatting();
+  loadOverview();
+  setInterval(loadOverview, 10000);
+});
 
 async function validateCounts(){
   try{
@@ -170,3 +220,5 @@ async function validateCounts(){
 }
 </script>
 {% endblock %}
+
+
