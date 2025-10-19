@@ -220,11 +220,14 @@
       <i class="bi bi-hand-stop"></i> Intercept
     </button>
     {% else %}
-    <button class="action-btn success" onclick="releaseEmail({{ email.id }})">
-      <i class="bi bi-check-circle"></i> Release
+    <button class="action-btn success" onclick="editEmail({{ email.id }}, true)">
+      <i class="bi bi-check-circle"></i> Edit &amp; Release
     </button>
-    <button class="action-btn" onclick="editEmail({{ email.id }})">
+    <button class="action-btn" onclick="editEmail({{ email.id }}, false)">
       <i class="bi bi-pencil"></i> Edit
+    </button>
+    <button class="action-btn" onclick="releaseEmail({{ email.id }}, true)">
+      <i class="bi bi-send-check"></i> Quick Release
     </button>
     {% endif %}
     <button class="action-btn danger" onclick="deleteEmail({{ email.id }})">
@@ -286,6 +289,7 @@
             <div class="modal-body" style="color:#fff !important;">
                 <form id="editEmailForm">
                     <input type="hidden" id="editEmailId" value="">
+                    <input type="hidden" id="editEmailReleaseMode" value="0">
 
                     <div class="mb-3">
                         <label class="form-label fw-bold">From:</label>
@@ -315,6 +319,9 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="saveAndReleaseBtn" style="display:none;" onclick="saveAndRelease()">
+                    <i class="bi bi-check-circle"></i> Save &amp; Release
+                </button>
                 <button type="button" class="btn btn-primary" onclick="saveEmailEdit()">
                     <i class="bi bi-save"></i> Save Changes
                 </button>
@@ -397,23 +404,57 @@ async function interceptEmail(emailId) {
   }
 }
 
-async function releaseEmail(emailId) {
-  const response = await fetch(`/api/interception/release/${emailId}`, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'}
-  });
+async function releaseEmail(emailId, isQuick = false) {
+  try {
+    const response = await fetch(`/api/interception/release/${emailId}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({target_folder: 'INBOX'})
+    });
 
-  const data = await response.json();
-  if (data.ok || data.success) {
-    showSuccess('Email released to inbox successfully');
+    let data = null;
+    try {
+      data = await response.json();
+    } catch (err) {
+      data = null;
+    }
+
+    if (!response.ok || !(data && (data.ok || data.success))) {
+      const reason = data && (data.error || data.reason) ? (data.error || data.reason) : `Request failed with status ${response.status}`;
+      throw new Error(reason);
+    }
+
+    showSuccess(isQuick ? 'Email released to inbox' : 'Email released successfully');
     setTimeout(() => window.location.reload(), 1000);
-  } else {
-    showError(data.error || 'Failed to release email');
+  } catch (error) {
+    console.error('Error releasing email:', error);
+    showError(error.message || 'Failed to release email');
   }
 }
 
-function editEmail(emailId) {
+function editEmail(emailId, releaseMode = false) {
     console.log(`Fetching email details for ID: ${emailId}`);
+
+    const releaseFlagInput = document.getElementById('editEmailReleaseMode');
+    if (releaseFlagInput) {
+        releaseFlagInput.value = releaseMode ? '1' : '0';
+    }
+    const saveReleaseBtn = document.getElementById('saveAndReleaseBtn');
+    if (saveReleaseBtn) {
+        if (releaseMode) {
+            saveReleaseBtn.style.display = 'inline-flex';
+            saveReleaseBtn.disabled = false;
+            saveReleaseBtn.innerHTML = '<i class="bi bi-check-circle"></i> Save &amp; Release';
+        } else {
+            saveReleaseBtn.style.display = 'none';
+        }
+    }
+    const modalTitle = document.getElementById('editEmailModalLabel');
+    if (modalTitle) {
+        modalTitle.innerHTML = releaseMode
+            ? '<i class="bi bi-pencil-square"></i> Finalize &amp; Release'
+            : '<i class="bi bi-pencil-square"></i> Edit Email';
+    }
 
     // Fetch email details
     fetch(`/email/${emailId}/edit`)
@@ -449,7 +490,7 @@ function editEmail(emailId) {
 
             // Show modal
             const modal = new bootstrap.Modal(modalElement);
-            modal.show();
+                modal.show();
             console.log('Modal should be visible now');
         })
         .catch(error => {
@@ -462,7 +503,7 @@ function editEmail(emailId) {
 function saveEmailEdit() {
     const emailId = document.getElementById('editEmailId').value;
     const subject = document.getElementById('editEmailSubject').value;
-    const body = document.getElementById('editEmailBody').value;
+   const body = document.getElementById('editEmailBody').value;
 
     if (!subject || !body) {
         showWarning('Subject and body are required');
@@ -497,6 +538,11 @@ function saveEmailEdit() {
             showError(data.error);
             saveBtn.disabled = false;
             saveBtn.innerHTML = originalText;
+            const releaseBtn = document.getElementById('saveAndReleaseBtn');
+            if (releaseBtn && releaseBtn.style.display !== 'none') {
+                releaseBtn.disabled = false;
+                releaseBtn.innerHTML = '<i class="bi bi-check-circle"></i> Save &amp; Release';
+            }
         } else {
             // Show success message
             saveBtn.innerHTML = '<i class="bi bi-check-circle"></i> Saved!';
@@ -514,6 +560,70 @@ function saveEmailEdit() {
         showError(`Failed to save changes: ${error.message}`);
         saveBtn.disabled = false;
         saveBtn.innerHTML = originalText;
+        const releaseBtn = document.getElementById('saveAndReleaseBtn');
+        if (releaseBtn && releaseBtn.style.display !== 'none') {
+            releaseBtn.disabled = false;
+            releaseBtn.innerHTML = '<i class="bi bi-check-circle"></i> Save &amp; Release';
+        }
+    });
+}
+
+function saveAndRelease() {
+    const emailId = document.getElementById('editEmailId').value;
+    const subject = document.getElementById('editEmailSubject').value;
+    const body = document.getElementById('editEmailBody').value;
+    const btn = document.getElementById('saveAndReleaseBtn');
+
+    if (!subject || !body) {
+        showWarning('Subject and body are required');
+        return;
+    }
+    if (!btn) {
+        releaseEmail(emailId, true);
+        return;
+    }
+
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+
+    fetch(`/api/interception/release/${emailId}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            edited_subject: subject,
+            edited_body: body,
+            target_folder: 'INBOX'
+        })
+    })
+    .then(async response => {
+        let payload = null;
+        try {
+            payload = await response.json();
+        } catch (err) {
+            payload = null;
+        }
+
+        if (!response.ok || !(payload && (payload.ok || payload.success))) {
+            const reason = (payload && (payload.error || payload.reason)) || `HTTP ${response.status}`;
+            throw new Error(reason);
+        }
+
+        showSuccess('Email saved and released successfully');
+        btn.innerHTML = '<i class="bi bi-check-circle"></i> Released!';
+        setTimeout(() => {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editEmailModal'));
+            if (modal) {
+                modal.hide();
+            }
+            window.location.reload();
+        }, 1200);
+    })
+    .catch(error => {
+        console.error('Error releasing email:', error);
+        showError(`Failed to release email: ${error.message}`);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
     });
 }
 

@@ -22,6 +22,7 @@ import imaplib, ssl
 from app.utils.db import get_db, DB_PATH
 from app.utils.crypto import decrypt_credential, encrypt_credential
 from app.utils.imap_helpers import _imap_connect_account, _ensure_quarantine, _move_uid_to_quarantine
+from app.utils.email_markers import RELEASE_BYPASS_HEADER, RELEASE_EMAIL_ID_HEADER
 from app.services.audit import log_action
 import socket
 from app.extensions import csrf, limiter
@@ -505,6 +506,14 @@ def api_interception_release(msg_id:int):
         except Exception:
             already_present = False
 
+        release_marker = f"emt-release-{msg_id}"
+        if msg.get(RELEASE_BYPASS_HEADER):
+            del msg[RELEASE_BYPASS_HEADER]
+        msg[RELEASE_BYPASS_HEADER] = release_marker
+        if msg.get(RELEASE_EMAIL_ID_HEADER):
+            del msg[RELEASE_EMAIL_ID_HEADER]
+        msg[RELEASE_EMAIL_ID_HEADER] = str(msg_id)
+
         if not already_present:
             # Append the (possibly edited) message
             imap.append(target_folder, '', date_param, msg.as_bytes())
@@ -541,7 +550,10 @@ def api_interception_release(msg_id:int):
             deleted = False
             for uid in uids:
                 try:
-                    imap.uid('STORE', uid, '+FLAGS', '(\\Deleted)')
+                    uid_param = str(uid).strip()
+                    if not uid_param:
+                        continue
+                    imap.uid('STORE', uid_param, '+FLAGS', '(\\Deleted)')
                     deleted = True
                 except Exception as store_err:
                     log.debug("[interception::release] UID STORE failed uid=%s err=%s", uid, store_err)
@@ -558,6 +570,20 @@ def api_interception_release(msg_id:int):
             'INBOX.Quarantine'
         ]
 
+        def _extract_uids(search_segments):
+            results = []
+            if not search_segments:
+                return results
+            for segment in search_segments:
+                if not segment:
+                    continue
+                if isinstance(segment, bytes):
+                    segment = segment.decode('ascii', errors='ignore')
+                if isinstance(segment, str):
+                    parts = [item.strip() for item in segment.split() if item]
+                    results.extend(parts)
+            return results
+
         try:
             for qfolder in quarantine_candidates:
                 try:
@@ -570,20 +596,21 @@ def api_interception_release(msg_id:int):
                     for header_val in header_candidates:
                         try:
                             typ, search_data = imap.uid('SEARCH', None, 'HEADER', 'Message-ID', header_val)
-                            if typ == 'OK' and search_data and search_data[0]:
-                                candidate_uids.extend(int(x) for x in search_data[0].split())
+                            if typ == 'OK':
+                                candidate_uids.extend(_extract_uids(search_data))
                         except Exception as search_err:
                             log.debug("[interception::release] HEADER search failed in %s (%s)", qfolder, search_err)
 
                     if not candidate_uids and original_uid:
                         try:
                             typ_uid, search_uid = imap.uid('SEARCH', None, 'UID', str(original_uid))
-                            if typ_uid == 'OK' and search_uid and search_uid[0]:
-                                candidate_uids.extend(int(x) for x in search_uid[0].split())
+                            if typ_uid == 'OK':
+                                candidate_uids.extend(_extract_uids(search_uid))
                         except Exception as uid_err:
                             log.debug("[interception::release] UID search failed in %s (%s)", qfolder, uid_err)
 
                     if candidate_uids:
+                        candidate_uids = list(dict.fromkeys(candidate_uids))
                         if _delete_matches(candidate_uids):
                             removed_from_quarantine = True
                             log.info("[interception::release] Removed %d message(s) from %s", len(candidate_uids), qfolder, extra={'email_id': msg_id, 'uids': candidate_uids})

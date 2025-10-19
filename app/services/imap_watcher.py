@@ -28,6 +28,7 @@ import backoff
 from imapclient import IMAPClient
 
 from app.utils.rule_engine import evaluate_rules
+from app.utils.email_markers import RELEASE_BYPASS_HEADER, RELEASE_EMAIL_ID_HEADER
 
 
 log = logging.getLogger(__name__)
@@ -55,6 +56,7 @@ class ImapWatcher:
         self._client: Optional[IMAPClient] = None  # set in _connect
         self._last_hb = 0.0
         self._last_uidnext = 1
+        self._release_skip_uids: set[int] = set()
         # Hybrid IDLE+polling strategy tracking
         self._idle_failure_count = 0
         self._last_successful_idle = time.time()
@@ -436,6 +438,16 @@ class ImapWatcher:
                     raw_email = data[b'RFC822']
                     email_msg = message_from_bytes(raw_email, policy=policy.default)
 
+                    release_marker = (email_msg.get(RELEASE_BYPASS_HEADER) or '').strip()
+                    if release_marker:
+                        email_row_id = (email_msg.get(RELEASE_EMAIL_ID_HEADER) or '').strip()
+                        log.info("Skipping released email UID=%s marker=%s email_id=%s",
+                                 uid_int,
+                                 release_marker,
+                                 email_row_id or "unknown")
+                        self._release_skip_uids.add(uid_int)
+                        continue
+
                     sender = str(email_msg.get('From', ''))
                     addr_fields = email_msg.get_all('To', []) + email_msg.get_all('Cc', [])
                     addr_list = [addr for _, addr in getaddresses(addr_fields)]
@@ -676,6 +688,16 @@ class ImapWatcher:
             return
         uniq = sorted(set(candidates))
 
+        if self._release_skip_uids:
+            filtered = [u for u in uniq if u not in self._release_skip_uids]
+            if not filtered:
+                try:
+                    self._last_uidnext = max(self._last_uidnext, max(uniq) + 1)
+                except Exception:
+                    pass
+                return
+            uniq = filtered
+
         # Filter out UIDs we've already stored for this account
         try:
             conn = sqlite3.connect(self.cfg.db_path)
@@ -703,6 +725,8 @@ class ImapWatcher:
                 self._last_uidnext = max(self._last_uidnext, max(uniq) + 1)
             except Exception:
                 pass
+            else:
+                self._release_skip_uids = {u for u in self._release_skip_uids if u >= self._last_uidnext}
             return
 
         log.info("Intercepting %d messages (acct=%s): %s", len(to_process), self.cfg.account_id, to_process)
@@ -751,6 +775,8 @@ class ImapWatcher:
             self._last_uidnext = max(self._last_uidnext, last_db_uid + 1, max(to_process) + 1)
         except Exception:
             pass
+        else:
+            self._release_skip_uids = {u for u in self._release_skip_uids if u >= self._last_uidnext}
 
     @backoff.on_exception(backoff.expo, (socket.error, OSError, Exception), max_time=60 * 60)
     def run_forever(self):

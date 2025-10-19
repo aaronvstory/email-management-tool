@@ -234,10 +234,11 @@ You have two options when releasing a held email:
 
 1. Go to **Held** page (or Dashboard → Held tab)
 2. Click on the held email to open details
-3. Option A: Click **"Release"** - sends original to inbox
-4. Option B: Click **"Edit"**, modify subject/body, then **"Release"**
-5. Check your real inbox: Released email now appears
-6. Check Quarantine folder: Original should be deleted
+3. Option A: Click **"Quick Release"** – delivers the held message exactly as captured
+4. Option B: Click **"Edit & Release"**, adjust subject/body in the modal, then press **"Save & Release"**
+5. Option C: Use **"Edit"** to save changes without releasing yet (the edits persist for later review)
+6. Check your real inbox: Released email now appears
+7. Check Quarantine folder: Original should be deleted
 
 ---
 
