@@ -767,6 +767,15 @@ def log_security_events(response):
             pass
     return response
 
+@app.route('/diagnostics')
+@login_required
+def diagnostics():
+    """Canonical diagnostics entry - redirects to Dashboard Diagnostics tab."""
+    account_id = request.args.get('account_id', type=int)
+    if account_id:
+        return redirect(url_for('dashboard.dashboard', tab='diagnostics') + f'?account_id={account_id}')
+    return redirect(url_for('dashboard.dashboard', tab='diagnostics'))
+
 # Routes
 # ============================================================================
 # PHASE 1B: Auth routes migrated to app/routes/auth.py

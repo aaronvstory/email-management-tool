@@ -2,25 +2,31 @@
 {% block title %}Settings - Email Management Tool{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 style="font-size:1.4rem"><i class="bi bi-sliders"></i> Settings</h1>
-  <div class="btn-group">
-    <button class="btn-secondary btn-sm" onclick="saveSettings()"><i class="bi bi-save"></i> Save</button>
-    <a href="/watchers" class="btn-ghost btn-sm"><i class="bi bi-activity"></i> Watchers</a>
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-sliders"></i> Settings</h1>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-secondary btn-sm" onclick="saveSettings()"><i class="bi bi-save"></i> Save</button>
+    <a href="/watchers" class="btn btn-ghost btn-sm"><i class="bi bi-activity"></i> Watchers</a>
   </div>
 </div>
 
 <div class="panel">
-  <div class="panel-title">Watcher & Service Flags</div>
-  <div class="table-responsive">
+  <div class="panel-header">
+    <div class="panel-title">Watcher & Service Flags</div>
+    <div class="panel-actions">
+      <a class="btn btn-secondary btn-sm" href="/watchers" onclick="setTimeout(()=>restartAllViaWatchers(), 0)"><i class="bi bi-arrow-repeat"></i> Apply & Restart Watchers</a>
+    </div>
+  </div>
+  <div class="panel-body">
+    <div class="table-responsive">
     <table class="table">
       <thead><tr><th>Flag</th><th>Description</th><th style="width:220px">Value</th></tr></thead>
       <tbody id="settingsBody"></tbody>
     </table>
   </div>
-  <div class="text-muted" style="font-size:.9rem">Changes apply to new connections; restart watchers to apply runtime parameters.</div>
-  <div class="mt-2">
-    <a class="btn-secondary btn-sm" href="/watchers" onclick="setTimeout(()=>restartAllViaWatchers(), 0)"><i class="bi bi-arrow-repeat"></i> Apply & Restart Watchers</a>
+  <div class="panel-note">Changes apply to new connections; restart watchers to apply runtime parameters.</div>
   </div>
 </div>
 

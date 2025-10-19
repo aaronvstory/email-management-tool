@@ -281,37 +281,8 @@ def api_test_connection(connection_type):
     return jsonify({'success': ok, 'message': msg, 'error': None if ok else msg})
 
 
-@accounts_bp.route('/diagnostics')
-@accounts_bp.route('/diagnostics/<account_id>')
-@login_required
-def diagnostics(account_id=None):
-    """Redirect to dashboard diagnostics tab, optionally scoped to account."""
-    if account_id:
-        return redirect(url_for('dashboard.dashboard', tab='diagnostics') + f'?account_id={account_id}')
-    return redirect(url_for('dashboard.dashboard', tab='diagnostics'))
 
 
-@accounts_bp.route('/api/diagnostics/<int:account_id>')
-@login_required
-def api_account_diagnostics(account_id: int):
-    """Return SMTP/IMAP test results for a specific account (JSON)."""
-    if current_user.role != 'admin':
-        return jsonify({'error': 'Admin access required'}), 403
-    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row
-    cur = conn.cursor(); acc = cur.execute("SELECT * FROM email_accounts WHERE id=?", (account_id,)).fetchone()
-    if not acc:
-        conn.close(); return jsonify({'error': 'Account not found'}), 404
-    imap_pwd = decrypt_credential(acc['imap_password']) if acc['imap_password'] else ''
-    smtp_pwd = decrypt_credential(acc['smtp_password']) if acc['smtp_password'] else ''
-    imap_ok, imap_msg = _test_email_connection('imap', str(acc['imap_host'] or ''), _to_int(acc['imap_port'], 993), str(acc['imap_username'] or ''), imap_pwd or '', bool(acc['imap_use_ssl']))
-    smtp_ok, smtp_msg = _test_email_connection('smtp', str(acc['smtp_host'] or ''), _to_int(acc['smtp_port'], 465), str(acc['smtp_username'] or ''), smtp_pwd or '', bool(acc['smtp_use_ssl']))
-    payload = {
-        'account_name': acc['account_name'],
-        'imap_test': {'success': imap_ok, 'message': imap_msg},
-        'smtp_test': {'success': smtp_ok, 'message': smtp_msg},
-        'timestamp': datetime.now().isoformat()
-    }
-    conn.close(); return jsonify(payload)
 
 
 @accounts_bp.route('/api/accounts/<int:account_id>/imap-live-test', methods=['POST'])

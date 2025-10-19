@@ -179,24 +179,8 @@ def email_queue():
     return redirect(redirect_url)
 
 
-@emails_bp.route('/inbox')
-@login_required
-def inbox_redirect():
-    """Legacy inbox - redirect to unified"""
-    account_id = request.args.get('account_id', type=int)
-
-    redirect_url = '/emails-unified?status=ALL'
-    if account_id:
-        redirect_url += f'&account_id={account_id}'
-
-    return redirect(redirect_url)
 
 
-@emails_bp.route('/interception')
-@login_required
-def interception_redirect():
-    """Legacy interception - redirect to unified"""
-    return redirect('/emails-unified?status=HELD')
 
 
 # Keep original email_queue for backward compatibility (without redirect)

@@ -89,8 +89,11 @@
         <div class="main-modern">
             <div class="topbar">
                 <button class="toggle-nav" onclick="document.querySelector('.sidebar-modern').classList.toggle('open')"><i class="bi bi-list"></i></button>
-                <div class="search-inline">
-                    <input type="text" placeholder="Search mail, accounts, rules..." aria-label="Search">
+                <div class="search-inline" role="search">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="search" class="form-control search-box" placeholder="Search mail, accounts, rules..." aria-label="Global search">
+                    </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;">
                     {% if not imap_only %}<span id="nav-smtp" class="badge badge-soft-muted" title="SMTP Proxy">SMTP</span>{% endif %}

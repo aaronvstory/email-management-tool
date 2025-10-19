@@ -454,94 +454,6 @@ form h4, form h5, form h6 {
     color: var(--text-primary) !important;
 }
 
-/* CONSISTENT BUTTON SIZING - All buttons same height and padding */
-.btn,
-button[type="submit"],
-button[type="button"],
-.btn-primary,
-.btn-secondary,
-.btn-success,
-.btn-danger,
-.btn-warning,
-.btn-info,
-.btn-light,
-.btn-dark,
-.btn-outline-primary,
-.btn-outline-secondary,
-.btn-outline-success,
-.btn-outline-danger,
-.btn-outline-warning,
-.btn-outline-info,
-.btn-modern,
-.btn-primary-modern,
-.btn-login,
-.btn-send,
-.btn-cancel,
-.toolbar-btn,
-.provider-btn,
-.btn-action,
-.action-btn,
-.btn-test,
-.btn-accent,
-.btn-ghost {
-    height: 42px !important;
-    padding: 8px 20px !important;
-    font-size: 15px !important;
-    font-weight: 500 !important;
-    border-radius: 6px !important;
-    line-height: 1.5 !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    white-space: nowrap !important;
-    min-width: 100px !important;
-}
-/* Include custom button classes used across app for consistent height */
-.add-account-btn {
-    height: 42px !important;
-    padding: 8px 20px !important;
-    font-size: 15px !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
-
-/* Small buttons - consistent smaller size */
-.btn-sm,
-.btn-group-sm > .btn {
-    height: 34px !important;
-    padding: 5px 15px !important;
-    font-size: 14px !important;
-    min-width: 80px !important;
-}
-
-/* Large buttons - consistent larger size */
-.btn-lg,
-.btn-group-lg > .btn {
-    height: 50px !important;
-    padding: 12px 30px !important;
-    font-size: 18px !important;
-    min-width: 120px !important;
-}
-
-/* Icon-only buttons */
-.btn-icon-only {
-    min-width: 42px !important;
-    width: 42px !important;
-    padding: 8px !important;
-}
-
-/* Button groups should align properly */
-.btn-group {
-    display: inline-flex !important;
-    gap: 5px !important;
-}
-
-/* Toolbar buttons same height */
-.toolbar-btn {
-    min-width: auto !important;
-    padding: 8px 15px !important;
-}
 
 /* REMOVE ALL PILL/BADGE STYLING - MAKE RECTANGULAR */
 .badge,
@@ -1150,7 +1062,13 @@ button[disabled] {
 }
 
 /* FOCUS STATES - Accessible and consistent */
-.btn:focus {
+.btn:focus,
+.btn:focus-visible,
+a:focus-visible,
+.form-control:focus-visible,
+.form-select:focus-visible,
+.nav-mini-link:focus-visible,
+.nav-item-link:focus-visible {
   outline: 2px solid #dc2626 !important;
   outline-offset: 2px !important;
 }

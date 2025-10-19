@@ -1312,33 +1312,3 @@
     duplication.
 
     Let me know when you’re ready for the next phase or if you want any more pointers included.
-
-
-========
-
-
-
-
-Checkpoint
-
-Kilo Code wants to read this file
-
-
-
-Checkpoint
-
-Kilo Code wants to search this directory for @[a-zA-Z_\.]+route\(\s*['\"][^'\"\)]+['\"][^)]*\)
-
-
-
-Kilo said
-Brief summary based on the attachment
-
-Completed so far
-Refactored templates/accounts.html to token-driven markup with no inline styles, using shared helpers and canonical panel/card/button patterns.
-Introduced reusable macros in templates/partials/account_components.html and templates/partials/rule_components.html to eliminate duplicated markup between standalone pages and dashboard tabs.
-Expanded tokenized utilities and unified classes in static/css/main.css (e.g., .text-accent, .tag-chip, .table-toolbar, empty/loading states); watchers remains the canonical visual reference templates/watchers.html.
-Remaining work
-Dashboard templates still use legacy styling with inline attributes and per-page ad hoc classes: templates/dashboard_unified.html, templates/dashboard_interception.html, templates/rules.html, templates/styleguide.html, plus compose/settings pages need alignment.
-Duplicated routes/views exist (e.g., /accounts vs /dashboard/accounts). Need a route map, canonicalization, redirects, and link updates across codebase, validating with tests. Candidate sources: app/routes/dashboard.py, app/routes/moderation.py, and other blueprints under app/routes/*.
-Next I’ll generate the full server route map and begin deduplication, while standardizing styling across remaining templates using the token system and shared components.
