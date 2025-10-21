@@ -22,8 +22,13 @@ class ReleaseIMAP:
         }
         self.deleted_uids = []
         self.gmail_operations = []  # Track Gmail-specific operations
-        # Simulate Gmail capabilities (MOVE, UIDPLUS)
-        self.capabilities = ('IMAP4REV1', 'MOVE', 'UIDPLUS', 'IDLE')
+        # Simulate Gmail capabilities (MOVE, UIDPLUS, X-GM-EXT-1 for Gmail extensions)
+        self.capabilities = ('IMAP4REV1', 'MOVE', 'UIDPLUS', 'IDLE', 'X-GM-EXT-1')
+
+    def capability(self):
+        """Return IMAP capabilities including Gmail extensions."""
+        caps = b' '.join(cap.encode() if isinstance(cap, str) else cap for cap in self.capabilities)
+        return "OK", [caps]
 
     def preload(self, folder, uid, message_id):
         self.mailboxes.setdefault(folder, {})[uid] = message_id
@@ -68,6 +73,32 @@ class ReleaseIMAP:
     def uid(self, command, *args):
         if command == 'SEARCH':
             _, criterion, data = args[0], args[1], args[2]
+            # Handle X-GM-RAW searches (Gmail extension)
+            if criterion == 'X-GM-RAW' and self.current_folder in self.mailboxes:
+                raw_query = data
+                # Simple matching: look for message ID in query
+                matches = []
+                for uid, msgid in self.mailboxes[self.current_folder].items():
+                    # Extract clean message ID for matching
+                    clean_msgid = msgid.strip('<>').strip()
+                    if clean_msgid in raw_query or msgid in raw_query:
+                        matches.append(uid)
+                result = b" ".join(str(uid).encode() for uid in matches) if matches else b""
+                # Track All Mail search
+                if self.current_folder in ['[Gmail]/All Mail', '[Google Mail]/All Mail']:
+                    self.gmail_operations.append(('uid_search', self.current_folder, raw_query, 'X-GM-RAW'))
+                return "OK", [result]
+            # Handle HEADER X-Google-Original-Message-ID searches
+            if criterion == 'HEADER' and len(args) > 3:
+                header_name = data
+                value = args[3]
+                if header_name == 'X-Google-Original-Message-ID' and self.current_folder in self.mailboxes:
+                    matches = [uid for uid, msgid in self.mailboxes[self.current_folder].items() if msgid.strip('<>').strip() == value.strip('<>').strip()]
+                    result = b" ".join(str(uid).encode() for uid in matches) if matches else b""
+                    if self.current_folder in ['[Gmail]/All Mail', '[Google Mail]/All Mail']:
+                        self.gmail_operations.append(('uid_search', self.current_folder, value, 'HEADER-XGOOG'))
+                    return "OK", [result]
+            # Handle regular HEADER Message-ID searches
             if criterion == 'HEADER' and self.current_folder in self.mailboxes:
                 value = args[3]
                 matches = [uid for uid, msgid in self.mailboxes[self.current_folder].items() if msgid == value]

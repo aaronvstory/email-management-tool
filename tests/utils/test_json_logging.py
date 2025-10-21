@@ -95,12 +95,17 @@ def test_setup_app_logging_creates_log_files(app, tmp_path):
     # Log a test message
     app.logger.info("Test log message")
 
-    # Verify JSON log file exists
-    json_log = log_dir / "app.json.log"
+    # Verify JSON log file exists (timestamped format: app_YYYY-MM-DD_HHMMSS.json.log)
+    json_logs = list(log_dir.glob("app_*.json.log"))
+    assert len(json_logs) > 0, "No JSON log files found"
+    json_log = json_logs[0]
     assert json_log.exists()
 
-    # Verify plain text log file exists
-    text_log = log_dir / "app.log"
+    # Verify plain text log file exists (timestamped format: app_YYYY-MM-DD_HHMMSS.log)
+    text_logs = list(log_dir.glob("app_*.log"))
+    text_logs = [f for f in text_logs if not f.name.endswith('.json.log')]  # Exclude .json.log files
+    assert len(text_logs) > 0, "No text log files found"
+    text_log = text_logs[0]
     assert text_log.exists()
 
     # Verify JSON log contains valid JSON
@@ -113,34 +118,47 @@ def test_setup_app_logging_creates_log_files(app, tmp_path):
 
 
 def test_json_log_rotation(app, tmp_path):
-    """Test that log rotation works correctly."""
+    """Test that timestamped log files are created and old files are cleaned up."""
     log_dir = tmp_path / "rotation_test"
 
     # Clear any existing handlers
     app.logger.handlers.clear()
 
-    # Setup logging with very small max size for testing (1KB)
+    # Create multiple log sessions to test cleanup (keeps last 3)
+    # Session 1
     setup_app_logging(app, log_dir=str(log_dir))
+    app.logger.info("Session 1 message")
+    app.logger.handlers.clear()
 
-    # Get the JSON handler and update its maxBytes for testing
-    for handler in app.logger.handlers:
-        if isinstance(handler, logging.handlers.RotatingFileHandler):
-            if "json" in str(handler.baseFilename):
-                handler.maxBytes = 1024  # 1KB for testing
+    # Session 2
+    import time
+    time.sleep(0.1)  # Ensure different timestamp
+    setup_app_logging(app, log_dir=str(log_dir))
+    app.logger.info("Session 2 message")
+    app.logger.handlers.clear()
 
-    # Write enough logs to trigger rotation
-    for i in range(100):
-        app.logger.info(f"Test log message {i} " + "x" * 100)
+    # Session 3
+    time.sleep(0.1)
+    setup_app_logging(app, log_dir=str(log_dir))
+    app.logger.info("Session 3 message")
+    app.logger.handlers.clear()
 
-    # Verify rotation occurred (backup files should exist)
-    json_log = log_dir / "app.json.log"
-    assert json_log.exists()
+    # Session 4 (should trigger cleanup of session 1 files)
+    time.sleep(0.1)
+    setup_app_logging(app, log_dir=str(log_dir))
+    app.logger.info("Session 4 message")
 
-    # Check if any backup files were created
-    backup_files = list(log_dir.glob("app.json.log.*"))
-    # Note: Rotation may or may not occur depending on exact log sizes
-    # Just verify the main file exists and is below max size + some buffer
-    assert json_log.stat().st_size < 10240  # 10KB buffer
+    # Verify timestamped JSON log files exist
+    json_logs = list(log_dir.glob("app_*.json.log"))
+    # Should have at most 3 JSON log files (cleanup keeps last 3)
+    assert len(json_logs) <= 3, f"Expected at most 3 JSON logs, found {len(json_logs)}"
+    assert len(json_logs) > 0, "No JSON log files found"
+
+    # Verify timestamped text log files exist
+    text_logs = [f for f in log_dir.glob("app_*.log") if not f.name.endswith('.json.log')]
+    # Should have at most 3 text log files (cleanup keeps last 3)
+    assert len(text_logs) <= 3, f"Expected at most 3 text logs, found {len(text_logs)}"
+    assert len(text_logs) > 0, "No text log files found"
 
 
 def test_logging_respects_log_level_env_var(app, tmp_path, monkeypatch):
@@ -161,8 +179,11 @@ def test_logging_respects_log_level_env_var(app, tmp_path, monkeypatch):
     app.logger.warning("Warning message")
     app.logger.error("Error message")
 
-    # Read JSON log
-    json_log = log_dir / "app.json.log"
+    # Read JSON log (timestamped format: app_YYYY-MM-DD_HHMMSS.json.log)
+    json_logs = list(log_dir.glob("app_*.json.log"))
+    assert len(json_logs) > 0, "No JSON log files found"
+    json_log = json_logs[0]
+
     logged_messages = []
     with open(json_log, 'r') as f:
         for line in f:
