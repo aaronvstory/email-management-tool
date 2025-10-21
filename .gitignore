@@ -185,3 +185,10 @@ nul
 
 # Workspace archive
 archive/
+
+# VS Code Local History extension
+.history/
+
+# VS Code launcher scripts (temporary helpers)
+launch_vscode_*.bat
+launch_vscode_*.vbs

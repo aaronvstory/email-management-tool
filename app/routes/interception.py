@@ -173,15 +173,15 @@ def _robust_message_id_search(imap_conn, folder, message_id, is_gmail=False, tri
                 else:
                     typ, data = imap_conn.uid('SEARCH', None, kind, 'Message-ID', arg)
 
-                app_log.info("[Search] Attempt", extra={"kind": kind, "label": label, "typ": typ, "raw": str(data)[:200], "folder": folder})
+                log.info("[Search] Attempt", extra={"kind": kind, "label": label, "typ": typ, "raw": str(data)[:200], "folder": folder})
 
                 if typ == 'OK' and data and data[0]:
                     uids = [u.decode() if isinstance(u, bytes) else u for u in data[0].split()]
                     if uids:
-                        app_log.info("[Search] SUCCESS", extra={"label": label, "uids": uids, "folder": folder})
+                        log.info("[Search] SUCCESS", extra={"label": label, "uids": uids, "folder": folder})
                         return uids
             except Exception as e:
-                app_log.debug("[Search] Error", extra={"label": label, "err": str(e)})
+                log.debug("[Search] Error", extra={"label": label, "err": str(e)})
         return []
 
     # Retry loop to handle Gmail indexing lag with exponential backoff
@@ -189,14 +189,14 @@ def _robust_message_id_search(imap_conn, folder, message_id, is_gmail=False, tri
         if attempt > 0:
             # Exponential backoff: 0.25s, 0.5s, 1s for better Gmail indexing lag handling
             backoff_delay = delay * (2 ** (attempt - 1))
-            app_log.info(f"[Search] Retry attempt {attempt + 1}/{tries}", extra={"folder": folder, "message_id": mid[:50], "backoff": backoff_delay})
+            log.info(f"[Search] Retry attempt {attempt + 1}/{tries}", extra={"folder": folder, "message_id": mid[:50], "backoff": backoff_delay})
             time.sleep(backoff_delay)
 
         uids = _one_try()
         if uids:
             return uids
 
-    app_log.warning("[Search] FAILED all strategies after retries", extra={"message_id": mid, "folder": folder, "tries": tries})
+    log.warning("[Search] FAILED all strategies after retries", extra={"message_id": mid, "folder": folder, "tries": tries})
     return []
 
 
@@ -1302,9 +1302,6 @@ def api_interception_release(msg_id:int):
                         # All Mail cleanup attempt
                         try:
                             typ, _ = imap.select(all_mail_box, readonly=False)
-
-                            app_log.debug("All Mail select", extra={"email_id": msg_id, "mbox": all_mail_box, "typ": typ})
-
                             if typ != 'OK':
                                 log.debug(f"[Gmail] All Mail select failed: {all_mail_box}")
                             else:
