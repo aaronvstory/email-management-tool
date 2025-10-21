@@ -138,6 +138,7 @@ def fetch_counts(account_id: int | None = None, *, conn: Optional[sqlite3.Connec
     if exclude_discarded:
         clauses.append("(interception_status IS NULL OR interception_status != 'DISCARDED')")
     where_sql = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+    
     # Count each email only once per category - use OR logic to avoid double-counting
     # when both interception_status and legacy status fields are set
     sql = f"""
@@ -146,6 +147,7 @@ def fetch_counts(account_id: int | None = None, *, conn: Optional[sqlite3.Connec
             SUM(CASE WHEN interception_status IN ('HELD', 'PENDING') OR status IN ('HELD', 'PENDING') THEN 1 ELSE 0 END) AS held,
             SUM(CASE WHEN {legacy_released_clause} THEN 1 ELSE 0 END) AS released,
             SUM(CASE WHEN interception_status='REJECTED' OR status IN ('REJECTED', 'DISCARDED') THEN 1 ELSE 0 END) AS rejected,
+            SUM(CASE WHEN interception_status='DISCARDED' THEN 1 ELSE 0 END) AS discarded,
             SUM(CASE WHEN status='SENT' THEN 1 ELSE 0 END) AS sent,
             SUM(CASE WHEN status='APPROVED' THEN 1 ELSE 0 END) AS approved,
             SUM(CASE WHEN status='PENDING' THEN 1 ELSE 0 END) AS pending
@@ -156,9 +158,9 @@ def fetch_counts(account_id: int | None = None, *, conn: Optional[sqlite3.Connec
         cur = c.cursor()
         row = cur.execute(sql, params).fetchone()
         if row is None:
-            return {k: 0 for k in ('total','pending','approved','rejected','sent','held','released')}
+            return {k: 0 for k in ('total','pending','approved','rejected','sent','held','released','discarded')}
         # Coerce NULL aggregates to 0 to avoid None in API responses
-        return {k: int(row[k] or 0) for k in ('total','pending','approved','rejected','sent','held','released')}
+        return {k: int(row[k] or 0) for k in ('total','pending','approved','rejected','sent','held','released','discarded')}
 
 
 def fetch_by_statuses(statuses: Iterable[str], limit: int = 200, *, conn: Optional[sqlite3.Connection] = None):

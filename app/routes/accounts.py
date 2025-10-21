@@ -599,21 +599,27 @@ def add_email_account():
     if request.method == 'POST':
         account_name = request.form.get('account_name')
         email_address = request.form.get('email_address')
+        start_watcher = request.form.get('start_watcher') == 'on'  # NEW: Control watcher startup
 
         use_auto_detect = request.form.get('use_auto_detect') == 'on'
         if use_auto_detect and email_address:
             auto = _detect_email_settings(email_address)
             imap_host = auto['imap_host']; imap_port = auto['imap_port']; imap_use_ssl = auto['imap_use_ssl']
-            smtp_host = auto['smtp_host']; smtp_port = auto['smtp_port']; smtp_use_ssl = auto['smtp_use_ssl']
-            imap_username = email_address; smtp_username = email_address
-            imap_password = request.form.get('imap_password'); smtp_password = request.form.get('smtp_password')
+            smtp_host = auto.get('smtp_host')  # Optional
+            smtp_port = auto.get('smtp_port', 465)  # Optional
+            smtp_use_ssl = auto.get('smtp_use_ssl', True)  # Optional
+            imap_username = email_address
+            smtp_username = email_address
+            imap_password = request.form.get('imap_password')
+            smtp_password = request.form.get('smtp_password')  # Optional
             # Probe to self-heal if credentials provided
-            if imap_password and smtp_password:
+            if imap_password:
                 try:
                     imap_choice = _negotiate_imap(imap_host, imap_username, imap_password, imap_port, imap_use_ssl)
                     imap_host = imap_choice['imap_host']; imap_port = imap_choice['imap_port']; imap_use_ssl = imap_choice['imap_use_ssl']
                 except Exception:
                     pass
+            if smtp_password and smtp_host:  # Only negotiate if SMTP provided
                 try:
                     smtp_choice = _negotiate_smtp(smtp_host, smtp_username, smtp_password, smtp_port, smtp_use_ssl)
                     smtp_host = smtp_choice['smtp_host']; smtp_port = smtp_choice['smtp_port']; smtp_use_ssl = smtp_choice['smtp_use_ssl']
@@ -626,14 +632,16 @@ def add_email_account():
             imap_password = request.form.get('imap_password')
             imap_use_ssl = request.form.get('imap_use_ssl') == 'on'
 
-            smtp_host = request.form.get('smtp_host')
-            smtp_port = _to_int(request.form.get('smtp_port'), 465)
-            smtp_username = request.form.get('smtp_username')
-            smtp_password = request.form.get('smtp_password')
-            smtp_use_ssl = request.form.get('smtp_use_ssl') == 'on'
+            # SMTP fields are now OPTIONAL
+            smtp_host = request.form.get('smtp_host') or None
+            smtp_port = _to_int(request.form.get('smtp_port'), 465) if smtp_host else None
+            smtp_username = request.form.get('smtp_username') or None
+            smtp_password = request.form.get('smtp_password') or None
+            smtp_use_ssl = request.form.get('smtp_use_ssl') == 'on' if smtp_host else False
 
             # Normalize modes by ports
-            smtp_use_ssl, imap_use_ssl = _normalize_modes(int(smtp_port or 0), bool(smtp_use_ssl), int(imap_port or 0), bool(imap_use_ssl))
+            if smtp_host and smtp_port:
+                smtp_use_ssl, imap_use_ssl = _normalize_modes(int(smtp_port), bool(smtp_use_ssl), int(imap_port or 0), bool(imap_use_ssl))
             # Optional negotiation if creds present
             if imap_password and imap_username and imap_host:
                 try:
@@ -648,18 +656,21 @@ def add_email_account():
                 except Exception:
                     pass
 
+        # IMAP is REQUIRED
         imap_ok, imap_msg = _test_email_connection('imap', str(imap_host or ''), _to_int(imap_port, 993), str(imap_username or ''), imap_password or '', bool(imap_use_ssl))
-        smtp_ok, smtp_msg = _test_email_connection('smtp', str(smtp_host or ''), _to_int(smtp_port, 465), str(smtp_username or ''), smtp_password or '', bool(smtp_use_ssl))
-
         if not imap_ok:
             flash(f'IMAP connection failed: {imap_msg}', 'error')
             return render_template('add_account.html')
-        if not smtp_ok:
-            flash(f'SMTP connection failed: {smtp_msg}', 'error')
-            return render_template('add_account.html')
+
+        # SMTP is OPTIONAL - only test if provided
+        if smtp_host and smtp_username and smtp_password:
+            smtp_ok, smtp_msg = _test_email_connection('smtp', str(smtp_host), _to_int(smtp_port, 465), str(smtp_username), smtp_password, bool(smtp_use_ssl))
+            if not smtp_ok:
+                flash(f'SMTP connection failed: {smtp_msg}', 'error')
+                return render_template('add_account.html')
 
         encrypted_imap_password = encrypt_credential(imap_password)
-        encrypted_smtp_password = encrypt_credential(smtp_password)
+        encrypted_smtp_password = encrypt_credential(smtp_password) if smtp_password else None
 
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
@@ -684,21 +695,25 @@ def add_email_account():
             flash('Failed to create account: database error', 'error')
             return redirect(url_for('accounts.email_accounts'))
 
-        # Try to start IMAP watcher for the new account (best effort)
-        try:
-            from simple_app import monitor_imap_account, imap_threads  # lazy import to avoid circular at import time
-            import threading
-            thread = threading.Thread(target=monitor_imap_account, args=(account_id,), daemon=True)
-            imap_threads[account_id] = thread  # account_id is now guaranteed to be int
-            thread.start()
-        except Exception as e:
-            # Silent failure pattern as in original; log for visibility
+        # Start IMAP watcher ONLY if user requested it
+        if start_watcher:
             try:
-                current_app.logger.warning(f"Failed to start IMAP monitor thread for account {account_id}: {e}")
-            except Exception:
-                pass
+                from simple_app import monitor_imap_account, imap_threads  # lazy import to avoid circular at import time
+                import threading
+                thread = threading.Thread(target=monitor_imap_account, args=(account_id,), daemon=True)
+                imap_threads[account_id] = thread  # account_id is now guaranteed to be int
+                thread.start()
+                flash('Account added and monitoring started successfully', 'success')
+            except Exception as e:
+                # Log warning but don't fail the account creation
+                try:
+                    current_app.logger.warning(f"Failed to start IMAP monitor thread for account {account_id}: {e}")
+                except Exception:
+                    pass
+                flash('Account added successfully (monitoring not started - you can start it manually from the accounts page)', 'warning')
+        else:
+            flash('Account added successfully (monitoring not started)', 'success')
 
-        flash('Account added successfully', 'success')
         return redirect(url_for('accounts.email_accounts'))
 
     return render_template('add_account.html')

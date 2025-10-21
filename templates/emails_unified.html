@@ -74,8 +74,8 @@
   }
 
   .status-tab.active {
-    background: var(--brand-primary-tint);
-    border-color: rgba(220,38,38,0.32);
+    background: rgba(127,29,29,0.18);
+    border-color: rgba(127,29,29,0.32);
     color: var(--text-primary);
     box-shadow: none;
   }
@@ -83,7 +83,7 @@
   .status-tab .badge {
     background: rgba(255,255,255,0.12);
     padding: 2px 10px;
-    border-radius: 999px;
+    border-radius: var(--radius-md);
     font-size: 0.75rem;
     font-weight: 600;
   }
@@ -99,6 +99,30 @@
     flex-wrap: wrap;
     margin-bottom: 20px;
     align-items: center;
+  }
+
+  /* Sticky Bulk Actions Bar */
+  #bulkActions {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--surface-highest);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  #bulkActions::before {
+    content: '✓ ' attr(data-count) ' selected';
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-right: 10px;
   }
 
   .search-input {
@@ -142,7 +166,9 @@
   }
 
   .email-table tbody tr:hover {
-    background: rgba(255,255,255,0.05);
+    background: rgba(255,255,255,0.03) !important;
+    box-shadow: 0 0 0 1px rgba(127,29,29,.2) !important;
+    transition: all 0.2s ease;
   }
 
   .email-table tbody td {
@@ -309,6 +335,10 @@
       <i class="bi bi-x-circle"></i> Rejected
       <span class="badge" id="badge-rejected">{{ rejected_count }}</span>
     </button>
+    <button class="status-tab" data-status="DISCARDED" onclick="switchStatus('DISCARDED')">
+      <i class="bi bi-trash"></i> Discarded
+      <span class="badge" id="badge-discarded">{{ discarded_count|default(0) }}</span>
+    </button>
   </div>
 
   <!-- Filters Bar -->
@@ -321,6 +351,29 @@
     <button class="btn-secondary" onclick="reloadEmails()">
       <i class="bi bi-arrow-clockwise"></i> Refresh
     </button>
+  </div>
+
+  <!-- Bulk Actions (Sticky at top when emails selected) -->
+  <div id="bulkActions" style="display: none;" data-count="0">
+    <button class="btn-success" onclick="bulkAction('RELEASE')">
+      <i class="bi bi-unlock"></i> Release
+    </button>
+    <button class="btn-danger" onclick="bulkAction('DISCARD')">
+      <i class="bi bi-trash"></i> Discard
+    </button>
+    <button class="btn-danger" onclick="bulkAction('DELETE')" style="background: #991b1b; border-color: #991b1b;">
+      <i class="bi bi-trash-fill"></i> Delete Permanently
+    </button>
+  </div>
+
+  <!-- Delete All Discarded Button (only visible on DISCARDED tab) -->
+  <div id="deleteAllDiscardedContainer" style="display: none; margin-bottom: 16px;">
+    <button class="btn-danger" onclick="deleteAllDiscarded()" style="background: #991b1b; border-color: #991b1b;">
+      <i class="bi bi-trash3-fill"></i> Delete All Discarded Emails
+    </button>
+    <small style="color: #9ca3af; margin-left: 10px;">
+      ⚠️ This will permanently delete ALL discarded emails from the database
+    </small>
   </div>
 
   <!-- Email Table -->
@@ -348,22 +401,6 @@
   <div id="emptyState" class="empty-state" style="display: none;">
     <i class="bi bi-inbox"></i>
     <p>No emails found</p>
-  </div>
-
-  <!-- Bulk Actions -->
-  <div id="bulkActions" style="margin-top: 20px; display: none;">
-    <button class="btn-success" onclick="bulkAction('APPROVE')">
-      <i class="bi bi-check-all"></i> Approve Selected
-    </button>
-    <button class="btn-danger" onclick="bulkAction('REJECT')">
-      <i class="bi bi-x-circle"></i> Reject Selected
-    </button>
-    <button class="btn-secondary" onclick="bulkAction('RELEASE')">
-      <i class="bi bi-unlock"></i> Release Selected
-    </button>
-    <button class="btn-danger" onclick="bulkAction('DISCARD')">
-      <i class="bi bi-trash"></i> Discard Selected
-    </button>
   </div>
 </div>
 
@@ -414,6 +451,42 @@
         </button>
         <button type="button" class="btn btn-success" onclick="saveAndRelease()">
           <i class="bi bi-check-circle"></i> Save & Release
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Progress Modal for Batch Operations -->
+<div class="modal fade" id="batchProgressModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-white">
+          <i class="bi bi-hourglass-split"></i> Processing Batch Operation
+        </h5>
+      </div>
+      <div class="modal-body" style="color:#fff;">
+        <div class="mb-3">
+          <div class="d-flex justify-content-between mb-2">
+            <span id="batchProgressText">Processing emails...</span>
+            <span id="batchProgressCount">0 / 0</span>
+          </div>
+          <div class="progress" style="height: 25px; background: rgba(255,255,255,0.1);">
+            <div id="batchProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                 role="progressbar" style="width: 0%; background: linear-gradient(90deg, #7f1d1d, #991b1b);" 
+                 aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+              <span id="batchProgressPercent">0%</span>
+            </div>
+          </div>
+        </div>
+        <div id="batchProgressDetails" style="font-size: 0.85rem; color: #9ca3af; max-height: 200px; overflow-y: auto;">
+          <!-- Progress details will be inserted here -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="batchProgressClose" disabled>
+          Close
         </button>
       </div>
     </div>
@@ -601,6 +674,13 @@ async function reloadEmails() {
     document.getElementById('badge-held').textContent = data.counts.held || 0;
     document.getElementById('badge-released').textContent = data.counts.released || 0;
     document.getElementById('badge-rejected').textContent = data.counts.rejected || 0;
+    document.getElementById('badge-discarded').textContent = data.counts.discarded || 0;
+    
+    // Show/hide "Delete All Discarded" button based on current tab
+    const deleteAllContainer = document.getElementById('deleteAllDiscardedContainer');
+    if (deleteAllContainer) {
+      deleteAllContainer.style.display = (currentStatus === 'DISCARDED' && (data.counts.discarded || 0) > 0) ? 'block' : 'none';
+    }
     
     renderEmails(currentEmails);
   } catch (error) {
@@ -760,8 +840,9 @@ function toggleSelectAll(checked) {
 function updateBulkActionsVisibility() {
   const checkedBoxes = document.querySelectorAll('.email-checkbox:checked');
   const bulkActions = document.getElementById('bulkActions');
-  bulkActions.style.display = checkedBoxes.length > 0 ? 'block' : 'none';
-  
+  bulkActions.style.display = checkedBoxes.length > 0 ? 'flex' : 'none';
+  bulkActions.setAttribute('data-count', checkedBoxes.length);
+
   // Update select all checkbox
   const allCheckboxes = document.querySelectorAll('.email-checkbox');
   const selectAll = document.getElementById('selectAll');
@@ -1075,24 +1156,244 @@ function bulkAction(action) {
 }
 
 async function performBulkAction(action, emailIds) {
-  for (const emailId of emailIds) {
-    try {
-      if (action === 'APPROVE') {
-        await approveEmail(emailId);
-      } else if (action === 'REJECT') {
-        performReject(emailId);
-      } else if (action === 'RELEASE') {
-        await performRelease(emailId);
-      } else if (action === 'DISCARD') {
-        await performDiscard(emailId);
+  // Use new batch API endpoints for better performance
+  if (action === 'DISCARD') {
+    await performBatchDiscard(emailIds);
+  } else if (action === 'DELETE') {
+    await performBatchDelete(emailIds);
+  } else if (action === 'RELEASE') {
+    // Release still needs individual handling due to IMAP operations
+    await performBatchRelease(emailIds);
+  } else {
+    // Fallback to individual operations for other actions
+    for (const emailId of emailIds) {
+      try {
+        if (action === 'APPROVE') {
+          await approveEmail(emailId);
+        } else if (action === 'REJECT') {
+          performReject(emailId);
+        }
+      } catch (error) {
+        console.error(`Failed to ${action} email ${emailId}:`, error);
       }
-    } catch (error) {
-      console.error(`Failed to ${action} email ${emailId}:`, error);
     }
+    if (window.showSuccess) showSuccess(`Bulk ${action.toLowerCase()} completed`);
+    setTimeout(() => reloadEmails(), 1000);
+  }
+}
+
+async function performBatchDiscard(emailIds) {
+  const modal = new bootstrap.Modal(document.getElementById('batchProgressModal'));
+  const progressBar = document.getElementById('batchProgressBar');
+  const progressText = document.getElementById('batchProgressText');
+  const progressCount = document.getElementById('batchProgressCount');
+  const progressPercent = document.getElementById('batchProgressPercent');
+  const closeBtn = document.getElementById('batchProgressClose');
+  
+  closeBtn.disabled = true;
+  progressText.textContent = 'Discarding emails...';
+  progressCount.textContent = `0 / ${emailIds.length}`;
+  modal.show();
+  
+  try {
+    const response = await fetch('/api/emails/batch-discard', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email_ids: emailIds })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      const percent = 100;
+      progressBar.style.width = percent + '%';
+      progressBar.setAttribute('aria-valuenow', percent);
+      progressPercent.textContent = percent + '%';
+      progressCount.textContent = `${data.processed} / ${data.total}`;
+      progressText.textContent = `✅ Successfully discarded ${data.processed} email(s)`;
+      
+      if (data.failed > 0) {
+        progressText.textContent += ` (${data.failed} failed)`;
+      }
+      
+      if (window.showSuccess) showSuccess(`Discarded ${data.processed} emails`);
+    } else {
+      progressText.textContent = `❌ Error: ${data.error}`;
+      if (window.showError) showError(data.error);
+    }
+  } catch (error) {
+    progressText.textContent = `❌ Failed: ${error.message}`;
+    if (window.showError) showError(`Batch discard failed: ${error.message}`);
+  } finally {
+    closeBtn.disabled = false;
+    setTimeout(() => {
+      modal.hide();
+      reloadEmails();
+    }, 2000);
+  }
+}
+
+async function performBatchDelete(emailIds) {
+  const modal = new bootstrap.Modal(document.getElementById('batchProgressModal'));
+  const progressBar = document.getElementById('batchProgressBar');
+  const progressText = document.getElementById('batchProgressText');
+  const progressCount = document.getElementById('batchProgressCount');
+  const progressPercent = document.getElementById('batchProgressPercent');
+  const closeBtn = document.getElementById('batchProgressClose');
+  
+  closeBtn.disabled = true;
+  progressText.textContent = 'Permanently deleting emails...';
+  progressCount.textContent = `0 / ${emailIds.length}`;
+  progressBar.style.background = 'linear-gradient(90deg, #991b1b, #dc2626)';
+  modal.show();
+  
+  try {
+    const response = await fetch('/api/emails/batch-delete', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email_ids: emailIds })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      const percent = 100;
+      progressBar.style.width = percent + '%';
+      progressBar.setAttribute('aria-valuenow', percent);
+      progressPercent.textContent = percent + '%';
+      progressCount.textContent = `${data.deleted} / ${data.total}`;
+      progressText.textContent = `✅ Permanently deleted ${data.deleted} email(s)`;
+      
+      if (window.showSuccess) showSuccess(`Permanently deleted ${data.deleted} emails`);
+    } else {
+      progressText.textContent = `❌ Error: ${data.error}`;
+      if (window.showError) showError(data.error);
+    }
+  } catch (error) {
+    progressText.textContent = `❌ Failed: ${error.message}`;
+    if (window.showError) showError(`Batch delete failed: ${error.message}`);
+  } finally {
+    closeBtn.disabled = false;
+    setTimeout(() => {
+      modal.hide();
+      reloadEmails();
+    }, 2000);
+  }
+}
+
+async function performBatchRelease(emailIds) {
+  // Release operations still need individual handling due to IMAP operations
+  const modal = new bootstrap.Modal(document.getElementById('batchProgressModal'));
+  const progressBar = document.getElementById('batchProgressBar');
+  const progressText = document.getElementById('batchProgressText');
+  const progressCount = document.getElementById('batchProgressCount');
+  const progressPercent = document.getElementById('batchProgressPercent');
+  const closeBtn = document.getElementById('batchProgressClose');
+  
+  closeBtn.disabled = true;
+  progressText.textContent = 'Releasing emails...';
+  progressBar.style.background = 'linear-gradient(90deg, #15803d, #22c55e)';
+  modal.show();
+  
+  let completed = 0;
+  let failed = 0;
+  
+  for (let i = 0; i < emailIds.length; i++) {
+    const emailId = emailIds[i];
+    try {
+      await performRelease(emailId);
+      completed++;
+    } catch (error) {
+      console.error(`Failed to release email ${emailId}:`, error);
+      failed++;
+    }
+    
+    const percent = Math.round(((i + 1) / emailIds.length) * 100);
+    progressBar.style.width = percent + '%';
+    progressBar.setAttribute('aria-valuenow', percent);
+    progressPercent.textContent = percent + '%';
+    progressCount.textContent = `${i + 1} / ${emailIds.length}`;
   }
   
-  if (window.showSuccess) showSuccess(`Bulk ${action.toLowerCase()} completed`);
-  setTimeout(() => reloadEmails(), 1000);
+  progressText.textContent = `✅ Released ${completed} email(s)`;
+  if (failed > 0) {
+    progressText.textContent += ` (${failed} failed)`;
+  }
+  
+  if (window.showSuccess) showSuccess(`Released ${completed} emails`);
+  
+  closeBtn.disabled = false;
+  setTimeout(() => {
+    modal.hide();
+    reloadEmails();
+  }, 2000);
+}
+
+async function deleteAllDiscarded() {
+  const accountId = document.getElementById('accountSelector').value;
+  const scope = accountId ? `for this account` : `across all accounts`;
+  const message = `⚠️ PERMANENT DELETION WARNING\n\nThis will permanently delete ALL discarded emails ${scope}.\n\nThis action CANNOT be undone!\n\nAre you absolutely sure?`;
+  
+  if (window.confirmToast) {
+    confirmToast(message, async () => {
+      await performDeleteAllDiscarded(accountId);
+    });
+  } else if (confirm(message)) {
+    await performDeleteAllDiscarded(accountId);
+  }
+}
+
+async function performDeleteAllDiscarded(accountId) {
+  const modal = new bootstrap.Modal(document.getElementById('batchProgressModal'));
+  const progressBar = document.getElementById('batchProgressBar');
+  const progressText = document.getElementById('batchProgressText');
+  const progressCount = document.getElementById('batchProgressCount');
+  const progressPercent = document.getElementById('batchProgressPercent');
+  const closeBtn = document.getElementById('batchProgressClose');
+  
+  closeBtn.disabled = true;
+  progressText.textContent = 'Deleting all discarded emails...';
+  progressCount.textContent = 'Processing...';
+  progressBar.style.width = '50%';
+  progressBar.style.background = 'linear-gradient(90deg, #991b1b, #dc2626)';
+  progressPercent.textContent = '...';
+  modal.show();
+  
+  try {
+    const url = new URL('/api/emails/delete-all-discarded', window.location.origin);
+    url.searchParams.set('confirm', 'yes');
+    if (accountId) {
+      url.searchParams.set('account_id', accountId);
+    }
+    
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {'Content-Type': 'application/json'}
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      progressBar.style.width = '100%';
+      progressPercent.textContent = '100%';
+      progressCount.textContent = `${data.deleted} deleted`;
+      progressText.textContent = `✅ ${data.message}`;
+      
+      if (window.showSuccess) showSuccess(data.message);
+    } else {
+      progressText.textContent = `❌ Error: ${data.error}`;
+      if (window.showError) showError(data.error);
+    }
+  } catch (error) {
+    progressText.textContent = `❌ Failed: ${error.message}`;
+    if (window.showError) showError(`Delete all failed: ${error.message}`);
+  } finally {
+    closeBtn.disabled = false;
+    setTimeout(() => {
+      modal.hide();
+      reloadEmails();
+    }, 2000);
+  }
 }
 </script>
 {% endblock %}

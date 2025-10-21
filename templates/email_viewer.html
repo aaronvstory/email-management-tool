@@ -280,6 +280,21 @@
   .edit-mode-actions .btn-success:hover {
     background: rgba(16,185,129,0.24);
   }
+  /* Overrides & refinements */
+  .email-subject { width: 100%; max-width: 100%; }
+  .edit-mode-banner { padding: 10px 14px; border-radius: 10px; gap: 12px; margin-bottom: 16px; }
+  .edit-mode-actions { gap: 8px; align-items: center; }
+  .edit-mode-actions .btn { padding: 6px 14px; font-size: 0.85rem; }
+  .body-toggle { display: inline-flex; gap: 0; margin-bottom: 12px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; overflow: hidden; }
+  .toggle-btn { padding: 8px 14px; background: transparent; border: 0; color: var(--text-muted); }
+  .toggle-btn.active { background: var(--brand-primary-tint); color: var(--text-primary); }
+  .email-html-content { background: var(--surface-highest); color: var(--text-primary); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 0; overflow: hidden; }
+  .email-html-content iframe { display:block; width:100%; height:560px; border:0; background: var(--surface-base); }
+  .email-raw-pre { color: var(--text-primary); background: var(--surface-base); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 0.9rem; white-space: pre-wrap; word-wrap: break-word; max-height: 520px; overflow: auto; }
+  .tech-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap:10px; }
+  .tech-item { background: rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:10px; }
+  .tech-item .label { color: var(--text-muted); font-size: 0.8rem; }
+  .tech-item .value { color: var(--text-primary); font-weight: 600; }
 </style>
 {% endblock %}
 
@@ -352,7 +367,13 @@
       {% if email.account_id %}
       <div class="meta-row">
         <span class="meta-label">Account:</span>
-        <span class="meta-value">Account #{{ email.account_id }}</span>
+        <span class="meta-value">
+          {% if email.account_name or email.email_address %}
+            {{ email.account_name or 'Account' }}{% if email.email_address %} ({{ email.email_address }}){% endif %}
+          {% else %}
+            Account #{{ email.account_id }}
+          {% endif %}
+        </span>
       </div>
       {% endif %}
     </div>
@@ -395,6 +416,7 @@
       <button class="toggle-btn active" onclick="showTextBody()">Text</button>
       <button class="toggle-btn" onclick="showHtmlBody()">HTML</button>
       <button class="toggle-btn" onclick="showRawBody()">Raw</button>
+      <button class="toggle-btn" onclick="showDetails()">Details</button>
     </div>
 
     <div id="textBody">
@@ -403,14 +425,18 @@
 
     <div id="htmlBody" class="email-html-content" style="display:none;">
       {% if email.body_html %}
-        <iframe srcdoc="{{ email.body_html | e }}" style="width:100%; height:500px; border:none;"></iframe>
+        <iframe srcdoc="{{ email.body_html | e }}"></iframe>
       {% else %}
-        No HTML content
+        <div style="padding:16px; color: var(--text-secondary);">No HTML content</div>
       {% endif %}
     </div>
 
     <div id="rawBody" style="display:none;">
-      <textarea id="emailRawContent" class="email-content" readonly style="font-family:monospace; font-size:0.9rem;">{{ email.raw_content[:5000] if email.raw_content else 'No raw content available' }}</textarea>
+      <pre id="emailRawContent" class="email-raw-pre">{{ email.raw_content[:5000] if email.raw_content else 'No raw content available' }}</pre>
+    </div>
+
+    <div id="detailsBody" style="display:none;">
+      <div id="techDetails" class="tech-grid"></div>
     </div>
   </div>
 
@@ -455,7 +481,66 @@ function showRawBody() {
   document.getElementById('textBody').style.display = 'none';
   document.getElementById('htmlBody').style.display = 'none';
   document.getElementById('rawBody').style.display = 'block';
+  document.getElementById('detailsBody').style.display = 'none';
   updateToggleButtons(2);
+}
+
+function showDetails() {
+  document.getElementById('textBody').style.display = 'none';
+  document.getElementById('htmlBody').style.display = 'none';
+  document.getElementById('rawBody').style.display = 'none';
+  document.getElementById('detailsBody').style.display = 'block';
+  updateToggleButtons(3);
+  buildTechDetails();
+}
+
+function buildTechDetails() {
+  const container = document.getElementById('techDetails');
+  if (!container) return;
+  container.innerHTML = '';
+  try {
+    const raw = document.getElementById('emailRawContent').textContent || '';
+    const lines = raw.split(/\r?\n/);
+    const headers = {};
+    let headerDone = false;
+    for (const line of lines) {
+      if (!headerDone && line.trim() === '') { headerDone = true; continue; }
+      if (headerDone) break;
+      const idx = line.indexOf(':');
+      if (idx > 0) {
+        const key = line.slice(0, idx).trim();
+        const val = line.slice(idx + 1).trim();
+        if (!headers[key]) headers[key] = [];
+        headers[key].push(val);
+      }
+    }
+    const get = (k) => (headers[k] ? headers[k].join(' | ') : '—');
+    const received = (headers['Received'] || []).join('\n\n');
+    const ipMatch = received.match(/\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b/);
+    const firstIp = ipMatch ? ipMatch[0] : '—';
+    const fields = [
+      ['Message-ID', get('Message-ID')],
+      ['From', get('From')],
+      ['To', get('To')],
+      ['Subject', get('Subject')],
+      ['Date', get('Date')],
+      ['MIME-Version', get('MIME-Version')],
+      ['Content-Type', get('Content-Type')],
+      ['Content-Transfer-Encoding', get('Content-Transfer-Encoding')],
+      ['Sender IP (from Received)', firstIp],
+    ];
+    for (const [label, value] of fields) {
+      const item = document.createElement('div');
+      item.className = 'tech-item';
+      item.innerHTML = `<div class="label">${label}</div><div class="value">${value ? value.replace(/</g,'&lt;').replace(/>/g,'&gt;') : '—'}</div>`;
+      container.appendChild(item);
+    }
+  } catch (e) {
+    const item = document.createElement('div');
+    item.className = 'tech-item';
+    item.innerHTML = `<div class="label">Error</div><div class="value">Failed to parse headers</div>`;
+    container.appendChild(item);
+  }
 }
 
 function updateToggleButtons(activeIndex) {
@@ -603,11 +688,11 @@ async function saveEdit() {
     });
 
     const data = await response.json();
-    if (data.success) {
+    if (data && (data.ok || data.success)) {
       showSuccess('Email saved successfully');
       setTimeout(() => window.location.reload(), 1000);
     } else {
-      showError(data.error || 'Failed to save changes');
+      showError((data && (data.error || data.reason)) || 'Failed to save changes');
     }
   } catch (error) {
     showError('Failed to save changes');
@@ -630,24 +715,24 @@ async function saveAndRelease() {
     });
 
     const editData = await editResponse.json();
-    if (!editData.success) {
-      showError(editData.error || 'Failed to save changes');
+    if (!(editData && (editData.ok || editData.success))) {
+      showError((editData && (editData.error || editData.reason)) || 'Failed to save changes');
       return;
     }
 
-    // Then release the email
+    // Then release the email, sending the edited content for atomicity
     const releaseResponse = await fetch(`/api/interception/release/${emailId}`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({target_folder: 'INBOX'})
+      body: JSON.stringify({target_folder: 'INBOX', edited_subject: subject, edited_body: bodyText})
     });
 
     const releaseData = await releaseResponse.json();
-    if (releaseData.success || releaseData.ok) {
+    if (releaseData && (releaseData.success || releaseData.ok)) {
       showSuccess('Email saved and released to inbox');
       setTimeout(() => window.location.href = '/interception', 1500);
     } else {
-      showError(releaseData.error || 'Failed to release email');
+      showError((releaseData && (releaseData.error || releaseData.reason)) || 'Failed to release email');
     }
   } catch (error) {
     showError('Failed to save and release email');

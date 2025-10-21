@@ -32,13 +32,12 @@ window.fetch = function(url, options = {}) {
         if (!csrfToken) {
             console.warn('[CSRF] Token meta tag not found - request may fail:', method, url);
         } else {
-            options.headers = options.headers || {};
-            if (options.headers instanceof Headers) {
-                options.headers.set('X-CSRFToken', csrfToken);
-            } else if (typeof options.headers === 'object') {
-                options.headers['X-CSRFToken'] = csrfToken;
-            }
+            // Build new Headers to avoid mutating possibly read-only objects
+            const hdrs = new Headers(options && options.headers ? options.headers : undefined);
+            hdrs.set('X-CSRFToken', csrfToken);
+            const opts = Object.assign({}, options, { headers: hdrs });
             try { console.debug('[CSRF] Added token to request:', method, url); } catch (_) {}
+            return originalFetch(url, opts);
         }
     }
 

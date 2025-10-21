@@ -159,6 +159,26 @@ app = Flask(__name__)
 from app.utils.logging import setup_app_logging
 setup_app_logging(app)
 
+# --- BEGIN TEMP LOGGING PATCH ---
+# Force INFO logs to stdout for troubleshooting (temporary diagnostic patch)
+import logging, sys
+root = logging.getLogger()
+for h in list(root.handlers):  # clear existing handlers that may write to files only
+    root.removeHandler(h)
+h = logging.StreamHandler(sys.stdout)
+h.setLevel(logging.INFO)
+h.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
+root.addHandler(h)
+root.setLevel(logging.INFO)
+
+# Show HTTP requests in console too
+logging.getLogger('werkzeug').setLevel(logging.INFO)
+
+# Boot marker to prove logging is working and show env config
+logging.info("BOOT MARKER: interception v2.8.2 logger online, GMAIL_ALL_MAIL_PURGE=%s",
+             os.getenv("GMAIL_ALL_MAIL_PURGE", "unset"))
+# --- END TEMP LOGGING PATCH ---
+
 # Ensure backup directory exists
 import os
 os.makedirs("database_backups", exist_ok=True)

@@ -649,6 +649,26 @@ class ImapWatcher:
         except Exception:
             pass
 
+    def _update_last_checked(self):
+        """Update the last_checked timestamp for this account."""
+        try:
+            if not self.cfg.account_id:
+                return
+            conn = sqlite3.connect(self.cfg.db_path)
+            cur = conn.cursor()
+            cur.execute(
+                """
+                UPDATE email_accounts
+                SET last_checked = datetime('now')
+                WHERE id = ?
+                """,
+                (self.cfg.account_id,)
+            )
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            log.debug(f"Failed to update last_checked for account {self.cfg.account_id}: {e}")
+
     def _handle_new_messages(self, client, changed):
         # changed example: {b'EXISTS': 12}
         # Build a robust candidate set using UIDNEXT deltas + last-N sweep, then filter out already-processed UIDs
@@ -864,6 +884,7 @@ class ImapWatcher:
                 try:
                     client.select_folder(self.cfg.inbox, readonly=False)
                     self._handle_new_messages(client, {})
+                    self._update_last_checked()
                 except Exception as e:
                     log.error(f"Polling check failed for account {self.cfg.account_id}: {e}")
                 if time.time() - self._last_hb > 30:
@@ -891,6 +912,7 @@ class ImapWatcher:
                     changed = {k: v for (k, v) in responses} if responses else {}
                     if responses:
                         self._handle_new_messages(client, changed)
+                        self._update_last_checked()
                         # Track successful IDLE operation
                         self._idle_failure_count = 0
                         self._last_successful_idle = time.time()
@@ -983,6 +1005,7 @@ class ImapWatcher:
                                     self._last_uidnext = max(self._last_uidnext, max(int(u) for u in new_uids) + 1)
                                 except Exception:
                                     self._last_uidnext = uidnext2
+                            self._update_last_checked()
                         except Exception:
                             pass
                         last_idle_break = now

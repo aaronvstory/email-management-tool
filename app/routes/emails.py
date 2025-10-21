@@ -69,6 +69,7 @@ def emails_unified():
         approved_count=counts.get('approved', 0),
         rejected_count=counts.get('rejected', 0),
         released_count=counts.get('released', 0),
+        discarded_count=counts.get('discarded', 0),
     )
 
 
@@ -157,6 +158,7 @@ def api_emails_unified():
             'approved': counts.get('approved', 0),
             'rejected': counts.get('rejected', 0),
             'released': counts.get('released', 0),
+            'discarded': counts.get('discarded', 0),
         }
     })
 

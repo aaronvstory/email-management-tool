@@ -17,10 +17,13 @@ class ReleaseIMAP:
         self.appended = False
         self.mailboxes = {
             "INBOX": {},
-            "Quarantine": {}
+            "Quarantine": {},
+            "[Gmail]/Trash": {}
         }
         self.deleted_uids = []
         self.gmail_operations = []  # Track Gmail-specific operations
+        # Simulate Gmail capabilities (MOVE, UIDPLUS)
+        self.capabilities = ('IMAP4REV1', 'MOVE', 'UIDPLUS', 'IDLE')
 
     def preload(self, folder, uid, message_id):
         self.mailboxes.setdefault(folder, {})[uid] = message_id
@@ -28,6 +31,16 @@ class ReleaseIMAP:
     def login(self, username, password):
         self.username = username
         self.password = password
+
+    def list(self):
+        """Simulate Gmail LIST response with special-use flags."""
+        mailboxes = [
+            b'(\\HasNoChildren) "/" "INBOX"',
+            b'(\\HasNoChildren) "/" "Quarantine"',
+            b'(\\All \\HasNoChildren) "/" "[Gmail]/All Mail"',
+            b'(\\Trash \\HasNoChildren) "/" "[Gmail]/Trash"',
+        ]
+        return "OK", mailboxes
 
     def select(self, mailbox, readonly=True):
         self.current_folder = mailbox
@@ -67,24 +80,70 @@ class ReleaseIMAP:
                 value = int(args[2])
                 matches = [value] if value in self.mailboxes.get(self.current_folder, {}) else []
                 return "OK", [b" ".join(str(uid).encode() for uid in matches) if matches else b""]
+        if command == 'MOVE':
+            # RFC 6851 MOVE command
+            uid = int(args[0])
+            dest_folder = args[1]
+            if self.current_folder in self.mailboxes and uid in self.mailboxes[self.current_folder]:
+                msgid = self.mailboxes[self.current_folder].pop(uid)
+                self.mailboxes.setdefault(dest_folder, {})[uid] = msgid
+                # Track Gmail MOVE operations
+                if self.current_folder in ['[Gmail]/All Mail', '[Google Mail]/All Mail']:
+                    self.gmail_operations.append(('uid_move', uid, self.current_folder, dest_folder))
+                return "OK", [b"MOVE completed"]
+            return "NO", [b"UID not found"]
+        if command == 'COPY':
+            # Traditional COPY command
+            uid = int(args[0])
+            dest_folder = args[1]
+            if self.current_folder in self.mailboxes and uid in self.mailboxes[self.current_folder]:
+                msgid = self.mailboxes[self.current_folder][uid]
+                self.mailboxes.setdefault(dest_folder, {})[uid] = msgid
+                # Track Gmail COPY operations
+                if self.current_folder in ['[Gmail]/All Mail', '[Google Mail]/All Mail']:
+                    self.gmail_operations.append(('uid_copy', uid, self.current_folder, dest_folder))
+                return "OK", [b"COPY completed"]
+            return "NO", [b"UID not found"]
         if command == 'STORE':
             uid = args[0] if isinstance(args[0], str) else int(args[0])
             operation = args[1] if len(args) > 1 else None
             label = args[2] if len(args) > 2 else None
 
-            # Track Gmail X-GM-LABELS operations
+            # Track Gmail X-GM-LABELS operations (deprecated in new approach)
             if operation and 'X-GM-LABELS' in operation:
                 self.gmail_operations.append(('uid_store', uid, operation, label))
 
-            # Handle regular deletion
-            if self.current_folder in self.mailboxes and int(uid) in self.mailboxes[self.current_folder]:
-                self.mailboxes[self.current_folder].pop(int(uid), None)
-                self.deleted_uids.append(int(uid))
+            # Handle FLAGS operations (+FLAGS, -FLAGS)
+            if operation and 'FLAGS' in operation:
+                if self.current_folder in ['[Gmail]/All Mail', '[Google Mail]/All Mail']:
+                    self.gmail_operations.append(('uid_store_flags', uid, operation, label))
+                # Mark message as deleted
+                if r'(\Deleted)' in label:
+                    if self.current_folder in self.mailboxes and int(uid) in self.mailboxes[self.current_folder]:
+                        self.deleted_uids.append(int(uid))
             return "OK", [b"OK"]
+        if command == 'EXPUNGE':
+            # RFC 4315 UID EXPUNGE - expunges specific UIDs
+            uid_set = args[0] if args else None
+            if uid_set:
+                uids_to_expunge = [int(u) for u in uid_set.split(',')]
+                for uid in uids_to_expunge:
+                    if self.current_folder in self.mailboxes:
+                        self.mailboxes[self.current_folder].pop(uid, None)
+                if self.current_folder in ['[Gmail]/All Mail', '[Google Mail]/All Mail']:
+                    self.gmail_operations.append(('uid_expunge', uids_to_expunge))
+            return "OK", [b"EXPUNGE completed"]
         return "OK", [b""]
 
     def expunge(self):
-        return "OK", [b"1"]
+        """Traditional EXPUNGE - removes all \\Deleted messages."""
+        if self.current_folder in self.mailboxes:
+            for uid in self.deleted_uids:
+                self.mailboxes[self.current_folder].pop(uid, None)
+            if self.current_folder in ['[Gmail]/All Mail', '[Google Mail]/All Mail']:
+                self.gmail_operations.append(('expunge', self.deleted_uids.copy()))
+        self.deleted_uids.clear()
+        return "OK", [b"EXPUNGE completed"]
 
     def logout(self):
         return "BYE", []
@@ -394,25 +453,29 @@ def test_gmail_all_mail_purge_on_release(monkeypatch, client, tmp_path):
 
     assert resp.status_code == 200
 
-    # Verify Gmail All Mail operations
+    # Verify Gmail All Mail operations (NEW: MOVE/COPY+EXPUNGE approach)
     assert any(op[0] == 'select' and '[Gmail]/All Mail' in op[1] for op in fake_imap.gmail_operations), \
         "Should select [Gmail]/All Mail folder"
 
     assert any(op[0] == 'uid_search' and original_mid in str(op) for op in fake_imap.gmail_operations), \
         "Should search for original Message-ID in All Mail"
 
-    # Verify three STORE operations for label management
-    store_ops = [op for op in fake_imap.gmail_operations if op[0] == 'uid_store']
-    assert len(store_ops) >= 3, f"Should have at least 3 STORE operations, got {len(store_ops)}"
+    # Verify MOVE command was used (Gmail has MOVE capability)
+    move_ops = [op for op in fake_imap.gmail_operations if op[0] == 'uid_move']
+    assert len(move_ops) >= 1, f"Should have at least 1 MOVE operation, got {len(move_ops)}: {fake_imap.gmail_operations}"
 
-    # Verify specific label operations
-    assert any('-X-GM-LABELS' in str(op) and 'Inbox' in str(op) for op in store_ops), \
-        "Should remove \\Inbox label"
-    assert any('-X-GM-LABELS' in str(op) and 'Quarantine' in str(op) for op in store_ops), \
-        "Should remove Quarantine label"
-    assert any('+X-GM-LABELS' in str(op) and 'Trash' in str(op) for op in store_ops), \
-        "Should add \\Trash label"
+    # Verify message was moved to Trash
+    assert any('[Gmail]/Trash' in str(op) for op in move_ops), \
+        "Should MOVE original to [Gmail]/Trash"
 
-    # Verify original removed from All Mail
-    assert 777 not in fake_imap.mailboxes.get("[Gmail]/All Mail", {}), \
-        "Original should be purged from [Gmail]/All Mail"
+    # Verify EXPUNGE was called to physically remove from All Mail
+    assert any(op[0] in ('uid_expunge', 'expunge') for op in fake_imap.gmail_operations), \
+        "Should EXPUNGE to remove original from All Mail"
+
+    # Verify original message is NO LONGER in All Mail
+    assert 777 not in fake_imap.mailboxes.get('[Gmail]/All Mail', {}), \
+        "Original UID 777 should be removed from All Mail"
+
+    # Verify original message IS in Trash
+    assert 777 in fake_imap.mailboxes.get('[Gmail]/Trash', {}), \
+        "Original UID 777 should be in Trash"

@@ -2,57 +2,360 @@
 
 {% block title %}Add Email Account - Email Management Tool{% endblock %}
 
-{% block extra_css %}
-<style>
+{% block extra_css %}<style>
+  /* ==================== STYLEGUIDE.MD COMPLIANT STYLES ==================== */
+
+  /* Main Panel - Compact spacing */
+  .unified-panel {
+    background: var(--surface-highest);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 20px;  /* Reduced from 30px */
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 15px;  /* Reduced from 20px */
+  }
+
   .provider-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: var(--space-sm);
-    margin-bottom: var(--space-md);
+    gap: 12px;  /* Reduced from 15px */
+    margin-bottom: 20px;  /* Reduced from 25px */
   }
 
+  /* Provider Buttons - Dark red theme */
+  .provider-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border: 2px solid var(--border-subtle);
+    color: var(--text-primary);
+    padding: 14px 16px;  /* Reduced from 18px 20px */
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .provider-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(127, 29, 29, 0.4);  /* Dark red - NOT bright red */
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .provider-btn.active {
+    background: rgba(127, 29, 29, 0.18);  /* Dark red - NOT bright red */
+    border-color: rgba(127, 29, 29, 0.35);  /* Dark red - NOT bright red */
+    color: #ffffff;
+    box-shadow: 0 0 0 2px rgba(127, 29, 29, 0.2);  /* Dark red focus ring */
+  }
+
+  .provider-btn i {
+    font-size: 1.1rem;
+  }
+
+  /* Form Sections - Compact spacing */
+  .form-section {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 15px;  /* Reduced from 20px */
+    margin-bottom: 15px;  /* Reduced from 25px */
+  }
+
+  .form-section-title {
+    font-size: 0.95rem;  /* Reduced from 1.1rem */
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 12px;  /* Reduced from 18px */
+    padding-bottom: 8px;  /* Reduced from 10px */
+    border-bottom: 1px solid rgba(127, 29, 29, 0.2);  /* Dark red border */
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Collapsible SMTP Section */
+  .form-section.collapsible .form-section-header {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .form-section.collapsible .form-section-header i.toggle-icon {
+    transition: transform 0.2s ease;
+  }
+
+  .form-section.collapsible.collapsed .form-section-header i.toggle-icon {
+    transform: rotate(-90deg);
+  }
+
+  .form-section.collapsible.collapsed .form-section-body {
+    display: none;
+  }
+
+  /* Form Grid - Compact */
   .form-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 12px;  /* Reduced from 20px */
   }
 
+  /* 2-column layout for IMAP/SMTP settings */
+  .form-grid-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 12px;  /* Reduced from 20px */
+    margin-bottom: 12px;  /* Reduced from 20px */
+  }
+
+  .form-group {
+    margin-bottom: 0;
+  }
+
+  @media (max-width: 768px) {
+    .form-grid-row {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .form-group label {
+    color: var(--text-primary);
+    font-weight: 600;
+    margin-bottom: 6px;  /* Reduced from 8px */
+    display: block;
+    font-size: 0.85rem;
+  }
+
+  .form-group label .text-muted {
+    font-weight: 400;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  /* Inputs - Dark red focus */
+  .form-group input,
+  .form-group select {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    width: 100%;
+    padding: 10px 12px;  /* Reduced from 12px 15px */
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+  }
+
+  .form-group input:focus,
+  .form-group select:focus {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(127, 29, 29, 0.5);  /* Dark red - NOT bright red */
+    box-shadow: 0 0 0 2px rgba(127, 29, 29, 0.2);  /* Dark red focus */
+    outline: none;
+  }
+
+  .form-group input::placeholder {
+    color: var(--text-muted);
+  }
+
+  /* Checkboxes with Tooltips */
+  .form-check-with-tooltip {
+    padding: 10px 0;  /* Reduced from 15px */
+    margin-top: 8px;
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .form-check-with-tooltip .form-check-input {
+    width: 18px;  /* Reduced from 20px */
+    height: 18px;
+    margin: 0;
+    flex-shrink: 0;
+    cursor: pointer;
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 2px solid var(--border-subtle);
+    position: relative;
+    float: none;
+  }
+
+  .form-check-with-tooltip .form-check-input:checked {
+    background-color: #7f1d1d !important;  /* Dark red - NOT bright red */
+    border-color: #7f1d1d !important;
+  }
+
+  .form-check-with-tooltip .form-check-label {
+    color: var(--text-primary);
+    font-weight: 500;
+    margin: 0;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .form-check-with-tooltip .bi-info-circle {
+    color: var(--text-muted);
+    cursor: help;
+    font-size: 0.85rem;
+  }
+
+  /* Action Bars - Compact */
+  .action-bar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 12px;  /* Reduced from 15px */
+  }
+
+  .action-bar.justify-content-end {
+    justify-content: flex-end;
+    margin-top: 20px;  /* Reduced from 30px */
+    padding-top: 15px;  /* Reduced from 20px */
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  /* Buttons - STYLEGUIDE.MD compliant (NO gradients, NO bright red) */
+  .unified-panel .btn,
+  .action-bar .btn {
+    padding: 10px 20px !important;  /* Reduced from 12px 24px */
+    border-radius: var(--radius-md) !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    transition: all 0.2s ease !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    cursor: pointer !important;
+    text-decoration: none !important;
+  }
+
+  /* Ghost button */
+  .unified-panel .btn-ghost,
+  .action-bar .btn-ghost {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid var(--border-subtle) !important;
+    color: var(--text-primary) !important;
+  }
+
+  .unified-panel .btn-ghost:hover,
+  .action-bar .btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  /* Primary/Secondary buttons - DARK RED, NO GRADIENTS */
+  .unified-panel .btn-primary,
+  .unified-panel .btn-secondary,
+  .action-bar .btn-primary,
+  .action-bar .btn-secondary {
+    background: rgba(127, 29, 29, 0.18) !important;  /* Dark red - NO gradient */
+    color: var(--text-primary) !important;
+    border: 1px solid rgba(127, 29, 29, 0.35) !important;
+  }
+
+  .unified-panel .btn-primary:hover,
+  .unified-panel .btn-secondary:hover,
+  .action-bar .btn-primary:hover,
+  .action-bar .btn-secondary:hover {
+    background: rgba(127, 29, 29, 0.24) !important;
+    transform: translateY(-2px) !important;  /* MUST be -2px, NOT -1px */
+    box-shadow: var(--shadow-md) !important;
+    color: var(--text-primary) !important;
+  }
+
+  /* Success button */
+  .unified-panel .btn-success,
+  .action-bar .btn-success {
+    background: rgba(16, 185, 129, 0.18) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid rgba(16, 185, 129, 0.35) !important;
+  }
+
+  .unified-panel .btn-success:hover,
+  .action-bar .btn-success:hover {
+    background: rgba(16, 185, 129, 0.24) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: var(--shadow-md) !important;
+  }
+
+  /* Small buttons */
+  .unified-panel .btn-sm,
+  .action-bar .btn-sm {
+    padding: 7px 14px !important;  /* Reduced from 8px 16px */
+    font-size: 0.85rem !important;
+  }
+
+  /* Test status messages */
   .test-status {
     display: none;
-    padding: var(--space-xs);
+    padding: 10px 12px;  /* Reduced from 12px 15px */
     border-radius: var(--radius-md);
-    margin-top: var(--space-xs);
+    margin-top: 10px;
     border: 1px solid var(--border-subtle);
-    background: var(--surface-base);
+    background: rgba(255, 255, 255, 0.03);
     color: var(--text-primary);
+    font-size: 0.85rem;
   }
 
   .test-status.test-success {
-    border-color: var(--success-border);
-    background: var(--success-bg);
-    color: var(--success-light);
+    border-color: rgba(16, 185, 129, 0.4);
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
   }
 
   .test-status.test-error {
-    border-color: var(--danger-border);
-    background: var(--danger-bg);
-    color: var(--danger-light);
+    border-color: rgba(239, 68, 68, 0.4);
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+  }
+
+  /* SMTP Optional Badge */
+  .optional-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: var(--radius-md);
+    background: rgba(148, 163, 184, 0.08);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="form-shell form-shell-wide">
-  <div class="page-header mb-4">
+<div class="page-header mb-3">
     <div>
       <h2><i class="bi bi-envelope-plus"></i> Add Email Account</h2>
-      <p class="text-muted mb-0">Configure inbound and outbound settings for a new mailbox.</p>
+      <p class="text-muted mb-0">Configure IMAP settings for email monitoring. SMTP is optional for sending.</p>
     </div>
-  </div>
+</div>
 
+<!-- Account Configuration Panel -->
+<div class="unified-panel">
   <form method="POST" id="addAccountForm">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
+    <!-- Provider Quick Select -->
     <div class="provider-grid">
       <button type="button" class="provider-btn" data-provider="gmail" onclick="setProvider(event, 'gmail')">
         <i class="fab fa-google"></i> Gmail
@@ -68,8 +371,11 @@
       </button>
     </div>
 
+    <!-- Account Details Section -->
     <div class="form-section">
-      <div class="form-section-title">Account Details</div>
+      <div class="form-section-title">
+        <i class="bi bi-person-badge"></i> Account Details
+      </div>
       <div class="form-grid">
         <div class="form-group">
           <label for="account_name">Account Name <span class="text-danger">*</span></label>
@@ -79,81 +385,151 @@
           <label for="email_address">Email Address <span class="text-danger">*</span></label>
           <input type="email" id="email_address" name="email_address" required placeholder="your@email.com">
         </div>
-        <div class="form-group">
-          <label for="friendly_name">Friendly Name</label>
-          <input type="text" id="friendly_name" name="friendly_name" placeholder="Display name for outgoing emails">
-        </div>
       </div>
       <div class="action-bar">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="autoDetect()">
-          <i class="bi bi-magic"></i> Auto-detect settings
+        <button type="button" class="btn btn-secondary btn-sm" onclick="smartAutoDetect()">
+          <i class="bi bi-magic"></i> Auto-Detect Settings
         </button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="autoDetectAndTest()">
-          <i class="bi bi-activity"></i> Auto-detect &amp; Test
-        </button>
+        <span class="text-muted small">Automatically configure IMAP/SMTP based on email domain</span>
       </div>
       <div id="autodetectStatus" class="test-status"></div>
     </div>
 
+    <!-- IMAP Settings Section (REQUIRED) -->
     <div class="form-section">
-      <div class="form-section-title">IMAP Settings</div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label for="imap_host">IMAP Host <span class="text-danger">*</span></label>
-          <input type="text" id="imap_host" name="imap_host" required placeholder="imap.example.com">
-        </div>
-        <div class="form-group">
-          <label for="imap_port">IMAP Port <span class="text-danger">*</span></label>
-          <input type="number" id="imap_port" name="imap_port" required placeholder="993">
-        </div>
-        <div class="form-group">
-          <label for="imap_username">IMAP Username <span class="text-danger">*</span></label>
-          <input type="text" id="imap_username" name="imap_username" required placeholder="username">
-        </div>
-        <div class="form-group">
-          <label for="imap_password">IMAP Password <span class="text-danger">*</span></label>
-          <input type="password" id="imap_password" name="imap_password" required placeholder="password">
-        </div>
+      <div class="form-section-title">
+        <i class="bi bi-inbox"></i> IMAP Settings
+        <span class="text-danger">* Required</span>
       </div>
-      <div class="form-check mt-2">
-        <input class="form-check-input" type="checkbox" value="true" id="imap_use_ssl" name="imap_use_ssl" checked>
-        <label class="form-check-label" for="imap_use_ssl">Use SSL/TLS for IMAP</label>
+      <div class="form-section-body">
+        <!-- Host and Port Row -->
+        <div class="form-grid-row">
+          <div class="form-group">
+            <label for="imap_host">IMAP Host <span class="text-danger">*</span></label>
+            <input type="text" id="imap_host" name="imap_host" required placeholder="imap.example.com">
+          </div>
+          <div class="form-group">
+            <label for="imap_port">Port <span class="text-danger">*</span></label>
+            <input type="number" id="imap_port" name="imap_port" required placeholder="993" value="993">
+          </div>
+        </div>
+
+        <!-- Username and Password Row -->
+        <div class="form-grid-row">
+          <div class="form-group">
+            <label for="imap_username">Username <span class="text-danger">*</span></label>
+            <input type="text" id="imap_username" name="imap_username" required placeholder="username">
+          </div>
+          <div class="form-group">
+            <label for="imap_password">Password <span class="text-danger">*</span></label>
+            <input type="password" id="imap_password" name="imap_password" required placeholder="password or app password">
+          </div>
+        </div>
+
+        <!-- SSL/TLS Checkbox with Tooltip -->
+        <div class="form-check-with-tooltip">
+          <input class="form-check-input" type="checkbox" id="imap_use_ssl" name="imap_use_ssl" checked>
+          <label class="form-check-label" for="imap_use_ssl">
+            Use SSL/TLS for IMAP
+            <i class="bi bi-info-circle"
+               data-bs-toggle="tooltip"
+               data-bs-placement="top"
+               title="Recommended for port 993 (SSL) or 143 with STARTTLS. Gmail/Outlook use SSL by default. Disable only if your server uses plaintext (not recommended)."></i>
+          </label>
+        </div>
+
+        <div class="action-bar">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="testConnection('imap')">
+            <i class="bi bi-broadcast"></i> Test IMAP Connection
+          </button>
+        </div>
+        <div id="imap_test_status" class="test-status"></div>
       </div>
-      <div id="imap_test_status" class="test-status"></div>
     </div>
 
-    <div class="form-section">
-      <div class="form-section-title">SMTP Settings</div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label for="smtp_host">SMTP Host <span class="text-danger">*</span></label>
-          <input type="text" id="smtp_host" name="smtp_host" required placeholder="smtp.example.com">
+    <!-- SMTP Settings Section (OPTIONAL - Collapsible) -->
+    <div class="form-section collapsible" id="smtpSection">
+      <div class="form-section-header" onclick="toggleSMTP()">
+        <div class="form-section-title">
+          <i class="bi bi-send"></i> SMTP Settings
+          <span class="optional-badge"><i class="bi bi-info-circle"></i> Optional</span>
         </div>
-        <div class="form-group">
-          <label for="smtp_port">SMTP Port <span class="text-danger">*</span></label>
-          <input type="number" id="smtp_port" name="smtp_port" required placeholder="465">
-        </div>
-        <div class="form-group">
-          <label for="smtp_username">SMTP Username <span class="text-danger">*</span></label>
-          <input type="text" id="smtp_username" name="smtp_username" required placeholder="username">
-        </div>
-        <div class="form-group">
-          <label for="smtp_password">SMTP Password <span class="text-danger">*</span></label>
-          <input type="password" id="smtp_password" name="smtp_password" required placeholder="password">
-        </div>
+        <i class="bi bi-chevron-down toggle-icon"></i>
       </div>
-      <div class="form-check mt-2">
-        <input class="form-check-input" type="checkbox" value="true" id="smtp_use_ssl" name="smtp_use_ssl" checked>
-        <label class="form-check-label" for="smtp_use_ssl">Use SSL/TLS for SMTP</label>
+      <div class="form-section-body">
+        <p class="text-muted small mb-3" style="font-size: 0.8rem;">
+          <i class="bi bi-lightbulb"></i> SMTP is only needed if you want to <strong>send</strong> emails through this account.
+          If you only need to <strong>monitor incoming mail</strong>, you can skip this section.
+        </p>
+
+        <!-- Host and Port Row -->
+        <div class="form-grid-row">
+          <div class="form-group">
+            <label for="smtp_host">SMTP Host <span class="text-muted">(Optional)</span></label>
+            <input type="text" id="smtp_host" name="smtp_host" placeholder="smtp.example.com">
+          </div>
+          <div class="form-group">
+            <label for="smtp_port">Port <span class="text-muted">(Optional)</span></label>
+            <input type="number" id="smtp_port" name="smtp_port" placeholder="465" value="465">
+          </div>
+        </div>
+
+        <!-- Username and Password Row -->
+        <div class="form-grid-row">
+          <div class="form-group">
+            <label for="smtp_username">Username <span class="text-muted">(Optional)</span></label>
+            <input type="text" id="smtp_username" name="smtp_username" placeholder="username">
+          </div>
+          <div class="form-group">
+            <label for="smtp_password">Password <span class="text-muted">(Optional)</span></label>
+            <input type="password" id="smtp_password" name="smtp_password" placeholder="password or app password">
+          </div>
+        </div>
+
+        <!-- SSL/TLS Checkbox with Tooltip -->
+        <div class="form-check-with-tooltip">
+          <input class="form-check-input" type="checkbox" id="smtp_use_ssl" name="smtp_use_ssl" checked>
+          <label class="form-check-label" for="smtp_use_ssl">
+            Use SSL/TLS for SMTP
+            <i class="bi bi-info-circle"
+               data-bs-toggle="tooltip"
+               data-bs-placement="top"
+               title="Recommended for port 465 (SSL) or 587 with STARTTLS. Gmail uses port 587, Hostinger uses 465. Disable only for plaintext (not recommended)."></i>
+          </label>
+        </div>
+
+        <div class="action-bar">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="testConnection('smtp')">
+            <i class="bi bi-broadcast"></i> Test SMTP Connection
+          </button>
+        </div>
+        <div id="smtp_test_status" class="test-status"></div>
       </div>
-      <div id="smtp_test_status" class="test-status"></div>
     </div>
 
+    <!-- Watcher Control Section -->
+    <div class="form-section">
+      <div class="form-section-title">
+        <i class="bi bi-eye"></i> Monitoring Options
+      </div>
+      <div class="form-check-with-tooltip">
+        <input class="form-check-input" type="checkbox" id="start_watcher" name="start_watcher" checked>
+        <label class="form-check-label" for="start_watcher">
+          Start monitoring immediately after saving
+          <i class="bi bi-info-circle"
+             data-bs-toggle="tooltip"
+             data-bs-placement="top"
+             title="When enabled, the IMAP watcher will start automatically to monitor incoming emails. You can disable this if you want to manually start monitoring later from the Accounts page."></i>
+        </label>
+      </div>
+    </div>
+
+    <!-- Submit Actions -->
     <div class="action-bar justify-content-end">
       <button type="button" class="btn btn-ghost" onclick="window.history.back()">
         <i class="bi bi-arrow-left"></i> Cancel
       </button>
-      <button type="submit" class="btn btn-secondary">
+      <button type="submit" class="btn btn-success">
         <i class="bi bi-save"></i> Save Account
       </button>
     </div>
@@ -163,12 +539,22 @@
 
 {% block extra_js %}
 <script>
-  const providerSettings = {
+// Initialize Bootstrap tooltips
+document.addEventListener('DOMContentLoaded', function() {
+  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+  });
+});
+
+// Provider settings (preset configurations)
+const providerSettings = {
   gmail: { imap_host: 'imap.gmail.com', imap_port: 993, smtp_host: 'smtp.gmail.com', smtp_port: 587 },
   outlook: { imap_host: 'outlook.office365.com', imap_port: 993, smtp_host: 'smtp.office365.com', smtp_port: 587 },
   hostinger: { imap_host: 'imap.hostinger.com', imap_port: 993, smtp_host: 'smtp.hostinger.com', smtp_port: 465 }
 };
 
+// Set provider preset
 function setProvider(arg, maybeProvider) {
   const evt = (arg && arg.currentTarget) ? arg : null;
   const provider = typeof arg === 'string' && !maybeProvider ? arg : maybeProvider;
@@ -197,50 +583,80 @@ function setProvider(arg, maybeProvider) {
   }
 }
 
-function autoDetect() {
+// Smart auto-detect: Detects settings, populates fields, then auto-tests IMAP
+function smartAutoDetect() {
   const email = document.getElementById('email_address').value.trim();
   if (!email || !email.includes('@')) {
-    alert('Enter a valid email first.');
+    showToast('Enter a valid email address first', 'error');
     return;
   }
+
+  showStatus('autodetectStatus', null, '<i class="bi bi-hourglass-split"></i> Detecting settings...');
+
   fetch('/api/detect-email-settings', {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({email})
   })
   .then(r => r.json())
   .then(cfg => {
-    if (!cfg || !cfg.smtp_host) throw new Error('Detection failed');
+    if (!cfg || !cfg.imap_host) throw new Error('Detection failed');
+
+    // Populate IMAP fields
     document.getElementById('imap_host').value = cfg.imap_host;
     document.getElementById('imap_port').value = cfg.imap_port;
     document.getElementById('imap_use_ssl').checked = !!cfg.imap_use_ssl;
-    document.getElementById('smtp_host').value = cfg.smtp_host;
-    document.getElementById('smtp_port').value = cfg.smtp_port;
-    document.getElementById('smtp_use_ssl').checked = !!cfg.smtp_use_ssl;
+
+    // Populate SMTP fields (optional)
+    if (cfg.smtp_host) {
+      document.getElementById('smtp_host').value = cfg.smtp_host;
+      document.getElementById('smtp_port').value = cfg.smtp_port;
+      document.getElementById('smtp_use_ssl').checked = !!cfg.smtp_use_ssl;
+    }
+
+    // Auto-fill usernames if not already set
     const emailField = document.getElementById('email_address').value;
     if (emailField) {
       if (!document.getElementById('imap_username').value) document.getElementById('imap_username').value = emailField;
       if (!document.getElementById('smtp_username').value) document.getElementById('smtp_username').value = emailField;
     }
-    showStatus('autodetectStatus', true, 'Settings detected.');
+
+    showStatus('autodetectStatus', true, 'Settings detected successfully! Enter your password and test the connection.');
+
+    // Expand SMTP section if SMTP was detected
+    if (cfg.smtp_host) {
+      const smtpSection = document.getElementById('smtpSection');
+      if (smtpSection.classList.contains('collapsed')) {
+        toggleSMTP();
+      }
+    }
   })
   .catch(err => showStatus('autodetectStatus', false, 'Auto-detect failed: ' + err.message));
 }
 
-function autoDetectAndTest() {
-  autoDetect();
-  setTimeout(() => { testConnection('imap'); testConnection('smtp'); }, 400);
+// Toggle SMTP section collapse
+function toggleSMTP() {
+  const section = document.getElementById('smtpSection');
+  section.classList.toggle('collapsed');
 }
 
+// Show status message
 function showStatus(id, success, message) {
   const div = document.getElementById(id);
   if (!div) return;
   div.style.display = 'block';
-  div.className = 'test-status ' + (success ? 'test-success' : 'test-error');
-  div.innerHTML = success
-    ? <i class="bi bi-check-circle"></i> 
-    : <i class="bi bi-x-circle"></i> ;
+
+  if (success === null) {
+    // Loading state
+    div.className = 'test-status';
+  } else {
+    div.className = 'test-status ' + (success ? 'test-success' : 'test-error');
+  }
+
+  div.innerHTML = message;
 }
 
+// Auto-fill username fields when email changes
 const emailField = document.getElementById('email_address');
 if (emailField) {
   emailField.addEventListener('change', function() {
@@ -253,12 +669,14 @@ if (emailField) {
   });
 }
 
+// Auto-sync IMAP password to SMTP if SMTP password is empty
 document.getElementById('imap_password').addEventListener('change', function() {
   if (!document.getElementById('smtp_password').value) {
     document.getElementById('smtp_password').value = this.value;
   }
 });
 
+// Test connection (IMAP or SMTP)
 function testConnection(type) {
   const statusDiv = document.getElementById(type + '_test_status');
   statusDiv.style.display = 'block';
@@ -292,6 +710,12 @@ function testConnection(type) {
     statusDiv.className = 'test-status test-error';
     statusDiv.innerHTML = '<i class="bi bi-x-circle"></i> Test failed: ' + error.message;
   });
+}
+
+// Toast helper (if not already defined globally)
+function showToast(message, type) {
+  // Simple alert fallback if toast system not available
+  alert(message);
 }
 </script>
 {% endblock %}

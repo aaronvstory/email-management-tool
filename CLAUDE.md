@@ -8,9 +8,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Version**: 2.8
 **Status**: 🟢 Fully functional — SMTP proxy running; IMAP watchers using hybrid IDLE+polling strategy; core UI accessible.
-**Last Updated**: October 18, 2025
+**Last Updated**: October 20, 2025
 
 ### Recent Major Updates
+- ✅ **Root Directory Cleanup** - Consolidated scattered docs, organized 19 files into `archive/2025-10-20_root_cleanup/`
+- ✅ **Gmail Fixes Consolidated** - Single comprehensive reference: [docs/GMAIL_FIXES_CONSOLIDATED.md](docs/GMAIL_FIXES_CONSOLIDATED.md)
+- ✅ **Implementation History** - Chronological feature history: [docs/IMPLEMENTATION_HISTORY.md](docs/IMPLEMENTATION_HISTORY.md)
 - ✅ **Comprehensive Documentation** - Added USER_GUIDE, API_REFERENCE, FAQ, expanded TROUBLESHOOTING
 - ✅ **UI Tooltips** - 9 tooltips across 3 templates explaining IDLE/polling, release mechanisms, rule matching
 - ✅ **Test Coverage Milestone** - 138/138 tests passing, 36% coverage (was 27%), pre-commit hooks enabled
@@ -311,6 +314,13 @@ For deeper technical information, see:
 - **[docs/SECURITY.md](docs/SECURITY.md)** - Security configuration and validation
 - **[docs/STYLEGUIDE.md](docs/STYLEGUIDE.md)** - UI/UX standards (MANDATORY)
 - **[docs/HYBRID_IMAP_STRATEGY.md](docs/HYBRID_IMAP_STRATEGY.md)** - IMAP implementation
+
+**Implementation & History**:
+- **[docs/GMAIL_FIXES_CONSOLIDATED.md](docs/GMAIL_FIXES_CONSOLIDATED.md)** - Complete Gmail duplicate fix documentation (v1-v4 evolution, protocol fixes, hardening)
+- **[docs/IMPLEMENTATION_HISTORY.md](docs/IMPLEMENTATION_HISTORY.md)** - Chronological feature implementation history (Oct 18-19, 2025)
+- **[docs/SMOKE_TEST_GUIDE.md](docs/SMOKE_TEST_GUIDE.md)** - End-to-end Gmail release validation guide
+- **[docs/reports/CODEBASE_ANALYSIS.md](docs/reports/CODEBASE_ANALYSIS.md)** - Comprehensive architecture and implementation review (2390 lines)
+- **[archive/2025-10-20_root_cleanup/MANIFEST.md](archive/2025-10-20_root_cleanup/MANIFEST.md)** - Root directory cleanup documentation
 
 ---
 

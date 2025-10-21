@@ -1,9 +1,9 @@
 import json
 import logging
 import os
+import sys
 from datetime import datetime, timezone
 from logging import Logger
-from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any, Dict
 
@@ -56,12 +56,13 @@ class _Formatter(logging.Formatter):
 
 def setup_app_logging(app, log_dir: str = "logs", log_level: str = "INFO") -> None:
     """
-    Attach JSON file logging and console logging to Flask app.logger.
+    Attach timestamped file logging and console logging to Flask app.logger.
 
     Features:
-    - JSON-formatted file logging with rotation (10MB max, 5 backups)
+    - Timestamped log files (app_YYYY-MM-DD_HHMMSS.log)
+    - Keeps only last 3 log files (auto-cleanup)
+    - JSON and text formats
     - Console logging with simple format for development
-    - Configurable log directory and level
     - Thread-safe operation
 
     Args:
@@ -81,37 +82,58 @@ def setup_app_logging(app, log_dir: str = "logs", log_level: str = "INFO") -> No
         log_path = Path(log_dir)
         log_path.mkdir(parents=True, exist_ok=True)
 
-        # If no handlers yet, attach file handlers; otherwise reuse existing ones
-        json_log_file = log_path / "app.json.log"
-        text_log_file = log_path / "app.log"
-        if not logger.handlers:
-            # 1. JSON File Handler with Rotation (10MB max, 5 backups)
-            json_handler = RotatingFileHandler(
-                json_log_file,
-                maxBytes=10 * 1024 * 1024,  # 10MB
-                backupCount=5,
-                encoding="utf-8"
-            )
-            json_handler.setLevel(level)
-            json_handler.setFormatter(JSONFormatter())
-            logger.addHandler(json_handler)
+        # Create timestamped log filenames
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H%M%S")
+        json_log_file = log_path / f"app_{timestamp}.json.log"
+        text_log_file = log_path / f"app_{timestamp}.log"
 
-            # 2. Plain Text File Handler with Rotation (for backward compatibility)
-            text_handler = RotatingFileHandler(
-                text_log_file,
-                maxBytes=10 * 1024 * 1024,  # 10MB
-                backupCount=5,
-                encoding="utf-8"
-            )
-            text_handler.setLevel(level)
-            text_handler.setFormatter(_Formatter(_DEF_FORMAT))
-            logger.addHandler(text_handler)
-        else:
-            # Ensure our level and filenames are still known for the info line below
-            pass
+        # Cleanup old log files - keep only last 3 of each type
+        def cleanup_old_logs(pattern: str, keep: int = 3):
+            """Remove old log files, keeping only the most recent 'keep' files."""
+            try:
+                log_files = sorted(log_path.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)
+                for old_log in log_files[keep:]:
+                    try:
+                        old_log.unlink()
+                        print(f"[Cleanup] Removed old log: {old_log.name}", file=sys.stderr)
+                    except Exception as e:
+                        print(f"[Cleanup] Failed to remove {old_log.name}: {e}", file=sys.stderr)
+            except Exception as e:
+                print(f"[Cleanup] Failed to cleanup logs: {e}", file=sys.stderr)
 
-        # 3. Console Handler (for development)
-        if os.getenv("TESTING") != "1":  # Skip console in tests
+        cleanup_old_logs("app_*.json.log", keep=3)
+        cleanup_old_logs("app_*.log", keep=3)
+
+        # Remove existing file handlers (if any) to force fresh timestamped files
+        # Keep track of whether we had a console handler
+        had_console_handler = False
+        for handler in logger.handlers[:]:  # Copy list to avoid modification during iteration
+            if isinstance(handler, logging.FileHandler):
+                logger.removeHandler(handler)
+                handler.close()
+            elif isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
+                had_console_handler = True
+
+        # 1. JSON File Handler (timestamped) - always create fresh
+        json_handler = logging.FileHandler(
+            json_log_file,
+            encoding="utf-8"
+        )
+        json_handler.setLevel(level)
+        json_handler.setFormatter(JSONFormatter())
+        logger.addHandler(json_handler)
+
+        # 2. Plain Text File Handler (timestamped) - always create fresh
+        text_handler = logging.FileHandler(
+            text_log_file,
+            encoding="utf-8"
+        )
+        text_handler.setLevel(level)
+        text_handler.setFormatter(_Formatter(_DEF_FORMAT))
+        logger.addHandler(text_handler)
+
+        # 3. Console Handler (for development) - only add if not already present
+        if os.getenv("TESTING") != "1" and not had_console_handler:  # Skip console in tests
             console_handler = logging.StreamHandler()
             console_handler.setLevel(level)
             console_handler.setFormatter(_Formatter(_DEF_FORMAT))
@@ -149,7 +171,6 @@ def setup_app_logging(app, log_dir: str = "logs", log_level: str = "INFO") -> No
 
     except Exception as e:
         # Fallback to stderr if logging setup fails
-        import sys
         print(f"ERROR: Failed to setup logging: {e}", file=sys.stderr)
 
 

@@ -21,10 +21,10 @@
 }
 :root {
     /* === LEGACY TOKENS (keep for compatibility) === */
-    --primary-color: #dc2626;
+    --primary-color: #7f1d1d;
     --secondary-color: #991b1b;
     --success-color: #10b981;
-    --danger-color: #dc2626;
+    --danger-color: #7f1d1d;
     --warning-color: #f59e0b;
     --dark-bg: #0a0a0a;
     --card-bg: #1a1a1a;
@@ -39,10 +39,10 @@
     /* === BORDER COLORS === */
     --border-subtle: rgba(255, 255, 255, 0.06);
     --border-default: rgba(255, 255, 255, 0.12);
-    --border-emphasis: rgba(220, 38, 38, 0.15);
+    --border-emphasis: rgba(127, 29, 29, 0.15);
     
     /* === BRAND COLORS === */
-    --brand-primary: #dc2626;
+    --brand-primary: #7f1d1d;
     --brand-primary-dark: #991b1b;
     --brand-primary-darker: #7f1d1d;
     --brand-secondary: #991b1b;
@@ -58,10 +58,10 @@
     --warning-bg: rgba(251, 191, 36, 0.15);
     --warning-border: rgba(251, 191, 36, 0.35);
     
-    --danger-base: #dc2626;
-    --danger-light: #ef4444;
-    --danger-bg: rgba(239, 68, 68, 0.15);
-    --danger-border: rgba(239, 68, 68, 0.35);
+    --danger-base: #7f1d1d;
+    --danger-light: #fca5a5;
+    --danger-bg: rgba(127, 29, 29, 0.15);
+    --danger-border: rgba(127, 29, 29, 0.35);
     
     --info-base: #06b6d4;
     --info-light: #60a5fa;
@@ -127,7 +127,7 @@ body {
 }
 
 .sidebar .nav-link.active {
-    background: rgba(220,38,38,0.15);
+    background: rgba(127,29,29,0.15);
     color: var(--text-primary);
     border-left: 3px solid var(--brand-primary);
 }
@@ -181,7 +181,7 @@ body {
 
 .table-modern .table thead,
 .table-modern thead {
-    background: rgba(220, 38, 38, 0.08) !important;
+    background: rgba(127, 29, 29, 0.08) !important;
     color: var(--text-primary) !important;
 }
 
@@ -210,8 +210,9 @@ body {
 
 .table-modern .table tbody tr:hover,
 .table-modern tbody tr:hover {
-    background: var(--border-emphasis) !important;
-    box-shadow: 0 0 0 1px var(--border-emphasis);
+    background: rgba(255,255,255,0.03) !important;
+    box-shadow: 0 0 0 1px rgba(127,29,29,.2) !important;
+    transition: all 0.2s ease;
 }
 
 /* Additional Bootstrap overrides for all tables in dark sections */
@@ -230,6 +231,15 @@ body {
     background-color: var(--surface-base) !important;
     color: var(--text-primary) !important;
     border-color: var(--border-default) !important;
+}
+
+/* Global table hover effect - ALL tables get the /rules page hover effect */
+.table tbody tr:hover,
+.table-hover tbody tr:hover,
+table tbody tr:hover {
+    background: rgba(255,255,255,0.03) !important;
+    box-shadow: 0 0 0 1px rgba(127,29,29,.2) !important;
+    transition: all 0.2s ease;
 }
 
 /* ========================================
@@ -316,7 +326,7 @@ select:focus {
     background: #333333 !important;
     border-color: #4a4a4a !important;
     color: var(--text-primary) !important;
-    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2) !important;
+    box-shadow: 0 0 0 2px rgba(127, 29, 29, 0.2) !important;
     outline: none !important;
 }
 
@@ -410,17 +420,7 @@ form h4, form h5, form h6 {
     color: var(--danger-light) !important;
 }
 
-/* Buttons in Dark Theme */
-.btn-secondary {
-    background: rgba(255,255,255,0.06) !important;
-    border: 1px solid var(--border-default) !important;
-    color: var(--text-primary) !important;
-}
-
-.btn-secondary:hover {
-    background: rgba(255,255,255,0.12) !important;
-    color: var(--text-primary) !important;
-}
+/* Buttons in Dark Theme - Removed duplicate btn-secondary (see line ~929 for actual definition) */
 
 /* Input Groups */
 .input-group-text {
@@ -647,7 +647,7 @@ section {
 }
 
 .list-group-item:hover {
-    background: rgba(220,38,38,0.08) !important;
+    background: rgba(127,29,29,0.08) !important;
 }
 
 .badge-status {
@@ -689,8 +689,8 @@ section {
 }
 
 .btn-primary-modern {
-    background: rgba(220,38,38,0.18);
-    border-color: rgba(220,38,38,0.35);
+    background: rgba(127,29,29,0.18);
+    border-color: rgba(127,29,29,0.35);
     color: var(--text-primary);
 }
 
@@ -712,7 +712,7 @@ section {
 
 .search-box:focus {
     border-color: var(--brand-primary);
-    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+    box-shadow: 0 0 0 3px rgba(127, 29, 29, 0.2);
     outline: none;
 }
 
@@ -727,8 +727,8 @@ section {
 
 .input-modern:focus {
     background: rgba(255,255,255,0.08) !important;
-    border-color: rgba(220, 38, 38, 0.5) !important;
-    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2) !important;
+    border-color: rgba(127, 29, 29, 0.5) !important;
+    box-shadow: 0 0 0 2px rgba(127, 29, 29, 0.2) !important;
     outline: none !important;
 }
 
@@ -910,33 +910,37 @@ button[type="button"],
 /* Primary buttons — brand red */
 .btn-primary,
 .btn-primary-modern {
-  background: rgba(220,38,38,0.18) !important;
+  background: rgba(127,29,29,0.18) !important;
   color: var(--text-primary) !important;
-  border: 1px solid rgba(220,38,38,0.35) !important;
+  border: 1px solid rgba(127,29,29,0.35) !important;
 }
 
 .btn-primary:hover,
 .btn-primary-modern:hover,
 .btn-primary:focus,
 .btn-primary-modern:focus {
-  background: rgba(220,38,38,0.24) !important;
-  transform: translateY(-1px) !important;
+  background: rgba(127,29,29,0.24) !important;
+  transform: none !important; /* no vertical movement */
   box-shadow: var(--shadow-md) !important;
   color: var(--text-primary) !important;
 }
 
-/* Secondary buttons */
+/* Secondary buttons - Subtle Dark Red (matches btn-primary) */
 .btn-secondary {
-  background: #2a2a2a !important;
+  background: rgba(127,29,29,0.18) !important;
   color: var(--text-primary) !important;
-  border: 2px solid #404040 !important;
+  border: 1px solid rgba(127,29,29,0.35) !important;
+  font-weight: 500;
+  transition: all 0.2s ease;
 }
 
 .btn-secondary:hover,
 .btn-secondary:focus {
-  background: #3a3a3a !important;
-  border-color: #505050 !important;
+  background: rgba(127,29,29,0.28) !important;
+  border-color: rgba(127,29,29,0.6) !important;
+  transform: none !important; /* no vertical movement */
   color: var(--text-primary) !important;
+  box-shadow: var(--shadow-md) !important;
 }
 
 /* Success buttons */
@@ -1000,15 +1004,15 @@ button[type="button"],
 /* Outline buttons */
 .btn-outline-primary {
   background: transparent !important;
-  color: #dc2626 !important;
-  border: 2px solid #dc2626 !important;
+  color: #7f1d1d !important;
+  border: 2px solid #7f1d1d !important;
 }
 
 .btn-outline-primary:hover,
 .btn-outline-primary:focus {
-  background: #dc2626 !important;
+  background: #7f1d1d !important;
   color: #ffffff !important;
-  border-color: #dc2626 !important;
+  border-color: #7f1d1d !important;
 }
 
 .btn-outline-secondary {
@@ -1109,7 +1113,7 @@ a:focus-visible,
 .form-select:focus-visible,
 .nav-mini-link:focus-visible,
 .nav-item-link:focus-visible {
-  outline: 2px solid #dc2626 !important;
+  outline: 2px solid #7f1d1d !important;
   outline-offset: 2px !important;
 }
 
@@ -1214,7 +1218,8 @@ a:focus-visible,
    ============================= */
 .badge-soft-success,
 .badge-soft-danger,
-.badge-soft-muted{
+.badge-soft-muted,
+.badge-soft-info{
     display: inline-flex !important;
     align-items: center !important;
     gap: 6px !important;
@@ -1234,14 +1239,19 @@ a:focus-visible,
     color: #6ee7b7 !important;
 }
 .badge-soft-danger{
-    background: rgba(220,38,38,0.16) !important;
-    border-color: rgba(220,38,38,0.36) !important;
+    background: rgba(127,29,29,0.16) !important;
+    border-color: rgba(127,29,29,0.36) !important;
     color: #fca5a5 !important;
 }
 .badge-soft-muted{
     background: rgba(148,163,184,0.08) !important;
     border-color: rgba(148,163,184,0.25) !important;
     color: var(--text-muted) !important;
+}
+.badge-soft-info{
+    background: rgba(127,29,29,0.12) !important;
+    border-color: rgba(127,29,29,0.28) !important;
+    color: #fca5a5 !important;
 }
 
 /* =============================
@@ -1365,7 +1375,7 @@ a:focus-visible,
 .stat-card-modern {
     background: var(--surface-highest);
     border-radius: var(--radius-lg);
-    padding: 18px;
+    padding: 14px;  /* Reduced from 18px for better scalability */
     border: 1px solid var(--border-subtle);
     box-shadow: var(--shadow-sm);
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
@@ -1375,13 +1385,13 @@ a:focus-visible,
 }
 
 .stat-card-modern:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    transform: none; /* prevent card lift */
+    box-shadow: var(--shadow-sm); /* keep subtle shadow only */
     border-color: var(--border-emphasis);
 }
 
 .stat-card-modern .stat-label {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -1451,80 +1461,8 @@ a:focus-visible,
 .cards-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: var(--space-sm);
+    gap: 12px;  /* Reduced from 20px for better scalability */
     padding: var(--space-sm);
-}
-
-.watcher-card {
-    background: var(--gradient-surface);
-    border-radius: var(--radius-lg);
-    padding: 20px;
-    border: 1px solid var(--border-subtle);
-    transition: all 0.3s ease;
-}
-
-.watcher-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-    border-color: var(--border-emphasis);
-}
-
-/* Email address display - FIX for broken text */
-.email-clip {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    letter-spacing: normal;
-    word-spacing: normal;
-    text-transform: none;
-    line-height: 1.4;
-}
-
-/* Status text colors */
-.text-success {
-    color: var(--success-base) !important;
-}
-
-.text-danger {
-    color: var(--danger-light) !important;
-}
-
-/* Account card helper classes */
-.account-meta {
-    margin-top: 15px;
-    padding-top: 15px;
-    border-top: 1px solid var(--border-subtle);
-}
-
-.account-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 6px 0;
-    font-size: 0.85rem;
-}
-
-.account-row-label {
-    color: var(--text-muted);
-}
-
-.account-row-value {
-    color: var(--text-secondary);
-}
-
-.account-error {
-    white-space: pre-wrap;
-    word-break: break-word;
-    text-align: right;
-    max-width: 60%;
-}
-
-.account-actions {
-    margin-top: 15px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    align-items: center;
 }
 
 /* Responsive cards grid */
@@ -1687,11 +1625,11 @@ a:focus-visible,
 .card-unified:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.6);
-    border-color: rgba(220,38,38,0.3);
+    border-color: rgba(127,29,29,0.3);
 }
 
 .card-unified-header {
-    background: rgba(220,38,38,0.08);
+    background: rgba(127,29,29,0.08);
     border-bottom: 1px solid rgba(255,255,255,0.06);
     padding: 15px 20px;
 }
@@ -1714,12 +1652,12 @@ a:focus-visible,
 }
 
 .table-unified thead th {
-    background: rgba(220,38,38,0.1);
+    background: rgba(127,29,29,0.1);
     color: #ffffff;
     font-weight: 600;
     padding: 15px 20px;
     border: none;
-    border-bottom: 2px solid rgba(220,38,38,0.3);
+    border-bottom: 2px solid rgba(127,29,29,0.3);
     font-size: 0.85rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -1739,7 +1677,9 @@ a:focus-visible,
 }
 
 .table-unified tbody tr:hover {
-    background: rgba(255,255,255,0.03);
+    background: rgba(255,255,255,0.03) !important;
+    box-shadow: 0 0 0 1px rgba(127,29,29,.2) !important;
+    transition: all 0.2s ease;
 }
 
 /* Unified Form Styling */
@@ -1760,8 +1700,8 @@ a:focus-visible,
 
 .form-unified .form-control:focus {
     background: rgba(255,255,255,0.08);
-    border-color: rgba(220,38,38,0.5);
-    box-shadow: 0 0 0 2px rgba(220,38,38,0.2);
+    border-color: rgba(127,29,29,0.5);
+    box-shadow: 0 0 0 2px rgba(127,29,29,0.2);
     color: #ffffff;
 }
 
@@ -1801,9 +1741,9 @@ a:focus-visible,
 }
 
 .nav-tab-unified.active {
-    background: rgba(220,38,38,0.18);
+    background: rgba(127,29,29,0.18);
     color: var(--text-primary);
-    border-color: rgba(220,38,38,0.35);
+    border-color: rgba(127,29,29,0.35);
     box-shadow: var(--shadow-sm);
 }
 
@@ -1813,16 +1753,16 @@ a:focus-visible,
     align-items: center;
     gap: 6px;
     padding: 4px 10px;
-    border-radius: 20px;
+    border-radius: var(--radius-md);
     font-size: 0.8rem;
     font-weight: 600;
     border: 1px solid;
 }
 
 .status-indicator.success {
-    background: rgba(34,197,94,0.15);
-    color: #22c55e;
-    border-color: rgba(34,197,94,0.3);
+    background: rgba(16,185,129,0.15);
+    color: #10b981;
+    border-color: rgba(16,185,129,0.3);
 }
 
 .status-indicator.warning {
@@ -1853,6 +1793,18 @@ a:focus-visible,
 
 .btn-group-unified .btn {
     margin: 0;
+    border: 1px solid var(--border-default) !important; /* subtle border */
+    background: rgba(127,29,29,0.18) !important; /* match card view secondary */
+    color: var(--text-primary) !important;
+}
+
+.btn-group-unified .btn:hover,
+.btn-group-unified .btn:focus {
+    background: rgba(127,29,29,0.28) !important;
+    border-color: rgba(127,29,29,0.6) !important;
+    color: var(--text-primary) !important;
+    transform: none !important;
+    box-shadow: var(--shadow-md) !important;
 }
 
 /* Empty States */
@@ -1895,7 +1847,7 @@ a:focus-visible,
     height: 24px;
     border: 3px solid rgba(255,255,255,0.1);
     border-radius: 50%;
-    border-top-color: #dc2626;
+    border-top-color: #7f1d1d;
     animation: spin-unified 1s linear infinite;
 }
 
@@ -2272,4 +2224,345 @@ a:focus-visible,
 .form-shell h3 {
     color: var(--text-primary);
     font-weight: 600;
+}
+
+
+/* ============================================
+   ACCOUNT CARDS - IMPROVED DENSITY & STYLING
+   ============================================ */
+
+/* Tighter card spacing for scalability (100+ accounts) */
+.cards-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 10px !important;  /* Reduced from 12px */
+    padding: 10px !important;  /* Reduced from var(--space-sm) */
+}
+
+.stat-card-modern {
+    padding: 12px !important;  /* Reduced from 14px */
+    gap: 5px !important;  /* Reduced from 6px */
+}
+
+/* Account metadata section */
+.account-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.account-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 0;
+    font-size: 0.8rem;
+}
+
+.account-row-label {
+    color: var(--text-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    font-size: 0.72rem;
+}
+
+.account-row-value {
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.account-error {
+    font-size: 0.75rem;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Email address clipping */
+.email-clip {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+    font-size: 1.2rem !important;  /* Smaller than default 1.75rem */
+}
+
+/* Account action buttons - NEW SYSTEM */
+.account-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.account-actions-row {
+    display: grid;
+    gap: 4px;
+}
+
+.account-actions-row.primary {
+    grid-template-columns: repeat(4, 1fr);  /* 4 equal-width buttons */
+}
+
+.account-actions-row.secondary {
+    grid-template-columns: repeat(4, 1fr);  /* match top line column widths */
+}
+
+/* Button variants with hover states */
+.btn-account {
+    padding: 6px 8px;
+    font-size: 0.78rem;
+    border-radius: 4px; /* tighter radius */
+    transition: all 0.15s ease;
+    border: 1px solid;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.btn-account i {
+    font-size: 0.85rem;
+}
+
+/* Test button - Blue */
+.btn-account-test {
+    background: rgba(59,130,246,0.18);
+    color: #60a5fa;
+    border-color: rgba(59,130,246,0.35);
+}
+
+.btn-account-test:hover {
+    background: rgba(59,130,246,0.28);
+    border-color: rgba(59,130,246,0.55);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+    transform: translateY(-1px);
+}
+
+/* Start button - Green */
+.btn-account-start {
+    background: rgba(16,185,129,0.18);
+    color: #6ee7b7;
+    border-color: rgba(16,185,129,0.35);
+}
+
+.btn-account-start:hover {
+    background: rgba(16,185,129,0.28);
+    border-color: rgba(16,185,129,0.55);
+    box-shadow: 0 0 0 3px rgba(16,185,129,0.1);
+    transform: translateY(-1px);
+}
+
+/* Stop button - Red */
+.btn-account-stop {
+    background: rgba(220,38,38,0.18);
+    color: #f87171;
+    border-color: rgba(220,38,38,0.35);
+}
+
+.btn-account-stop:hover {
+    background: rgba(220,38,38,0.28);
+    border-color: rgba(220,38,38,0.55);
+    box-shadow: 0 0 0 3px rgba(220,38,38,0.1);
+    transform: translateY(-1px);
+}
+
+/* Delete button - Yellow/Orange */
+.btn-account-delete {
+    background: rgba(251,191,36,0.18);
+    color: #fbbf24;
+    border-color: rgba(251,191,36,0.35);
+}
+
+.btn-account-delete:hover {
+    background: rgba(251,191,36,0.28);
+    border-color: rgba(251,191,36,0.55);
+    box-shadow: 0 0 0 3px rgba(251,191,36,0.1);
+    transform: translateY(-1px);
+}
+
+/* Edit button - Ghost style */
+.btn-account-edit {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-default) !important; /* ensure subtle border */
+}
+
+.btn-account-edit:hover {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.2);
+    color: var(--text-primary);
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.05);
+    transform: none; /* no movement */
+}
+
+/* Diagnostics button - Ghost style with icon emphasis */
+.btn-account-diagnostics {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-default) !important; /* subtle white border */
+}
+
+.btn-account-diagnostics:hover {
+    background: rgba(255,255,255,0.05); /* match edit hover; no purple */
+    border-color: rgba(255,255,255,0.2);
+    color: var(--text-primary);
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.05);
+    transform: none; /* no movement */
+}
+
+/* Accounts table view adjustments */
+.accounts-view .table-modern tbody tr td {
+    padding: 12px 10px; /* tighter spacing */
+    font-size: 0.85rem;
+}
+.accounts-view .btn-group-unified {
+    gap: 6px;
+}
+
+/* Make list-view buttons mirror card-view variants by position without HTML changes */
+.accounts-view .btn-group-unified .btn { 
+    background: transparent !important; 
+    color: var(--text-primary) !important; 
+    border: 1px solid var(--border-default) !important;
+}
+
+/* 1: Test (Blue) */
+.accounts-view .btn-group-unified .btn:nth-child(1) {
+    background: rgba(59,130,246,0.18) !important;
+    color: #60a5fa !important;
+    border-color: rgba(59,130,246,0.35) !important;
+}
+.accounts-view .btn-group-unified .btn:nth-child(1):hover,
+.accounts-view .btn-group-unified .btn:nth-child(1):focus {
+    background: rgba(59,130,246,0.28) !important;
+    border-color: rgba(59,130,246,0.55) !important;
+}
+
+/* 2: Start (Green) */
+.accounts-view .btn-group-unified .btn:nth-child(2) {
+    background: rgba(16,185,129,0.18) !important;
+    color: #6ee7b7 !important;
+    border-color: rgba(16,185,129,0.35) !important;
+}
+.accounts-view .btn-group-unified .btn:nth-child(2):hover,
+.accounts-view .btn-group-unified .btn:nth-child(2):focus {
+    background: rgba(16,185,129,0.28) !important;
+    border-color: rgba(16,185,129,0.55) !important;
+}
+
+/* 3: Stop (Red) */
+.accounts-view .btn-group-unified .btn:nth-child(3) {
+    background: rgba(220,38,38,0.18) !important;
+    color: #f87171 !important;
+    border-color: rgba(220,38,38,0.35) !important;
+}
+.accounts-view .btn-group-unified .btn:nth-child(3):hover,
+.accounts-view .btn-group-unified .btn:nth-child(3):focus {
+    background: rgba(220,38,38,0.28) !important;
+    border-color: rgba(220,38,38,0.55) !important;
+}
+
+/* 4: Edit (Ghost with subtle white border) */
+.accounts-view .btn-group-unified .btn:nth-child(4) {
+    background: transparent !important;
+    color: var(--text-secondary) !important;
+    border-color: var(--border-default) !important;
+}
+.accounts-view .btn-group-unified .btn:nth-child(4):hover,
+.accounts-view .btn-group-unified .btn:nth-child(4):focus {
+    background: rgba(255,255,255,0.05) !important;
+    border-color: rgba(255,255,255,0.2) !important;
+    color: var(--text-primary) !important;
+}
+
+/* 5: Delete (Yellow/Orange) */
+.accounts-view .btn-group-unified .btn:nth-child(5) {
+    background: rgba(251,191,36,0.18) !important;
+    color: #fbbf24 !important;
+    border-color: rgba(251,191,36,0.35) !important;
+}
+.accounts-view .btn-group-unified .btn:nth-child(5):hover,
+.accounts-view .btn-group-unified .btn:nth-child(5):focus {
+    background: rgba(251,191,36,0.28) !important;
+    border-color: rgba(251,191,36,0.55) !important;
+}
+
+/* 6: Diagnostics (Ghost with subtle white border, no purple) */
+.accounts-view .btn-group-unified .btn:nth-child(6) {
+    background: transparent !important;
+    color: var(--text-secondary) !important;
+    border-color: var(--border-default) !important;
+}
+.accounts-view .btn-group-unified .btn:nth-child(6):hover,
+.accounts-view .btn-group-unified .btn:nth-child(6):focus {
+    background: rgba(255,255,255,0.05) !important;
+    border-color: rgba(255,255,255,0.2) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Ensure inline icons are centered with text inside account action buttons */
+.btn-account {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.btn-account i { line-height: 1; display: inline-block; }
+
+/* Prevent awkward wrapping of account name/email in table */
+.table-modern td .ellipsis { max-width: 260px; display: inline-block; vertical-align: middle; }
+
+/* Name split styles */
+.account-name .name-primary { font-size: 0.9rem; color: var(--text-primary); font-weight: 700; line-height: 1.1; text-transform: none; }
+.account-name .name-secondary { font-size: 0.78rem; color: var(--text-muted); line-height: 1.1; margin-top: 2px; text-transform: none; }
+.name-stack .name-primary { font-size: 0.9rem; color: var(--text-primary); font-weight: 700; line-height: 1.1; }
+.name-stack .name-secondary { font-size: 0.78rem; color: var(--text-muted); line-height: 1.1; }
+
+/* Keep action area from wrapping to 2 lines in table view */
+.accounts-view .table-modern td.text-end .account-actions { min-width: 520px; }
+
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .cards-grid {
+        grid-template-columns: 1fr;
+        gap: 8px !important;
+    }
+    
+    .btn-account {
+        font-size: 0.75rem;
+        padding: 5px 6px;
+    }
+}
+
+/* ============================================
+   Accounts page layout stabilization
+   - Scope overrides to .accounts-view to avoid global regressions
+   ============================================ */
+.accounts-view .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+    padding: var(--space-sm);
+}
+
+@media (max-width: 1200px) {
+    .accounts-view .cards-grid {
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .accounts-view .cards-grid {
+        grid-template-columns: 1fr;
+    }
 }

@@ -515,24 +515,32 @@ Gmail uses a **label-based IMAP system** instead of traditional folders:
 - **Gmail IMAP**: All messages exist in `[Gmail]/All Mail` with labels like `\Inbox`, `Quarantine`, etc.
 
 **What This Means for You:**
-When releasing edited emails on Gmail accounts, the system performs extra cleanup to ensure only the edited version appears in your INBOX. We purge the original from `[Gmail]/All Mail` to prevent Gmail from reapplying the Inbox label; this can be toggled via `GMAIL_ALL_MAIL_PURGE` environment variable.
+When releasing edited emails on Gmail accounts, the system performs extra cleanup to ensure only the edited version appears in your INBOX. We **physically move** the original from `[Gmail]/All Mail` to Trash using the IMAP MOVE command (or COPY+EXPUNGE fallback). This prevents Gmail from ever reapplying the Inbox label.
 
 #### The Release Process (Gmail)
 
 1. **Intercept**: Original email moved to Quarantine (removes `\Inbox` label)
 2. **Edit**: You modify subject/body in the dashboard
-3. **Release**: System performs three operations:
+3. **Release**: System performs defense-in-depth cleanup:
    - Appends edited email to INBOX (with new Message-ID)
    - Removes original from Quarantine folder
-   - **Purges original from `[Gmail]/All Mail`** (adds `\Trash` label)
+   - **Moves original from `[Gmail]/All Mail` to `[Gmail]/Trash`** using RFC 6851 MOVE or traditional COPY+FLAGS+EXPUNGE
+   - Physically expunges the message from All Mail
 
-**Result**: Only the edited email appears in your Gmail INBOX.
+**Result**: Only the edited email appears in your Gmail INBOX. The original is physically removed from All Mail and placed in Trash.
+
+**Technical Details:**
+- Uses `UID MOVE` command if server supports it (RFC 6851)
+- Falls back to `UID COPY` → `+FLAGS \Deleted` → `EXPUNGE` for compatibility
+- Automatically discovers mailboxes using IMAP LIST special-use flags (`\All`, `\Trash`)
+- Supports both `[Gmail]/All Mail` and `[Google Mail]/All Mail` (international Gmail)
 
 #### Verifying Gmail Release Success
 
 Check application logs for this line:
 ```
-[Gmail] Original purged from All Mail (email_id=X, uids=['123'], mbox='[Gmail]/All Mail')
+[Gmail] Original moved to Trash and removed from All Mail
+  (email_id=X, uids=['123'], mbox='[Gmail]/All Mail', trash='[Gmail]/Trash', used_move=True, used_uidplus=True)
 ```
 
 If you don't see this log:

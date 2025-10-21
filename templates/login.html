@@ -7,81 +7,130 @@
     <title>Login - Email Management Tool</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme-dark.css') }}">
     <style>
         body {
-            background: var(--surface-base);
+            background: var(--surface-base) !important;
+            background-attachment: fixed !important;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            margin: 0;
+            padding: 0;
         }
+        
         .login-container {
-            background: var(--surface-highest);
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-lg);
-            padding: 32px;
-            box-shadow: var(--shadow-md);
+            background: var(--surface-highest) !important;
+            border: 1px solid var(--border-subtle) !important;
+            border-radius: var(--radius-lg) !important;
+            padding: 40px !important;
+            box-shadow: var(--shadow-md) !important;
             width: 100%;
-            max-width: 420px;
+            max-width: 440px;
         }
+        
         .login-header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 32px;
         }
+        
         .login-header h2 {
-            color: #ffffff;
+            color: var(--text-primary) !important;
             font-weight: 700;
+            margin: 12px 0 8px 0;
         }
+        
         .login-header .icon {
-            font-size: 3rem;
-            color: #dc2626;
+            font-size: 3.5rem;
+            color: var(--brand-primary);
+            margin-bottom: 8px;
         }
+        
+        .login-header p {
+            color: var(--text-muted) !important;
+            margin: 0;
+        }
+        
         .form-label {
-            color: #9ca3af;
+            color: var(--text-primary) !important;
+            font-weight: 600;
+            margin-bottom: 8px;
         }
+        
         .form-control {
-            background: rgba(255,255,255,0.04);
-            border: 1px solid var(--border-default);
-            color: var(--text-primary);
-            border-radius: var(--radius-md);
-            padding: 12px;
+            background: rgba(255,255,255,0.06) !important;
+            border: 1px solid var(--border-default) !important;
+            color: var(--text-primary) !important;
+            border-radius: var(--radius-md) !important;
+            padding: 12px 15px !important;
         }
+        
         .form-control:focus {
-            background: rgba(255,255,255,0.06);
-            border-color: rgba(220,38,38,0.5);
-            color: var(--text-primary);
-            box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2);
+            background: rgba(255,255,255,0.08) !important;
+            border-color: rgba(127,29,29,0.5) !important;
+            color: var(--text-primary) !important;
+            box-shadow: 0 0 0 2px rgba(127, 29, 29, 0.2) !important;
+            outline: none !important;
         }
+        
+        .form-control::placeholder {
+            color: #888888 !important;
+            opacity: 1 !important;
+        }
+        
         .input-group-text {
-            background: rgba(255,255,255,0.04);
-            border: 1px solid var(--border-default);
-            color: var(--text-muted);
+            background: rgba(255,255,255,0.06) !important;
+            border: 1px solid var(--border-default) !important;
+            color: var(--text-muted) !important;
+            border-radius: var(--radius-md) 0 0 var(--radius-md) !important;
         }
+        
+        .input-group .form-control {
+            border-radius: 0 var(--radius-md) var(--radius-md) 0 !important;
+        }
+        
         .btn-login {
-            background: rgba(220,38,38,0.18);
-            color: var(--text-primary);
-            border: 1px solid rgba(220,38,38,0.35);
-            border-radius: var(--radius-md);
-            padding: 12px;
+            background: rgba(127,29,29,0.18) !important;
+            color: var(--text-primary) !important;
+            border: 1px solid rgba(127,29,29,0.35) !important;
+            border-radius: var(--radius-md) !important;
+            padding: 12px !important;
             font-weight: 600;
             width: 100%;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            transition: all 0.2s ease;
+            height: 48px;
         }
+        
         .btn-login:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
+            background: rgba(127,29,29,0.24) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: var(--shadow-md) !important;
+            color: var(--text-primary) !important;
         }
+        
         .text-muted {
-            color: #6b7280 !important;
+            color: var(--text-muted) !important;
         }
+        
         .small {
-            color: #6b7280;
+            color: var(--text-muted) !important;
+        }
+        
+        .alert {
+            border-radius: var(--radius-md) !important;
+        }
+        
+        .alert-danger {
+            background: var(--danger-bg) !important;
+            border-color: var(--danger-border) !important;
+            color: var(--danger-light) !important;
         }
     </style>
 </head>
 <body>
-    <div class="login-container card">
-        <div class="card-body">
+    <div class="login-container">
         <div class="login-header">
             <i class="bi bi-envelope-check-fill icon"></i>
             <h2>Email Manager</h2>
@@ -125,8 +174,7 @@
         <div class="mt-4 text-center text-muted small">
             <p>Default credentials: admin / admin123</p>
         </div>
-        </div>
-    </div>
+            </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>

@@ -52,7 +52,7 @@ def test_fetch_counts_basic(memory_conn):
         ],
     )
     counts = db.fetch_counts(conn=memory_conn)
-    assert counts == {"total": 2, "pending": 1, "approved": 1, "rejected": 0, "sent": 0, "held": 1, "released": 1}
+    assert counts == {"total": 2, "pending": 1, "approved": 1, "rejected": 0, "sent": 0, "held": 1, "released": 1, "discarded": 0}
 
 
 def test_fetch_counts_includes_outbound(memory_conn):
