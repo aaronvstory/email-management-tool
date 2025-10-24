@@ -141,7 +141,47 @@ def _create_test_schema(conn: sqlite3.Connection) -> None:
             reviewed_at TEXT,
             sent_at TEXT,
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            attachments_manifest TEXT,
+            version INTEGER NOT NULL DEFAULT 0,
             FOREIGN KEY (account_id) REFERENCES email_accounts (id)
+        )
+    ''')
+
+    # Attachment storage metadata (Phase 2-4)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS email_attachments(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email_id INTEGER NOT NULL,
+            filename TEXT NOT NULL,
+            mime_type TEXT,
+            size INTEGER,
+            sha256 TEXT,
+            disposition TEXT,
+            content_id TEXT,
+            is_original INTEGER NOT NULL DEFAULT 0,
+            is_staged INTEGER NOT NULL DEFAULT 0,
+            storage_path TEXT NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(email_id, filename, is_original, is_staged)
+        )
+    ''')
+
+    # Release coordination tables (Phase 4)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS email_release_locks(
+            email_id INTEGER PRIMARY KEY,
+            acquired_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS idempotency_keys(
+            key TEXT PRIMARY KEY,
+            email_id INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            response_json TEXT
         )
     ''')
 

@@ -485,7 +485,8 @@ def _build_release_message(
 
     body_container = EmailMessage()
     body_container.make_alternative()
-    body_container.set_content(text_body or '')
+    # Must use add_alternative for both text and HTML on a multipart/alternative container
+    body_container.add_alternative(text_body or '', subtype='plain')
     if html_body:
         body_container.add_alternative(html_body, subtype='html')
 
@@ -1724,7 +1725,7 @@ def api_interception_release(msg_id: int):
 
             message_bytes = msg.as_bytes(policy=default_policy)
 
-            with track_latency(release_latency, direction=str(row.get('direction') or 'inbound').lower()):
+            with track_latency(release_latency, direction=str(row['direction'] if 'direction' in row.keys() else 'inbound').lower()):
                 if not already_present:
                     with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
                         tmp_file.write(message_bytes)
@@ -2093,7 +2094,7 @@ def api_interception_release(msg_id: int):
                     extra={'email_id': msg_id, 'path': staged.get('storage_path'), 'error': str(exc)},
                 )
 
-        record_release(action='RELEASED', account_id=row.get('account_id'))
+        record_release(action='RELEASED', account_id=row['account_id'] if 'account_id' in row.keys() else None)
 
         response_payload = {
             'ok': True,

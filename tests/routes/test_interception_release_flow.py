@@ -225,6 +225,8 @@ def test_release_basic(monkeypatch, client, tmp_path):
         json={"target_folder": "INBOX"},
         headers={"Content-Type": "application/json"},
     )
+    if response.status_code != 200:
+        print(f"ERROR RESPONSE: {response.get_json()}")
     assert response.status_code == 200
     assert fake_imap.appended
 
