@@ -29,6 +29,7 @@ from app.utils.db import get_db, DB_PATH
 from app.utils.crypto import decrypt_credential, encrypt_credential
 from app.utils.imap_helpers import _imap_connect_account, _ensure_quarantine, _move_uid_to_quarantine
 from app.utils.email_markers import RELEASE_BYPASS_HEADER, RELEASE_EMAIL_ID_HEADER
+from app.services.imap_utils import normalize_folder
 from app.services.audit import log_action
 import socket
 from app.extensions import csrf, limiter
@@ -1536,7 +1537,7 @@ def api_interception_release(msg_id: int):
     edited_subject = payload.get('edited_subject')
     edited_body = payload.get('edited_body')
     edited_body_html = payload.get('edited_body_html')
-    target_folder = payload.get('target_folder', 'INBOX')
+    target_folder = normalize_folder(payload.get('target_folder', 'INBOX'))
     strip_attachments = bool(payload.get('strip_attachments'))
     idempotency_key = request.headers.get('X-Idempotency-Key')
 
@@ -1665,6 +1666,7 @@ def api_interception_release(msg_id: int):
             if not decrypted_pass:
                 raise RuntimeError('Decrypted password missing')
             imap.login(row['imap_username'], decrypted_pass)
+            # Normalize folder before IMAP select to prevent label name errors
             status, _ = imap.select(target_folder)
             if status != 'OK':
                 imap.select('INBOX')
@@ -1725,7 +1727,7 @@ def api_interception_release(msg_id: int):
 
             message_bytes = msg.as_bytes(policy=default_policy)
 
-            with track_latency(release_latency, direction=str(row['direction'] if 'direction' in row.keys() else 'inbound').lower()):
+            with track_latency(release_latency, action='RELEASED'):
                 if not already_present:
                     with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
                         tmp_file.write(message_bytes)

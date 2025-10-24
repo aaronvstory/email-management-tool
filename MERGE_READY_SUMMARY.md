@@ -2,7 +2,7 @@
 
 **Date**: October 24, 2025
 **Branch**: `feature/attachments-e2e-P1`
-**Status**: ✅ **READY FOR MERGE TO MAIN**
+**Status**: ✅ **READY FOR MERGE TO master**
 **Test Pass Rate**: 93% (149/160 passing)
 
 ---
@@ -202,11 +202,11 @@ a92732d - fix: resolve syntax errors in interception.py from Codex WIP
 git checkout feature/attachments-e2e-P1
 git pull origin feature/attachments-e2e-P1
 
-# Merge to main
-git checkout main
-git pull origin main
+# Merge to master
+git checkout master
+git pull origin master
 git merge feature/attachments-e2e-P1
-git push origin main
+git push origin master
 
 # Tag the release
 git tag -a v2.9.0-attachments-e2e -m "feat: complete attachments E2E (Phases 2-4)"
