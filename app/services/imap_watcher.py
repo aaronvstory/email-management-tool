@@ -11,6 +11,7 @@ This module is intentionally decoupled from Flask; it can be used by a runner sc
 """
 from __future__ import annotations
 
+import imaplib
 import logging
 import os
 import socket
@@ -76,8 +77,11 @@ class ImapWatcher:
                 return True
             is_active = int(row[0]) if row[0] is not None else 0
             return is_active == 0
-        except Exception:
-            # On DB error, do not force stop
+        except sqlite3.Error as e:
+            log.warning(f"Failed to check account active status for account {self.cfg.account_id}: {e}")
+            return False  # On DB error, do not force stop
+        except Exception as e:
+            log.error(f"Unexpected error checking account status for account {self.cfg.account_id}: {e}", exc_info=True)
             return False
 
     def _check_connection_alive(self, client) -> bool:
@@ -118,8 +122,8 @@ class ImapWatcher:
                 cols = [r[1] for r in cur.execute("PRAGMA table_info(worker_heartbeats)").fetchall()]
                 if 'error_count' not in cols:
                     cur.execute("ALTER TABLE worker_heartbeats ADD COLUMN error_count INTEGER DEFAULT 0")
-            except Exception:
-                pass
+            except sqlite3.Error as e:
+                log.debug(f"Failed to backfill error_count column (may already exist): {e}")
             wid = f"imap_{self.cfg.account_id}"
             # Upsert and increment error_count
             cur.execute(
@@ -143,8 +147,10 @@ class ImapWatcher:
                     (f"circuit_open:{reason}", self.cfg.account_id),
                 )
             conn.commit(); conn.close()
-        except Exception:
-            pass
+        except sqlite3.Error as e:
+            log.error(f"Failed to record failure for account {self.cfg.account_id}: {e}", exc_info=True)
+        except Exception as e:
+            log.error(f"Unexpected error recording failure for account {self.cfg.account_id}: {e}", exc_info=True)
 
     def _get_last_processed_uid(self) -> int:
         """Get the last processed UID from database for this account."""
@@ -159,8 +165,11 @@ class ImapWatcher:
             ).fetchone()
             conn.close()
             return int(row[0]) if row and row[0] else 0
+        except sqlite3.Error as e:
+            log.warning(f"Database error getting last processed UID for account {self.cfg.account_id}: {e}")
+            return 0
         except Exception as e:
-            log.warning("Failed to get last processed UID from database: %s", e)
+            log.error(f"Unexpected error getting last processed UID for account {self.cfg.account_id}: {e}", exc_info=True)
             return 0
 
     def _connect(self) -> Optional[IMAPClient]:
@@ -171,7 +180,8 @@ class ImapWatcher:
             try:
                 to = int(os.getenv("EMAIL_CONN_TIMEOUT", "15"))
                 to = max(5, min(60, to))
-            except Exception:
+            except (ValueError, TypeError) as e:
+                log.debug(f"Invalid EMAIL_CONN_TIMEOUT value, using default 15s: {e}")
                 to = 15
             client = IMAPClient(
                 self.cfg.imap_host,
@@ -188,8 +198,9 @@ class ImapWatcher:
             # Always ensure INBOX first
             try:
                 client.select_folder(self.cfg.inbox, readonly=False)
-            except Exception:
+            except (imaplib.IMAP4.error, Exception) as e:
                 # Some servers require upper-case name
+                log.debug(f"Failed to select {self.cfg.inbox}, trying INBOX: {e}")
                 client.select_folder("INBOX", readonly=False)
 
             # Resolve folder delimiter and build robust candidate list
@@ -202,9 +213,10 @@ class ImapWatcher:
                     if isinstance(delim, bytes):
                         try:
                             delim = delim.decode('utf-8', errors='ignore')
-                        except Exception:
+                        except (UnicodeDecodeError, AttributeError):
                             pass
-            except Exception:
+            except (imaplib.IMAP4.error, Exception) as e:
+                log.debug(f"Failed to determine folder delimiter: {e}")
                 delim = None
 
             # Try to ensure quarantine folder with several candidates (ordered by preference)
@@ -222,8 +234,8 @@ class ImapWatcher:
             try:
                 if delim in ("/", "."):
                     q_candidates.append(f"INBOX{delim}{self.cfg.quarantine}")
-            except Exception:
-                pass
+            except (TypeError, KeyError):
+                pass  # Delimiter invalid, skip this candidate
 
             ensured = False
             for qname in q_candidates:
@@ -234,7 +246,8 @@ class ImapWatcher:
                     if str(os.getenv('IMAP_LOG_VERBOSE','0')).lower() in ('1','true','yes'):
                         log.info("Using quarantine folder: %s", qname)
                     break
-                except Exception:
+                except imaplib.IMAP4.error as e:
+                    log.debug(f"Folder {qname} not found: {e}")
                     try:
                         client.create_folder(qname)
                         client.select_folder(qname, readonly=False)
@@ -242,28 +255,28 @@ class ImapWatcher:
                         ensured = True
                         log.info("Created folder %s", qname)
                         break
-                    except Exception:
-                        log.debug("Folder %s not available yet", qname)
+                    except imaplib.IMAP4.error as create_err:
+                        log.debug(f"Could not create folder {qname}: {create_err}")
                         continue
 
             # Fall back to original inbox if quarantine couldn't be ensured (should be rare)
             try:
                 client.select_folder(self.cfg.inbox, readonly=False)
-            except Exception:
+            except imaplib.IMAP4.error:
+                log.debug(f"Failed to select {self.cfg.inbox}, using INBOX")
                 client.select_folder("INBOX", readonly=False)
             # If we still didn't ensure quarantine, default to INBOX.Quarantine for safety
             if not ensured:
-                try:
-                    self.cfg.quarantine = "INBOX.Quarantine"
-                except Exception:
-                    pass
+                log.warning(f"Could not ensure quarantine folder for account {self.cfg.account_id}, defaulting to INBOX.Quarantine")
+                self.cfg.quarantine = "INBOX.Quarantine"
 
             # FIX #2: Initialize UIDNEXT tracking from database, not server UIDNEXT
             # This ensures we don't skip UIDs that arrived while watcher was down
             try:
                 status = client.folder_status(self.cfg.inbox, [b'UIDNEXT'])
                 server_uidnext = int(status.get(b'UIDNEXT') or 1)
-            except Exception:
+            except (imaplib.IMAP4.error, KeyError, ValueError, TypeError) as e:
+                log.warning(f"Failed to get UIDNEXT from server for account {self.cfg.account_id}: {e}")
                 server_uidnext = 1
 
             # Check database for last processed UID
@@ -298,7 +311,8 @@ class ImapWatcher:
                 return False
             caps = set(self._client.capabilities()) if self._client else set()
             return b"UIDPLUS" in caps or b"MOVE" in caps
-        except Exception:
+        except (imaplib.IMAP4.error, AttributeError, Exception) as e:
+            log.debug(f"Failed to check MOVE capability: {e}")
             return False
 
     def _copy_purge(self, uids):
@@ -330,15 +344,15 @@ class ImapWatcher:
                 # Ensure target exists, try create if needed
                 try:
                     client.select_folder(tgt, readonly=False)
-                except Exception:
+                except imaplib.IMAP4.error:
                     try:
                         client.create_folder(tgt)
-                    except Exception:
-                        pass
+                    except imaplib.IMAP4.error as create_err:
+                        log.debug(f"Could not create quarantine folder {tgt}: {create_err}")
                 # Reselect INBOX (source) to ensure UIDs refer to current mailbox
                 try:
                     client.select_folder(self.cfg.inbox, readonly=False)
-                except Exception:
+                except imaplib.IMAP4.error:
                     client.select_folder("INBOX", readonly=False)
                 client.copy(uids, tgt)
                 # Success: pin quarantine to working target
@@ -358,9 +372,9 @@ class ImapWatcher:
             try:
                 client.select_folder(self.cfg.quarantine, readonly=False)
                 client.add_flags(uids, [b"\\Seen"])  # same UIDs valid in target on many servers with UIDPLUS
-            except Exception:
+            except imaplib.IMAP4.error as e:
                 # If UIDs differ post-copy, ignore silently; not critical
-                log.debug("Could not set Seen in quarantine; continuing")
+                log.debug(f"Could not set Seen in quarantine (UIDs may differ): {e}")
             finally:
                 client.select_folder(self.cfg.inbox, readonly=False)
         if str(os.getenv('IMAP_LOG_VERBOSE','0')).lower() in ('1','true','yes'):
@@ -370,8 +384,8 @@ class ImapWatcher:
         # Ensure we're operating on INBOX
         try:
             client.select_folder(self.cfg.inbox, readonly=False)
-        except Exception:
-            pass
+        except (imaplib.IMAP4.error, Exception) as e:
+            log.debug(f"Failed to select INBOX before expunge: {e}")
         # Mark \Deleted using UID semantics (IMAPClient uses UIDs by default)
         try:
             client.add_flags(uids, [b"\\Deleted"])  # mark for deletion
@@ -489,8 +503,8 @@ class ImapWatcher:
                             if row:
                                 log.info(f"⚠️ [DUPLICATE] Skipping duplicate message_id={original_msg_id} (uid={uid_int}, existing_id={row[0]})")
                                 continue
-                    except Exception:
-                        pass
+                    except sqlite3.Error as e:
+                        log.warning(f"Failed to check duplicate message_id for UID {uid_int}: {e}")
 
                     internal_dt = None
                     try:
@@ -500,7 +514,8 @@ class ImapWatcher:
                                 internal_dt = internal_obj.isoformat()
                             else:
                                 internal_dt = str(internal_obj)
-                    except Exception:
+                    except (KeyError, ValueError, AttributeError) as e:
+                        log.debug(f"Failed to parse INTERNALDATE for UID {uid_int}: {e}")
                         internal_dt = None
 
                     rule_eval = evaluate_rules(subject, body_text, sender, recipients_list)
@@ -560,8 +575,8 @@ class ImapWatcher:
             try:
                 if 'conn' in locals() and conn:
                     conn.close()
-            except Exception:
-                pass
+            except sqlite3.Error as e:
+                log.debug(f"Failed to close database connection: {e}")
 
         return held_uids
 
@@ -599,14 +614,16 @@ class ImapWatcher:
                 params,
             )
             conn.commit()
+        except sqlite3.Error as exc:
+            log.error(f"Database error updating interception status for account {self.cfg.account_id} UIDs {uids}: {exc}", exc_info=True)
         except Exception as exc:
-            log.error("Failed to update interception status for account %s UIDs %s: %s", self.cfg.account_id, uids, exc)
+            log.error(f"Unexpected error updating interception status for account {self.cfg.account_id} UIDs {uids}: {exc}", exc_info=True)
         finally:
             if conn:
                 try:
                     conn.close()
-                except Exception:
-                    pass
+                except sqlite3.Error as e:
+                    log.debug(f"Failed to close connection: {e}")
 
     def _update_heartbeat(self, status: str = "active"):
         """Best-effort upsert of a heartbeat record for /healthz."""
@@ -630,8 +647,8 @@ class ImapWatcher:
                 cols = [r[1] for r in cur.execute("PRAGMA table_info(worker_heartbeats)").fetchall()]
                 if 'error_count' not in cols:
                     cur.execute("ALTER TABLE worker_heartbeats ADD COLUMN error_count INTEGER DEFAULT 0")
-            except Exception:
-                pass
+            except sqlite3.Error as e:
+                log.debug(f"Failed to backfill error_count column in heartbeat (may already exist): {e}")
             wid = f"imap_{self.cfg.account_id}"
             # Reset error_count to 0 on healthy heartbeat; otherwise preserve
             cur.execute(
@@ -646,8 +663,10 @@ class ImapWatcher:
                 (wid, status, status),
             )
             conn.commit(); conn.close()
-        except Exception:
-            pass
+        except sqlite3.Error as e:
+            log.debug(f"Failed to update heartbeat for account {self.cfg.account_id}: {e}")
+        except Exception as e:
+            log.error(f"Unexpected error updating heartbeat for account {self.cfg.account_id}: {e}", exc_info=True)
 
     def _update_last_checked(self):
         """Update the last_checked timestamp for this account."""
@@ -666,8 +685,10 @@ class ImapWatcher:
             )
             conn.commit()
             conn.close()
+        except sqlite3.Error as e:
+            log.debug(f"Database error updating last_checked for account {self.cfg.account_id}: {e}")
         except Exception as e:
-            log.debug(f"Failed to update last_checked for account {self.cfg.account_id}: {e}")
+            log.error(f"Unexpected error updating last_checked for account {self.cfg.account_id}: {e}", exc_info=True)
 
     def _handle_new_messages(self, client, changed):
         # changed example: {b'EXISTS': 12}
@@ -679,29 +700,31 @@ class ImapWatcher:
             try:
                 st = client.folder_status(self.cfg.inbox, [b'UIDNEXT'])
                 uidnext_now = int(st.get(b'UIDNEXT') or self._last_uidnext)
-            except Exception:
+            except (imaplib.IMAP4.error, KeyError, ValueError, TypeError) as e:
+                log.debug(f"Failed to get UIDNEXT in handle_new_messages: {e}")
                 uidnext_now = self._last_uidnext
             if uidnext_now > self._last_uidnext:
                 try:
                     all_uids = client.search('ALL')
                     delta = [int(u) for u in all_uids if self._last_uidnext <= int(u) < uidnext_now]
                     candidates.extend(delta)
-                except Exception:
-                    pass
+                except (imaplib.IMAP4.error, ValueError, TypeError) as e:
+                    log.debug(f"Failed to search for UIDs in delta range: {e}")
             # 2) Last-N sweep to catch provider quirks (e.g., flags set early)
             try:
                 sweep_n = 50
                 try:
                     sweep_n = max(10, min(500, int(os.getenv('IMAP_SWEEP_LAST_N', '50'))))
-                except Exception:
+                except (ValueError, TypeError) as e:
+                    log.debug(f"Invalid IMAP_SWEEP_LAST_N, using default 50: {e}")
                     sweep_n = 50
                 all_uids2 = client.search('ALL')
                 recent = sorted([int(u) for u in all_uids2])[-sweep_n:]
                 candidates.extend(recent)
-            except Exception:
-                pass
-        except Exception:
-            pass
+            except (imaplib.IMAP4.error, ValueError, TypeError) as e:
+                log.debug(f"Failed to sweep last N UIDs: {e}")
+        except (imaplib.IMAP4.error, Exception) as e:
+            log.warning(f"Failed to build candidate UID list for account {self.cfg.account_id}: {e}")
 
         # De-dup candidates
         if not candidates:
@@ -713,8 +736,8 @@ class ImapWatcher:
             if not filtered:
                 try:
                     self._last_uidnext = max(self._last_uidnext, max(uniq) + 1)
-                except Exception:
-                    pass
+                except (ValueError, TypeError):
+                    pass  # Empty uniq list
                 return
             uniq = filtered
 
@@ -731,20 +754,22 @@ class ImapWatcher:
                     params,
                 ).fetchall()
                 seen = {int(r[0]) for r in rows if r and r[0] is not None}
-            except Exception:
+            except sqlite3.Error as e:
+                log.warning(f"Database error checking processed UIDs for account {self.cfg.account_id}: {e}")
                 seen = set()
             finally:
                 conn.close()
             to_process = [u for u in uniq if u not in seen]
-        except Exception:
+        except sqlite3.Error as e:
+            log.error(f"Failed to filter processed UIDs for account {self.cfg.account_id}: {e}", exc_info=True)
             to_process = uniq
 
         if not to_process:
             # Advance tracker to latest observed window
             try:
                 self._last_uidnext = max(self._last_uidnext, max(uniq) + 1)
-            except Exception:
-                pass
+            except (ValueError, TypeError):
+                pass  # Empty uniq list
             else:
                 self._release_skip_uids = {u for u in self._release_skip_uids if u >= self._last_uidnext}
             return
@@ -793,8 +818,8 @@ class ImapWatcher:
         try:
             last_db_uid = self._get_last_processed_uid()
             self._last_uidnext = max(self._last_uidnext, last_db_uid + 1, max(to_process) + 1)
-        except Exception:
-            pass
+        except (ValueError, TypeError) as e:
+            log.debug(f"Failed to advance UID tracker: {e}")
         else:
             self._release_skip_uids = {u for u in self._release_skip_uids if u >= self._last_uidnext}
 
@@ -804,8 +829,8 @@ class ImapWatcher:
         if self._should_stop():
             try:
                 self._update_heartbeat("stopped")
-            except Exception:
-                pass
+            except Exception as e:
+                log.debug(f"Failed to update heartbeat on early stop: {e}")
             return
         self._client = self._connect()
         client = self._client
@@ -820,8 +845,8 @@ class ImapWatcher:
         # Ensure tracker resumes from DB state at loop start
         try:
             self._last_uidnext = max(1, self._get_last_processed_uid() + 1)
-        except Exception:
-            pass
+        except Exception as e:
+            log.warning(f"Failed to resume UIDNEXT from DB for account {self.cfg.account_id}: {e}")
         log.info(f"Starting IDLE loop with _last_uidnext={self._last_uidnext} (db-resumed)")
         # initial heartbeat
         self._update_heartbeat("active"); self._last_hb = time.time()
@@ -830,7 +855,8 @@ class ImapWatcher:
         try:
             poll_interval = int(os.getenv("IMAP_POLL_INTERVAL", "30"))
             poll_interval = max(5, min(300, poll_interval))  # Clamp between 5-300 seconds
-        except Exception:
+        except (ValueError, TypeError) as e:
+            log.debug(f"Invalid IMAP_POLL_INTERVAL, using default 30s: {e}")
             poll_interval = 30
 
         while True:
@@ -838,13 +864,13 @@ class ImapWatcher:
             if self._should_stop():
                 try:
                     self._update_heartbeat("stopped")
-                except Exception:
-                    pass
+                except Exception as e:
+                    log.debug(f"Failed to update heartbeat on stop: {e}")
                 try:
                     if client:
                         client.logout()
-                except Exception:
-                    pass
+                except (imaplib.IMAP4.error, Exception) as e:
+                    log.debug(f"Failed to logout on stop: {e}")
                 return
             # Ensure client is still connected
             if not client:
@@ -865,7 +891,8 @@ class ImapWatcher:
                 # Respect forced polling mode from repeated IDLE failures
                 if self._polling_mode_forced:
                     can_idle = False
-            except Exception:
+            except (imaplib.IMAP4.error, AttributeError) as e:
+                log.debug(f"Failed to check IDLE capability for account {self.cfg.account_id}: {e}")
                 can_idle = False
 
             if not can_idle:
@@ -923,16 +950,16 @@ class ImapWatcher:
                     if self._should_stop():
                         try:
                             client.idle_done()
-                        except Exception:
-                            pass
+                        except (imaplib.IMAP4.error, Exception) as e:
+                            log.debug(f"Failed to exit IDLE on stop request: {e}")
                         try:
                             client.logout()
-                        except Exception:
-                            pass
+                        except (imaplib.IMAP4.error, Exception) as e:
+                            log.debug(f"Failed to logout on stop request: {e}")
                         try:
                             self._update_heartbeat("stopped")
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            log.debug(f"Failed to update heartbeat on stop: {e}")
                         return
                     # Keep alive / break idle periodically
                     now = time.time()
@@ -957,20 +984,23 @@ class ImapWatcher:
                             try:
                                 st2 = client.folder_status(self.cfg.inbox, [b'UIDNEXT'])
                                 uidnext2 = int(st2.get(b'UIDNEXT') or self._last_uidnext)
-                            except Exception:
+                            except (imaplib.IMAP4.error, KeyError, ValueError, TypeError) as e:
+                                log.debug(f"Failed to get UIDNEXT during opportunistic poll: {e}")
                                 uidnext2 = self._last_uidnext
                             new_uids = []
                             if uidnext2 > self._last_uidnext:
                                 try:
                                     all_uids2 = client.search('ALL')
                                     new_uids = [int(u) for u in all_uids2 if self._last_uidnext <= int(u) < uidnext2]
-                                except Exception:
+                                except (imaplib.IMAP4.error, ValueError, TypeError) as e:
+                                    log.debug(f"Failed to search UIDs during IDLE sweep: {e}")
                                     new_uids = []
                             # Fallback to UNSEEN if no range detected
                             if not new_uids:
                                 try:
                                     new_uids = [int(u) for u in client.search('UNSEEN')]
-                                except Exception:
+                                except (imaplib.IMAP4.error, ValueError, TypeError) as e:
+                                    log.debug(f"Failed to search UNSEEN during IDLE sweep: {e}")
                                     new_uids = []
                             if new_uids:
                                 # Persist and move
@@ -982,19 +1012,19 @@ class ImapWatcher:
                                         try:
                                             self._move(held_new)
                                             move_ok = True
-                                        except Exception as move_exc:
-                                            log.warning("MOVE during idle sweep failed for acct=%s: %s", self.cfg.account_id, move_exc)
+                                        except (imaplib.IMAP4.error, Exception) as move_exc:
+                                            log.warning(f"MOVE during idle sweep failed for acct={self.cfg.account_id}: {move_exc}")
                                             try:
                                                 self._copy_purge(held_new)
                                                 move_ok = True
                                             except Exception as copy_exc:
-                                                log.error("Copy+purge during idle sweep failed for acct=%s: %s", self.cfg.account_id, copy_exc)
+                                                log.error(f"Copy+purge during idle sweep failed for acct={self.cfg.account_id}: {copy_exc}", exc_info=True)
                                     else:
                                         try:
                                             self._copy_purge(held_new)
                                             move_ok = True
                                         except Exception as copy_exc:
-                                            log.error("Copy+purge during idle sweep failed for acct=%s: %s", self.cfg.account_id, copy_exc)
+                                            log.error(f"Copy+purge during idle sweep failed for acct={self.cfg.account_id}: {copy_exc}", exc_info=True)
 
                                     if move_ok:
                                         self._update_message_status(held_new, 'HELD')
@@ -1003,11 +1033,11 @@ class ImapWatcher:
                                 # Advance tracker to just after the highest UID we processed
                                 try:
                                     self._last_uidnext = max(self._last_uidnext, max(int(u) for u in new_uids) + 1)
-                                except Exception:
+                                except (ValueError, TypeError):
                                     self._last_uidnext = uidnext2
                             self._update_last_checked()
-                        except Exception:
-                            pass
+                        except (imaplib.IMAP4.error, Exception) as e:
+                            log.debug(f"Opportunistic poll during idle_break failed for account {self.cfg.account_id}: {e}")
                         last_idle_break = now
                         break
             except Exception as e:
