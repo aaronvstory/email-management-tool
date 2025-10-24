@@ -12,9 +12,12 @@ import sqlite3
 import re
 import sys
 import traceback
+import hashlib
+from pathlib import Path
+import json
 
-from typing import Dict, Any, Optional, cast
-from flask import Blueprint, jsonify, render_template, request
+from typing import Dict, Any, Optional, cast, Iterable
+from flask import Blueprint, jsonify, render_template, request, current_app, send_file, abort
 from flask_login import login_required, current_user
 from email.parser import BytesParser
 from email.policy import default as default_policy
@@ -55,6 +58,155 @@ def _db():
 
 WORKER_HEARTBEATS = {}
 _HEALTH_CACHE: Dict[str, Any] = {'ts': 0.0, 'payload': None}
+
+_FILENAME_SANITIZER = re.compile(r'[^A-Za-z0-9._-]+')
+
+
+def _get_storage_roots() -> tuple[Path, Path]:
+    """Return absolute paths for attachments and staged roots."""
+    app = current_app
+    attachments_root = Path(app.config.get('ATTACHMENTS_ROOT_DIR', 'attachments')).resolve()
+    staged_root = Path(app.config.get('ATTACHMENTS_STAGED_ROOT_DIR', 'attachments_staged')).resolve()
+    attachments_root.mkdir(parents=True, exist_ok=True)
+    staged_root.mkdir(parents=True, exist_ok=True)
+    return attachments_root, staged_root
+
+
+def _sanitize_filename(value: Optional[str]) -> str:
+    if not value:
+        return 'attachment'
+    candidate = value.strip().replace('\\', '_').replace('/', '_')
+    sanitized = _FILENAME_SANITIZER.sub('_', candidate)
+    sanitized = sanitized.strip('._')
+    return sanitized[:255] or 'attachment'
+
+
+def _is_under(child: Path, parent: Path) -> bool:
+    try:
+        child.relative_to(parent)
+        return True
+    except ValueError:
+        return False
+
+
+def _serialize_attachment_row(row: sqlite3.Row) -> Dict[str, Any]:
+    return {
+        'id': row['id'],
+        'email_id': row['email_id'],
+        'filename': row['filename'],
+        'mime_type': row['mime_type'],
+        'size': row['size'],
+        'sha256': row['sha256'],
+        'disposition': row['disposition'],
+        'content_id': row['content_id'],
+        'is_original': bool(row['is_original']),
+        'is_staged': bool(row['is_staged']),
+    }
+
+
+def _attachments_feature_enabled(flag: str) -> bool:
+    return bool(current_app.config.get(flag, False))
+
+
+def _ensure_attachments_extracted(conn: sqlite3.Connection, row: sqlite3.Row) -> Iterable[sqlite3.Row]:
+    """Ensure original attachments for the given email are extracted to disk and recorded."""
+    email_id = row['id']
+    cur = conn.cursor()
+    existing = cur.execute(
+        "SELECT * FROM email_attachments WHERE email_id=? AND is_original=1 ORDER BY id",
+        (email_id,),
+    ).fetchall()
+    if existing:
+        return existing
+
+    raw_bytes = None
+    raw_path = row['raw_path']
+    raw_content = row['raw_content']
+    if raw_path and os.path.exists(raw_path):
+        try:
+            raw_bytes = Path(raw_path).read_bytes()
+        except Exception as exc:
+            log.warning("[attachments] Failed reading raw_path", extra={'email_id': email_id, 'error': str(exc)})
+    if raw_bytes is None and raw_content:
+        raw_bytes = raw_content if isinstance(raw_content, bytes) else raw_content.encode('utf-8', 'ignore')
+
+    if not raw_bytes:
+        return existing
+
+    try:
+        message = BytesParser(policy=default_policy).parsebytes(raw_bytes)
+    except Exception as exc:
+        log.warning("[attachments] Failed parsing raw email", extra={'email_id': email_id, 'error': str(exc)})
+        return existing
+
+    attachments_root, _ = _get_storage_roots()
+    email_dir = attachments_root / str(email_id)
+    try:
+        email_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as exc:
+        log.warning("[attachments] Failed to create storage directory", extra={'email_id': email_id, 'error': str(exc)})
+        return existing
+
+    counter = 0
+    for part in message.walk():
+        if part.is_multipart():
+            continue
+        payload = part.get_payload(decode=True)
+        if not payload:
+            continue
+        disposition = (part.get_content_disposition() or '').lower() or None
+        filename = part.get_filename()
+        content_id = part.get('Content-ID')
+        if not filename and disposition != 'attachment' and not content_id:
+            # Skip inline body parts without filenames
+            continue
+
+        counter += 1
+        base_name = _sanitize_filename(filename) if filename else f'attachment-{counter}'
+        mime_type = part.get_content_type() or 'application/octet-stream'
+        if '.' not in base_name:
+            subtype = mime_type.split('/')[-1] if '/' in mime_type else None
+            if subtype and subtype not in ('plain', 'html'):
+                base_name = f'{base_name}.{subtype.lower()}'
+
+        final_name = base_name
+        suffix_count = 1
+        while (email_dir / final_name).exists():
+            path_obj = Path(base_name)
+            final_name = f"{path_obj.stem}_{suffix_count}{path_obj.suffix}"
+            suffix_count += 1
+
+        destination = email_dir / final_name
+        try:
+            destination.write_bytes(payload)
+        except Exception as exc:
+            log.warning("[attachments] Failed writing attachment", extra={'email_id': email_id, 'file': final_name, 'error': str(exc)})
+            continue
+
+        sha256 = hashlib.sha256(payload).hexdigest()
+        cur.execute(
+            """
+            INSERT OR IGNORE INTO email_attachments
+                (email_id, filename, mime_type, size, sha256, disposition, content_id, is_original, is_staged, storage_path)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0, ?)
+            """,
+            (
+                email_id,
+                final_name,
+                mime_type,
+                len(payload),
+                sha256,
+                disposition,
+                (content_id or '').strip('<>') if content_id else None,
+                str(destination),
+            ),
+        )
+
+    conn.commit()
+    return cur.execute(
+        "SELECT * FROM email_attachments WHERE email_id=? AND is_original=1 ORDER BY id",
+        (email_id,),
+    ).fetchall()
 
 SMTP_HOST = os.environ.get('SMTP_PROXY_HOST', '127.0.0.1')
 SMTP_PORT = int(os.environ.get('SMTP_PROXY_PORT', '8587'))
@@ -449,6 +601,66 @@ def api_interception_get(msg_id:int):
         except Exception:
             data['body_diff'] = None
     conn.close(); return jsonify(data)
+
+@bp_interception.route('/api/email/<int:email_id>/attachments', methods=['GET'])
+@login_required
+def api_email_attachments(email_id: int):
+    if not _attachments_feature_enabled('ATTACHMENTS_UI_ENABLED'):
+        return jsonify({'ok': False, 'error': 'disabled'}), 403
+
+    conn = _db()
+    try:
+        row = conn.execute("SELECT * FROM email_messages WHERE id=?", (email_id,)).fetchone()
+        if not row:
+            return jsonify({'ok': False, 'error': 'not-found'}), 404
+
+        original_rows = list(_ensure_attachments_extracted(conn, row))
+        manifest_raw = row['attachments_manifest'] if 'attachments_manifest' in row.keys() else None
+        manifest = None
+        if manifest_raw:
+            try:
+                manifest = json.loads(manifest_raw)
+            except Exception as exc:
+                log.warning("[attachments] Failed to decode manifest", extra={'email_id': email_id, 'error': str(exc)})
+
+        version = row['version'] if 'version' in row.keys() and row['version'] is not None else 0
+        payload = {
+            'ok': True,
+            'email_id': email_id,
+            'version': version,
+            'attachments': [_serialize_attachment_row(r) for r in original_rows],
+            'manifest': manifest,
+        }
+        return jsonify(payload)
+    finally:
+        conn.close()
+
+
+@bp_interception.route('/api/attachment/<int:attachment_id>/download', methods=['GET'])
+@login_required
+def api_attachment_download(attachment_id: int):
+    conn = _db()
+    try:
+        row = conn.execute("SELECT * FROM email_attachments WHERE id=?", (attachment_id,)).fetchone()
+        if not row:
+            return jsonify({'ok': False, 'error': 'not-found'}), 404
+
+        attachments_root, staged_root = _get_storage_roots()
+        storage_path = Path(row['storage_path']).resolve()
+
+        if not storage_path.exists() or not storage_path.is_file():
+            log.warning("[attachments] File missing for download", extra={'attachment_id': attachment_id, 'path': str(storage_path)})
+            return jsonify({'ok': False, 'error': 'not-found'}), 404
+
+        if not (_is_under(storage_path, attachments_root) or _is_under(storage_path, staged_root)):
+            log.warning("[attachments] Download path outside storage roots", extra={'attachment_id': attachment_id, 'path': str(storage_path)})
+            abort(404)
+
+        download_name = row['filename'] or f'attachment-{attachment_id}'
+        mimetype = row['mime_type'] or 'application/octet-stream'
+        return send_file(storage_path, mimetype=mimetype, as_attachment=True, download_name=download_name)
+    finally:
+        conn.close()
 
 @bp_interception.route('/api/interception/release/<int:msg_id>', methods=['POST'])
 @csrf.exempt

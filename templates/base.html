@@ -36,25 +36,6 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body class="dark-enabled">
-    <!-- Slim top navigation bar -->
-    <header class="navbar-main">
-        <a href="/" class="navbar-brand-mini">MAIL OPS</a>
-        <nav class="nav-mini">
-            <a href="/emails-unified" class="nav-mini-link {% if request.path.startswith('/emails') or request.path.startswith('/inbox') or request.path.startswith('/interception') %}active{% endif %}">Emails</a>
-            <a href="/compose" class="nav-mini-link {% if request.path.startswith('/compose') %}active{% endif %}">Compose</a>
-            <a href="/diagnostics" class="nav-mini-link {% if request.path.startswith('/diagnostics') %}active{% endif %}">Diagnostics</a>
-            {% if current_user.is_authenticated and current_user.role == 'admin' %}
-            <a href="/accounts" class="nav-mini-link {% if request.path.startswith('/accounts') %}active{% endif %}">Accounts</a>
-            {% endif %}
-        </nav>
-        <div class="navbar-right">
-            <span class="badge badge-soft-danger" title="Pending">{{ pending_count }}</span>
-            {% if current_user.is_authenticated %}
-              <span style="font-size:.65rem;opacity:.75;">{{ current_user.username }}</span>
-              <a href="/logout" class="btn-ghost btn-sm">Logout</a>
-            {% endif %}
-        </div>
-    </header>
     <div class="dark-app-shell">
         <!-- Modern Sidebar (kept original nav for fallback) -->
         <aside class="sidebar-modern">
@@ -75,40 +56,119 @@
                 <a class="nav-item-link {% if request.endpoint == 'diagnostics' %}active{% endif %}" href="/diagnostics"><i class="bi bi-heart-pulse"></i> Diagnostics</a>
                 <a class="nav-item-link {% if request.endpoint == 'watchers.settings_page' %}active{% endif %}" href="/settings"><i class="bi bi-sliders"></i> Settings</a>
 <a class="nav-item-link {% if request.endpoint == 'styleguide.styleguide' %}active{% endif %}" href="/styleguide"><i class="bi bi-palette2"></i> Style Guide</a>
-                <a class="nav-item-link {% if request.endpoint == 'diagnostics.interception_test_dashboard' %}active{% endif %}" href="/interception-test"><i class="bi bi-flask"></i> Test Suite</a>
+<a class="nav-item-link {% if request.endpoint == 'diagnostics.interception_test_dashboard' %}active{% endif %}" href="/interception-test"><i class="bi bi-flask"></i> Interception Test</a>
             </nav>
-            <div class="footer">
-                <div>
-                    {% if current_user.is_authenticated %}{{ current_user.username }}{% else %}Guest{% endif %}
+            <div class="sidebar-footer">
+                <div class="footer-meta">
+                    <span class="footer-label">Signed in</span>
+                    <span class="footer-value">{% if current_user.is_authenticated %}{{ current_user.username }}{% else %}Guest{% endif %}</span>
                 </div>
-                <div>
-                    <a href="/logout" class="btn-ghost">Logout</a>
+                <div class="footer-actions">
+                    <a href="/settings" class="btn btn-ghost btn-sm">
+                        <i class="bi bi-sliders"></i> Settings
+                    </a>
+                    {% if current_user.is_authenticated %}
+                    <a href="/logout" class="btn btn-ghost btn-sm">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </a>
+                    {% else %}
+                    <a href="/login" class="btn btn-secondary btn-sm">
+                        <i class="bi bi-box-arrow-in-right"></i> Login
+                    </a>
+                    {% endif %}
                 </div>
             </div>
         </aside>
         <div class="main-modern">
-            <div class="topbar">
-                <button class="toggle-nav" onclick="document.querySelector('.sidebar-modern').classList.toggle('open')"><i class="bi bi-list"></i></button>
-                <div class="search-inline" role="search">
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        <input type="search" class="form-control search-box" placeholder="Search mail, accounts, rules..." aria-label="Global search">
+            <header class="command-bar">
+                <button class="toggle-nav" type="button" aria-label="Toggle navigation" onclick="document.querySelector('.sidebar-modern').classList.toggle('open')">
+                    <i class="bi bi-list"></i>
+                </button>
+                <div class="command-brand">
+                    <a href="/" class="brand-chip">
+                        <i class="bi bi-envelope-heart"></i>
+                        <span>Mail Ops</span>
+                    </a>
+                    <nav class="command-nav" aria-label="Primary navigation">
+                        <a href="/dashboard" class="command-link {% if request.endpoint == 'dashboard.dashboard' %}active{% endif %}">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                        <a href="/emails-unified" class="command-link {% if request.path.startswith('/emails') or request.path.startswith('/inbox') %}active{% endif %}">
+                            <i class="bi bi-inbox-fill"></i> Emails
+                        </a>
+                        <a href="/compose" class="command-link {% if request.path.startswith('/compose') %}active{% endif %}">
+                            <i class="bi bi-pencil-square"></i> Compose
+                        </a>
+                        <a href="/diagnostics" class="command-link {% if request.path.startswith('/diagnostics') %}active{% endif %}">
+                            <i class="bi bi-heart-pulse"></i> Diagnostics
+                        </a>
+                        <a href="/watchers" class="command-link {% if request.path.startswith('/watchers') %}active{% endif %}">
+                            <i class="bi bi-activity"></i> Watchers
+                        </a>
+                    </nav>
+                </div>
+                <div class="command-controls">
+                    <div class="global-search" role="search">
+                        <i class="bi bi-search search-icon"></i>
+                        <input type="search"
+                               name="global-search"
+                               placeholder="Search mail, accounts, rules..."
+                               aria-label="Global search">
+                    </div>
+                    <div class="command-actions">
+                        <div class="toolbar-group">
+                            <a href="/compose" class="btn btn-secondary btn-sm">
+                                <i class="bi bi-send-plus"></i> Compose
+                            </a>
+                            <a href="/settings" class="btn btn-ghost btn-sm">
+                                <i class="bi bi-sliders"></i> Settings
+                            </a>
+                        </div>
+                        <div class="toolbar-group">
+                            {% if not imap_only %}
+                            <span id="nav-smtp" class="health-pill" title="SMTP Proxy health">
+                                <i class="bi bi-diagram-2"></i>
+                                <span class="pill-text">SMTP: --</span>
+                            </span>
+                            {% endif %}
+                            <span id="nav-watchers" class="health-pill" title="Active IMAP watchers">
+                                <i class="bi bi-activity"></i>
+                                <span class="pill-text">Watchers: --</span>
+                            </span>
+                            <span class="health-pill" title="Pending moderation items">
+                                <i class="bi bi-flag"></i>
+                                <span class="pill-text">Pending: {{ pending_count }}</span>
+                            </span>
+                        </div>
                     </div>
                 </div>
-                <div style="display:flex;align-items:center;gap:10px;">
-                    {% if not imap_only %}<span id="nav-smtp" class="badge badge-soft-muted" title="SMTP Proxy">SMTP</span>{% endif %}
-                    <span id="nav-watchers" class="badge badge-soft-muted" title="Active IMAP watchers">Watchers: --</span>
-                </div>
-            </div>
+            </header>
             <div class="content-scroll">
                 {% with messages = get_flashed_messages(with_categories=true) %}
                     {% if messages %}
-                        {% for category, message in messages %}
-                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-modern alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                        {% endfor %}
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function () {
+                            const flashMessages = {{ messages|tojson }};
+                            flashMessages.forEach(function (entry) {
+                                const category = (entry[0] || '').toLowerCase();
+                                const text = entry[1] || '';
+                                switch (category) {
+                                    case 'success':
+                                        if (window.showSuccess) window.showSuccess(text);
+                                        break;
+                                    case 'error':
+                                    case 'danger':
+                                        if (window.showError) window.showError(text);
+                                        break;
+                                    case 'warning':
+                                        if (window.showWarning) window.showWarning(text);
+                                        break;
+                                    default:
+                                        if (window.showInfo) window.showInfo(text);
+                                }
+                            });
+                        });
+                    </script>
                     {% endif %}
                 {% endwith %}
                 {% block content %}{% endblock %}
@@ -121,6 +181,9 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
     <!-- Global toast notification system -->
+    <script>
+        window.ATTACHMENTS_FLAGS = {{ attachments_flags | tojson }};
+    </script>
     <script src="/static/js/app.js"></script>
 
     {% block extra_js %}{% endblock %}
@@ -134,9 +197,12 @@
             const smtp = document.getElementById('nav-smtp');
             if(smtp){
               const ok = j.smtp && j.smtp.listening;
-              smtp.textContent = ok ? 'SMTP: OK' : 'SMTP: DOWN';
-              smtp.classList.remove('badge-soft-success','badge-soft-danger','badge-soft-muted');
-              smtp.classList.add(ok ? 'badge-soft-success' : 'badge-soft-danger');
+              const label = smtp.querySelector('.pill-text');
+              if(label){
+                label.textContent = ok ? 'SMTP: OK' : 'SMTP: DOWN';
+              }
+              smtp.classList.remove('ok','down');
+              smtp.classList.add(ok ? 'ok' : 'down');
             }
 
             const w = document.getElementById('nav-watchers');
@@ -155,17 +221,24 @@
 
             // Build display text with status breakdown
             if (total === 0) {
-                w.textContent = 'Watchers: 0';
-                w.classList.remove('badge-soft-success','badge-soft-danger','badge-soft-muted');
-                w.classList.add('badge-soft-muted');
+                const label = w.querySelector('.pill-text');
+                if(label){
+                  label.textContent = 'Watchers: 0';
+                }
+                w.classList.remove('ok','down');
+                w.classList.add('down');
+                w.removeAttribute('title');
             } else {
                 let parts = [];
                 if (polling > 0) parts.push(`P:${polling}`);
                 if (idle > 0) parts.push(`I:${idle}`);
                 if (active > 0) parts.push(`A:${active}`);
-                w.textContent = `Watchers: ${total} (${parts.join(', ')})`;
-                w.classList.remove('badge-soft-success','badge-soft-danger','badge-soft-muted');
-                w.classList.add('badge-soft-success');
+                const label = w.querySelector('.pill-text');
+                if(label){
+                  label.textContent = `Watchers: ${total} (${parts.join(', ')})`;
+                }
+                w.classList.remove('ok','down');
+                w.classList.add('ok');
                 w.title = `Active watchers - P=Polling, I=IDLE, A=Active`;
             }
         }catch(e){/* ignore */}

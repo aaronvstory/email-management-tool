@@ -440,20 +440,17 @@
     </div>
   </div>
 
-  <!-- Attachments if any -->
-  {% if email.attachments %}
-  <div class="attachments-section">
-    <h3 style="color:#ffffff; margin-bottom:10px;">Attachments</h3>
-    {% for attachment in email.attachments %}
-    <div class="attachment-item">
-      <span>{{ attachment.filename }}</span>
-      <button class="action-btn" onclick="downloadAttachment({{ attachment.id }})">
-        <i class="bi bi-download"></i>
-      </button>
+  <div id="viewerAttachments" class="panel-card attachments-card mt-4" data-visible="{{ 'true' if attachments_flags.ui else 'false' }}">
+    <div class="panel-header">
+      <div class="panel-title"><i class="bi bi-paperclip"></i> Attachments</div>
     </div>
-    {% endfor %}
+    <div class="panel-body attachments-panel-body">
+      <div id="viewerAttachmentsSkeleton" class="attachments-skeleton hidden"></div>
+      <div id="viewerAttachmentsList" class="attachments-list"></div>
+      <div id="viewerAttachmentsEmpty" class="attachments-empty text-muted">No attachments</div>
+    </div>
   </div>
-  {% endif %}
+</div>
 </div>
 {% endblock %}
 
@@ -699,6 +696,18 @@ async function saveEdit() {
   }
 }
 
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.MailAttach) {
+    window.MailAttach.render({
+      emailId,
+      container: document.getElementById('viewerAttachments'),
+      listElement: document.getElementById('viewerAttachmentsList'),
+      emptyElement: document.getElementById('viewerAttachmentsEmpty'),
+      skeletonElement: document.getElementById('viewerAttachmentsSkeleton')
+    });
+  }
+});
+
 async function saveAndRelease() {
   const subject = document.getElementById('emailSubject').value;
   const bodyText = document.getElementById('emailBodyText').value;
@@ -740,7 +749,11 @@ async function saveAndRelease() {
 }
 
 function downloadAttachment(attachmentId) {
-  window.location.href = `/api/attachment/${attachmentId}/download`;
+  if (window.MailAttach && typeof window.MailAttach.download === 'function') {
+    window.MailAttach.download(attachmentId);
+  } else {
+    window.location.href = `/api/attachment/${attachmentId}/download`;
+  }
 }
 </script>
 {% endblock %}

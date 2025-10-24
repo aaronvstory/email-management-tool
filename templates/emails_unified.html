@@ -1,265 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Email Management - Email Management Tool{% endblock %}
 
-{% block extra_css %}
-<style>
-  /* Account Selector */
-  .account-selector {
-    background: var(--surface-highest);
-    border-radius: var(--radius-lg);
-    padding: 16px;
-    margin-bottom: 20px;
-    border: 1px solid var(--border-subtle);
-    box-shadow: var(--shadow-sm);
-  }
-
-  .account-selector label {
-    color: var(--text-primary);
-    font-weight: 600;
-    margin-bottom: 8px;
-    display: block;
-  }
-
-  .account-selector select {
-    background: var(--surface-base);
-    border: 1px solid var(--border-subtle);
-    color: var(--text-primary);
-    width: 100%;
-    padding: 10px 14px;
-    border-radius: var(--radius-md);
-  }
-
-  .account-selector select option {
-    background: var(--surface-base);
-    color: var(--text-primary);
-  }
-
-  /* Unified Panel */
-  .unified-panel {
-    background: var(--surface-highest);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-lg);
-    padding: 20px;
-    box-shadow: var(--shadow-sm);
-  }
-
-  /* Status Tabs */
-  .status-tabs {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-    border-bottom: 1px solid var(--border-subtle);
-    padding-bottom: 10px;
-  }
-
-  .status-tab {
-    padding: 10px 18px;
-    border-radius: var(--radius-md);
-    background: rgba(255,255,255,0.04);
-    border: 1px solid var(--border-subtle);
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: background 0.2s ease, color 0.2s ease;
-    font-weight: 500;
-    font-size: 0.9rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .status-tab:hover {
-    background: rgba(255,255,255,0.07);
-    color: var(--text-primary);
-  }
-
-  .status-tab.active {
-    background: rgba(127,29,29,0.18);
-    border-color: rgba(127,29,29,0.32);
-    color: var(--text-primary);
-    box-shadow: none;
-  }
-
-  .status-tab .badge {
-    background: rgba(255,255,255,0.12);
-    padding: 2px 10px;
-    border-radius: var(--radius-md);
-    font-size: 0.75rem;
-    font-weight: 600;
-  }
-
-  .status-tab.active .badge {
-    background: rgba(255,255,255,0.2);
-  }
-
-  /* Filters Bar */
-  .filters-bar {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-bottom: 20px;
-    align-items: center;
-  }
-
-  /* Sticky Bulk Actions Bar */
-  #bulkActions {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background: var(--surface-highest);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-md);
-    padding: 12px 16px;
-    margin-bottom: 16px;
-    box-shadow: var(--shadow-sm);
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-
-  #bulkActions::before {
-    content: '✓ ' attr(data-count) ' selected';
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-right: 10px;
-  }
-
-  .search-input {
-    flex: 1;
-    min-width: 250px;
-    background: var(--surface-base);
-    border: 1px solid var(--border-subtle);
-    color: var(--text-primary);
-    padding: 10px 14px;
-    border-radius: var(--radius-md);
-  }
-
-  .search-input::placeholder {
-    color: var(--text-muted);
-  }
-
-  /* Email Table */
-  .email-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    table-layout: fixed;
-  }
-
-  .email-table thead th {
-    background: rgba(255,255,255,0.03);
-    color: #9ca3af;
-    font-weight: 600;
-    padding: 10px 12px;
-    text-align: left;
-    border-bottom: 2px solid rgba(255,255,255,0.06);
-    font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.45px;
-  }
-
-  .email-table tbody tr {
-    cursor: pointer;
-    transition: background 0.2s;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-  }
-
-  .email-table tbody tr:hover {
-    background: rgba(255,255,255,0.03) !important;
-    box-shadow: 0 0 0 1px rgba(127,29,29,.2) !important;
-    transition: all 0.2s ease;
-  }
-
-  .email-table tbody td {
-    padding: 8px 12px;
-    color: #ffffff;
-    vertical-align: middle;
-    line-height: 1.35;
-  }
-
-  .email-subject {
-    font-weight: 600;
-    color: #ffffff;
-  }
-
-  .subject-cell { font-size: 0.95rem; font-weight: 600; color: #ffffff; margin-bottom: 2px; }
-  .subject-cell, .email-preview { word-break: break-word; }
-
-  .email-preview {
-    font-size: 0.8rem;
-    color: #9ca3af;
-    margin-top: 4px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    white-space: normal;
-  }
-
-  /* Correspondent cell shows From/To stacked */
-  .correspondent-cell { display:flex; flex-direction:column; gap:4px; }
-  .correspondent-line { display:flex; gap:6px; align-items:flex-start; font-size:0.82rem; }
-  .correspondent-label { font-size:0.7rem; letter-spacing:0.05em; color:#9ca3af; text-transform:uppercase; font-weight:600; flex-shrink:0; width:45px; }
-  .correspondent-value { color:#e5e7eb; line-height:1.3; word-break:break-word; }
-
-  /* Status badge styling unified in main.css (.status-badge/.status-chip + .status-*) */
-
-  .status-FETCHED {
-    background: rgba(59,130,246,0.15);
-    color: #60a5fa;
-    border: 1px solid rgba(59,130,246,0.3);
-  }
-
-  /* Empty State */
-  .empty-state {
-    text-align: center;
-    padding: 60px 20px;
-    color: #9ca3af;
-  }
-
-  .empty-state i {
-    font-size: 4rem;
-    margin-bottom: 20px;
-    opacity: 0.5;
-  }
-
-  /* Loading Spinner */
-  .loading-spinner {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    border: 3px solid rgba(255,255,255,0.3);
-    border-radius: 50%;
-    border-top-color: #ffffff;
-    animation: spin 1s ease-in-out infinite;
-  }
-
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-
-  /* Auto-refresh indicator */
-  .auto-refresh-indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 5px 10px;
-    background: rgba(16,185,129,0.15);
-    border: 1px solid rgba(16,185,129,0.3);
-    border-radius: 6px;
-    color: #10b981;
-    font-size: 0.8rem;
-  }
-
-  .auto-refresh-indicator.inactive {
-    background: rgba(255,255,255,0.06);
-    border-color: rgba(255,255,255,0.12);
-    color: #9ca3af;
-  }
-</style>
-{% endblock %}
+{% block extra_css %}{% endblock %}
 
 {% block content %}
 <div class="page-header">
@@ -275,137 +17,144 @@
 </div>
 
 <!-- Account Selector with Fetch Controls -->
-<div class="account-selector">
-  <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
-    <div style="flex: 1; min-width: 250px;">
-      <label class="form-label">Select Email Account:</label>
-      <select class="form-select" id="accountSelector" onchange="switchAccount(this.value)">
-        <option value="">All Accounts</option>
-        {% for account in accounts %}
-        <option value="{{ account.id }}" {% if selected_account == account.id %}selected{% endif %}>
-          {{ account.account_name }} ({{ account.email_address }})
-        </option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <!-- Fetch Controls -->
-    <div style="display: flex; gap: 10px; align-items: center;">
-      <div>
-        <label class="form-label" style="font-size: 0.85rem;">Fetch Count:</label>
-        <select class="form-select" id="fetchCount" style="width: 80px;">
-          <option value="10">10</option>
-          <option value="20" selected>20</option>
-          <option value="50">50</option>
-          <option value="100">100</option>
-        </select>
-      </div>
-      <button class="btn-primary" onclick="fetchEmails()" style="margin-top: 20px;">
-        <i class="bi bi-cloud-download"></i> Fetch
-      </button>
-      <button class="btn-secondary" onclick="fetchMore()" style="margin-top: 20px;">
-        <i class="bi bi-plus-circle"></i> More
-      </button>
-    </div>
+<div class="account-selector selector-card">
+  <div class="selector-field flex-grow">
+    <label for="accountSelector" class="form-label">Select Email Account</label>
+    <select class="form-select" id="accountSelector" onchange="switchAccount(this.value)">
+      <option value="">All Accounts</option>
+      {% for account in accounts %}
+      <option value="{{ account.id }}" {% if selected_account == account.id %}selected{% endif %}>
+        {{ account.account_name }} ({{ account.email_address }})
+      </option>
+      {% endfor %}
+    </select>
   </div>
-
-  <!-- Fetch Status -->
-  <div id="fetchStatus" style="margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 8px; display: none;">
-    <span id="fetchMessage" style="color: #818cf8;"></span>
+  <div class="selector-field small">
+    <label for="fetchCount" class="form-label">Fetch Count</label>
+    <select class="form-select" id="fetchCount">
+      <option value="10">10</option>
+      <option value="20" selected>20</option>
+      <option value="50">50</option>
+      <option value="100">100</option>
+    </select>
   </div>
+  <div class="selector-actions">
+    <button type="button" class="btn btn-primary btn-sm" onclick="fetchEmails()">
+      <i class="bi bi-cloud-download"></i> Fetch
+    </button>
+    <button type="button" class="btn btn-secondary btn-sm" onclick="fetchMore()">
+      <i class="bi bi-plus-circle"></i> More
+    </button>
+  </div>
+</div>
+<div id="fetchStatus" class="status-banner hidden">
+  <span id="fetchMessage"></span>
 </div>
 
 <!-- Unified Email Panel -->
-<div class="unified-panel">
-  <!-- Status Tabs -->
-  <div class="status-tabs">
-    <button class="status-tab" data-status="ALL" onclick="switchStatus('ALL')">
-      <i class="bi bi-inbox"></i> All
-      <span class="badge" id="badge-all">{{ total_count }}</span>
-    </button>
-    <button class="status-tab" data-status="HELD" onclick="switchStatus('HELD')">
-      <i class="bi bi-hand-stop"></i> Held
-      <span class="badge" id="badge-held">{{ held_count|default(0) }}</span>
-    </button>
-    <button class="status-tab" data-status="RELEASED" onclick="switchStatus('RELEASED')">
-      <i class="bi bi-send-check"></i> Released
-      <span class="badge" id="badge-released">{{ released_count|default(0) }}</span>
-    </button>
-    <button class="status-tab" data-status="REJECTED" onclick="switchStatus('REJECTED')">
-      <i class="bi bi-x-circle"></i> Rejected
-      <span class="badge" id="badge-rejected">{{ rejected_count }}</span>
-    </button>
-    <button class="status-tab" data-status="DISCARDED" onclick="switchStatus('DISCARDED')">
-      <i class="bi bi-trash"></i> Discarded
-      <span class="badge" id="badge-discarded">{{ discarded_count|default(0) }}</span>
-    </button>
+<div class="panel">
+  <div class="panel-header">
+    <div class="panel-title"><i class="bi bi-inboxes"></i> Unified Inbox</div>
+    <div class="panel-actions">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="reloadEmails()">
+        <i class="bi bi-arrow-clockwise"></i> Refresh
+      </button>
+    </div>
   </div>
+  <div class="panel-body">
+    <div class="status-tabs">
+      <button type="button" class="status-tab active" data-status="ALL" onclick="switchStatus('ALL')">
+        <i class="bi bi-inbox"></i> All
+        <span class="badge" id="badge-all">{{ total_count }}</span>
+      </button>
+      <button type="button" class="status-tab" data-status="HELD" onclick="switchStatus('HELD')">
+        <i class="bi bi-hand-stop"></i> Held
+        <span class="badge" id="badge-held">{{ held_count|default(0) }}</span>
+      </button>
+      <button type="button" class="status-tab" data-status="RELEASED" onclick="switchStatus('RELEASED')">
+        <i class="bi bi-send-check"></i> Released
+        <span class="badge" id="badge-released">{{ released_count|default(0) }}</span>
+      </button>
+      <button type="button" class="status-tab" data-status="REJECTED" onclick="switchStatus('REJECTED')">
+        <i class="bi bi-x-circle"></i> Rejected
+        <span class="badge" id="badge-rejected">{{ rejected_count }}</span>
+      </button>
+      <button type="button" class="status-tab" data-status="DISCARDED" onclick="switchStatus('DISCARDED')">
+        <i class="bi bi-trash"></i> Discarded
+        <span class="badge" id="badge-discarded">{{ discarded_count|default(0) }}</span>
+      </button>
+    </div>
 
-  <!-- Filters Bar -->
-  <div class="filters-bar">
-    <input id="searchBox" class="search-input" placeholder="Search subject, sender, or recipient..." />
-    <label class="form-check" style="color: #ffffff; margin: 0;">
-      <input type="checkbox" class="form-check-input" id="autoRefresh" onchange="toggleAutoRefresh(this.checked)">
-      <span style="margin-left: 5px;">Auto-refresh</span>
-    </label>
-    <button class="btn-secondary" onclick="reloadEmails()">
-      <i class="bi bi-arrow-clockwise"></i> Refresh
-    </button>
-  </div>
+    <div class="filters-bar">
+      <div class="filter-control flex-grow-1">
+        <label for="searchBox">Search</label>
+        <div class="input-with-icon">
+          <i class="bi bi-search input-icon"></i>
+          <input id="searchBox" type="search" class="form-control" placeholder="Search subject, sender, or recipient..." />
+        </div>
+      </div>
+      <div class="filter-control compact-switch">
+        <label class="form-switch">
+          <input type="checkbox" class="form-check-input" id="autoRefresh" onchange="toggleAutoRefresh(this.checked)">
+          <span>Auto-refresh</span>
+        </label>
+      </div>
+    </div>
 
-  <!-- Bulk Actions (Sticky at top when emails selected) -->
-  <div id="bulkActions" style="display: none;" data-count="0">
-    <button class="btn-success" onclick="bulkAction('RELEASE')">
-      <i class="bi bi-unlock"></i> Release
-    </button>
-    <button class="btn-danger" onclick="bulkAction('DISCARD')">
-      <i class="bi bi-trash"></i> Discard
-    </button>
-    <button class="btn-danger" onclick="bulkAction('DELETE')" style="background: #991b1b; border-color: #991b1b;">
-      <i class="bi bi-trash-fill"></i> Delete Permanently
-    </button>
-  </div>
+    <div id="bulkActions" class="bulk-toolbar sticky hidden" data-count="0">
+      <div class="toolbar-actions">
+        <button type="button" class="btn btn-success btn-sm" onclick="bulkAction('RELEASE')">
+          <i class="bi bi-unlock"></i> Release
+        </button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="bulkAction('DISCARD')">
+          <i class="bi bi-trash"></i> Discard
+        </button>
+        <button type="button" class="btn btn-warning btn-sm" onclick="bulkAction('DELETE')">
+          <i class="bi bi-trash3"></i> Delete Permanently
+        </button>
+      </div>
+    </div>
 
-  <!-- Delete All Discarded Button (only visible on DISCARDED tab) -->
-  <div id="deleteAllDiscardedContainer" style="display: none; margin-bottom: 16px;">
-    <button class="btn-danger" onclick="deleteAllDiscarded()" style="background: #991b1b; border-color: #991b1b;">
-      <i class="bi bi-trash3-fill"></i> Delete All Discarded Emails
-    </button>
-    <small style="color: #9ca3af; margin-left: 10px;">
-      ⚠️ This will permanently delete ALL discarded emails from the database
-    </small>
-  </div>
+    <div id="deleteAllDiscardedContainer" class="panel-note hidden">
+      <div class="toolbar-actions">
+        <button type="button" class="btn btn-warning btn-sm" onclick="deleteAllDiscarded()">
+          <i class="bi bi-trash3-fill"></i> Delete All Discarded Emails
+        </button>
+        <span class="text-muted small">
+          <i class="bi bi-exclamation-triangle"></i>
+          This will permanently delete all discarded emails from the database.
+        </span>
+      </div>
+    </div>
 
-  <!-- Email Table -->
-  <div style="overflow-x: auto;">
-    <table class="email-table">
-      <thead>
-        <tr>
-          <th style="width: 40px;">
-            <input type="checkbox" class="form-check-input" id="selectAll" onchange="toggleSelectAll(this.checked)">
-          </th>
-          <th style="width: 150px;">Time</th>
-          <th style="width: 260px;">Correspondents</th>
-          <th>Subject</th>
-          <th style="width: 150px;">Status</th>
-          <th style="width: 150px;">Actions</th>
-        </tr>
-      </thead>
-      <tbody id="emailTableBody">
-        <!-- Dynamic content -->
-      </tbody>
-    </table>
-  </div>
+    <div class="table-responsive-modern">
+      <table class="table-modern email-table">
+        <thead>
+          <tr>
+            <th class="col-select">
+              <input type="checkbox" class="form-check-input" id="selectAll" onchange="toggleSelectAll(this.checked)">
+            </th>
+            <th class="col-time">Time</th>
+            <th class="col-correspondents">Correspondents</th>
+            <th>Subject</th>
+            <th class="col-status">Status</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="emailTableBody"></tbody>
+      </table>
+    </div>
 
-  <!-- Empty State -->
-  <div id="emptyState" class="empty-state" style="display: none;">
-    <i class="bi bi-inbox"></i>
-    <p>No emails found</p>
+    <div id="emptyState" class="empty-state hidden">
+      <i class="bi bi-inbox"></i>
+      <h4>No emails to display</h4>
+      <p class="text-muted">Adjust your filters or try refreshing the inbox.</p>
+    </div>
   </div>
 </div>
 
 <!-- Edit Email Modal -->
-<div class="modal fade" id="editEmailModal" tabindex="-1" aria-labelledby="editEmailModalLabel" aria-hidden="true">
+<div class="modal fade modal-modern" id="editEmailModal" tabindex="-1" aria-labelledby="editEmailModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-unified">
     <div class="modal-content">
       <div class="modal-header">
@@ -414,31 +163,42 @@
         </h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body" style="color:#fff;">
+      <div class="modal-body">
         <form id="editEmailForm">
           <input type="hidden" id="editEmailId" value="">
           
           <div class="mb-3">
             <label class="form-label fw-bold">From:</label>
-            <p id="editEmailFrom" class="form-control-plaintext" style="color: #9ca3af;"></p>
+            <p id="editEmailFrom" class="form-control-plaintext text-muted"></p>
           </div>
           
           <div class="mb-3">
             <label class="form-label fw-bold">To:</label>
-            <p id="editEmailTo" class="form-control-plaintext" style="color: #9ca3af;"></p>
+            <p id="editEmailTo" class="form-control-plaintext text-muted"></p>
           </div>
           
           <div class="mb-3">
             <label for="editEmailSubject" class="form-label fw-bold">Subject:</label>
-            <input type="text" class="form-control" id="editEmailSubject" required style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #ffffff;">
+            <input type="text" class="form-control" id="editEmailSubject" required>
           </div>
           
           <div class="mb-3">
             <label for="editEmailBody" class="form-label fw-bold">Message Body:</label>
-            <textarea class="form-control" id="editEmailBody" rows="10" required style="font-family: monospace; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #ffffff;"></textarea>
+            <textarea class="form-control font-monospace" id="editEmailBody" rows="10" required></textarea>
           </div>
-          
-          <div class="alert alert-info" style="background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); color: #60a5fa;">
+
+          <div id="modalAttachments" class="panel-card attachments-card mt-4" data-visible="{{ 'true' if attachments_flags.ui else 'false' }}">
+            <div class="panel-header">
+              <div class="panel-title"><i class="bi bi-paperclip"></i> Attachments</div>
+            </div>
+            <div class="panel-body attachments-panel-body">
+              <div id="modalAttachmentsSkeleton" class="attachments-skeleton hidden"></div>
+              <div id="modalAttachmentsList" class="attachments-list"></div>
+              <div id="modalAttachmentsEmpty" class="attachments-empty text-muted">No attachments</div>
+            </div>
+          </div>
+
+          <div class="alert alert-info alert-modern">
             <i class="bi bi-info-circle"></i>
             <small>Editing this email will update its content before it's sent to the final destination.</small>
           </div>
@@ -458,7 +218,7 @@
 </div>
 
 <!-- Progress Modal for Batch Operations -->
-<div class="modal fade" id="batchProgressModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+<div class="modal fade modal-modern" id="batchProgressModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
@@ -466,21 +226,20 @@
           <i class="bi bi-hourglass-split"></i> Processing Batch Operation
         </h5>
       </div>
-      <div class="modal-body" style="color:#fff;">
+      <div class="modal-body">
         <div class="mb-3">
           <div class="d-flex justify-content-between mb-2">
             <span id="batchProgressText">Processing emails...</span>
             <span id="batchProgressCount">0 / 0</span>
           </div>
-          <div class="progress" style="height: 25px; background: rgba(255,255,255,0.1);">
+          <div class="progress progress-modern">
             <div id="batchProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
-                 role="progressbar" style="width: 0%; background: linear-gradient(90deg, #7f1d1d, #991b1b);" 
-                 aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                 role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
               <span id="batchProgressPercent">0%</span>
             </div>
           </div>
         </div>
-        <div id="batchProgressDetails" style="font-size: 0.85rem; color: #9ca3af; max-height: 200px; overflow-y: auto;">
+        <div id="batchProgressDetails" class="scrollable-note">
           <!-- Progress details will be inserted here -->
         </div>
       </div>
@@ -579,7 +338,8 @@ async function fetchEmails() {
   const fetchCount = parseInt(document.getElementById('fetchCount').value);
   const statusDiv = document.getElementById('fetchStatus');
   const statusMsg = document.getElementById('fetchMessage');
-  statusDiv.style.display = 'block';
+  statusDiv.classList.add('active');
+  statusDiv.classList.remove('hidden');
   statusMsg.textContent = `Fetching ${fetchCount} emails from server...`;
 
   try {
@@ -600,7 +360,8 @@ async function fetchEmails() {
       fetchOffset = data.fetched;
       setTimeout(() => {
         reloadEmails();
-        statusDiv.style.display = 'none';
+        statusDiv.classList.remove('active');
+        statusDiv.classList.add('hidden');
       }, 1500);
     } else {
       statusMsg.textContent = `❌ Error: ${data.error}`;
@@ -620,7 +381,8 @@ async function fetchMore() {
   const fetchCount = parseInt(document.getElementById('fetchCount').value);
   const statusDiv = document.getElementById('fetchStatus');
   const statusMsg = document.getElementById('fetchMessage');
-  statusDiv.style.display = 'block';
+  statusDiv.classList.add('active');
+  statusDiv.classList.remove('hidden');
   statusMsg.textContent = `Loading ${fetchCount} more emails...`;
 
   try {
@@ -641,7 +403,8 @@ async function fetchMore() {
       fetchOffset += data.fetched;
       setTimeout(() => {
         reloadEmails();
-        statusDiv.style.display = 'none';
+        statusDiv.classList.remove('active');
+        statusDiv.classList.add('hidden');
       }, 1500);
     } else {
       statusMsg.textContent = `❌ Error: ${data.error}`;
@@ -679,7 +442,8 @@ async function reloadEmails() {
     // Show/hide "Delete All Discarded" button based on current tab
     const deleteAllContainer = document.getElementById('deleteAllDiscardedContainer');
     if (deleteAllContainer) {
-      deleteAllContainer.style.display = (currentStatus === 'DISCARDED' && (data.counts.discarded || 0) > 0) ? 'block' : 'none';
+      const shouldShowDeleteAll = currentStatus === 'DISCARDED' && (data.counts.discarded || 0) > 0;
+      deleteAllContainer.classList.toggle('hidden', !shouldShowDeleteAll);
     }
     
     renderEmails(currentEmails);
@@ -697,11 +461,11 @@ function renderEmails(emails) {
   
   if (!emails || emails.length === 0) {
     tbody.innerHTML = '';
-    emptyState.style.display = 'block';
+    emptyState.classList.remove('hidden');
     return;
   }
   
-  emptyState.style.display = 'none';
+  emptyState.classList.add('hidden');
   tbody.innerHTML = '';
   
   emails.forEach(email => {
@@ -755,11 +519,11 @@ function renderEmails(emails) {
     const previewSnippet = email.preview_snippet ? escapeHtml(email.preview_snippet.substring(0, 100)) : '';
     const previewHtml = email.preview_snippet ? `<div class="email-preview">${previewSnippet}${email.preview_snippet.length > 100 ? '&hellip;' : ''}</div>` : '';
     tr.innerHTML = `
-      <td>
+      <td data-label="Select">
         <input type="checkbox" class="form-check-input email-checkbox" value="${email.id}">
       </td>
-      <td>${createdAtCell}</td>
-      <td>
+      <td data-label="Time">${createdAtCell}</td>
+      <td data-label="Correspondents">
         <div class="correspondent-cell">
           <div class="correspondent-line">
             <span class="correspondent-label">FROM</span>
@@ -771,11 +535,11 @@ function renderEmails(emails) {
           </div>
         </div>
       </td>
-      <td onclick="viewEmail(${email.id})" style="cursor: pointer;">
+      <td data-label="Subject" class="cell-link" onclick="viewEmail(${email.id})">
         <div class="subject-cell ellipsis">${subjectDisplay}</div>
         ${previewHtml}
       </td>
-      <td>
+      <td data-label="Status">
         <div class="status-cell">
           <div class="status-main"><span class="status-badge status-${status}">${statusLabel}</span></div>
           <div class="status-meta">${watcherBadge}
@@ -783,7 +547,7 @@ function renderEmails(emails) {
           </div>
         </div>
       </td>
-      <td>
+      <td data-label="Actions">
         <div class="action-buttons">
           ${actions}
         </div>
@@ -840,7 +604,7 @@ function toggleSelectAll(checked) {
 function updateBulkActionsVisibility() {
   const checkedBoxes = document.querySelectorAll('.email-checkbox:checked');
   const bulkActions = document.getElementById('bulkActions');
-  bulkActions.style.display = checkedBoxes.length > 0 ? 'flex' : 'none';
+  bulkActions.classList.toggle('hidden', checkedBoxes.length === 0);
   bulkActions.setAttribute('data-count', checkedBoxes.length);
 
   // Update select all checkbox
@@ -906,6 +670,20 @@ function editEmail(emailId) {
       
       document.getElementById('editEmailSubject').value = data.subject || '';
       document.getElementById('editEmailBody').value = data.body_text || '';
+
+      const attachmentsContainer = document.getElementById('modalAttachments');
+      if (attachmentsContainer) {
+        attachmentsContainer.dataset.emailId = data.id;
+      }
+      if (window.MailAttach) {
+        window.MailAttach.render({
+          emailId: data.id,
+          container: document.getElementById('modalAttachments'),
+          listElement: document.getElementById('modalAttachmentsList'),
+          emptyElement: document.getElementById('modalAttachmentsEmpty'),
+          skeletonElement: document.getElementById('modalAttachmentsSkeleton')
+        });
+      }
 
       const modal = new bootstrap.Modal(document.getElementById('editEmailModal'));
       modal.show();

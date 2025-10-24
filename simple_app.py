@@ -391,11 +391,64 @@ def init_database():
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     )""")
 
+    # Ensure new columns for attachments manifest/version
+    try:
+        existing_columns = {row["name"] for row in cur.execute("PRAGMA table_info(email_messages)")}
+    except Exception:
+        existing_columns = set()
+    if "attachments_manifest" not in existing_columns:
+        cur.execute("ALTER TABLE email_messages ADD COLUMN attachments_manifest TEXT")
+    if "version" not in existing_columns:
+        cur.execute("ALTER TABLE email_messages ADD COLUMN version INTEGER NOT NULL DEFAULT 0")
+
     # Idempotency: avoid duplicate rows by Message-ID when present
     try:
         cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_email_messages_msgid_unique ON email_messages(message_id) WHERE message_id IS NOT NULL")
     except Exception:
         pass
+
+    # Attachment storage metadata
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS email_attachments(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email_id INTEGER NOT NULL,
+            filename TEXT NOT NULL,
+            mime_type TEXT,
+            size INTEGER,
+            sha256 TEXT,
+            disposition TEXT,
+            content_id TEXT,
+            is_original INTEGER NOT NULL DEFAULT 0,
+            is_staged INTEGER NOT NULL DEFAULT 0,
+            storage_path TEXT NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(email_id, filename, is_original, is_staged)
+        )
+        """
+    )
+
+    # Release coordination tables
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS email_release_locks(
+            email_id INTEGER PRIMARY KEY,
+            acquired_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS idempotency_keys(
+            key TEXT PRIMARY KEY,
+            email_id INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            response_json TEXT
+        )
+        """
+    )
 
     # Moderation rules table
     cur.execute("""CREATE TABLE IF NOT EXISTS moderation_rules(
@@ -431,6 +484,15 @@ def init_database():
         from werkzeug.security import generate_password_hash
         admin_hash = generate_password_hash('admin123')
         cur.execute("INSERT INTO users(username, password_hash, role) VALUES('admin', ?, 'admin')", (admin_hash,))
+
+    # Ensure attachment storage directories exist
+    try:
+        attachments_root = app.config.get('ATTACHMENTS_ROOT_DIR', 'attachments')
+        staged_root = app.config.get('ATTACHMENTS_STAGED_ROOT_DIR', 'attachments_staged')
+        os.makedirs(attachments_root, exist_ok=True)
+        os.makedirs(staged_root, exist_ok=True)
+    except Exception as exc:
+        app.logger.warning("Failed to ensure attachment directories", extra={"error": str(exc)})
 
     conn.commit()
     conn.close()
@@ -732,6 +794,11 @@ def inject_template_context():
 
     # Add CSRF token
     context['csrf_token'] = generate_csrf
+    context['attachments_flags'] = {
+        'ui': bool(app.config.get('ATTACHMENTS_UI_ENABLED', False)),
+        'edit': bool(app.config.get('ATTACHMENTS_EDIT_ENABLED', False)),
+        'release': bool(app.config.get('ATTACHMENTS_RELEASE_ENABLED', False)),
+    }
 
     return context
 

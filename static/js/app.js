@@ -456,6 +456,146 @@ window.showInfo = showInfo;
 window.confirmToast = confirmToast;
 
 // ============================================================================
+// Attachments module
+// ============================================================================
+
+(function attachModuleNamespace() {
+    const flags = window.ATTACHMENTS_FLAGS || {};
+    const cache = new Map();
+
+    const defaultEscape = (value) => {
+        if (value === null || value === undefined) return '';
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/\"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    };
+    const escapeHtml = window.MailOps && typeof window.MailOps.escapeHtml === 'function'
+        ? window.MailOps.escapeHtml
+        : defaultEscape;
+
+    function isEnabled() {
+        return !!flags.ui;
+    }
+
+    function formatSize(bytes) {
+        const size = Number(bytes || 0);
+        if (!size) return '';
+        const units = ['B', 'KB', 'MB', 'GB'];
+        let idx = 0;
+        let value = size;
+        while (value >= 1024 && idx < units.length - 1) {
+            value /= 1024;
+            idx += 1;
+        }
+        return `${value.toFixed(idx === 0 ? 0 : 1)} ${units[idx]}`;
+    }
+
+    function toggleElement(el, show) {
+        if (!el) return;
+        el.classList.toggle('hidden', !show);
+    }
+
+    function applyError(container, message) {
+        if (container) container.classList.add('attachments-error');
+        if (window.showError) window.showError(message);
+    }
+
+    async function fetchAttachments(emailId) {
+        if (cache.has(emailId)) {
+            return cache.get(emailId);
+        }
+
+        const response = await fetch(`/api/email/${emailId}/attachments`);
+        let data = null;
+        try {
+            data = await response.json();
+        } catch (_) {
+            data = null;
+        }
+        if (!response.ok || !data || data.ok === false) {
+            const reason = (data && (data.error || data.reason)) || `HTTP ${response.status}`;
+            throw new Error(reason);
+        }
+        cache.set(emailId, data);
+        return data;
+    }
+
+    function renderList(options, attachments) {
+        const listEl = options.listElement;
+        const emptyEl = options.emptyElement;
+        if (!listEl) return;
+
+        if (!attachments || attachments.length === 0) {
+            listEl.innerHTML = '';
+            toggleElement(emptyEl, true);
+            return;
+        }
+
+        const rows = attachments.map(att => {
+            const badge = att.is_staged ? '<span class="attachment-pill">Staged</span>' : '';
+            const sizeLabel = formatSize(att.size);
+            const sizeHtml = sizeLabel ? `<span class="attachment-size">${escapeHtml(sizeLabel)}</span>` : '';
+            return `
+                <div class="attachment-item-row">
+                    <div class="attachment-meta">
+                        <i class="bi bi-paperclip"></i>
+                        <span class="attachment-name">${escapeHtml(att.filename || 'attachment')}</span>
+                        ${badge}
+                        ${sizeHtml}
+                    </div>
+                    <div class="attachment-actions">
+                        <button type="button" class="btn btn-ghost btn-sm" onclick="window.MailAttach.download(${att.id})">
+                            <i class="bi bi-download"></i> Download
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        listEl.innerHTML = rows;
+        toggleElement(emptyEl, false);
+    }
+
+    async function render(options = {}) {
+        const emailId = options.emailId;
+        const container = options.container || null;
+        const skeletonEl = options.skeletonElement || null;
+        if (!emailId || !isEnabled()) {
+            if (container) container.classList.add('hidden');
+            return;
+        }
+        if (container) {
+            container.classList.remove('hidden');
+            container.classList.remove('attachments-error');
+        }
+        if (skeletonEl) skeletonEl.classList.remove('hidden');
+        toggleElement(options.emptyElement, false);
+
+        try {
+            const payload = await fetchAttachments(emailId);
+            renderList(options, payload.attachments || []);
+        } catch (error) {
+            applyError(container, `Failed to load attachments: ${error.message}`);
+        } finally {
+            if (skeletonEl) skeletonEl.classList.add('hidden');
+        }
+    }
+
+    function download(attachmentId) {
+        if (!attachmentId) return;
+        window.location.href = `/api/attachment/${attachmentId}/download`;
+    }
+
+    window.MailAttach = {
+        render,
+        download,
+        _fetch: fetchAttachments,
+    };
+})();
+
+// ============================================================================
 // HTTP helper utilities
 // ============================================================================
 
