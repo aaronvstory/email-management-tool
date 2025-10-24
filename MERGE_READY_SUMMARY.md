@@ -1,9 +1,10 @@
 # Attachments E2E Implementation - MERGE READY SUMMARY
 
 **Date**: October 24, 2025
-**Branch**: `feature/attachments-e2e-P1`
-**Status**: ✅ **READY FOR MERGE TO master**
-**Test Pass Rate**: 93% (149/160 passing)
+**Branch**: `feature/attachments-e2e-P1` → **MERGED TO master**
+**Status**: ✅ **DEPLOYED TO PRODUCTION**
+**Tag**: `v2.9.0-attachments-e2e`
+**Test Pass Rate**: 99.375% (159/160 passing)
 
 ---
 
@@ -246,4 +247,17 @@ git push origin v2.9.0-attachments-e2e
 
 ---
 
-**STATUS**: ✅ **APPROVED FOR MERGE TO MAIN**
+## 🎊 Deployment Summary
+
+**Merged**: October 24, 2025 at 02:35 UTC
+**Commits**:
+- `3712b72` - feat: attachments E2E production-ready (Phases 2-4)
+- `6461b5e` - fix(release): prometheus label mismatch; add defensive folder normalization
+- `30e127b` - test: fix log assertion to accept either message variant
+
+**Tag**: `v2.9.0-attachments-e2e`
+**Release Notes**: See `RELEASE_NOTES_v2.9.0.md`
+
+---
+
+**STATUS**: ✅ **DEPLOYED TO PRODUCTION ON master**
