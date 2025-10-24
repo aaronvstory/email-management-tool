@@ -323,7 +323,7 @@
       <button class="btn btn-secondary btn-sm" onclick="saveEdit()">
         <i class="bi bi-save"></i> Save Changes
       </button>
-      <button class="btn btn-success btn-sm" id="saveAndReleaseBtn" onclick="saveAndRelease()" style="display:none;">
+      <button class="btn btn-success btn-sm" id="saveAndReleaseBtn" onclick="openViewerReleaseSummary()" style="display:none;">
         <i class="bi bi-check-circle"></i> Save & Release
       </button>
     </div>
@@ -440,14 +440,90 @@
     </div>
   </div>
 
-  <div id="viewerAttachments" class="panel-card attachments-card mt-4" data-visible="{{ 'true' if attachments_flags.ui else 'false' }}">
+  <div id="viewerAttachments" class="panel-card attachments-card mt-4" data-visible="{{ 'true' if attachments_flags.ui else 'false' }}" data-email-id="{{ email.id }}">
     <div class="panel-header">
       <div class="panel-title"><i class="bi bi-paperclip"></i> Attachments</div>
     </div>
-    <div class="panel-body attachments-panel-body">
+    <div class="panel-body attachments-panel-body" data-role="attachments-panel">
+      {% if attachments_flags.edit %}
+      <div class="attachments-upload-shell" data-role="upload-shell">
+        <label class="btn btn-secondary btn-sm attachments-upload-btn" data-role="upload-button">
+          <i class="bi bi-upload"></i> Add Files
+          <input type="file" class="attachments-file-input" data-role="file-input" multiple>
+        </label>
+        <div class="attachments-dropzone" data-role="dropzone">
+          <div class="dropzone-icon"><i class="bi bi-cloud-arrow-up"></i></div>
+          <div class="dropzone-copy">
+            <div class="title">Drag & Drop files</div>
+            <div class="subtitle text-muted">or click to browse</div>
+          </div>
+        </div>
+        <div class="attachments-hint text-muted small">
+          Allowed: PDF, PNG, JPEG, TXT • Max 25&nbsp;MB each
+        </div>
+      </div>
+      {% endif %}
       <div id="viewerAttachmentsSkeleton" class="attachments-skeleton hidden"></div>
-      <div id="viewerAttachmentsList" class="attachments-list"></div>
+      <div id="viewerAttachmentsList" class="attachments-list" data-role="attachments-list"></div>
       <div id="viewerAttachmentsEmpty" class="attachments-empty text-muted">No attachments</div>
+    </div>
+  </div>
+</div>
+
+<!-- Viewer Attachments Summary Modal -->
+<div class="modal fade modal-modern" id="viewerAttachmentsSummaryModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-lg modal-unified">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-white">
+          <i class="bi bi-clipboard-check"></i> Review Attachment Changes
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="summary-counts-grid mb-3">
+          <div class="summary-count-card">
+            <div class="label text-muted">Added</div>
+            <div class="value" id="viewerSummaryAddCount">0</div>
+          </div>
+          <div class="summary-count-card">
+            <div class="label text-muted">Replaced</div>
+            <div class="value" id="viewerSummaryReplaceCount">0</div>
+          </div>
+          <div class="summary-count-card">
+            <div class="label text-muted">Removed</div>
+            <div class="value" id="viewerSummaryRemoveCount">0</div>
+          </div>
+        </div>
+        <div class="summary-section">
+          <h6 class="section-title"><i class="bi bi-plus-circle"></i> Will add</h6>
+          <div class="summary-empty text-muted small" id="viewerSummaryAddEmpty">No new attachments</div>
+          <ul class="summary-list" id="viewerSummaryAddList"></ul>
+        </div>
+        <div class="summary-section">
+          <h6 class="section-title"><i class="bi bi-arrow-repeat"></i> Will replace</h6>
+          <div class="summary-empty text-muted small" id="viewerSummaryReplaceEmpty">No replacements</div>
+          <ul class="summary-list" id="viewerSummaryReplaceList"></ul>
+        </div>
+        <div class="summary-section">
+          <h6 class="section-title"><i class="bi bi-dash-circle"></i> Will remove</h6>
+          <div class="summary-empty text-muted small" id="viewerSummaryRemoveEmpty">No removals</div>
+          <ul class="summary-list" id="viewerSummaryRemoveList"></ul>
+        </div>
+        <div class="summary-section warnings">
+          <h6 class="section-title text-warning"><i class="bi bi-exclamation-triangle"></i> Warnings</h6>
+          <div class="summary-empty text-muted small" id="viewerSummaryWarningsEmpty">No warnings detected</div>
+          <ul class="summary-list" id="viewerSummaryWarningsList"></ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle"></i> Cancel
+        </button>
+        <button type="button" class="btn btn-success" id="viewerSummaryConfirmRelease">
+          <span class="btn-label"><i class="bi bi-check-circle"></i> Save & Release</span>
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -706,14 +782,122 @@ document.addEventListener('DOMContentLoaded', () => {
       skeletonElement: document.getElementById('viewerAttachmentsSkeleton')
     });
   }
+  const viewerConfirmBtn = document.getElementById('viewerSummaryConfirmRelease');
+  if (viewerConfirmBtn && !viewerConfirmBtn.dataset.bound) {
+    viewerConfirmBtn.dataset.bound = 'true';
+    viewerConfirmBtn.addEventListener('click', executeViewerSaveAndRelease);
+  }
 });
 
-async function saveAndRelease() {
-  const subject = document.getElementById('emailSubject').value;
-  const bodyText = document.getElementById('emailBodyText').value;
+if (typeof generateIdempotencyKey !== 'function') {
+  function generateIdempotencyKey() {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+      return window.crypto.randomUUID();
+    }
+    return `emt-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+}
+
+function viewerFormatSizeLabel(bytes) {
+  const value = Number(bytes || 0);
+  if (!value) return '';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let size = value;
+  let unitIndex = 0;
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+  const numeric = unitIndex === 0 ? size.toFixed(0) : size.toFixed(1);
+  return `${numeric} ${units[unitIndex]}`;
+}
+
+function viewerRenderSummaryList(prefix, items, builder) {
+  const listEl = document.getElementById(`${prefix}List`);
+  const emptyEl = document.getElementById(`${prefix}Empty`);
+  if (!listEl) return;
+  if (!items || !items.length) {
+    listEl.innerHTML = '';
+    if (emptyEl) emptyEl.classList.remove('hidden');
+    return;
+  }
+  listEl.innerHTML = items.map(builder).join('');
+  if (emptyEl) emptyEl.classList.add('hidden');
+}
+
+function populateViewerSummaryModal(summary) {
+  document.getElementById('viewerSummaryAddCount').textContent = summary.counts.add;
+  document.getElementById('viewerSummaryReplaceCount').textContent = summary.counts.replace;
+  document.getElementById('viewerSummaryRemoveCount').textContent = summary.counts.remove;
+
+  viewerRenderSummaryList('viewerSummaryAdd', summary.add, (entry) => {
+    const staged = entry.staged || {};
+    const sizeLabel = viewerFormatSizeLabel(staged.size);
+    return `<li><i class="bi bi-plus-circle-fill text-success me-2"></i>${window.MailOps.escapeHtml(staged.filename || entry.manifest.filename || 'attachment')}${sizeLabel ? ` <span class="text-muted">(${sizeLabel})</span>` : ''}</li>`;
+  });
+
+  viewerRenderSummaryList('viewerSummaryReplace', summary.replace, (entry) => {
+    const original = entry.original || {};
+    const staged = entry.staged || {};
+    const originalName = window.MailOps.escapeHtml(original.filename || entry.manifest.original_filename || 'original');
+    const stagedName = window.MailOps.escapeHtml(staged.filename || 'replacement');
+    return `<li><i class="bi bi-arrow-repeat text-info me-2"></i>${originalName} <span class="text-muted">→</span> ${stagedName}</li>`;
+  });
+
+  viewerRenderSummaryList('viewerSummaryRemove', summary.remove, (entry) => {
+    const original = entry.original || {};
+    const sizeLabel = viewerFormatSizeLabel(original.size);
+    return `<li><i class="bi bi-dash-circle-fill text-danger me-2"></i>${window.MailOps.escapeHtml(original.filename || entry.manifest.filename || 'attachment')}${sizeLabel ? ` <span class="text-muted">(${sizeLabel})</span>` : ''}</li>`;
+  });
+
+  const warnings = summary.remove.filter(
+    (entry) => entry.original && typeof entry.original.mime_type === 'string' && entry.original.mime_type.toLowerCase().includes('pdf')
+  );
+
+  viewerRenderSummaryList('viewerSummaryWarnings', warnings, (entry) => {
+    const original = entry.original || {};
+    return `<li><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Removing PDF: ${window.MailOps.escapeHtml(original.filename || 'attachment')}</li>`;
+  });
+}
+
+async function openViewerReleaseSummary() {
+  const subject = document.getElementById('emailSubject').value.trim();
+  const bodyText = document.getElementById('emailBodyText').value.trim();
+  if (!subject || !bodyText) {
+    showWarning('Subject and body are required before release');
+    return;
+  }
+  try {
+    const { summary } = await window.MailAttach.summarize(emailId);
+    populateViewerSummaryModal(summary);
+    const confirmBtn = document.getElementById('viewerSummaryConfirmRelease');
+    confirmBtn.dataset.emailId = String(emailId);
+    const modalEl = document.getElementById('viewerAttachmentsSummaryModal');
+    const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modalInstance.show();
+  } catch (error) {
+    console.error('Failed to build attachment summary:', error);
+    showError(`Failed to prepare summary: ${error.message}`);
+  }
+}
+
+async function executeViewerSaveAndRelease(event) {
+  const button = event ? event.currentTarget : document.getElementById('viewerSummaryConfirmRelease');
+  const modalEl = document.getElementById('viewerAttachmentsSummaryModal');
+  const modalInstance = bootstrap.Modal.getInstance(modalEl);
+  const subject = document.getElementById('emailSubject').value.trim();
+  const bodyText = document.getElementById('emailBodyText').value.trim();
+
+  if (!subject || !bodyText) {
+    showWarning('Subject and body are required before release');
+    return;
+  }
+
+  const originalText = button.innerHTML;
+  button.disabled = true;
+  button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Releasing...';
 
   try {
-    // First save the edit
     const editResponse = await fetch(`/api/email/${emailId}/edit`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -724,28 +908,42 @@ async function saveAndRelease() {
     });
 
     const editData = await editResponse.json();
-    if (!(editData && (editData.ok || editData.success))) {
-      showError((editData && (editData.error || editData.reason)) || 'Failed to save changes');
-      return;
+    if (!editData || !(editData.ok || editData.success)) {
+      throw new Error((editData && (editData.error || editData.reason)) || 'Failed to save changes');
     }
 
-    // Then release the email, sending the edited content for atomicity
+    const idempotencyKey = generateIdempotencyKey();
     const releaseResponse = await fetch(`/api/interception/release/${emailId}`, {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Idempotency-Key': idempotencyKey
+      },
       body: JSON.stringify({target_folder: 'INBOX', edited_subject: subject, edited_body: bodyText})
     });
 
     const releaseData = await releaseResponse.json();
-    if (releaseData && (releaseData.success || releaseData.ok)) {
-      showSuccess('Email saved and released to inbox');
-      setTimeout(() => window.location.href = '/interception', 1500);
-    } else {
-      showError((releaseData && (releaseData.error || releaseData.reason)) || 'Failed to release email');
+    if (!releaseResponse.ok || !(releaseData && (releaseData.success || releaseData.ok))) {
+      const reason = window.extractErrorMessage(releaseData, `HTTP ${releaseResponse.status}`);
+      throw new Error(reason || 'Failed to release email');
     }
+
+    if (modalInstance) modalInstance.hide();
+    showSuccess('Email saved and released to inbox');
+    setTimeout(() => window.location.href = '/interception', 1400);
   } catch (error) {
-    showError('Failed to save and release email');
+    console.error('Error saving and releasing email:', error);
+    showError(error.message || 'Failed to save and release email');
+    button.disabled = false;
+    button.innerHTML = originalText;
   }
+}
+
+async function saveAndRelease() {
+  const subject = document.getElementById('emailSubject').value;
+  const bodyText = document.getElementById('emailBodyText').value;
+async function saveAndRelease() {
+  return openViewerReleaseSummary();
 }
 
 function downloadAttachment(attachmentId) {

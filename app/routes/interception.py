@@ -43,6 +43,20 @@ import threading
 from contextlib import contextmanager
 
 
+import mimetypes
+
+try:
+    import magic  # type: ignore
+except ImportError:  # pragma: no cover - optional dependency
+    magic = None
+
+from typing import List
+from typing import Set
+import tempfile
+import mmap
+import html
+from email.message import EmailMessage
+from app.utils.metrics import record_release, track_latency, release_latency
 _RELEASE_RATE_LIMIT = get_rate_limit_config('release', default_requests=30)
 _EDIT_RATE_LIMIT = get_rate_limit_config('edit', default_requests=30)
 _RELEASE_LIMIT_STRING = str(_RELEASE_RATE_LIMIT['limit_string'])
@@ -207,6 +221,388 @@ def _ensure_attachments_extracted(conn: sqlite3.Connection, row: sqlite3.Row) ->
         "SELECT * FROM email_attachments WHERE email_id=? AND is_original=1 ORDER BY id",
         (email_id,),
     ).fetchall()
+
+
+def _ensure_manifest_structure(manifest: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    if not isinstance(manifest, dict):
+        manifest = {}
+    items = manifest.get('items')
+    if not isinstance(items, list):
+        manifest['items'] = []
+    else:
+        manifest['items'] = [item for item in items if isinstance(item, dict)]
+    return manifest
+
+
+def _load_manifest_from_row(row: sqlite3.Row | Dict[str, Any]) -> Dict[str, Any]:
+    raw = None
+    email_id = None
+    if isinstance(row, sqlite3.Row):
+        keys = row.keys()
+        if 'attachments_manifest' in keys:
+            raw = row['attachments_manifest']
+        if 'id' in keys:
+            email_id = row['id']
+    elif isinstance(row, dict):
+        raw = row.get('attachments_manifest')
+        email_id = row.get('id')
+
+    if not raw:
+        return {'items': []}
+
+    if isinstance(raw, bytes):
+        raw = raw.decode('utf-8', 'ignore')
+
+    try:
+        manifest = json.loads(raw)
+    except Exception as exc:
+        log.warning(
+            '[attachments] Failed to decode manifest',
+            extra={'email_id': email_id, 'error': str(exc)},
+        )
+        manifest = {}
+
+    return _ensure_manifest_structure(manifest)
+
+
+def _dump_manifest(manifest: Dict[str, Any]) -> str:
+    snapshot = _ensure_manifest_structure(dict(manifest))
+    snapshot['updated_at'] = datetime.now(timezone.utc).isoformat()
+    return json.dumps(snapshot)
+
+
+def _manifest_remove_entries(
+    manifest: Dict[str, Any], *, aid: Optional[int] = None, staged_ref: Optional[int] = None
+) -> Dict[str, Any]:
+    manifest = _ensure_manifest_structure(manifest)
+    if aid is None and staged_ref is None:
+        return manifest
+
+    filtered: List[Dict[str, Any]] = []
+    for item in manifest['items']:
+        matches_aid = aid is not None and item.get('aid') == aid
+        matches_staged = staged_ref is not None and (
+            item.get('staged_ref') == staged_ref or item.get('staged_id') == staged_ref
+        )
+        if matches_aid or matches_staged:
+            continue
+        filtered.append(item)
+
+    manifest['items'] = filtered
+    return manifest
+
+
+def _manifest_append_entry(manifest: Dict[str, Any], entry: Dict[str, Any]) -> Dict[str, Any]:
+    manifest = _manifest_remove_entries(
+        manifest,
+        aid=entry.get('aid') if entry.get('aid') is not None else None,
+        staged_ref=entry.get('staged_ref'),
+    )
+    manifest['items'].append(entry)
+    return manifest
+
+
+def _acquire_release_lock(conn: sqlite3.Connection, email_id: int) -> bool:
+    try:
+        conn.execute(
+            "INSERT INTO email_release_locks(email_id, acquired_at) VALUES(?, datetime('now'))",
+            (email_id,),
+        )
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
+
+
+def _release_release_lock(conn: sqlite3.Connection, email_id: int) -> None:
+    try:
+        conn.execute(
+            "DELETE FROM email_release_locks WHERE email_id=?",
+            (email_id,),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+
+
+def _get_idempotency_record(conn: sqlite3.Connection, key: str) -> Optional[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM idempotency_keys WHERE key=?",
+        (key,),
+    ).fetchone()
+
+
+def _set_idempotency_record(
+    conn: sqlite3.Connection,
+    key: str,
+    email_id: int,
+    status: str,
+    response: Optional[Dict[str, Any]] = None,
+) -> None:
+    response_json = json.dumps(response) if response is not None else None
+    conn.execute(
+        "INSERT INTO idempotency_keys(key, email_id, status, response_json)\n         VALUES(?, ?, ?, ?)\n         ON CONFLICT(key) DO UPDATE SET status=excluded.status, response_json=excluded.response_json",
+        (key, email_id, status, response_json),
+    )
+    conn.commit()
+
+
+def _assemble_attachment_plan(
+    attachments: Iterable[sqlite3.Row],
+    manifest: Dict[str, Any],
+) -> Dict[str, Any]:
+    originals: List[sqlite3.Row] = []
+    staged_map: Dict[int, sqlite3.Row] = {}
+    for row in attachments:
+        if row['is_original']:
+            originals.append(row)
+        elif row['is_staged']:
+            staged_map[row['id']] = row
+
+    items = manifest.get('items', []) if isinstance(manifest, dict) else []
+    manifest_by_aid: Dict[int, List[Dict[str, Any]]] = {}
+    additions: List[Dict[str, Any]] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        action = str(item.get('action', '')).lower()
+        aid = item.get('aid')
+        if action == 'add':
+            additions.append(item)
+        elif aid is not None:
+            aid_int = int(aid)
+            manifest_by_aid.setdefault(aid_int, []).append(item)
+
+    originals.sort(key=lambda r: r['id'])
+    final_entries: List[Dict[str, Any]] = []
+    removed_entries: List[Dict[str, Any]] = []
+    replaced_entries: List[Dict[str, Any]] = []
+
+    for original in originals:
+        actions = manifest_by_aid.get(original['id'], [])
+        replace_entry = next((entry for entry in actions if str(entry.get('action', '')).lower() == 'replace'), None)
+        remove_entry = next((entry for entry in actions if str(entry.get('action', '')).lower() == 'remove'), None)
+
+        if replace_entry:
+            staged_ref = replace_entry.get('staged_ref')
+            staged_row = staged_ref is not None and staged_map.get(int(staged_ref))
+            if staged_row:
+                final_entries.append({
+                    'row': staged_row,
+                    'source': 'staged',
+                    'manifest': replace_entry,
+                    'replaces': original,
+                })
+                replaced_entries.append({
+                    'original': original,
+                    'staged': staged_row,
+                    'manifest': replace_entry,
+                })
+                continue
+
+        if remove_entry:
+            removed_entries.append({'row': original, 'manifest': remove_entry})
+            continue
+
+        final_entries.append({'row': original, 'source': 'original'})
+
+    added_entries: List[Dict[str, Any]] = []
+    for item in additions:
+        staged_ref = item.get('staged_ref')
+        if staged_ref is None:
+            continue
+        staged_row = staged_map.get(int(staged_ref))
+        if not staged_row:
+            continue
+        entry = {
+            'row': staged_row,
+            'source': 'staged',
+            'manifest': item,
+            'is_addition': True,
+        }
+        final_entries.append(entry)
+        added_entries.append(entry)
+
+    for entry in final_entries:
+        row = entry['row']
+        disposition = (row['disposition'] or '').lower() if row['disposition'] else ''
+        entry['is_inline'] = bool(disposition == 'inline' or row['content_id'])
+
+    return {
+        'final': final_entries,
+        'removed': removed_entries,
+        'replaced': replaced_entries,
+        'added': added_entries,
+    }
+
+
+def _build_release_message(
+    row: sqlite3.Row,
+    original_msg: EmailMessage,
+    payload: Dict[str, Any],
+    plan: Dict[str, Any],
+    attachments_root: Path,
+    staged_root: Path,
+    strip_notice: bool = False,
+) -> EmailMessage:
+    subject = payload.get('edited_subject')
+    if not subject:
+        subject = row['subject'] if 'subject' in row.keys() else None
+    if not subject:
+        subject = original_msg.get('Subject', '')
+
+    text_body = payload.get('edited_body')
+    if text_body is None:
+        text_body = row['body_text'] if 'body_text' in row.keys() else None
+    if text_body is None:
+        text_body = ''
+
+    html_body = payload.get('edited_body_html')
+    if html_body is None:
+        html_body = row['body_html'] if 'body_html' in row.keys() else None
+    if html_body is None and text_body:
+        html_body = '<br>'.join(html.escape(text_body).splitlines())
+
+    if strip_notice:
+        text_body = (text_body or '') + '\n\n[Attachments removed]'
+        if html_body:
+            html_body = html_body + '<br><br><em>[Attachments removed]</em>'
+        else:
+            html_body = '<em>[Attachments removed]</em>'
+
+    message = EmailMessage()
+    message['Subject'] = subject
+
+    for header, value in original_msg.items():
+        header_lower = header.lower()
+        if header_lower in {'subject', 'content-type', 'content-transfer-encoding', 'mime-version'}:
+            continue
+        if header_lower == 'message-id':
+            continue
+        message[header] = value
+
+    message.make_mixed()
+
+    body_container = EmailMessage()
+    body_container.make_alternative()
+    body_container.set_content(text_body or '')
+    if html_body:
+        body_container.add_alternative(html_body, subtype='html')
+
+    inline_entries = [entry for entry in plan['final'] if entry.get('is_inline')]
+    regular_entries = [entry for entry in plan['final'] if not entry.get('is_inline')]
+
+    if inline_entries and html_body:
+        related_container = EmailMessage()
+        related_container.make_related()
+        related_container.attach(body_container)
+        for entry in inline_entries:
+            row_entry = entry['row']
+            storage_path = Path(row_entry['storage_path']).resolve()
+            if not storage_path.exists() or not storage_path.is_file():
+                continue
+            if not (_is_under(storage_path, attachments_root) or _is_under(storage_path, staged_root)):
+                continue
+            maintype, subtype = _split_mime_type(row_entry['mime_type'])
+            with storage_path.open('rb') as fh:
+                data = fh.read()
+            related_container.add_attachment(
+                data,
+                maintype=maintype,
+                subtype=subtype,
+                filename=row_entry['filename'] or f'attachment-{row_entry["id"]}',
+                disposition='inline',
+                cid=f"{row_entry['content_id']}" if row_entry.get('content_id') else None,
+            )
+        message.attach(related_container)
+    else:
+        message.attach(body_container)
+
+    for entry in regular_entries:
+        row_entry = entry['row']
+        storage_path = Path(row_entry['storage_path']).resolve()
+        if not storage_path.exists() or not storage_path.is_file():
+            continue
+        if not (_is_under(storage_path, attachments_root) or _is_under(storage_path, staged_root)):
+            continue
+        maintype, subtype = _split_mime_type(row_entry['mime_type'])
+        with storage_path.open('rb') as fh:
+            data = fh.read()
+        message.add_attachment(
+            data,
+            maintype=maintype,
+            subtype=subtype,
+            filename=row_entry['filename'] or f'attachment-{row_entry["id"]}',
+        )
+
+    needs_new_message_id = bool(
+        payload.get('edited_subject')
+        or payload.get('edited_body')
+        or payload.get('edited_body_html')
+        or plan['added']
+        or plan['removed']
+        or plan['replaced']
+    )
+
+    original_mid = (original_msg.get('Message-ID') or '').strip()
+    if original_mid:
+        message['X-EMT-Released-From'] = original_mid
+
+    if needs_new_message_id or not original_mid:
+        message['Message-ID'] = make_msgid()
+    else:
+        message['Message-ID'] = original_mid
+
+    return message
+
+
+def _split_mime_type(value: Optional[str]) -> tuple[str, str]:
+    if value and '/' in value:
+        maintype, subtype = value.split('/', 1)
+        return maintype or 'application', subtype or 'octet-stream'
+    if value:
+        return value, 'octet-stream'
+    return 'application', 'octet-stream'
+
+
+def _allowed_mime_types() -> Set[str]:
+    raw = current_app.config.get('ATTACHMENT_ALLOWED_MIME', '')
+    if isinstance(raw, str):
+        values = [token.strip().lower() for token in raw.split(',') if token.strip()]
+        return set(values)
+    if isinstance(raw, (list, tuple, set)):
+        return {str(token).strip().lower() for token in raw if str(token).strip()}
+    return {'application/pdf', 'image/png', 'image/jpeg', 'text/plain'}
+
+
+def _detect_mime_type(file_bytes: bytes, filename: Optional[str] = None) -> str:
+    detected: Optional[str] = None
+    if magic:
+        try:
+            detected = magic.from_buffer(file_bytes, mime=True)
+        except Exception as exc:  # pragma: no cover - debugging aid
+            log.debug('[attachments] magic detection failed', extra={'error': str(exc)})
+    if not detected and filename:
+        detected = mimetypes.guess_type(filename)[0]
+    return (detected or 'application/octet-stream').lower()
+
+
+def _allocate_staged_path(base_dir: Path, filename: str) -> Path:
+    sanitized = _sanitize_filename(filename)
+    if not sanitized:
+        sanitized = 'attachment'
+    candidate = base_dir / sanitized
+    if not candidate.exists():
+        return candidate
+
+    stem = Path(sanitized).stem or 'attachment'
+    suffix = Path(sanitized).suffix
+    counter = 1
+    while True:
+        candidate = base_dir / f"{stem}_{counter}{suffix}"
+        if not candidate.exists():
+            return candidate
+        counter += 1
 
 SMTP_HOST = os.environ.get('SMTP_PROXY_HOST', '127.0.0.1')
 SMTP_PORT = int(os.environ.get('SMTP_PROXY_PORT', '8587'))
@@ -610,20 +1006,24 @@ def api_email_attachments(email_id: int):
 
     conn = _db()
     try:
-        row = conn.execute("SELECT * FROM email_messages WHERE id=?", (email_id,)).fetchone()
+        row = conn.execute(
+            "SELECT * FROM email_messages WHERE id=?",
+            (email_id,),
+        ).fetchone()
         if not row:
             return jsonify({'ok': False, 'error': 'not-found'}), 404
 
         original_rows = list(_ensure_attachments_extracted(conn, row))
-        manifest_raw = row['attachments_manifest'] if 'attachments_manifest' in row.keys() else None
-        manifest = None
-        if manifest_raw:
-            try:
-                manifest = json.loads(manifest_raw)
-            except Exception as exc:
-                log.warning("[attachments] Failed to decode manifest", extra={'email_id': email_id, 'error': str(exc)})
-
+        manifest = _load_manifest_from_row(row)
         version = row['version'] if 'version' in row.keys() and row['version'] is not None else 0
+
+        etag = f'W/"attachments-{email_id}-{version}"'
+        if_none_match = request.headers.get('If-None-Match')
+        if if_none_match and if_none_match.strip() == etag:
+            response = current_app.response_class(status=304)
+            response.headers['ETag'] = etag
+            return response
+
         payload = {
             'ok': True,
             'email_id': email_id,
@@ -631,7 +1031,9 @@ def api_email_attachments(email_id: int):
             'attachments': [_serialize_attachment_row(r) for r in original_rows],
             'manifest': manifest,
         }
-        return jsonify(payload)
+        response = jsonify(payload)
+        response.headers['ETag'] = etag
+        return response
     finally:
         conn.close()
 
@@ -662,1113 +1064,1087 @@ def api_attachment_download(attachment_id: int):
     finally:
         conn.close()
 
+
+@bp_interception.route('/api/email/<int:email_id>/attachments/upload', methods=['POST'])
+@login_required
+def api_email_attachments_upload(email_id: int):
+    if not _attachments_feature_enabled('ATTACHMENTS_EDIT_ENABLED'):
+        return jsonify({'ok': False, 'error': 'disabled'}), 403
+
+    upload_file = request.files.get('file')
+    if not upload_file or upload_file.filename == '':
+        return jsonify({'ok': False, 'error': 'missing-file'}), 400
+
+    replace_raw = request.form.get('replace_aid')
+    version_raw = request.form.get('version')
+
+    replace_aid: Optional[int] = None
+    if replace_raw:
+        try:
+            replace_aid = int(replace_raw)
+        except (TypeError, ValueError):
+            return jsonify({'ok': False, 'error': 'invalid-replace-id'}), 422
+
+    expected_version: Optional[int] = None
+    if version_raw not in (None, ''):
+        try:
+            expected_version = int(version_raw)
+        except (TypeError, ValueError):
+            return jsonify({'ok': False, 'error': 'invalid-version'}), 422
+
+    file_bytes = upload_file.read()
+    if not file_bytes:
+        return jsonify({'ok': False, 'error': 'empty-file'}), 400
+
+    max_bytes = int(current_app.config.get('ATTACHMENT_MAX_BYTES', 25 * 1024 * 1024))
+    if len(file_bytes) > max_bytes:
+        return jsonify({'ok': False, 'error': 'size-exceeded', 'limit': max_bytes}), 413
+
+    mime_type = _detect_mime_type(file_bytes, upload_file.filename)
+    allowed_mime = _allowed_mime_types()
+    if allowed_mime and mime_type not in allowed_mime:
+        return jsonify({'ok': False, 'error': 'mime-disallowed', 'mime': mime_type}), 415
+
+    conn = _db()
+    written_path: Optional[Path] = None
+    try:
+        conn.execute('BEGIN')
+        row = conn.execute(
+            "SELECT id, attachments_manifest, version FROM email_messages WHERE id=?",
+            (email_id,),
+        ).fetchone()
+        if not row:
+            conn.rollback()
+            return jsonify({'ok': False, 'error': 'not-found'}), 404
+
+        manifest = _load_manifest_from_row(row)
+        base_version = row['version'] if row['version'] is not None else 0
+        version_check = expected_version if expected_version is not None else base_version
+
+        replace_row = None
+        if replace_aid is not None:
+            replace_row = conn.execute(
+                "SELECT * FROM email_attachments WHERE id=? AND email_id=?",
+                (replace_aid, email_id),
+            ).fetchone()
+            if not replace_row:
+                conn.rollback()
+                return jsonify({'ok': False, 'error': 'replace-target-missing'}), 404
+
+        max_count = int(current_app.config.get('ATTACHMENTS_MAX_COUNT', 25))
+        if max_count > 0 and replace_row is None:
+            total_count = conn.execute(
+                "SELECT COUNT(*) FROM email_attachments WHERE email_id=?",
+                (email_id,),
+            ).fetchone()[0]
+            if total_count >= max_count:
+                conn.rollback()
+                return jsonify({'ok': False, 'error': 'max-count-exceeded', 'limit': max_count}), 422
+
+        _, staged_root = _get_storage_roots()
+        email_dir = staged_root / str(email_id)
+        email_dir.mkdir(parents=True, exist_ok=True)
+
+        allocated_path = _allocate_staged_path(email_dir, upload_file.filename or 'attachment')
+        allocated_path.write_bytes(file_bytes)
+        written_path = allocated_path
+
+        sha256_hash = hashlib.sha256(file_bytes).hexdigest()
+        file_size = len(file_bytes)
+        filename = allocated_path.name
+
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO email_attachments
+                (email_id, filename, mime_type, size, sha256, disposition, content_id, is_original, is_staged, storage_path)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 0, 1, ?)
+            """,
+            (
+                email_id,
+                filename,
+                mime_type,
+                file_size,
+                sha256_hash,
+                'attachment',
+                None,
+                str(allocated_path),
+            ),
+        )
+        staged_id = cur.lastrowid
+
+        manifest_entry: Dict[str, Any] = {
+            'action': 'replace' if replace_row else 'add',
+            'staged_ref': staged_id,
+            'filename': filename,
+            'mime_type': mime_type,
+            'size': file_size,
+            'sha256': sha256_hash,
+            'uploaded_at': datetime.now(timezone.utc).isoformat(),
+        }
+        if replace_row:
+            manifest_entry['aid'] = replace_row['id']
+            manifest_entry['original_filename'] = replace_row['filename']
+        manifest = _manifest_append_entry(manifest, manifest_entry)
+
+        manifest_text = _dump_manifest(manifest)
+        cur.execute(
+            "UPDATE email_messages SET attachments_manifest=?, version=version+1 WHERE id=? AND version=?",
+            (manifest_text, email_id, version_check),
+        )
+        if cur.rowcount == 0:
+            conn.rollback()
+            if written_path and written_path.exists():
+                try:
+                    written_path.unlink()
+                except Exception:
+                    log.warning(
+                        '[attachments] Failed to remove staged file after version mismatch',
+                        extra={'email_id': email_id, 'path': str(written_path)},
+                    )
+            latest = conn.execute(
+                "SELECT attachments_manifest, version FROM email_messages WHERE id=?",
+                (email_id,),
+            ).fetchone()
+            latest_manifest = _load_manifest_from_row(latest)
+            latest_version = latest['version'] if latest and 'version' in latest.keys() else version_check
+            return (
+                jsonify(
+                    {
+                        'ok': False,
+                        'error': 'version-mismatch',
+                        'latest_version': latest_version,
+                        'manifest': latest_manifest,
+                    }
+                ),
+                409,
+            )
+
+        attachment_row = conn.execute(
+            "SELECT * FROM email_attachments WHERE id=?",
+            (staged_id,),
+        ).fetchone()
+        new_version_row = conn.execute(
+            "SELECT version FROM email_messages WHERE id=?",
+            (email_id,),
+        ).fetchone()
+        conn.commit()
+
+        new_version = new_version_row['version'] if new_version_row else version_check + 1
+        payload = {
+            'ok': True,
+            'staged_id': staged_id,
+            'version': new_version,
+            'attachment': _serialize_attachment_row(attachment_row),
+            'manifest': manifest,
+        }
+        return jsonify(payload), 201
+    except Exception:
+        conn.rollback()
+        if written_path and written_path.exists():
+            try:
+                written_path.unlink()
+            except Exception:
+                log.warning(
+                    '[attachments] Failed to clean staged file on error',
+                    extra={'email_id': email_id, 'path': str(written_path)},
+                )
+        raise
+    finally:
+        conn.close()
+
+
+@bp_interception.route('/api/email/<int:email_id>/attachments/mark', methods=['POST'])
+@login_required
+def api_email_attachments_mark(email_id: int):
+    if not _attachments_feature_enabled('ATTACHMENTS_EDIT_ENABLED'):
+        return jsonify({'ok': False, 'error': 'disabled'}), 403
+
+    payload = request.get_json(silent=True) or {}
+    action = str(payload.get('action') or '').lower()
+    version_value = payload.get('version')
+
+    if action not in {'add', 'replace', 'remove', 'keep'}:
+        return jsonify({'ok': False, 'error': 'invalid-action'}), 422
+
+    if version_value is None:
+        return jsonify({'ok': False, 'error': 'version-required'}), 400
+    try:
+        version_check = int(version_value)
+    except (TypeError, ValueError):
+        return jsonify({'ok': False, 'error': 'invalid-version'}), 422
+
+    aid_value = payload.get('aid')
+    staged_value = payload.get('staged_ref')
+
+    aid: Optional[int] = None
+    if aid_value is not None:
+        try:
+            aid = int(aid_value)
+        except (TypeError, ValueError):
+            return jsonify({'ok': False, 'error': 'invalid-aid'}), 422
+
+    staged_ref: Optional[int] = None
+    if staged_value is not None:
+        try:
+            staged_ref = int(staged_value)
+        except (TypeError, ValueError):
+            return jsonify({'ok': False, 'error': 'invalid-staged-ref'}), 422
+
+    conn = _db()
+    try:
+        conn.execute('BEGIN')
+        email_row = conn.execute(
+            "SELECT id, attachments_manifest, version FROM email_messages WHERE id=?",
+            (email_id,),
+        ).fetchone()
+        if not email_row:
+            conn.rollback()
+            return jsonify({'ok': False, 'error': 'not-found'}), 404
+
+        manifest = _load_manifest_from_row(email_row)
+
+        cur = conn.cursor()
+        attachment_for_aid = None
+        if aid is not None:
+            attachment_for_aid = cur.execute(
+                "SELECT * FROM email_attachments WHERE id=? AND email_id=?",
+                (aid, email_id),
+            ).fetchone()
+            if not attachment_for_aid:
+                conn.rollback()
+                return jsonify({'ok': False, 'error': 'aid-not-found'}), 404
+
+        staged_row = None
+        if staged_ref is not None:
+            staged_row = cur.execute(
+                "SELECT * FROM email_attachments WHERE id=? AND email_id=?",
+                (staged_ref, email_id),
+            ).fetchone()
+            if not staged_row:
+                conn.rollback()
+                return jsonify({'ok': False, 'error': 'staged-not-found'}), 404
+            if not staged_row['is_staged']:
+                conn.rollback()
+                return jsonify({'ok': False, 'error': 'staged-invalid'}), 422
+
+        if action == 'add':
+            if staged_row is None:
+                conn.rollback()
+                return jsonify({'ok': False, 'error': 'staged-required'}), 422
+            manifest_entry = {
+                'action': 'add',
+                'staged_ref': staged_row['id'],
+                'filename': staged_row['filename'],
+                'mime_type': staged_row['mime_type'],
+                'size': staged_row['size'],
+                'sha256': staged_row['sha256'],
+                'uploaded_at': datetime.now(timezone.utc).isoformat(),
+            }
+            manifest = _manifest_append_entry(manifest, manifest_entry)
+        elif action == 'replace':
+            if aid is None or staged_row is None:
+                conn.rollback()
+                return jsonify({'ok': False, 'error': 'aid-and-staged-required'}), 422
+            manifest_entry = {
+                'action': 'replace',
+                'aid': aid,
+                'staged_ref': staged_row['id'],
+                'filename': staged_row['filename'],
+                'mime_type': staged_row['mime_type'],
+                'size': staged_row['size'],
+                'sha256': staged_row['sha256'],
+                'uploaded_at': datetime.now(timezone.utc).isoformat(),
+            }
+            if attachment_for_aid:
+                manifest_entry['original_filename'] = attachment_for_aid['filename']
+            manifest = _manifest_append_entry(manifest, manifest_entry)
+        elif action == 'remove':
+            if aid is None:
+                conn.rollback()
+                return jsonify({'ok': False, 'error': 'aid-required'}), 422
+            manifest = _manifest_remove_entries(manifest, aid=aid)
+            manifest_entry = {
+                'action': 'remove',
+                'aid': aid,
+                'updated_at': datetime.now(timezone.utc).isoformat(),
+            }
+            manifest['items'].append(manifest_entry)
+        elif action == 'keep':
+            if aid is None:
+                conn.rollback()
+                return jsonify({'ok': False, 'error': 'aid-required'}), 422
+            manifest = _manifest_remove_entries(manifest, aid=aid)
+            manifest_entry = {
+                'action': 'keep',
+                'aid': aid,
+                'updated_at': datetime.now(timezone.utc).isoformat(),
+            }
+            manifest['items'].append(manifest_entry)
+
+        manifest_text = _dump_manifest(manifest)
+        cur.execute(
+            "UPDATE email_messages SET attachments_manifest=?, version=version+1 WHERE id=? AND version=?",
+            (manifest_text, email_id, version_check),
+        )
+        if cur.rowcount == 0:
+            conn.rollback()
+            latest = conn.execute(
+                "SELECT attachments_manifest, version FROM email_messages WHERE id=?",
+                (email_id,),
+            ).fetchone()
+            latest_manifest = _load_manifest_from_row(latest)
+            latest_version = latest['version'] if latest and 'version' in latest.keys() else version_check
+            return (
+                jsonify(
+                    {
+                        'ok': False,
+                        'error': 'version-mismatch',
+                        'latest_version': latest_version,
+                        'manifest': latest_manifest,
+                    }
+                ),
+                409,
+            )
+
+        new_version_row = conn.execute(
+            "SELECT version FROM email_messages WHERE id=?",
+            (email_id,),
+        ).fetchone()
+        conn.commit()
+
+        new_version = new_version_row['version'] if new_version_row else version_check + 1
+        return jsonify({'ok': True, 'version': new_version, 'manifest': manifest})
+    finally:
+        conn.close()
+
+
+@bp_interception.route('/api/email/<int:email_id>/attachments/staged/<int:staged_id>', methods=['DELETE'])
+@login_required
+def api_email_attachments_delete_staged(email_id: int, staged_id: int):
+    if not _attachments_feature_enabled('ATTACHMENTS_EDIT_ENABLED'):
+        return jsonify({'ok': False, 'error': 'disabled'}), 403
+
+    version_raw = request.args.get('version')
+    expected_version: Optional[int] = None
+    if version_raw not in (None, ''):
+        try:
+            expected_version = int(version_raw)
+        except (TypeError, ValueError):
+            return jsonify({'ok': False, 'error': 'invalid-version'}), 422
+
+    conn = _db()
+    staged_path: Optional[Path] = None
+    try:
+        conn.execute('BEGIN')
+        cur = conn.cursor()
+        staged_row = cur.execute(
+            "SELECT * FROM email_attachments WHERE id=? AND email_id=?",
+            (staged_id, email_id),
+        ).fetchone()
+        if not staged_row:
+            conn.rollback()
+            return jsonify({'ok': False, 'error': 'not-found'}), 404
+        if not staged_row['is_staged']:
+            conn.rollback()
+            return jsonify({'ok': False, 'error': 'not-staged'}), 422
+
+        email_row = cur.execute(
+            "SELECT id, attachments_manifest, version FROM email_messages WHERE id=?",
+            (email_id,),
+        ).fetchone()
+        if not email_row:
+            conn.rollback()
+            return jsonify({'ok': False, 'error': 'not-found'}), 404
+
+        manifest = _load_manifest_from_row(email_row)
+        manifest = _manifest_remove_entries(manifest, staged_ref=staged_row['id'])
+        manifest_text = _dump_manifest(manifest)
+
+        base_version = email_row['version'] if email_row['version'] is not None else 0
+        version_check = expected_version if expected_version is not None else base_version
+
+        cur.execute(
+            "UPDATE email_messages SET attachments_manifest=?, version=version+1 WHERE id=? AND version=?",
+            (manifest_text, email_id, version_check),
+        )
+        if cur.rowcount == 0:
+            conn.rollback()
+            latest = cur.execute(
+                "SELECT attachments_manifest, version FROM email_messages WHERE id=?",
+                (email_id,),
+            ).fetchone()
+            latest_manifest = _load_manifest_from_row(latest)
+            latest_version = latest['version'] if latest and 'version' in latest.keys() else version_check
+            return (
+                jsonify(
+                    {
+                        'ok': False,
+                        'error': 'version-mismatch',
+                        'latest_version': latest_version,
+                        'manifest': latest_manifest,
+                    }
+                ),
+                409,
+            )
+
+        staged_path = Path(staged_row['storage_path']).resolve()
+        cur.execute(
+            "DELETE FROM email_attachments WHERE id=?",
+            (staged_id,),
+        )
+
+        new_version_row = cur.execute(
+            "SELECT version FROM email_messages WHERE id=?",
+            (email_id,),
+        ).fetchone()
+        conn.commit()
+
+        new_version = new_version_row['version'] if new_version_row else version_check + 1
+
+        try:
+            _, staged_root = _get_storage_roots()
+        except Exception:
+            staged_root = None
+        if (
+            staged_path
+            and staged_path.exists()
+            and staged_path.is_file()
+            and staged_root
+            and _is_under(staged_path, staged_root)
+        ):
+            try:
+                staged_path.unlink()
+            except Exception as exc:
+                log.warning(
+                    '[attachments] Failed to remove staged file after delete',
+                    extra={'email_id': email_id, 'path': str(staged_path), 'error': str(exc)},
+                )
+
+        return jsonify({'ok': True, 'removed': staged_id, 'version': new_version, 'manifest': manifest})
+    finally:
+        conn.close()
+
 @bp_interception.route('/api/interception/release/<int:msg_id>', methods=['POST'])
 @csrf.exempt
 @limiter.limit(_RELEASE_LIMIT_STRING)
 @simple_rate_limit('release', config=_RELEASE_RATE_LIMIT)
 @login_required
-def api_interception_release(msg_id:int):
+def api_interception_release(msg_id: int):
     payload = request.get_json(silent=True) or {}
-    edited_subject = payload.get('edited_subject'); edited_body = payload.get('edited_body')
-    target_folder = payload.get('target_folder','INBOX')
+    edited_subject = payload.get('edited_subject')
+    edited_body = payload.get('edited_body')
+    edited_body_html = payload.get('edited_body_html')
+    target_folder = payload.get('target_folder', 'INBOX')
     strip_attachments = bool(payload.get('strip_attachments'))
-    conn = _db(); cur = conn.cursor()
+    idempotency_key = request.headers.get('X-Idempotency-Key')
+
+    conn = _db()
+    cur = conn.cursor()
     log.debug("[interception::release] begin", extra={'email_id': msg_id, 'target': target_folder})
-    # Fetch regardless of current interception_status to support idempotency
-    row = cur.execute("""
-        SELECT em.*, ea.imap_host, ea.imap_port, ea.imap_username, ea.imap_password, ea.imap_use_ssl
-        FROM email_messages em JOIN email_accounts ea ON em.account_id = ea.id
-        WHERE em.id=? AND em.direction='inbound'
-    """, (msg_id,)).fetchone()
-    if not row:
-        conn.close(); return jsonify({'ok':False,'reason':'not-found'}), 404
-
     app_log = logging.getLogger("simple_app")
-    app_log.debug("Entered release handler", extra={"email_id": msg_id})
 
-    interception_status = str((row['interception_status'] or '')).upper()
-    # Idempotent success if already released
-    if interception_status == 'RELEASED':
-        conn.close(); return jsonify({'ok': True, 'reason': 'already-released'})
-    # Discarded items cannot be released via this endpoint
-    if interception_status == 'DISCARDED':
-        conn.close(); return jsonify({'ok': False, 'reason': 'discarded'}), 409
-    # Require HELD for a release action
-    if interception_status != 'HELD':
-        conn.close(); return jsonify({'ok': False, 'reason': 'not-held'}), 409
+    lock_acquired = False
+    temp_path: Optional[Path] = None
+    mapped_bytes = None
+    staged_rows: List[sqlite3.Row] = []
+    response_payload: Dict[str, Any] = {}
 
-    # Default to persisted edits when payload doesn't include them
-    if edited_subject is None:
-        edited_subject = row['subject']
-    if edited_body is None:
-        edited_body = row['body_text'] or None
+    try:
+        # Fast idempotency check before acquiring lock
+        if idempotency_key:
+            record = _get_idempotency_record(conn, idempotency_key)
+            if record:
+                status = (record['status'] or '').lower()
+                stored_response = record['response_json']
+                if status == 'success' and stored_response:
+                    return current_app.response_class(stored_response, mimetype='application/json')
+                if status == 'pending':
+                    return jsonify({'ok': False, 'reason': 'release-in-progress'}), 409
+                if status not in {'success', 'pending'}:
+                    conn.execute("DELETE FROM idempotency_keys WHERE key=?", (idempotency_key,))
+                    conn.commit()
 
-    # Load email from raw_path (legacy) or raw_content (new UID-based fetch)
-    raw_path = row['raw_path']
-    raw_content = row['raw_content']
-    if raw_path and os.path.exists(raw_path):
-        with open(raw_path,'rb') as f: original_bytes = f.read()
-    elif raw_content:
-        original_bytes = raw_content.encode('utf-8') if isinstance(raw_content, str) else raw_content
-    else:
-        conn.close();
-        log.error("[interception::release] raw content missing", extra={'email_id': msg_id})
-        return jsonify({'ok':False,'reason':'raw-missing'}), 500
+        # Fetch message metadata
+        row = cur.execute(
+            """\n        SELECT em.*, ea.imap_host, ea.imap_port, ea.imap_username, ea.imap_password, ea.imap_use_ssl\n        FROM email_messages em JOIN email_accounts ea ON em.account_id = ea.id\n        WHERE em.id=? AND em.direction='inbound'\n        """",
+            (msg_id,),
+        ).fetchone()
+        if not row:
+            return jsonify({'ok': False, 'reason': 'not-found'}), 404
 
-    msg = BytesParser(policy=default_policy).parsebytes(original_bytes)
-    if edited_subject:
-        msg.replace_header('Subject', edited_subject) if msg['Subject'] else msg.add_header('Subject', edited_subject)
-    if edited_body:
-        if msg.is_multipart():
-            # Update both text/plain and text/html parts to ensure clients display edits
-            updated_plain = False; updated_html = False
-            html_body = edited_body.replace('\n', '<br>')
-            for part in msg.walk():
-                if part.is_multipart():
-                    continue
-                ctype = (part.get_content_type() or '').lower()
+        app_log.debug("Entered release handler", extra={"email_id": msg_id})
+
+        interception_status = str((row['interception_status'] or '')).upper()
+        if interception_status == 'RELEASED':
+            return jsonify({'ok': True, 'reason': 'already-released'})
+        if interception_status == 'DISCARDED':
+            return jsonify({'ok': False, 'reason': 'discarded'}), 409
+        if interception_status != 'HELD':
+            return jsonify({'ok': False, 'reason': 'not-held'}), 409
+
+        if edited_subject is None:
+            edited_subject = row['subject']
+        if edited_body is None:
+            edited_body = row['body_text'] or None
+
+        # Acquire per-email release lock
+        lock_acquired = _acquire_release_lock(conn, msg_id)
+        if not lock_acquired:
+            return jsonify({'ok': False, 'reason': 'release-in-progress'}), 409
+
+        if idempotency_key:
+            _set_idempotency_record(conn, idempotency_key, msg_id, 'pending')
+
+        # Load original raw message
+        raw_path = row['raw_path']
+        raw_content = row['raw_content']
+        if raw_path and os.path.exists(raw_path):
+            with open(raw_path, 'rb') as f:
+                original_bytes = f.read()
+        elif raw_content:
+            original_bytes = raw_content.encode('utf-8') if isinstance(raw_content, str) else raw_content
+        else:
+            raise RuntimeError('raw-missing')
+
+        original_msg = BytesParser(policy=default_policy).parsebytes(original_bytes)
+
+        attachments_root, staged_root = _get_storage_roots()
+        attachment_rows = conn.execute(
+            "SELECT * FROM email_attachments WHERE email_id=?",
+            (msg_id,),
+        ).fetchall()
+        staged_rows = [row for row in attachment_rows if row['is_staged']]
+        manifest = _load_manifest_from_row(row)
+        plan = _assemble_attachment_plan(attachment_rows, manifest)
+        if strip_attachments:
+            removed_manifest = [
+                {'row': r, 'manifest': {'action': 'remove'}}
+                for r in attachment_rows
+                if r['is_original']
+            ]
+            plan = {'final': [], 'removed': removed_manifest, 'replaced': [], 'added': []}
+
+        payload_for_builder = dict(payload)
+        payload_for_builder['edited_subject'] = edited_subject
+        payload_for_builder['edited_body'] = edited_body
+        payload_for_builder['edited_body_html'] = edited_body_html
+
+        rebuilt_message = _build_release_message(
+            row,
+            original_msg,
+            payload_for_builder,
+            plan,
+            attachments_root,
+            staged_root,
+            strip_notice=strip_attachments,
+        )
+        msg = rebuilt_message
+
+        removed = [
+            entry['row']['filename'] or f"attachment-{entry['row']['id']}"
+            for entry in plan['removed']
+        ]
+        attachments_summary = {
+            'added': len(plan['added']),
+            'removed': len(plan['removed']),
+            'replaced': len(plan['replaced']),
+        }
+
+        decrypted_pass = decrypt_credential(row['imap_password'])
+        try:
+            if row['imap_use_ssl']:
+                imap = imaplib.IMAP4_SSL(row['imap_host'], int(row['imap_port']))
+            else:
+                imap = imaplib.IMAP4(row['imap_host'], int(row['imap_port']))
+            if not decrypted_pass:
+                raise RuntimeError('Decrypted password missing')
+            imap.login(row['imap_username'], decrypted_pass)
+            status, _ = imap.select(target_folder)
+            if status != 'OK':
+                imap.select('INBOX')
+
+            original_message_id = (row['message_id'] or '').strip()
+            message_id_hdr = (msg.get('Message-ID') or '').strip()
+            if not message_id_hdr:
+                new_mid = make_msgid()
+                msg['Message-ID'] = new_mid
+                message_id_hdr = new_mid.strip()
+
+            if original_message_id:
+                if 'X-EMT-Released-From' in msg:
+                    msg.replace_header('X-EMT-Released-From', original_message_id)
+                else:
+                    msg['X-EMT-Released-From'] = original_message_id
+                app_log.info(
+                    "[Idempotency] Added X-EMT-Released-From header",
+                    extra={"email_id": msg_id, "original_message_id": original_message_id},
+                )
+
+            # Use internaldate if available; else use current time
+            date_param = None
+            try:
+                if row['original_internaldate']:
+                    from datetime import datetime as _dt
+
+                    try:
+                        dt = _dt.fromisoformat(str(row['original_internaldate']))
+                        date_param = imaplib.Time2Internaldate(dt.timetuple())
+                    except Exception:
+                        date_param = None
+                if not date_param:
+                    import time as _t
+
+                    date_param = imaplib.Time2Internaldate(_t.localtime())
+            except Exception:
+                import time as _t
+
+                date_param = imaplib.Time2Internaldate(_t.localtime())
+
+            already_present = False
+            try:
+                if message_id_hdr:
+                    imap.select(target_folder)
+                    typ0, data0 = imap.search(None, 'HEADER', 'Message-ID', f"{message_id_hdr}")
+                    already_present = bool(data0 and data0[0] and len(data0[0].split()) > 0)
+            except Exception:
+                already_present = False
+
+            release_marker = f"emt-release-{msg_id}"
+            if msg.get(RELEASE_BYPASS_HEADER):
+                del msg[RELEASE_BYPASS_HEADER]
+            msg[RELEASE_BYPASS_HEADER] = release_marker
+            if msg.get(RELEASE_EMAIL_ID_HEADER):
+                del msg[RELEASE_EMAIL_ID_HEADER]
+            msg[RELEASE_EMAIL_ID_HEADER] = str(msg_id)
+
+            message_bytes = msg.as_bytes(policy=default_policy)
+
+            with track_latency(release_latency, direction=str(row.get('direction') or 'inbound').lower()):
+                if not already_present:
+                    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+                        tmp_file.write(message_bytes)
+                        temp_path = Path(tmp_file.name)
+                    with temp_path.open('rb') as mapped_file:
+                        mapped_bytes = mmap.mmap(mapped_file.fileno(), 0, access=mmap.ACCESS_READ)
+                        imap.append(target_folder, '', date_param, mapped_bytes[:])
+
+                # Existing Gmail cleanup phases (B-E)
+                original_uid = row['original_uid']
                 try:
-                    if ctype == 'text/plain' and not updated_plain:
-                        part.set_content(edited_body)
-                        updated_plain = True
-                    elif ctype == 'text/html' and not updated_html:
-                        part.set_content(f"<div>{html_body}</div>", subtype='html')
-                        updated_html = True
+                    quarantine_folder = row['quarantine_folder'] if row['quarantine_folder'] else 'Quarantine'
+                except (KeyError, TypeError):
+                    quarantine_folder = 'Quarantine'
+
+                host_l = str(row['imap_host'] if row['imap_host'] else '').lower()
+                is_gmail = any(k in host_l for k in ("gmail", "googlemail", "google"))
+
+                # Phase A: remove from quarantine
+                if original_uid:
+                    try:
+                        app_log.info(
+                            "[Release] Phase A: Pre-append Quarantine cleanup",
+                            extra={"email_id": msg_id, "original_uid": original_uid, "folder": quarantine_folder},
+                        )
+                        typ, _ = imap.select(quarantine_folder)
+                        if typ == 'OK':
+                            imap.uid('STORE', str(original_uid), '+FLAGS', r'(\\Deleted)')
+                            imap.expunge()
+                            app_log.info(
+                                "[Release] Phase A: SUCCESS - Original deleted",
+                                extra={"email_id": msg_id, "uid": original_uid},
+                            )
+                        else:
+                            app_log.warning(
+                                f"[Release] Phase A: Failed to select {quarantine_folder}",
+                                extra={"email_id": msg_id, "typ": typ},
+                            )
+                    except Exception as exc:
+                        app_log.warning(
+                            "[Release] Phase A: Quarantine cleanup failed",
+                            extra={"email_id": msg_id, "error": str(exc)},
+                        )
+                else:
+                    app_log.info(
+                        "[Release] Phase A: No original_uid, skipping Quarantine delete",
+                        extra={"email_id": msg_id},
+                    )
+
+                # Phase B: append edited message already handled above
+
+                # Phase C onwards reuse existing logic
+                if is_gmail and _server_supports_x_gm(imap):
+                    try:
+                        app_log.info(
+                            "[Release] Phase C: Gmail thread cleanup starting",
+                            extra={"email_id": msg_id, "is_gmail": is_gmail},
+                        )
+                        imap.select(target_folder)
+                        edited_uid = None
+                        if message_id_hdr:
+                            typ, data = imap.uid('SEARCH', None, 'HEADER', 'Message-ID', f'"{message_id_hdr}"')
+                            if typ == 'OK' and data and data[0]:
+                                uids = [int(x) for x in data[0].split()]
+                                edited_uid = uids[0] if uids else None
+                                app_log.info(
+                                    "[Release] Phase C: Found edited message UID",
+                                    extra={"email_id": msg_id, "edited_uid": edited_uid, "message_id": message_id_hdr},
+                                )
+                        if not edited_uid:
+                            app_log.warning(
+                                "[Release] Phase C: Could not find edited message UID, skipping thread cleanup",
+                                extra={"email_id": msg_id},
+                            )
+                        else:
+                            thread_id = _gm_fetch_thrid(imap, edited_uid)
+                            if thread_id:
+                                app_log.info(
+                                    "[Release] Phase C: Fetched thread ID",
+                                    extra={"email_id": msg_id, "thread_id": thread_id},
+                                )
+                                imap.select('"[Gmail]/All Mail"')
+                                typ, data = imap.uid('SEARCH', None, 'X-GM-RAW', f'"thread:{thread_id}"')
+                                if typ == 'OK' and data and data[0]:
+                                    thread_uids = [int(x) for x in data[0].split()]
+                                    app_log.info(
+                                        "[Release] Phase C: Found thread messages in All Mail",
+                                        extra={"email_id": msg_id, "thread_id": thread_id, "count": len(thread_uids), "uids": thread_uids},
+                                    )
+                                    imap.select('"[Gmail]/All Mail"')
+                                    edited_uid_in_allmail = None
+                                    if message_id_hdr:
+                                        typ2, data2 = imap.uid('SEARCH', None, 'HEADER', 'Message-ID', f'"{message_id_hdr}"')
+                                        if typ2 == 'OK' and data2 and data2[0]:
+                                            uids2 = [int(x) for x in data2[0].split()]
+                                            edited_uid_in_allmail = uids2[0] if uids2 else None
+                                    removed_labels_count = 0
+                                    for uid in thread_uids:
+                                        if edited_uid_in_allmail and uid == edited_uid_in_allmail:
+                                            app_log.info(
+                                                "[Release] Phase C: Preserving edited message",
+                                                extra={"email_id": msg_id, "uid": uid},
+                                            )
+                                            continue
+                                        try:
+                                            labels_to_remove = []
+                                            ftyp, fdat = imap.uid('FETCH', str(uid), '(X-GM-LABELS)')
+                                            if ftyp == 'OK' and fdat and isinstance(fdat[0], tuple):
+                                                raw = fdat[0][1].decode('utf-8', 'ignore') if isinstance(fdat[0][1], bytes) else str(fdat[0][1])
+                                                app_log.info(
+                                                    "[Release] Phase C: Fetched labels",
+                                                    extra={"email_id": msg_id, "uid": uid, "raw_labels": raw[:200]},
+                                                )
+                                                for token in re.findall(r'"\\[?[^\"]+\\]?"|\\\\\w+', raw):
+                                                    label_token = token.strip('"').strip()
+                                                    if (
+                                                        label_token.lower() == 'quarantine'
+                                                        or label_token.endswith('/Quarantine')
+                                                        or label_token.endswith('.Quarantine')
+                                                        or 'Quarantine' in label_token
+                                                    ):
+                                                        labels_to_remove.append(label_token)
+                                                        app_log.info(
+                                                            "[Release] Phase C: Found Quarantine label",
+                                                            extra={"email_id": msg_id, "uid": uid, "label": label_token},
+                                                        )
+                                            typ_store, _ = _uid_store(imap, uid, '-X-GM-LABELS', r'(\\Inbox)')
+                                            if typ_store == 'OK':
+                                                removed_labels_count += 1
+                                                app_log.info(
+                                                    "[Release] Phase C: Removed \\Inbox from thread message",
+                                                    extra={"email_id": msg_id, "uid": uid},
+                                                )
+                                            for label in labels_to_remove:
+                                                typ_quar, _ = _uid_store(imap, uid, '-X-GM-LABELS', f'("{label}")')
+                                                if typ_quar == 'OK':
+                                                    removed_labels_count += 1
+                                                    app_log.info(
+                                                        "[Release] Phase C: Removed Quarantine label",
+                                                        extra={"email_id": msg_id, "uid": uid, "label": label},
+                                                    )
+                                        except Exception as exc:
+                                            app_log.warning(
+                                                "[Release] Phase C: Failed to remove labels",
+                                                extra={"email_id": msg_id, "uid": uid, "error": str(exc)},
+                                            )
+                                    app_log.info(
+                                        "[Release] Phase C: SUCCESS - Thread cleanup complete",
+                                        extra={"email_id": msg_id, "thread_id": thread_id, "processed": len(thread_uids), "labels_removed": removed_labels_count},
+                                    )
+                                else:
+                                    app_log.warning(
+                                        "[Release] Phase C: No messages found in thread",
+                                        extra={"email_id": msg_id, "thread_id": thread_id},
+                                    )
+                            else:
+                                app_log.warning(
+                                    "[Release] Phase C: Could not fetch thread ID",
+                                    extra={"email_id": msg_id, "edited_uid": edited_uid},
+                                )
+                    except Exception as exc:
+                        app_log.error(
+                            "[Release] Phase C: Thread cleanup failed",
+                            extra={"email_id": msg_id, "error": str(exc), "traceback": traceback.format_exc()},
+                        )
+                # Failsafe INBOX cleanup and verification remain unchanged
+                try:
+                    typ, data = imap.select("INBOX", readonly=False)
+                    app_log.debug(
+                        "INBOX select for failsafe cleanup",
+                        extra={"email_id": msg_id, "typ": typ, "is_gmail": is_gmail},
+                    )
+                    if typ == "OK" and original_message_id:
+                        inbox_count = data[0].decode() if data and data[0] else "?"
+                        all_typ, all_data = imap.uid('SEARCH', None, 'ALL')
+                        all_uids = all_data[0].decode() if all_data and all_data[0] else ""
+                        uid_list = all_uids.split()[:5]
+                        app_log.debug(
+                            "INBOX state before search",
+                            extra={
+                                "email_id": msg_id,
+                                "inbox_message_count": inbox_count,
+                                "total_uids": len(all_uids.split()) if all_uids else 0,
+                                "sample_uids": uid_list,
+                                "searching_for_message_id": original_message_id,
+                            },
+                        )
+                        uids = _robust_message_id_search(imap, "INBOX", original_message_id, is_gmail=is_gmail)
+                        if uids:
+                            app_log.info(
+                                "[Failsafe] Found original in INBOX, removing",
+                                extra={"email_id": msg_id, "uids": uids},
+                            )
+                            for uid in uids:
+                                imap.uid('STORE', uid, '+FLAGS', r'(\\Deleted)')
+                            imap.expunge()
+                            app_log.info(
+                                "[Failsafe] Removed original from INBOX by UID/EXPUNGE",
+                                extra={"email_id": msg_id, "uids": uids},
+                            )
+                        else:
+                            app_log.info(
+                                "[Failsafe] No original found in INBOX (may already be cleaned or never existed there)",
+                                extra={"email_id": msg_id},
+                            )
+                except Exception as exc:
+                    app_log.warning(
+                        "[Failsafe DEBUG] INBOX cleanup failed",
+                        extra={"email_id": msg_id, "error": str(exc)},
+                    )
+
+                verify_ok = True
+                duplicate_detected = False
+                try:
+                    if message_id_hdr:
+                        app_log.info(
+                            "[Release] Phase E: Starting verification",
+                            extra={"email_id": msg_id, "is_gmail": is_gmail},
+                        )
+                        imap.select(target_folder)
+                        typ, data = imap.search(None, 'HEADER', 'Message-ID', f"{message_id_hdr}")
+                        found = data and data[0] and len(data[0].split()) > 0
+                        verify_ok = bool(found)
+                        if verify_ok:
+                            app_log.info(
+                                "[Release] Phase E: Edited message verified in INBOX",
+                                extra={"email_id": msg_id, "message_id": message_id_hdr},
+                            )
+                        else:
+                            app_log.error(
+                                "[Release] Phase E: Edited message NOT found in INBOX",
+                                extra={"email_id": msg_id, "message_id": message_id_hdr},
+                            )
+                        if verify_ok and is_gmail and _server_supports_x_gm(imap):
+                            try:
+                                imap.select(target_folder)
+                                typ, data = imap.uid('SEARCH', None, 'HEADER', 'Message-ID', f'"{message_id_hdr}"')
+                                edited_uid = None
+                                if typ == 'OK' and data and data[0]:
+                                    uids = [int(x) for x in data[0].split()]
+                                    edited_uid = uids[0] if uids else None
+                                if edited_uid:
+                                    thread_id = _gm_fetch_thrid(imap, edited_uid)
+                                    if thread_id:
+                                        imap.select("INBOX")
+                                        typ, data = imap.uid('SEARCH', None, 'X-GM-RAW', f'"in:inbox thread:{thread_id}"')
+                                        if typ == 'OK' and data and data[0]:
+                                            inbox_thread_uids = [int(x) for x in data[0].split()]
+                                            app_log.info(
+                                                "[Release] Phase E: Found thread messages in INBOX",
+                                                extra={"email_id": msg_id, "count": len(inbox_thread_uids), "uids": inbox_thread_uids},
+                                            )
+                                            if len(inbox_thread_uids) > 1:
+                                                duplicate_detected = True
+                                                app_log.error(
+                                                    "[Release] Phase E: DUPLICATE DETECTED - Multiple thread messages in INBOX",
+                                                    extra={"email_id": msg_id, "count": len(inbox_thread_uids), "uids": inbox_thread_uids, "expected_uid": edited_uid},
+                                                )
+                                            elif len(inbox_thread_uids) == 1 and inbox_thread_uids[0] == edited_uid:
+                                                app_log.info(
+                                                    "[Release] Phase E: SUCCESS - Only edited message in INBOX",
+                                                    extra={"email_id": msg_id, "uid": edited_uid},
+                                                )
+                                            else:
+                                                app_log.warning(
+                                                    "[Release] Phase E: Unexpected UID in INBOX",
+                                                    extra={"email_id": msg_id, "found_uids": inbox_thread_uids, "expected_uid": edited_uid},
+                                                )
+                                        if original_message_id:
+                                            imap.select("INBOX")
+                                            typ, data = imap.uid('SEARCH', None, 'HEADER', 'Message-ID', f'"{original_message_id}"')
+                                            if typ == 'OK' and data and data[0]:
+                                                original_found = [int(x) for x in data[0].split()]
+                                                if original_found:
+                                                    duplicate_detected = True
+                                                    app_log.error(
+                                                        "[Release] Phase E: ORIGINAL STILL IN INBOX",
+                                                        extra={"email_id": msg_id, "original_uids": original_found, "original_message_id": original_message_id},
+                                                    )
+                                                else:
+                                                    app_log.info(
+                                                        "[Release] Phase E: Original correctly removed from INBOX",
+                                                        extra={"email_id": msg_id},
+                                                    )
+                                else:
+                                    app_log.warning(
+                                        "[Release] Phase E: Could not find edited UID for verification",
+                                        extra={"email_id": msg_id},
+                                    )
+                            except Exception as exc:
+                                app_log.warning(
+                                    "[Release] Phase E: Thread verification failed (non-fatal)",
+                                    extra={"email_id": msg_id, "error": str(exc)},
+                                )
+                    else:
+                        verify_ok = True
+                except Exception as exc:
+                    app_log.error(
+                        "[Release] Phase E: Verification failed",
+                        extra={"email_id": msg_id, "error": str(exc)},
+                    )
+                    verify_ok = False
+
+                if duplicate_detected:
+                    app_log.error(
+                        "[Release] Phase E: VERIFICATION COMPLETE - DUPLICATES DETECTED",
+                        extra={"email_id": msg_id, "verify_ok": verify_ok},
+                    )
+                elif verify_ok:
+                    app_log.info(
+                        "[Release] Phase E: VERIFICATION COMPLETE - SUCCESS",
+                        extra={"email_id": msg_id},
+                    )
+                else:
+                    app_log.error(
+                        "[Release] Phase E: VERIFICATION COMPLETE - FAILED",
+                        extra={"email_id": msg_id},
+                    )
+
+                if not verify_ok:
+                    try:
+                        imap.logout()
+                    except Exception as exc:
+                        log.debug(
+                            "[interception::release] IMAP logout failed during verify failure (non-critical)",
+                            extra={'email_id': msg_id, 'error': str(exc)},
+                        )
+                    raise RuntimeError('verify-failed')
+
+                try:
+                    imap.logout()
                 except Exception:
                     pass
-        else:
-            from email.message import EmailMessage
-            new_msg = EmailMessage();
-            for k,v in msg.items():
-                if k.lower() != 'content-type': new_msg[k] = v
-            # Provide both plain and basic HTML alternatives
-            new_msg.set_content(edited_body)
+        except Exception as exc:
+            raise RuntimeError(f'append-failed:{exc}') from exc
+
+        # Update database and clear manifest
+        cur.execute(
+            """\n            UPDATE email_messages\n            SET interception_status='RELEASED',\n                status='DELIVERED',\n                edited_message_id=?,\n                attachments_manifest=NULL,\n                version=version+1,\n                processed_at=datetime('now'),\n                action_taken_at=datetime('now')\n            WHERE id=?\n            """",
+            (msg.get('Message-ID'), msg_id),
+        )
+        cur.execute(
+            "DELETE FROM email_attachments WHERE email_id=? AND is_staged=1",
+            (msg_id,),
+        )
+        conn.commit()
+
+        for staged in staged_rows:
             try:
-                new_msg.add_alternative(f"<div>{edited_body.replace('\n','<br>')}</div>", subtype='html')
-            except Exception:
-                pass
-            msg = new_msg
-    removed = []
-    if strip_attachments and msg.is_multipart():
-        from email.message import EmailMessage
+                storage_path = Path(staged['storage_path']).resolve()
+                if storage_path.exists() and storage_path.is_file() and _is_under(storage_path, staged_root):
+                    storage_path.unlink()
+            except Exception as exc:
+                log.warning(
+                    "[attachments] Failed to remove staged file after release",
+                    extra={'email_id': msg_id, 'path': staged.get('storage_path'), 'error': str(exc)},
+                )
 
-        new_container = EmailMessage()
-        for k, v in msg.items():
-            if k.lower() in {'content-type', 'content-transfer-encoding', 'mime-version'}:
-                continue
-            new_container[k] = v
+        record_release(action='RELEASED', account_id=row.get('account_id'))
 
-        plain_body = None
-        html_body = None
-
-        for part in msg.walk():
-            if part.is_multipart():
-                continue
-            disp = (part.get_content_disposition() or '').lower()
-            if disp == 'attachment':
-                removed.append(part.get_filename() or 'attachment.bin')
-                continue
-
-            ctype = part.get_content_type()
-            content = part.get_content()
-            charset = part.get_content_charset()
-
-            if ctype == 'text/plain' and plain_body is None:
-                plain_body = (content, charset)
-            elif ctype == 'text/html' and html_body is None:
-                html_body = (content, charset)
-
-        if removed:
-            notice = '\n\n[Attachments removed: ' + ', '.join(removed) + ']'
-            if plain_body is not None:
-                plain_body = (plain_body[0] + notice, plain_body[1])
-            else:
-                plain_body = (notice.strip(), 'utf-8')
-
-        plain_added = False
-        try:
-            if plain_body is not None:
-                content, charset = plain_body
-                if charset:
-                    new_container.set_content(content, subtype='plain', charset=charset)
-                else:
-                    new_container.set_content(content)
-                plain_added = True
-            elif html_body is not None:
-                content, charset = html_body
-                if charset:
-                    new_container.set_content(content, subtype='html', charset=charset)
-                else:
-                    new_container.set_content(content, subtype='html')
-            else:
-                new_container.set_content('Attachments removed', subtype='plain')
-        except Exception as e:
-            log.warning("[interception::release] Failed to build stripped message body", extra={'email_id': msg_id, 'error': str(e)})
-            new_container.set_content('Attachments removed', subtype='plain')
-
-        if plain_added and html_body is not None:
-            content, charset = html_body
-            try:
-                if charset:
-                    new_container.add_alternative(content, subtype='html', charset=charset)
-                else:
-                    new_container.add_alternative(content, subtype='html')
-            except Exception as e:
-                log.warning("[interception::release] Failed to add HTML alternative", extra={'email_id': msg_id, 'error': str(e)})
-
-        msg = new_container
-    decrypted_pass = decrypt_credential(row['imap_password'])
-    try:
-        if row['imap_use_ssl']:
-            imap = imaplib.IMAP4_SSL(row['imap_host'], int(row['imap_port']))
-        else:
-            imap = imaplib.IMAP4(row['imap_host'], int(row['imap_port']))
-        if not decrypted_pass: raise RuntimeError('Decrypted password missing')
-        imap.login(row['imap_username'], decrypted_pass)
-        status,_ = imap.select(target_folder)
-        if status != 'OK': imap.select('INBOX')
-        original_message_id = (row['message_id'] or '').strip()
-        message_id_hdr = (msg.get('Message-ID') or '').strip()
-        # Ensure Message-ID exists and is unique when edits were applied
-        if message_id_hdr:
-            if (edited_subject is not None or edited_body is not None or strip_attachments):
-                new_mid = make_msgid()
-                msg.replace_header('Message-ID', new_mid)
-                message_id_hdr = new_mid.strip()
-        else:
-            new_mid = make_msgid()
-            msg['Message-ID'] = new_mid
-            message_id_hdr = new_mid.strip()
-
-        # Add idempotency header to track which original this release came from
-        if original_message_id:
-            if 'X-EMT-Released-From' in msg:
-                msg.replace_header('X-EMT-Released-From', original_message_id)
-            else:
-                msg['X-EMT-Released-From'] = original_message_id
-            app_log.info("[Idempotency] Added X-EMT-Released-From header", extra={
-                "email_id": msg_id,
-                "original_message_id": original_message_id
-            })
-
-        # Use internaldate if available; else use current time; format via IMAP internal date
-        date_param = None
-        try:
-            if row['original_internaldate']:
-                from datetime import datetime as _dt
-                try:
-                    dt = _dt.fromisoformat(str(row['original_internaldate']))
-                    date_param = imaplib.Time2Internaldate(dt.timetuple())
-                except Exception:
-                    date_param = None
-            if not date_param:
-                import time as _t
-                date_param = imaplib.Time2Internaldate(_t.localtime())
-        except Exception:
-            import time as _t
-            date_param = imaplib.Time2Internaldate(_t.localtime())
-        # Idempotency guard: if a message with same Message-ID already exists, skip APPEND
-        already_present = False
-        try:
-            if message_id_hdr:
-                imap.select(target_folder)
-                typ0, data0 = imap.search(None, 'HEADER', 'Message-ID', f"{message_id_hdr}")
-                already_present = bool(data0 and data0[0] and len(data0[0].split()) > 0)
-        except Exception:
-            already_present = False
-
-        release_marker = f"emt-release-{msg_id}"
-        if msg.get(RELEASE_BYPASS_HEADER):
-            del msg[RELEASE_BYPASS_HEADER]
-        msg[RELEASE_BYPASS_HEADER] = release_marker
-        if msg.get(RELEASE_EMAIL_ID_HEADER):
-            del msg[RELEASE_EMAIL_ID_HEADER]
-        msg[RELEASE_EMAIL_ID_HEADER] = str(msg_id)
-
-        app_log.debug("About to append edited message", extra={
-            "email_id": msg_id,
-            "target_folder": target_folder,
-            "already_present": already_present,
-        })
-
-        # ========================================================================
-        # PHASE A: PRE-APPEND CLEANUP - Delete original from Quarantine FIRST
-        # ========================================================================
-        # This prevents race conditions where original gets \Inbox label after append
-        original_uid = row['original_uid']
-        # sqlite3.Row doesn't have .get() - use try/except instead
-        try:
-            quarantine_folder = row['quarantine_folder'] if row['quarantine_folder'] else 'Quarantine'
-        except (KeyError, TypeError):
-            quarantine_folder = 'Quarantine'
-
-        if original_uid:
-            try:
-                app_log.info("[Release] Phase A: Pre-append Quarantine cleanup", extra={
-                    "email_id": msg_id, "original_uid": original_uid, "folder": quarantine_folder
-                })
-
-                # Select Quarantine folder
-                typ, _ = imap.select(quarantine_folder)
-                if typ == 'OK':
-                    # Delete by UID (most reliable method)
-                    imap.uid('STORE', str(original_uid), '+FLAGS', r'(\Deleted)')
-                    imap.expunge()
-                    app_log.info("[Release] Phase A: SUCCESS - Original deleted", extra={
-                        "email_id": msg_id, "uid": original_uid
-                    })
-                else:
-                    app_log.warning(f"[Release] Phase A: Failed to select {quarantine_folder}", extra={
-                        "email_id": msg_id, "typ": typ
-                    })
-            except Exception as e:
-                app_log.warning(f"[Release] Phase A: Quarantine cleanup failed", extra={
-                    "email_id": msg_id, "error": str(e)
-                })
-        else:
-            app_log.info("[Release] Phase A: No original_uid, skipping Quarantine delete",
-                         extra={"email_id": msg_id})
-
-        # Determine if this is Gmail for search optimization (do this early for Phase B backoff)
-        try:
-            host_l = str(row['imap_host'] if row['imap_host'] else '').lower()
-        except (KeyError, TypeError):
-            host_l = ''
-        is_gmail = any(k in host_l for k in ("gmail", "googlemail", "google"))
-
-        # ========================================================================
-        # PHASE B: APPEND EDITED MESSAGE TO INBOX
-        # ========================================================================
-        if not already_present:
-            app_log.info("[Release] Phase B: Appending edited message", extra={
-                "email_id": msg_id, "target_folder": target_folder
-            })
-            # Append the (possibly edited) message
-            append_result = imap.append(target_folder, '', date_param, msg.as_bytes())
-
-            # Gmail index backoff: small delay to avoid rare indexing race conditions
-            # Gmail's search index may lag by 100-300ms after APPEND
-            if is_gmail:
-                time.sleep(0.2)  # 200ms backoff for Gmail indexing
-                app_log.info("[Release] Phase B: Gmail index backoff applied", extra={
-                    "email_id": msg_id, "backoff_ms": 200
-                })
-
-        # ========================================================================
-        # PHASE C: GMAIL THREAD-LEVEL CLEANUP (The Game Changer)
-        # Uses X-GM-THRID to remove \Inbox label from ALL thread messages except edited
-        # ========================================================================
-        if is_gmail and _server_supports_x_gm(imap):
-            try:
-                app_log.info("[Release] Phase C: Gmail thread cleanup starting", extra={
-                    "email_id": msg_id, "is_gmail": is_gmail
-                })
-
-                # Step 1: Find UID of newly appended edited message in INBOX
-                imap.select(target_folder)
-                edited_uid = None
-
-                if message_id_hdr:
-                    # Search for edited message by its Message-ID
-                    typ, data = imap.uid('SEARCH', None, 'HEADER', 'Message-ID', f'"{message_id_hdr}"')
-                    if typ == 'OK' and data and data[0]:
-                        uids = [int(x) for x in data[0].split()]
-                        edited_uid = uids[0] if uids else None
-                        app_log.info("[Release] Phase C: Found edited message UID", extra={
-                            "email_id": msg_id, "edited_uid": edited_uid, "message_id": message_id_hdr
-                        })
-
-                if not edited_uid:
-                    app_log.warning("[Release] Phase C: Could not find edited message UID, skipping thread cleanup",
-                                  extra={"email_id": msg_id})
-                else:
-                    # Step 2: Fetch X-GM-THRID for the edited message
-                    thread_id = _gm_fetch_thrid(imap, edited_uid)
-
-                    if not thread_id:
-                        app_log.warning("[Release] Phase C: Could not fetch thread ID", extra={
-                            "email_id": msg_id, "edited_uid": edited_uid
-                        })
-                    else:
-                        app_log.info("[Release] Phase C: Fetched thread ID", extra={
-                            "email_id": msg_id, "thread_id": thread_id
-                        })
-
-                        # Step 3: Search All Mail for all messages in this thread
-                        # Use X-GM-RAW "thread:<id>" - X-GM-THRID is FETCH-only, not SEARCH
-                        imap.select('"[Gmail]/All Mail"')
-                        typ, data = imap.uid('SEARCH', None, 'X-GM-RAW', f'"thread:{thread_id}"')
-
-                        if typ == 'OK' and data and data[0]:
-                            thread_uids = [int(x) for x in data[0].split()]
-                            app_log.info("[Release] Phase C: Found thread messages in All Mail", extra={
-                                "email_id": msg_id, "thread_id": thread_id, "count": len(thread_uids),
-                                "uids": thread_uids
-                            })
-
-                            # Step 4: Remove \Inbox and Quarantine labels from ALL except edited message
-                            # Note: We need to re-find the edited UID in All Mail context
-                            imap.select('"[Gmail]/All Mail"')
-                            edited_uid_in_allmail = None
-
-                            if message_id_hdr:
-                                typ2, data2 = imap.uid('SEARCH', None, 'HEADER', 'Message-ID', f'"{message_id_hdr}"')
-                                if typ2 == 'OK' and data2 and data2[0]:
-                                    uids2 = [int(x) for x in data2[0].split()]
-                                    edited_uid_in_allmail = uids2[0] if uids2 else None
-
-                            removed_labels_count = 0
-                            for uid in thread_uids:
-                                # Skip the edited message itself
-                                if edited_uid_in_allmail and uid == edited_uid_in_allmail:
-                                    app_log.info("[Release] Phase C: Preserving edited message", extra={
-                                        "email_id": msg_id, "uid": uid
-                                    })
-                                    continue
-
-                                # Remove \Inbox and Quarantine labels from this message
-                                # Enhancement: Fetch actual labels present and remove them intelligently
-                                try:
-                                    # Fetch current labels on this message
-                                    labels_to_remove = []
-                                    ftyp, fdat = imap.uid('FETCH', str(uid), '(X-GM-LABELS)')
-
-                                    if ftyp == 'OK' and fdat and isinstance(fdat[0], tuple):
-                                        raw = fdat[0][1].decode('utf-8', 'ignore') if isinstance(fdat[0][1], bytes) else str(fdat[0][1])
-                                        app_log.info("[Release] Phase C: Fetched labels", extra={
-                                            "email_id": msg_id, "uid": uid, "raw_labels": raw[:200]
-                                        })
-
-                                        # Parse labels: look for tokens that match Quarantine variants
-                                        # Matches: "Quarantine", "[Gmail]/Quarantine", "INBOX/Quarantine", etc.
-                                        for token in re.findall(r'"\[?[^"]+\]?"|\\\w+', raw):
-                                            t = token.strip('"').strip()
-                                            # Match Quarantine in any form
-                                            if (t.lower() == 'quarantine' or
-                                                t.endswith('/Quarantine') or
-                                                t.endswith('.Quarantine') or
-                                                'Quarantine' in t):
-                                                labels_to_remove.append(t)
-                                                app_log.info("[Release] Phase C: Found Quarantine label", extra={
-                                                    "email_id": msg_id, "uid": uid, "label": t
-                                                })
-
-                                    # Always remove \Inbox label (use X-GM-LABELS for Gmail labels, not FLAGS)
-                                    typ_store, _ = _uid_store(imap, uid, '-X-GM-LABELS', r'(\Inbox)')
-                                    if typ_store == 'OK':
-                                        removed_labels_count += 1
-                                        app_log.info("[Release] Phase C: Removed \\Inbox from thread message", extra={
-                                            "email_id": msg_id, "uid": uid
-                                        })
-
-                                    # Remove any Quarantine-like labels actually present
-                                    for lb in labels_to_remove:
-                                        typ_quar, _ = _uid_store(imap, uid, '-X-GM-LABELS', f'("{lb}")')
-                                        if typ_quar == 'OK':
-                                            removed_labels_count += 1
-                                            app_log.info("[Release] Phase C: Removed Quarantine label", extra={
-                                                "email_id": msg_id, "uid": uid, "label": lb
-                                            })
-
-                                except Exception as e:
-                                    app_log.warning("[Release] Phase C: Failed to remove labels", extra={
-                                        "email_id": msg_id, "uid": uid, "error": str(e)
-                                    })
-
-                            app_log.info("[Release] Phase C: SUCCESS - Thread cleanup complete", extra={
-                                "email_id": msg_id, "thread_id": thread_id,
-                                "processed": len(thread_uids),
-                                "labels_removed": removed_labels_count
-                            })
-                        else:
-                            app_log.warning("[Release] Phase C: No messages found in thread", extra={
-                                "email_id": msg_id, "thread_id": thread_id
-                            })
-
-            except Exception as e:
-                app_log.error("[Release] Phase C: Thread cleanup failed", extra={
-                    "email_id": msg_id, "error": str(e), "traceback": traceback.format_exc()
-                })
-                # Don't fail the entire release if thread cleanup fails
-                pass
-        else:
-            if is_gmail:
-                app_log.info("[Release] Phase C: Skipped (Gmail extensions not supported)", extra={
-                    "email_id": msg_id
-                })
-            else:
-                app_log.info("[Release] Phase C: Skipped (not Gmail)", extra={
-                    "email_id": msg_id, "is_gmail": is_gmail
-                })
-
-        # Failsafe INBOX cleanup to prevent visible duplicates
-        # This runs even if All Mail purge fails, ensuring no duplicates in user's view
-        try:
-            typ, data = imap.select("INBOX", readonly=False)
-            app_log.debug("INBOX select for failsafe cleanup", extra={
-                "email_id": msg_id, "typ": typ, "is_gmail": is_gmail})
-
-            if typ == "OK" and original_message_id:
-                # Show INBOX state before search
-                inbox_count = data[0].decode() if data and data[0] else "?"
-                all_typ, all_data = imap.uid('SEARCH', None, 'ALL')
-                all_uids = all_data[0].decode() if all_data and all_data[0] else ""
-                uid_list = all_uids.split()[:5]  # First 5 UIDs for context
-
-                app_log.debug("INBOX state before search", extra={
-                    "email_id": msg_id,
-                    "inbox_message_count": inbox_count,
-                    "total_uids": len(all_uids.split()) if all_uids else 0,
-                    "sample_uids": uid_list,
-                    "searching_for_message_id": original_message_id
-                })
-
-                # Use robust multi-strategy search
-                uids = _robust_message_id_search(imap, "INBOX", original_message_id, is_gmail=is_gmail)
-
-                if uids:
-                    app_log.info("[Failsafe] Found original in INBOX, removing", extra={
-                        "email_id": msg_id, "uids": uids})
-
-                    for uid in uids:
-                        imap.uid('STORE', uid, '+FLAGS', r'(\Deleted)')
-                    imap.expunge()
-
-                    app_log.info("[Failsafe] Removed original from INBOX by UID/EXPUNGE", extra={
-                        "email_id": msg_id, "uids": uids})
-                else:
-                    app_log.info("[Failsafe] No original found in INBOX (may already be cleaned or never existed there)",
-                               extra={"email_id": msg_id})
-        except Exception as e:
-            app_log.warning("[Failsafe DEBUG] INBOX cleanup failed", extra={"email_id": msg_id, "error": str(e)})
-
-        # ========================================================================
-        # PHASE E: HARDENED VERIFICATION USING THREAD ID
-        # Verify edited message exists AND no duplicates present
-        # ========================================================================
-        verify_ok = True
-        duplicate_detected = False
+        response_payload = {
+            'ok': True,
+            'released_to': target_folder,
+            'attachments_removed': removed,
+            'attachments_summary': attachments_summary,
+        }
+        if idempotency_key:
+            _set_idempotency_record(conn, idempotency_key, msg_id, 'success', response_payload)
 
         try:
-            if message_id_hdr:
-                app_log.info("[Release] Phase E: Starting verification", extra={
-                    "email_id": msg_id, "is_gmail": is_gmail
-                })
-
-                # Step 1: Verify edited message exists in target folder (INBOX)
-                imap.select(target_folder)
-                typ, data = imap.search(None, 'HEADER', 'Message-ID', f"{message_id_hdr}")
-                found = data and data[0] and len(data[0].split()) > 0
-                verify_ok = bool(found)
-
-                if verify_ok:
-                    app_log.info("[Release] Phase E: Edited message verified in INBOX", extra={
-                        "email_id": msg_id, "message_id": message_id_hdr
-                    })
-                else:
-                    app_log.error("[Release] Phase E: Edited message NOT found in INBOX", extra={
-                        "email_id": msg_id, "message_id": message_id_hdr
-                    })
-
-                # Step 2: Gmail thread-level duplicate detection
-                if verify_ok and is_gmail and _server_supports_x_gm(imap):
-                    try:
-                        app_log.info("[Release] Phase E: Starting Gmail thread duplicate check", extra={
-                            "email_id": msg_id
-                        })
-
-                        # Find edited message UID in INBOX
-                        imap.select(target_folder)
-                        typ, data = imap.uid('SEARCH', None, 'HEADER', 'Message-ID', f'"{message_id_hdr}"')
-                        edited_uid = None
-                        if typ == 'OK' and data and data[0]:
-                            uids = [int(x) for x in data[0].split()]
-                            edited_uid = uids[0] if uids else None
-
-                        if edited_uid:
-                            # Get thread ID for edited message
-                            thread_id = _gm_fetch_thrid(imap, edited_uid)
-
-                            if thread_id:
-                                app_log.info("[Release] Phase E: Got thread ID for verification", extra={
-                                    "email_id": msg_id, "thread_id": thread_id
-                                })
-
-                                # Search INBOX for all messages in this thread
-                                # Use X-GM-RAW "in:inbox thread:<id>" for precise INBOX-only search
-                                imap.select("INBOX")
-                                typ, data = imap.uid('SEARCH', None, 'X-GM-RAW', f'"in:inbox thread:{thread_id}"')
-
-                                if typ == 'OK' and data and data[0]:
-                                    inbox_thread_uids = [int(x) for x in data[0].split()]
-                                    app_log.info("[Release] Phase E: Found thread messages in INBOX", extra={
-                                        "email_id": msg_id, "count": len(inbox_thread_uids),
-                                        "uids": inbox_thread_uids
-                                    })
-
-                                    # Verify only ONE message is in INBOX (the edited one)
-                                    if len(inbox_thread_uids) > 1:
-                                        duplicate_detected = True
-                                        app_log.error("[Release] Phase E: DUPLICATE DETECTED - Multiple thread messages in INBOX", extra={
-                                            "email_id": msg_id, "count": len(inbox_thread_uids),
-                                            "uids": inbox_thread_uids, "expected_uid": edited_uid
-                                        })
-                                    elif len(inbox_thread_uids) == 1 and inbox_thread_uids[0] == edited_uid:
-                                        app_log.info("[Release] Phase E: SUCCESS - Only edited message in INBOX", extra={
-                                            "email_id": msg_id, "uid": edited_uid
-                                        })
-                                    else:
-                                        app_log.warning("[Release] Phase E: Unexpected UID in INBOX", extra={
-                                            "email_id": msg_id, "found_uids": inbox_thread_uids,
-                                            "expected_uid": edited_uid
-                                        })
-
-                                # Step 3: Verify original Message-ID is NOT in INBOX
-                                if original_message_id:
-                                    imap.select("INBOX")
-                                    typ, data = imap.uid('SEARCH', None, 'HEADER', 'Message-ID', f'"{original_message_id}"')
-                                    if typ == 'OK' and data and data[0]:
-                                        original_found = [int(x) for x in data[0].split()]
-                                        if original_found:
-                                            duplicate_detected = True
-                                            app_log.error("[Release] Phase E: ORIGINAL STILL IN INBOX", extra={
-                                                "email_id": msg_id, "original_uids": original_found,
-                                                "original_message_id": original_message_id
-                                            })
-                                        else:
-                                            app_log.info("[Release] Phase E: Original correctly removed from INBOX", extra={
-                                                "email_id": msg_id
-                                            })
-                            else:
-                                app_log.warning("[Release] Phase E: Could not get thread ID for verification", extra={
-                                    "email_id": msg_id
-                                })
-                        else:
-                            app_log.warning("[Release] Phase E: Could not find edited UID for verification", extra={
-                                "email_id": msg_id
-                            })
-
-                    except Exception as e:
-                        app_log.warning("[Release] Phase E: Thread verification failed (non-fatal)", extra={
-                            "email_id": msg_id, "error": str(e)
-                        })
-                        # Don't fail the release, just log the issue
-                else:
-                    app_log.info("[Release] Phase E: Thread verification skipped (not Gmail or no X-GM support)", extra={
-                        "email_id": msg_id, "is_gmail": is_gmail
-                    })
-
-        except Exception as e:
-            app_log.error("[Release] Phase E: Verification failed", extra={
-                "email_id": msg_id, "error": str(e)
-            })
-            verify_ok = False
-
-        # Log final verification status
-        if duplicate_detected:
-            app_log.error("[Release] Phase E: VERIFICATION COMPLETE - DUPLICATES DETECTED", extra={
-                "email_id": msg_id, "verify_ok": verify_ok
-            })
-        elif verify_ok:
-            app_log.info("[Release] Phase E: VERIFICATION COMPLETE - SUCCESS", extra={
-                "email_id": msg_id
-            })
-        else:
-            app_log.error("[Release] Phase E: VERIFICATION COMPLETE - FAILED", extra={
-                "email_id": msg_id
-            })
-
-        if not verify_ok:
-            try: imap.logout()
-            except Exception as e:
-                log.debug("[interception::release] IMAP logout failed during verify failure (non-critical)", extra={'email_id': msg_id, 'error': str(e)})
-            conn.close(); return jsonify({'ok': False, 'reason': 'verify-failed'}), 502
-
-        # CRITICAL: Remove any original copies from INBOX and Quarantine after successful release
-        # This prevents duplicates and ensures only the edited version is in INBOX
-        original_uid = row['original_uid']
-        removed_from_quarantine = False
-        removed_original_from_inbox = False
-        
-        # DEBUG: Verify we have the original Message-ID for cleanup
-        edited_message_id = message_id_hdr
-        app_log.info("[Gmail DEBUG] IDs", extra={
-            "email_id": msg_id,
-            "original_message_id": original_message_id,
-            "edited_message_id": edited_message_id,
-        })
-        
-        # Only target the original message identifiers for cleanup (never the newly appended edited message)
-        header_candidates = []
-        if original_message_id:
-            header_candidates.append(original_message_id)
-        log.info(f"[interception::release] Attempting Quarantine cleanup for email {msg_id}, original_uid={original_uid}")
-
-        def _delete_matches(uids):
-            deleted = False
-            for uid in uids:
-                try:
-                    uid_param = str(uid).strip()
-                    if not uid_param:
-                        continue
-                    imap.uid('STORE', uid_param, '+FLAGS', '(\\Deleted)')
-                    deleted = True
-                except Exception as store_err:
-                    log.debug("[interception::release] UID STORE failed uid=%s err=%s", uid, store_err)
-            if deleted:
-                try:
-                    imap.expunge()
-                except Exception as expunge_err:
-                    log.debug("[interception::release] EXPUNGE failed err=%s", expunge_err)
-            return deleted
-
-        # Prefer the recorded quarantine folder first (provider-specific), then common fallbacks
-        quarantine_candidates = []
-        try:
-            if 'quarantine_folder' in row.keys() and row['quarantine_folder']:
-                quarantine_candidates.append(row['quarantine_folder'])
+            log_action(
+                'RELEASE',
+                getattr(current_user, 'id', None),
+                msg_id,
+                f"Released to {target_folder}; edited={bool(edited_subject or edited_body)}; removed={removed}",
+            )
         except Exception:
             pass
-        quarantine_candidates.extend([
-            'Quarantine',
-            'INBOX/Quarantine',
-            'INBOX.Quarantine'
-        ])
+        log.info(
+            "[interception::release] success",
+            extra={
+                'email_id': msg_id,
+                'target': target_folder,
+                'attachments_removed': bool(removed),
+                'attachments_summary': attachments_summary,
+            },
+        )
+        return jsonify(response_payload)
 
-        def _extract_uids(search_segments):
-            results = []
-            if not search_segments:
-                return results
-            for segment in search_segments:
-                if not segment:
-                    continue
-                if isinstance(segment, bytes):
-                    segment = segment.decode('ascii', errors='ignore')
-                if isinstance(segment, str):
-                    parts = [item.strip() for item in segment.split() if item]
-                    results.extend(parts)
-            return results
-
-        try:
-            # 1) Proactively remove any original copy lingering in INBOX by Message-ID or original UID
+    except RuntimeError as runtime_error:
+        conn.rollback()
+        reason = str(runtime_error)
+        error_payload = {'ok': False, 'reason': reason}
+        if idempotency_key:
+            _set_idempotency_record(conn, idempotency_key, msg_id, 'failed', error_payload)
+        log.error("[interception::release] runtime failure", extra={'email_id': msg_id, 'reason': reason})
+        return jsonify(error_payload), 502 if reason == 'verify-failed' else 500
+    except Exception as exc:
+        conn.rollback()
+        error_payload = {'ok': False, 'reason': 'append-failed', 'error': str(exc)}
+        if idempotency_key:
+            _set_idempotency_record(conn, idempotency_key, msg_id, 'failed', error_payload)
+        log.exception(
+            "[interception::release] append failed",
+            extra={'email_id': msg_id, 'target': target_folder},
+        )
+        return jsonify(error_payload), 500
+    finally:
+        if mapped_bytes:
             try:
-                status_inbox, _ = imap.select('INBOX')
-                if status_inbox == 'OK':
-                    inbox_uids = []
-                    # Try header search with and without quotes (original only)
-                    for header_val in header_candidates:
-                        for probe in (header_val, f'"{header_val}"'):
-                            try:
-                                t_in, d_in = imap.uid('SEARCH', None, 'HEADER', 'Message-ID', probe)
-                                if t_in == 'OK':
-                                    inbox_uids.extend(_extract_uids(d_in))
-                            except Exception:
-                                continue
-                    # Fallback to UID match if we have it
-                    if not inbox_uids and original_uid:
-                        try:
-                            t_in2, d_in2 = imap.uid('SEARCH', None, 'UID', str(original_uid))
-                            if t_in2 == 'OK':
-                                inbox_uids.extend(_extract_uids(d_in2))
-                        except Exception:
-                            pass
-                    if inbox_uids:
-                        if _delete_matches(inbox_uids):
-                            removed_original_from_inbox = True
+                mapped_bytes.close()
             except Exception:
                 pass
-
-            # 2) Remove from Quarantine folder(s)
-            for qfolder in quarantine_candidates:
-                try:
-                    log.debug(f"[interception::release] Trying to select folder: {qfolder}")
-                    status, data = imap.select(qfolder)
-                    if status != 'OK':
-                        continue
-
-                    candidate_uids = []
-                    for header_val in header_candidates:
-                        try:
-                            # Try both raw and quoted header values for robustness across providers (esp. Gmail)
-                            typ, search_data = imap.uid('SEARCH', None, 'HEADER', 'Message-ID', header_val)
-                            if typ == 'OK':
-                                candidate_uids.extend(_extract_uids(search_data))
-                            if not candidate_uids:
-                                typq, search_data_q = imap.uid('SEARCH', None, 'HEADER', 'Message-ID', f'"{header_val}"')
-                                if typq == 'OK':
-                                    candidate_uids.extend(_extract_uids(search_data_q))
-                        except Exception as search_err:
-                            log.debug("[interception::release] HEADER search failed in %s (%s)", qfolder, search_err)
-
-                    if not candidate_uids and original_uid:
-                        try:
-                            typ_uid, search_uid = imap.uid('SEARCH', None, 'UID', str(original_uid))
-                            if typ_uid == 'OK':
-                                candidate_uids.extend(_extract_uids(search_uid))
-                        except Exception as uid_err:
-                            log.debug("[interception::release] UID search failed in %s (%s)", qfolder, uid_err)
-
-                    if candidate_uids:
-                        candidate_uids = list(dict.fromkeys(candidate_uids))
-                        if _delete_matches(candidate_uids):
-                            removed_from_quarantine = True
-                            log.info("[interception::release] Removed %d message(s) from %s", len(candidate_uids), qfolder, extra={'email_id': msg_id, 'uids': candidate_uids})
-                            break
-                except Exception as e:
-                    log.warning(f"[interception::release] Folder {qfolder} not accessible: {e}", extra={'email_id': msg_id, 'folder': qfolder})
-                    continue
-
-            if not removed_from_quarantine:
-                log.warning(f"[interception::release] Could not remove original message from quarantine (uid={original_uid})", extra={'email_id': msg_id, 'message_ids': header_candidates})
-
-            # 3) Gmail-specific label cleanup (best-effort) to ensure original cannot retain \Inbox label
+        if temp_path and temp_path.exists():
             try:
-                host_l = ''
-                try:
-                    if 'imap_host' in row.keys() and row['imap_host']:
-                        host_l = str(row['imap_host']).lower()
-                except Exception:
-                    host_l = ''
-                # Check capability when possible (non-fatal if unsupported)
-                
-                # DEBUG: Gate check to diagnose if Gmail purge block is considered
-                is_gmail = any(k in host_l for k in ("gmail", "googlemail", "google"))
-                app_log.info("[Gmail DEBUG] Gate check", extra={
-                    "email_id": msg_id,
-                    "imap_host": host_l,
-                    "gmail_flag": str(os.getenv("GMAIL_ALL_MAIL_PURGE", "1")),
-                    "has_headers": bool(header_candidates),
-                    "is_gmail": is_gmail,
-                })
-                if is_gmail:
-                    try:
-                        imap.select('INBOX')
-                        for header_val in header_candidates:
-                            for probe in (header_val, f'"{header_val}"'):
-                                t_gm, d_gm = imap.uid('SEARCH', None, 'HEADER', 'Message-ID', probe)
-                                if t_gm != 'OK' or not d_gm:
-                                    continue
-                                gm_uids = _extract_uids(d_gm)
-                                for uid in gm_uids:
-                                    try:
-                                        imap.uid('STORE', str(uid), '-X-GM-LABELS', '(\\Inbox)')
-                                    except Exception:
-                                        pass
-                    except Exception:
-                        pass
-                    
-                    # 4) Gmail defense-in-depth: purge any remaining original from All Mail
-                    # Can be disabled via GMAIL_ALL_MAIL_PURGE=0 for emergency rollback
-                    gmail_purge_enabled = str(os.getenv('GMAIL_ALL_MAIL_PURGE', '1')).lower() in ('1', 'true', 'yes')
-                    if header_candidates and gmail_purge_enabled:
-                        def _discover_gmail_boxes(imap_obj):
-                            """Discover All Mail and Trash using special-use flags with robust fallbacks."""
-                            all_mail_name, trash_name = None, None
-                            try:
-                                typ, mailboxes = imap_obj.list()
-                                if typ == 'OK' and mailboxes:
-                                    for raw in mailboxes:
-                                        line = raw.decode('utf-8', errors='ignore') if isinstance(raw, bytes) else raw
-                                        # Robust parsing: handle variations in LIST response format
-                                        if '\\All' in line:
-                                            # Extract mailbox name (last quoted or unquoted segment)
-                                            parts = line.split('"')
-                                            all_mail_name = parts[-1] if len(parts) > 1 else line.split()[-1]
-                                            all_mail_name = all_mail_name.strip('"').strip()
-                                        if '\\Trash' in line:
-                                            parts = line.split('"')
-                                            trash_name = parts[-1] if len(parts) > 1 else line.split()[-1]
-                                            trash_name = trash_name.strip('"').strip()
-                            except Exception as e:
-                                log.debug(f"[Gmail] Mailbox discovery failed: {e}", exc_info=False)
-
-                            # Proper fallback: try discovery first, then English Gmail variant
-                            if not all_mail_name:
-                                all_mail_name = '[Gmail]/All Mail'
-                            if not trash_name:
-                                trash_name = '[Gmail]/Trash'
-
-                            return all_mail_name, trash_name
-
-                        all_mail_box, trash_box = _discover_gmail_boxes(imap)
-
-                        # DEBUG: Log discovered mailboxes for live testing validation
-                        log.info(f"[Gmail DEBUG] Discovered mailboxes: All Mail='{all_mail_box}', Trash='{trash_box}'",
-                                 extra={'email_id': msg_id})
-
-                        # Check for MOVE capability (RFC 6851) and UIDPLUS (RFC 4315)
-                        caps = ()
-                        try:
-                            if hasattr(imap, 'capabilities') and imap.capabilities:
-                                caps = imap.capabilities if isinstance(imap.capabilities, tuple) else ()
-                        except Exception:
-                            caps = ()
-
-                        has_move = 'MOVE' in caps
-                        has_uidplus = 'UIDPLUS' in caps
-
-                        # DEBUG: Log capabilities for live testing validation
-                        log.info(f"[Gmail DEBUG] IMAP capabilities: {caps}, MOVE={has_move}, UIDPLUS={has_uidplus}",
-                                 extra={'email_id': msg_id})
-
-                        # All Mail cleanup attempt
-                        try:
-                            typ, _ = imap.select(all_mail_box, readonly=False)
-                            if typ != 'OK':
-                                log.debug(f"[Gmail] All Mail select failed: {all_mail_box}")
-                            else:
-                                for hdr in header_candidates:
-                                    try:
-                                        # Use robust multi-strategy search for All Mail
-                                        uids = _robust_message_id_search(imap, all_mail_box, hdr, is_gmail=True)
-
-                                        # ========================================================================
-                                        # PHASE D: ENHANCED ALL MAIL FALLBACK (Broadened Search)
-                                        # If standard search fails, try additional Gmail-specific strategies
-                                        # ========================================================================
-                                        if not uids and _server_supports_x_gm(imap):
-                                            app_log.debug("Phase D: Trying broadened All Mail search", extra={
-                                                "email_id": msg_id, "hdr": hdr
-                                            })
-
-                                            # Strategy 1: Search by X-EMT-Released-From header (if this is an edited release)
-                                            if original_message_id:
-                                                try:
-                                                    # Gmail X-GM-RAW uses: header:name "value" (space, then quoted value)
-                                                    search_query = f'header:x-emt-released-from "{original_message_id.strip("<>")}"'
-                                                    app_log.info("[Release] Phase D: Trying X-EMT-Released-From search", extra={
-                                                        "email_id": msg_id, "query": search_query
-                                                    })
-                                                    typ, data = imap.uid('SEARCH', None, 'X-GM-RAW', search_query)
-                                                    if typ == 'OK' and data and data[0]:
-                                                        uids = [u.decode() if isinstance(u, bytes) else u for u in data[0].split()]
-                                                        if uids:
-                                                            app_log.info("[Release] Phase D: Found via X-EMT-Released-From", extra={
-                                                                "email_id": msg_id, "uids": uids
-                                                            })
-                                                except Exception as e:
-                                                    app_log.debug("[Release] Phase D: X-EMT-Released-From search failed", extra={
-                                                        "email_id": msg_id, "error": str(e)
-                                                    })
-
-                                            # Strategy 2: Search by subject + from combination (broadened pattern)
-                                            # sqlite3.Row doesn't have .get() - check keys() instead
-                                            if (not uids and 'sender' in row.keys() and 'subject' in row.keys() and
-                                                row['sender'] and row['subject']):
-                                                try:
-                                                    sender_email = row['sender']
-                                                    subject_text = row['subject']
-                                                    # Extract email from "Name <email>" format
-                                                    if '<' in sender_email and '>' in sender_email:
-                                                        sender_email = sender_email.split('<')[1].split('>')[0]
-                                                    # Sanitize subject for search (remove special chars that break X-GM-RAW)
-                                                    subject_clean = subject_text.replace('"', '').replace('\\', '').strip()[:50]
-
-                                                    search_query = f'from:{sender_email} subject:"{subject_clean}"'
-                                                    app_log.info("[Release] Phase D: Trying subject+sender search", extra={
-                                                        "email_id": msg_id, "query": search_query
-                                                    })
-                                                    typ, data = imap.uid('SEARCH', None, 'X-GM-RAW', search_query)
-                                                    if typ == 'OK' and data and data[0]:
-                                                        candidate_uids = [u.decode() if isinstance(u, bytes) else u for u in data[0].split()]
-                                                        # Verify we're not accidentally matching the edited message
-                                                        # by checking it's not the Message-ID we just appended
-                                                        verified_uids = []
-                                                        for cuid in candidate_uids:
-                                                            try:
-                                                                fetch_typ, fetch_data = imap.uid('FETCH', str(cuid), '(BODY.PEEK[HEADER.FIELDS (MESSAGE-ID)])')
-                                                                if fetch_typ == 'OK' and fetch_data and fetch_data[0]:
-                                                                    header_part = fetch_data[0][1] if isinstance(fetch_data[0], tuple) else fetch_data[0]
-                                                                    if isinstance(header_part, bytes):
-                                                                        header_str = header_part.decode('utf-8', errors='ignore')
-                                                                        # Skip if this is the edited message we just appended
-                                                                        if message_id_hdr and message_id_hdr in header_str:
-                                                                            continue
-                                                                        # Include if this looks like the original
-                                                                        if original_message_id and original_message_id in header_str:
-                                                                            verified_uids.append(cuid)
-                                                            except Exception:
-                                                                pass
-
-                                                        if verified_uids:
-                                                            uids = verified_uids
-                                                            app_log.info("[Release] Phase D: Found via subject+sender", extra={
-                                                                "email_id": msg_id, "uids": uids
-                                                            })
-                                                except Exception as e:
-                                                    app_log.debug("[Release] Phase D: Subject+sender search failed", extra={
-                                                        "email_id": msg_id, "error": str(e)
-                                                    })
-
-                                            # Strategy 3: If we have thread ID from Phase C context, use it
-                                            # This is a fallback if Phase C ran but didn't clean up properly
-                                            if not uids and original_uid:
-                                                try:
-                                                    # Try to find the original by UID in All Mail
-                                                    # (UID might be different in All Mail vs Quarantine, but worth trying)
-                                                    search_query = f'in:anywhere'
-                                                    app_log.info("[Release] Phase D: Trying broad in:anywhere search", extra={
-                                                        "email_id": msg_id
-                                                    })
-                                                    typ, data = imap.uid('SEARCH', None, 'X-GM-RAW', search_query)
-                                                    # This is intentionally very broad and will need filtering
-                                                    # We'll rely on the Message-ID verification in the next steps
-                                                except Exception as e:
-                                                    app_log.debug("[Release] Phase D: Broad search failed", extra={
-                                                        "email_id": msg_id, "error": str(e)
-                                                    })
-
-                                            if uids:
-                                                app_log.info("[Release] Phase D: SUCCESS - Broadened search found UIDs", extra={
-                                                    "email_id": msg_id, "uids": uids, "hdr": hdr
-                                                })
-                                            else:
-                                                app_log.info("[Release] Phase D: Broadened search exhausted, no results", extra={
-                                                    "email_id": msg_id, "hdr": hdr
-                                                })
-
-                                        if not uids:
-                                            app_log.info("[Gmail DEBUG] Header not found in All Mail, trying next",
-                                                       extra={"email_id": msg_id, "hdr": hdr})
-                                            continue
-
-                                        # DEBUG: Log header searched and UIDs found for live testing validation
-                                        app_log.info(f"[Gmail DEBUG] Found original in All Mail: header='{hdr}', UIDs={uids}",
-                                                 extra={'email_id': msg_id})
-
-                                        # Remove \Inbox label to prevent original from appearing in inbox view
-                                        # This is the KEY fix for Gmail duplicates
-                                        labels_cleared = 0
-                                        moved_to_trash = 0
-                                        for uid in uids:
-                                            try:
-                                                # Gmail-specific: Remove \Inbox and Quarantine labels
-                                                # This prevents the original from showing up in Gmail's inbox view
-                                                imap.uid('STORE', uid, '-X-GM-LABELS', r'(\Inbox Quarantine)')
-                                                labels_cleared += 1
-
-                                                # Optionally also trash the original (more aggressive cleanup)
-                                                # This ensures it's fully removed, not just hidden from inbox
-                                                if has_move:
-                                                    # RFC 6851 MOVE: atomic operation
-                                                    m_typ, _ = imap.uid('MOVE', uid, trash_box)
-                                                    if m_typ == 'OK':
-                                                        moved_to_trash += 1
-                                                    else:
-                                                        # MOVE failed, fall back to COPY+DELETE
-                                                        imap.uid('COPY', uid, trash_box)
-                                                        imap.uid('STORE', uid, '+FLAGS', r'(\Deleted)')
-                                                        moved_to_trash += 1
-                                                else:
-                                                    # Traditional COPY+DELETE for servers without MOVE
-                                                    imap.uid('COPY', uid, trash_box)
-                                                    imap.uid('STORE', uid, '+FLAGS', r'(\Deleted)')
-                                                    moved_to_trash += 1
-                                            except Exception as uid_err:
-                                                log.debug(f"[Gmail] Label removal/MOVE/COPY failed for UID {uid}: {uid_err}", exc_info=False)
-
-                                        # EXPUNGE to physically remove from All Mail
-                                        try:
-                                            if has_uidplus:
-                                                # RFC 4315: UID EXPUNGE - safer, only expunges messages with \Deleted in UID set
-                                                imap.uid('EXPUNGE', ','.join(uids))
-                                            else:
-                                                # Traditional EXPUNGE - removes ALL \Deleted messages in mailbox
-                                                imap.expunge()
-                                        except Exception as exp_err:
-                                            log.debug(f"[Gmail] EXPUNGE failed: {exp_err}", exc_info=False)
-
-                                        if labels_cleared or moved_to_trash or uids:
-                                            # All Mail cleanup SUCCESS
-                                            app_log.debug("All Mail cleanup SUCCESS", extra={
-                                                'email_id': msg_id,
-                                                'account_id': row['account_id'],
-                                                'message_id': hdr,
-                                                'uids': uids,
-                                                'labels_cleared': labels_cleared,
-                                                'moved_to_trash': moved_to_trash,
-                                                'mbox': all_mail_box,
-                                                'trash': trash_box,
-                                                'used_move': has_move,
-                                                'used_uidplus': has_uidplus
-                                            })
-                                            break  # Success, move to next header if any
-                                    except Exception as e:
-                                        log.debug(f"[Gmail] All Mail cleanup failed for header: {e}", exc_info=False)
-                                else:
-                                    # Loop completed without break - nothing found in All Mail
-                                    app_log.debug("All Mail cleanup: nothing to remove (likely already cleaned or not in All Mail)",
-                                               extra={"email_id": msg_id, "headers_tried": header_candidates})
-                        except Exception as e:
-                            log.debug(f"[Gmail] All Mail purge block failed: {e}", exc_info=False)
+                temp_path.unlink()
             except Exception:
                 pass
-
-        except Exception as e:
-            log.error(f"[interception::release] Failed to remove from quarantine: {e}", extra={'email_id': msg_id, 'uid': original_uid}, exc_info=True)
-
-        # Post-condition verification: Check for duplicates in INBOX
-        # IMPORTANT: Do this BEFORE logout() to avoid "illegal in state LOGOUT" error
-        edited_message_id = msg.get('Message-ID')
-        try:
-            imap.select("INBOX", readonly=True)
-
-            # Search using enhanced strategy (includes X-Google-Original-Message-ID)
-            orig_uids = _robust_message_id_search(imap, "INBOX", original_message_id, is_gmail=is_gmail, tries=1, delay=0)
-
-            if orig_uids:
-                app_log.warning("[Verify] DUPLICATE DETECTED: Original still in INBOX after cleanup", extra={
-                    "email_id": msg_id,
-                    "orig_uids": orig_uids,
-                    "original_message_id": original_message_id
-                })
-            else:
-                app_log.info("[Verify] Original successfully removed from INBOX", extra={"email_id": msg_id})
-
-            # Guard against null/empty edited Message-ID (some MTAs are creative)
-            if edited_message_id:
-                edited_uids = _robust_message_id_search(imap, "INBOX", edited_message_id, is_gmail=is_gmail, tries=1, delay=0)
-
-                if not edited_uids:
-                    app_log.warning("[Verify] Edited message not found in INBOX", extra={
-                        "email_id": msg_id,
-                        "edited_message_id": edited_message_id
-                    })
-                else:
-                    app_log.info("[Verify] Edited message present in INBOX", extra={"email_id": msg_id, "edited_uids": edited_uids})
-            else:
-                app_log.debug("[Verify] Skipping edited message check (no Message-ID)", extra={"email_id": msg_id})
-        except Exception as e:
-            app_log.debug("[Verify] Post-condition check skipped (error)", extra={"err": str(e)})
-
-        # All good; close IMAP connection (after verification!)
-        try:
-            imap.logout()
-        except Exception:
-            pass
-
-    except Exception as e:
-        log.exception("[interception::release] append failed", extra={'email_id': msg_id, 'target': target_folder})
-        conn.close(); return jsonify({'ok':False,'reason':'append-failed','error':str(e)}), 500
-
-    cur.execute("""
-        UPDATE email_messages
-        SET interception_status='RELEASED',
-            status='DELIVERED',
-            edited_message_id=?,
-            processed_at=datetime('now'),
-            action_taken_at=datetime('now')
-        WHERE id=?
-    """, (msg.get('Message-ID'), msg_id))
-    conn.commit(); conn.close()
-
-    # Best-effort audit
-    try:
-        log_action('RELEASE', getattr(current_user, 'id', None), msg_id, f"Released to {target_folder}; edited={bool(edited_subject or edited_body)}; removed={removed}")
-    except Exception:
-        pass
-    log.info("[interception::release] success", extra={'email_id': msg_id, 'target': target_folder, 'attachments_removed': bool(removed)})
-    return jsonify({'ok':True,'released_to':target_folder,'attachments_removed':removed})
+        if lock_acquired:
+            try:
+                _release_release_lock(conn, msg_id)
+            except Exception:
+                pass
+        conn.close()
 
 @bp_interception.route('/api/interception/discard/<int:msg_id>', methods=['POST'])
 @login_required

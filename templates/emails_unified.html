@@ -191,14 +191,32 @@
             <div class="panel-header">
               <div class="panel-title"><i class="bi bi-paperclip"></i> Attachments</div>
             </div>
-            <div class="panel-body attachments-panel-body">
+            <div class="panel-body attachments-panel-body" data-role="attachments-panel">
+              {% if attachments_flags.edit %}
+              <div class="attachments-upload-shell" data-role="upload-shell">
+                <label class="btn btn-secondary btn-sm attachments-upload-btn" data-role="upload-button">
+                  <i class="bi bi-upload"></i> Add Files
+                  <input type="file" class="attachments-file-input" data-role="file-input" multiple>
+                </label>
+                <div class="attachments-dropzone" data-role="dropzone">
+                  <div class="dropzone-icon"><i class="bi bi-cloud-arrow-up"></i></div>
+                  <div class="dropzone-copy">
+                    <div class="title">Drag & Drop files</div>
+                    <div class="subtitle text-muted">or click to browse</div>
+                  </div>
+                </div>
+                <div class="attachments-hint text-muted small">
+                  Allowed: PDF, PNG, JPEG, TXT • Max 25&nbsp;MB each
+                </div>
+              </div>
+              {% endif %}
               <div id="modalAttachmentsSkeleton" class="attachments-skeleton hidden"></div>
-              <div id="modalAttachmentsList" class="attachments-list"></div>
-              <div id="modalAttachmentsEmpty" class="attachments-empty text-muted">No attachments</div>
-            </div>
-          </div>
+              <div id="modalAttachmentsList" class="attachments-list" data-role="attachments-list"></div>
+          <div id="modalAttachmentsEmpty" class="attachments-empty text-muted">No attachments</div>
+        </div>
+      </div>
 
-          <div class="alert alert-info alert-modern">
+      <div class="alert alert-info alert-modern">
             <i class="bi bi-info-circle"></i>
             <small>Editing this email will update its content before it's sent to the final destination.</small>
           </div>
@@ -209,8 +227,66 @@
         <button type="button" class="btn btn-primary" onclick="saveEmailEdit()">
           <i class="bi bi-save"></i> Save Changes
         </button>
-        <button type="button" class="btn btn-success" onclick="saveAndRelease()">
+        <button type="button" class="btn btn-success" onclick="openReleaseSummary(event)">
           <i class="bi bi-check-circle"></i> Save & Release
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Attachments Summary Modal -->
+<div class="modal fade modal-modern" id="attachmentsSummaryModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-lg modal-unified">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-white">
+          <i class="bi bi-clipboard-check"></i> Review Attachment Changes
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="summary-counts-grid mb-3">
+          <div class="summary-count-card">
+            <div class="label text-muted">Added</div>
+            <div class="value" id="summaryAddCount">0</div>
+          </div>
+          <div class="summary-count-card">
+            <div class="label text-muted">Replaced</div>
+            <div class="value" id="summaryReplaceCount">0</div>
+          </div>
+          <div class="summary-count-card">
+            <div class="label text-muted">Removed</div>
+            <div class="value" id="summaryRemoveCount">0</div>
+          </div>
+        </div>
+        <div class="summary-section" id="summaryAddSection">
+          <h6 class="section-title"><i class="bi bi-plus-circle"></i> Will add</h6>
+          <div class="summary-empty text-muted small" id="summaryAddEmpty">No new attachments</div>
+          <ul class="summary-list" id="summaryAddList"></ul>
+        </div>
+        <div class="summary-section" id="summaryReplaceSection">
+          <h6 class="section-title"><i class="bi bi-arrow-repeat"></i> Will replace</h6>
+          <div class="summary-empty text-muted small" id="summaryReplaceEmpty">No replacements</div>
+          <ul class="summary-list" id="summaryReplaceList"></ul>
+        </div>
+        <div class="summary-section" id="summaryRemoveSection">
+          <h6 class="section-title"><i class="bi bi-dash-circle"></i> Will remove</h6>
+          <div class="summary-empty text-muted small" id="summaryRemoveEmpty">No removals</div>
+          <ul class="summary-list" id="summaryRemoveList"></ul>
+        </div>
+        <div class="summary-section warnings" id="summaryWarningsSection">
+          <h6 class="section-title text-warning"><i class="bi bi-exclamation-triangle"></i> Warnings</h6>
+          <div class="summary-empty text-muted small" id="summaryWarningsEmpty">No warnings detected</div>
+          <ul class="summary-list" id="summaryWarningsList"></ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle"></i> Cancel
+        </button>
+        <button type="button" class="btn btn-success" id="summaryConfirmRelease">
+          <span class="btn-label"><i class="bi bi-check-circle"></i> Save & Release</span>
         </button>
       </div>
     </div>
@@ -284,6 +360,12 @@ document.addEventListener('DOMContentLoaded', function() {
   if (autoRefreshPref === 'true') {
     document.getElementById('autoRefresh').checked = true;
     toggleAutoRefresh(true);
+  }
+
+  const summaryConfirmBtn = document.getElementById('summaryConfirmRelease');
+  if (summaryConfirmBtn && !summaryConfirmBtn.dataset.bound) {
+    summaryConfirmBtn.dataset.bound = 'true';
+    summaryConfirmBtn.addEventListener('click', executeSaveAndRelease);
   }
 });
 
@@ -744,25 +826,146 @@ function saveEmailEdit() {
   });
 }
 
-function saveAndRelease() {
-  const emailId = document.getElementById('editEmailId').value;
-  const subject = document.getElementById('editEmailSubject').value;
-  const body = document.getElementById('editEmailBody').value;
+function formatAttachmentSizeLabel(bytes) {
+  const value = Number(bytes || 0);
+  if (!value) return '';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let size = value;
+  let unitIndex = 0;
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+  const numeric = unitIndex === 0 ? size.toFixed(0) : size.toFixed(1);
+  return `${numeric} ${units[unitIndex]}`;
+}
+
+function generateIdempotencyKey() {
+  if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+    return window.crypto.randomUUID();
+  }
+  return `emt-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function renderSummaryList(listId, emptyId, items, builder) {
+  const listEl = document.getElementById(listId);
+  const emptyEl = document.getElementById(emptyId);
+  if (!listEl) return;
+  if (!items || !items.length) {
+    listEl.innerHTML = '';
+    if (emptyEl) emptyEl.classList.remove('hidden');
+    return;
+  }
+  listEl.innerHTML = items.map(builder).join('');
+  if (emptyEl) emptyEl.classList.add('hidden');
+}
+
+function populateSummaryModal(summary) {
+  document.getElementById('summaryAddCount').textContent = summary.counts.add;
+  document.getElementById('summaryReplaceCount').textContent = summary.counts.replace;
+  document.getElementById('summaryRemoveCount').textContent = summary.counts.remove;
+
+  renderSummaryList(
+    'summaryAddList',
+    'summaryAddEmpty',
+    summary.add,
+    (entry) => {
+      const staged = entry.staged || {};
+      const sizeLabel = formatAttachmentSizeLabel(staged.size);
+      return `<li><i class="bi bi-plus-circle-fill text-success me-2"></i>${window.MailOps.escapeHtml(staged.filename || entry.manifest.filename || 'attachment')}${sizeLabel ? ` <span class="text-muted">(${sizeLabel})</span>` : ''}</li>`;
+    }
+  );
+
+  renderSummaryList(
+    'summaryReplaceList',
+    'summaryReplaceEmpty',
+    summary.replace,
+    (entry) => {
+      const original = entry.original || {};
+      const staged = entry.staged || {};
+      const originalName = window.MailOps.escapeHtml(original.filename || entry.manifest.original_filename || 'original');
+      const stagedName = window.MailOps.escapeHtml(staged.filename || 'replacement');
+      return `<li><i class="bi bi-arrow-repeat text-info me-2"></i>${originalName} <span class="text-muted">→</span> ${stagedName}</li>`;
+    }
+  );
+
+  renderSummaryList(
+    'summaryRemoveList',
+    'summaryRemoveEmpty',
+    summary.remove,
+    (entry) => {
+      const original = entry.original || {};
+      const sizeLabel = formatAttachmentSizeLabel(original.size);
+      return `<li><i class="bi bi-dash-circle-fill text-danger me-2"></i>${window.MailOps.escapeHtml(original.filename || entry.manifest.filename || 'attachment')}${sizeLabel ? ` <span class="text-muted">(${sizeLabel})</span>` : ''}</li>`;
+    }
+  );
+
+  const warnings = summary.remove.filter(
+    (entry) => entry.original && typeof entry.original.mime_type === 'string' && entry.original.mime_type.toLowerCase().includes('pdf')
+  );
+
+  renderSummaryList(
+    'summaryWarningsList',
+    'summaryWarningsEmpty',
+    warnings,
+    (entry) => {
+      const original = entry.original || {};
+      return `<li><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Removing PDF: ${window.MailOps.escapeHtml(original.filename || 'attachment')}</li>`;
+    }
+  );
+}
+
+async function openReleaseSummary(evt) {
+  if (evt) evt.preventDefault();
+  const emailId = Number(document.getElementById('editEmailId').value);
+  const subject = document.getElementById('editEmailSubject').value.trim();
+  const body = document.getElementById('editEmailBody').value.trim();
 
   if (!subject || !body) {
     if (window.showWarning) showWarning('Subject and body are required');
     return;
   }
 
-  const btn = event.target;
-  const originalText = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+  try {
+    const { summary } = await window.MailAttach.summarize(emailId);
+    populateSummaryModal(summary);
+    const confirmBtn = document.getElementById('summaryConfirmRelease');
+    confirmBtn.dataset.emailId = String(emailId);
+    const modalEl = document.getElementById('attachmentsSummaryModal');
+    const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modalInstance.show();
+  } catch (error) {
+    console.error('Failed to build attachment summary:', error);
+    if (window.showError) showError(`Failed to prepare summary: ${error.message}`);
+  }
+}
 
-  // Release with edited content
+async function executeSaveAndRelease(event) {
+  const button = event ? event.currentTarget : document.getElementById('summaryConfirmRelease');
+  const emailId = Number(button.dataset.emailId || document.getElementById('editEmailId').value);
+  const subject = document.getElementById('editEmailSubject').value.trim();
+  const body = document.getElementById('editEmailBody').value.trim();
+
+  if (!subject || !body) {
+    if (window.showWarning) showWarning('Subject and body are required');
+    return;
+  }
+
+  const modalEl = document.getElementById('attachmentsSummaryModal');
+  const modalInstance = bootstrap.Modal.getInstance(modalEl);
+
+  const originalText = button.innerHTML;
+  button.disabled = true;
+  button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Releasing...';
+
+  const idempotencyKey = generateIdempotencyKey();
+
   fetch(`/api/interception/release/${emailId}`, {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Idempotency-Key': idempotencyKey
+    },
     body: JSON.stringify({
       edited_subject: subject,
       edited_body: body,
@@ -780,18 +983,18 @@ function saveAndRelease() {
       const reason = window.extractErrorMessage(payload ?? parsed?.body, 'Release failed');
       throw new Error(reason);
     }
-
     return payload;
   })
   .then(data => {
     if (data.ok || data.success) {
+      if (modalInstance) modalInstance.hide();
       if (window.showSuccess) showSuccess('Email saved and released successfully');
-      btn.innerHTML = '<i class="bi bi-check-circle"></i> Released!';
+      button.innerHTML = '<i class="bi bi-check-circle"></i> Released!';
       setTimeout(() => {
-        const modal = bootstrap.Modal.getInstance(document.getElementById('editEmailModal'));
-        modal.hide();
+        const editModal = bootstrap.Modal.getInstance(document.getElementById('editEmailModal'));
+        if (editModal) editModal.hide();
         reloadEmails();
-      }, 1000);
+      }, 900);
     } else {
       throw new Error(data.error || data.reason || 'Release failed');
     }
@@ -799,8 +1002,8 @@ function saveAndRelease() {
   .catch(error => {
     console.error('Error releasing email:', error);
     if (window.showError) showError(`Failed to release: ${error.message}`);
-    btn.disabled = false;
-    btn.innerHTML = originalText;
+    button.disabled = false;
+    button.innerHTML = originalText;
   });
 }
 
