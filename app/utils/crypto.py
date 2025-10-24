@@ -1,7 +1,10 @@
 """Encryption utilities for credential management"""
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 import os
+import logging
 from functools import lru_cache
+
+log = logging.getLogger(__name__)
 
 KEY_FILE = "key.txt"
 
@@ -36,5 +39,12 @@ def decrypt_credential(encrypted_text: str | None) -> str | None:
         return None
     try:
         return get_cipher().decrypt(encrypted_text.encode("utf-8")).decode("utf-8")
-    except Exception:
+    except InvalidToken as e:
+        log.warning(f"Failed to decrypt credential (invalid token or corrupted data): {e}")
+        return None
+    except (ValueError, UnicodeDecodeError) as e:
+        log.warning(f"Failed to decrypt credential (encoding error): {e}")
+        return None
+    except Exception as e:
+        log.error(f"Unexpected decryption error: {e}", exc_info=True)
         return None
