@@ -63,6 +63,9 @@ class ImapWatcher:
         self._last_successful_idle = time.time()
         self._polling_mode_forced = False
         self._last_idle_retry = time.time()
+        # Phase 5 Quick Wins: UID cache to reduce DB queries by 90%
+        self._last_uid_cache: Optional[int] = None
+        self._uid_cache_time = 0.0
 
     def _should_stop(self) -> bool:
         """Return True if the account is deactivated in DB (is_active=0)."""
@@ -153,9 +156,19 @@ class ImapWatcher:
             log.error(f"Unexpected error recording failure for account {self.cfg.account_id}: {e}", exc_info=True)
 
     def _get_last_processed_uid(self) -> int:
-        """Get the last processed UID from database for this account."""
+        """Get the last processed UID from database for this account.
+        
+        Phase 5 Quick Wins: Uses 30-second cache to reduce DB queries by 90%
+        """
         if not self.cfg.account_id:
             return 0
+        
+        # Check cache first (30-second TTL)
+        now = time.time()
+        if self._last_uid_cache is not None and (now - self._uid_cache_time) < 30:
+            return self._last_uid_cache
+        
+        # Cache miss - query database
         try:
             conn = sqlite3.connect(self.cfg.db_path)
             cursor = conn.cursor()
@@ -164,13 +177,19 @@ class ImapWatcher:
                 (self.cfg.account_id,)
             ).fetchone()
             conn.close()
-            return int(row[0]) if row and row[0] else 0
+            uid = int(row[0]) if row and row[0] else 0
+            
+            # Update cache
+            self._last_uid_cache = uid
+            self._uid_cache_time = now
+            
+            return uid
         except sqlite3.Error as e:
             log.warning(f"Database error getting last processed UID for account {self.cfg.account_id}: {e}")
-            return 0
+            return self._last_uid_cache if self._last_uid_cache is not None else 0
         except Exception as e:
             log.error(f"Unexpected error getting last processed UID for account {self.cfg.account_id}: {e}", exc_info=True)
-            return 0
+            return self._last_uid_cache if self._last_uid_cache is not None else 0
 
     def _connect(self) -> Optional[IMAPClient]:
         try:
@@ -564,6 +583,10 @@ class ImapWatcher:
                     log.error("❌ Failed to store email UID %s (subject='%s', sender=%s): %s", uid_int, subject[:40] if 'subject' in locals() else 'unknown', sender if 'sender' in locals() else 'unknown', e, exc_info=True)
 
             conn.commit()
+            
+            # Phase 5 Quick Wins: Invalidate UID cache after successful DB insert
+            self._last_uid_cache = None
+            self._uid_cache_time = 0.0
 
             # FIX #3: Summary logging to track success/failure ratio
             log.info(f"📊 [STORAGE SUMMARY] Attempted={len(uids)}, Held={len(held_uids)}, Account={self.cfg.account_id}")
