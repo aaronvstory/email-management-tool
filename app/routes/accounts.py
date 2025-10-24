@@ -78,7 +78,8 @@ def api_accounts_bulk_delete():
     # Normalize to ints and filter invalid
     try:
         id_list = [int(i) for i in ids if str(i).isdigit()]
-    except Exception:
+    except (ValueError, TypeError) as e:
+        log.warning(f"[accounts] Failed to parse account IDs: {e}")
         id_list = []
     if not id_list:
         return jsonify({'success': False, 'error': 'No valid ids provided'}), 400
@@ -88,8 +89,8 @@ def api_accounts_bulk_delete():
         for aid in id_list:
             try:
                 stop_imap_watcher_for_account(aid)
-            except Exception:
-                pass
+            except (RuntimeError, KeyError) as e:
+                log.warning(f"[accounts] Failed to stop watcher for account {aid}: {e}")
     except Exception:
         pass
     conn = sqlite3.connect(DB_PATH)
@@ -98,8 +99,8 @@ def api_accounts_bulk_delete():
         # Remove heartbeats for these accounts
         try:
             cur.executemany("DELETE FROM worker_heartbeats WHERE worker_id=?", [(f"imap_{aid}",) for aid in id_list])
-        except Exception:
-            pass
+        except sqlite3.Error as e:
+            log.warning(f"[accounts] Failed to remove heartbeats for accounts {id_list}: {e}")
         # Delete accounts
         qmarks = ",".join(["?"] * len(id_list))
         cur.execute(f"DELETE FROM email_accounts WHERE id IN ({qmarks})", id_list)
@@ -312,7 +313,7 @@ def api_imap_live_test(account_id: int):
         else:
             imap = imaplib.IMAP4(host, port)
             try: imap.starttls()
-            except Exception as e:
+            except (imaplib.IMAP4.error, OSError) as e:
                 log.warning("[accounts::probe] STARTTLS failed (non-SSL port, continuing)", extra={'account_id': account_id, 'error': str(e)})
         imap.login(user, pwd); imap.select('INBOX')
         import time as _t
@@ -320,7 +321,8 @@ def api_imap_live_test(account_id: int):
         imap.append('INBOX', '', date_param, msg.as_bytes())
         imap.logout()
         log.debug("[accounts::probe] appended probe message", extra={'account_id': account_id, 'probe_id': probe_id})
-    except Exception as e:
+    except (imaplib.IMAP4.error, OSError) as e:
+        log.error(f"[accounts::probe] IMAP append failed for account {account_id}: {e}")
         conn.close(); return jsonify({'success': False, 'error': f'IMAP append failed: {e}'}), 500
     # Poll for HELD entry in DB and verify server state
     ok=False; attempts=10; last=None
@@ -338,7 +340,7 @@ def api_imap_live_test(account_id: int):
                 imap = imaplib.IMAP4_SSL(acc['imap_host'], port) if port==993 else imaplib.IMAP4(acc['imap_host'], port)
                 try:
                     if port!=993: imap.starttls()
-                except Exception:
+                except (imaplib.IMAP4.error, OSError):
                     pass
                 imap_pwd = decrypt_credential(acc['imap_password']) if acc['imap_password'] else None
                 if imap_pwd is None:
