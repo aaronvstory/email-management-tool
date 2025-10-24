@@ -87,6 +87,18 @@ class Config:
     # Email Processing
     MAX_EMAIL_SIZE = 10485760  # 10MB
     ATTACHMENT_ALLOWED_EXTENSIONS = {'.pdf', '.doc', '.docx', '.xls', '.xlsx', '.txt', '.png', '.jpg', '.jpeg'}
+    ATTACHMENTS_UI_ENABLED = os.environ.get('ATTACHMENTS_UI_ENABLED', 'false').lower() == 'true'
+    ATTACHMENTS_EDIT_ENABLED = os.environ.get('ATTACHMENTS_EDIT_ENABLED', 'false').lower() == 'true'
+    ATTACHMENTS_RELEASE_ENABLED = os.environ.get('ATTACHMENTS_RELEASE_ENABLED', 'false').lower() == 'true'
+    ATTACHMENT_MAX_BYTES = int(os.environ.get('ATTACHMENT_MAX_BYTES', 25 * 1024 * 1024))
+    ATTACHMENTS_MAX_COUNT = int(os.environ.get('ATTACHMENTS_MAX_COUNT', 25))
+    ATTACHMENT_ALLOWED_MIME = os.environ.get(
+        'ATTACHMENT_ALLOWED_MIME',
+        'application/pdf,image/png,image/jpeg,text/plain'
+    )
+    ATTACHMENT_CLAMAV_ENABLED = os.environ.get('ATTACHMENT_CLAMAV_ENABLED', 'false').lower() == 'true'
+    ATTACHMENTS_ROOT_DIR = os.environ.get('ATTACHMENTS_ROOT_DIR', 'attachments')
+    ATTACHMENTS_STAGED_ROOT_DIR = os.environ.get('ATTACHMENTS_STAGED_ROOT_DIR', 'attachments_staged')
     
     # Pagination
     ITEMS_PER_PAGE = 20

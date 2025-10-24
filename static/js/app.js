@@ -456,6 +456,667 @@ window.showInfo = showInfo;
 window.confirmToast = confirmToast;
 
 // ============================================================================
+// Attachments module
+// ============================================================================
+
+(function attachModuleNamespace() {
+    const flags = window.ATTACHMENTS_FLAGS || {};
+    const canEdit = !!flags.edit;
+    const cache = new Map(); // emailId -> { data, etag }
+    const panelRegistry = new WeakMap();
+
+    const defaultEscape = (value) => {
+        if (value === null || value === undefined) return '';
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/\"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    };
+    const escapeHtml = window.MailOps && typeof window.MailOps.escapeHtml === 'function'
+        ? window.MailOps.escapeHtml
+        : defaultEscape;
+
+    function isEnabled() {
+        return !!flags.ui;
+    }
+
+    function formatSize(bytes) {
+        const size = Number(bytes || 0);
+        if (!size) return '';
+        const units = ['B', 'KB', 'MB', 'GB'];
+        let idx = 0;
+        let value = size;
+        while (value >= 1024 && idx < units.length - 1) {
+            value /= 1024;
+            idx += 1;
+        }
+        return `${value.toFixed(idx === 0 ? 0 : 1)} ${units[idx]}`;
+    }
+
+    function toggleElement(el, show) {
+        if (!el) return;
+        el.classList.toggle('hidden', !show);
+    }
+
+    function applyError(container, message) {
+        if (container) container.classList.add('attachments-error');
+        if (window.showError) window.showError(message);
+    }
+
+    function buildManifestIndex(manifest) {
+        const index = {
+            byAid: new Map(),
+            byStaged: new Map(),
+        };
+        if (!manifest || !Array.isArray(manifest.items)) {
+            return index;
+        }
+        manifest.items.forEach((item) => {
+            if (!item || typeof item !== 'object') return;
+            if (item.aid !== undefined && item.aid !== null) {
+                index.byAid.set(Number(item.aid), item);
+            }
+            if (item.staged_ref !== undefined && item.staged_ref !== null) {
+                index.byStaged.set(Number(item.staged_ref), item);
+            }
+        });
+        return index;
+    }
+
+    async function fetchAttachments(emailId, { force = false } = {}) {
+        const cached = cache.get(emailId);
+        const headers = {};
+        if (cached && cached.etag && !force) {
+            headers['If-None-Match'] = cached.etag;
+        }
+
+        const response = await fetch(`/api/email/${emailId}/attachments`, { headers });
+        if (response.status === 304 && cached) {
+            return cached.data;
+        }
+
+        let data = null;
+        try {
+            data = await response.json();
+        } catch (_) {
+            data = null;
+        }
+
+        if (!response.ok || !data || data.ok === false) {
+            const reason = (data && (data.error || data.reason)) || `HTTP ${response.status}`;
+            throw new Error(reason);
+        }
+
+        const etag = response.headers.get('ETag');
+        cache.set(emailId, { data, etag });
+        return data;
+    }
+
+    function resolveOptionsFromNode(node) {
+        if (!node) return null;
+        const container = node.classList && node.classList.contains('attachments-card')
+            ? node
+            : node.closest('.attachments-card');
+        if (!container) return null;
+
+        const stored = panelRegistry.get(container) || container._mailAttachOptions || {};
+        const panelElement = stored.panelElement || container.querySelector('[data-role="attachments-panel"]');
+        const listElement = stored.listElement || container.querySelector('[data-role="attachments-list"]');
+        const emptyElement = stored.emptyElement || container.querySelector('.attachments-empty');
+        const skeletonElement = stored.skeletonElement || container.querySelector('.attachments-skeleton');
+
+        return {
+            emailId: Number(container.dataset.emailId || stored.emailId || 0),
+            container,
+            panelElement,
+            listElement,
+            emptyElement,
+            skeletonElement,
+        };
+    }
+
+    function ensureListHandler(listEl) {
+        if (!listEl || listEl.dataset.mailAttachHandler === 'true') return;
+        listEl.addEventListener('click', handleListClick);
+        listEl.dataset.mailAttachHandler = 'true';
+    }
+
+    async function runWithLoading(button, task) {
+        if (!button) {
+            return task();
+        }
+        const originalHtml = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+        try {
+            return await task();
+        } finally {
+            button.disabled = false;
+            button.innerHTML = originalHtml;
+        }
+    }
+
+    async function refreshPanel(emailId, options, forceReload = true) {
+        if (!emailId) return;
+        if (forceReload) {
+            cache.delete(emailId);
+        }
+        const targetOptions = options || resolveOptionsFromNode(options && options.container);
+        if (!targetOptions) return;
+        await render(Object.assign({}, targetOptions, { emailId, forceReload }));
+    }
+
+    async function uploadOne(emailId, file, extra = {}) {
+        if (!emailId || !file) return;
+        const options = extra.options || resolveOptionsFromNode(extra.node);
+        try {
+            const payload = await fetchAttachments(emailId);
+            const version = Number(payload && payload.version !== undefined ? payload.version : 0);
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('version', String(version));
+            if (extra.replaceAid) {
+                formData.append('replace_aid', String(extra.replaceAid));
+            }
+
+            const response = await fetch(`/api/email/${emailId}/attachments/upload`, {
+                method: 'POST',
+                body: formData,
+            });
+            const parsed = await parseResponseBody(response);
+            const body = parsed.body || {};
+
+            if (!response.ok || !body.ok) {
+                if (response.status === 409 && body.latest_version !== undefined) {
+                    if (window.showWarning) showWarning('Attachments changed while uploading. Refreshing latest state.');
+                    await refreshPanel(emailId, options, true);
+                    return;
+                }
+                const message = extractErrorMessage(body, `Upload failed (${response.status})`);
+                throw new Error(message);
+            }
+
+            cache.delete(emailId);
+            await refreshPanel(emailId, options, true);
+            if (window.showSuccess) {
+                showSuccess(`Attachment \"${file.name}\" staged`);
+            }
+        } catch (error) {
+            if (window.showError) showError(error.message || 'Failed to upload attachment');
+            throw error;
+        }
+    }
+
+    async function markRemove(aid, options) {
+        if (!aid || !options) return;
+        const payload = await fetchAttachments(options.emailId);
+        const version = Number(payload && payload.version !== undefined ? payload.version : 0);
+        const response = await fetch(`/api/email/${options.emailId}/attachments/mark`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'remove', aid, version }),
+        });
+        const parsed = await parseResponseBody(response);
+        const body = parsed.body || {};
+
+        if (!response.ok || !body.ok) {
+            if (response.status === 409 && body.latest_version !== undefined) {
+                if (window.showWarning) showWarning('Attachments manifest updated elsewhere. Refreshing.');
+                await refreshPanel(options.emailId, options, true);
+                return;
+            }
+            const message = extractErrorMessage(body, `Failed to mark removal (${response.status})`);
+            throw new Error(message);
+        }
+
+        cache.delete(options.emailId);
+        await refreshPanel(options.emailId, options, true);
+        if (window.showSuccess) showSuccess('Attachment marked for removal');
+    }
+
+    async function markKeep(aid, options) {
+        if (!aid || !options) return;
+        const payload = await fetchAttachments(options.emailId);
+        const version = Number(payload && payload.version !== undefined ? payload.version : 0);
+        const response = await fetch(`/api/email/${options.emailId}/attachments/mark`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'keep', aid, version }),
+        });
+        const parsed = await parseResponseBody(response);
+        const body = parsed.body || {};
+
+        if (!response.ok || !body.ok) {
+            if (response.status === 409 && body.latest_version !== undefined) {
+                if (window.showWarning) showWarning('Attachments manifest updated elsewhere. Refreshing.');
+                await refreshPanel(options.emailId, options, true);
+                return;
+            }
+            const message = extractErrorMessage(body, `Failed to undo removal (${response.status})`);
+            throw new Error(message);
+        }
+
+        cache.delete(options.emailId);
+        await refreshPanel(options.emailId, options, true);
+        if (window.showSuccess) showSuccess('Attachment removal undone');
+    }
+
+    async function deleteStaged(stagedId, options) {
+        if (!stagedId || !options) return;
+        const payload = await fetchAttachments(options.emailId);
+        const version = Number(payload && payload.version !== undefined ? payload.version : 0);
+        const params = new URLSearchParams();
+        params.set('version', String(version));
+
+        const response = await fetch(`/api/email/${options.emailId}/attachments/staged/${stagedId}?${params.toString()}`, {
+            method: 'DELETE',
+        });
+        const parsed = await parseResponseBody(response);
+        const body = parsed.body || {};
+
+        if (!response.ok || !body.ok) {
+            if (response.status === 409 && body.latest_version !== undefined) {
+                if (window.showWarning) showWarning('Attachments manifest updated elsewhere. Refreshing.');
+                await refreshPanel(options.emailId, options, true);
+                return;
+            }
+            const message = extractErrorMessage(body, `Failed to discard staged file (${response.status})`);
+            throw new Error(message);
+        }
+
+        cache.delete(options.emailId);
+        await refreshPanel(options.emailId, options, true);
+        if (window.showSuccess) showSuccess('Staged attachment discarded');
+    }
+
+    function replacePrompt(aid, options) {
+        if (!aid) return;
+        const resolved = options || resolveOptionsFromNode(options && options.container);
+        if (!resolved || !resolved.emailId) return;
+
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.multiple = false;
+        fileInput.style.display = 'none';
+        document.body.appendChild(fileInput);
+
+        fileInput.addEventListener('change', async (event) => {
+            const files = event.target.files;
+            fileInput.remove();
+            if (!files || !files.length) return;
+            try {
+                await handleFileList(files, resolved, aid);
+            } catch (_) {
+                // errors handled in uploadOne
+            }
+        }, { once: true });
+
+        fileInput.click();
+    }
+
+    async function handleFileList(fileList, options, replaceAid = null) {
+        const filesRaw = Array.from(fileList || []);
+        const files = replaceAid !== null ? filesRaw.slice(0, 1) : filesRaw;
+        if (!files.length) return;
+        const resolved = options || resolveOptionsFromNode(options && options.container);
+        if (!resolved || !resolved.emailId) return;
+        const shell = resolved.panelElement ? resolved.panelElement.querySelector('[data-role="upload-shell"]') : null;
+        if (shell) shell.classList.add('is-uploading');
+        try {
+            for (const file of files) {
+                try {
+                    await uploadOne(resolved.emailId, file, { replaceAid, options: resolved });
+                } catch (_) {
+                    break;
+                }
+            }
+        } finally {
+            if (shell) shell.classList.remove('is-uploading');
+        }
+    }
+
+    function buildSummaryPayload(payload) {
+        const summary = {
+            add: [],
+            replace: [],
+            remove: [],
+            keep: [],
+            counts: { add: 0, replace: 0, remove: 0, keep: 0 },
+        };
+        if (!payload || typeof payload !== 'object') {
+            return summary;
+        }
+
+        const attachments = Array.isArray(payload.attachments) ? payload.attachments : [];
+        const attachmentsById = new Map();
+        attachments.forEach((att) => {
+            if (att && att.id !== undefined) {
+                attachmentsById.set(Number(att.id), att);
+            }
+        });
+
+        const items = payload.manifest && Array.isArray(payload.manifest.items)
+            ? payload.manifest.items
+            : [];
+
+        items.forEach((item) => {
+            if (!item || typeof item !== 'object') return;
+            const action = String(item.action || '').toLowerCase();
+            const aid = item.aid !== undefined ? Number(item.aid) : null;
+            const stagedRef = item.staged_ref !== undefined ? Number(item.staged_ref) : null;
+            const entry = { manifest: item };
+
+            switch (action) {
+                case 'add': {
+                    entry.staged = stagedRef !== null ? attachmentsById.get(stagedRef) : null;
+                    summary.add.push(entry);
+                    break;
+                }
+                case 'replace': {
+                    entry.original = aid !== null ? attachmentsById.get(aid) : null;
+                    entry.staged = stagedRef !== null ? attachmentsById.get(stagedRef) : null;
+                    summary.replace.push(entry);
+                    break;
+                }
+                case 'remove': {
+                    entry.original = aid !== null ? attachmentsById.get(aid) : null;
+                    summary.remove.push(entry);
+                    break;
+                }
+                case 'keep': {
+                    entry.original = aid !== null ? attachmentsById.get(aid) : null;
+                    summary.keep.push(entry);
+                    break;
+                }
+                default:
+                    break;
+            }
+        });
+
+        summary.counts.add = summary.add.length;
+        summary.counts.replace = summary.replace.length;
+        summary.counts.remove = summary.remove.length;
+        summary.counts.keep = summary.keep.length;
+        summary.attachments = attachments;
+
+        return summary;
+    }
+
+    function handleListClick(event) {
+        const button = event.target.closest('[data-attachment-action]');
+        if (!button) return;
+
+        const action = button.dataset.attachmentAction;
+        const row = button.closest('.attachment-item-row');
+        if (!row) return;
+
+        const options = resolveOptionsFromNode(button);
+        if (!options || !options.emailId) return;
+
+        const attachmentId = Number(row.dataset.attachmentId);
+        const stagedId = Number(row.dataset.stagedId || attachmentId);
+        const aid = Number(row.dataset.aid || attachmentId);
+
+        if (action === 'download') {
+            download(attachmentId);
+            return;
+        }
+
+        const replaceAidAttr = button.dataset.replaceAid;
+        const replaceAid = replaceAidAttr ? Number(replaceAidAttr) : aid;
+
+        runWithLoading(button, async () => {
+            try {
+                switch (action) {
+                    case 'remove-original':
+                        await markRemove(aid, options);
+                        break;
+                    case 'undo-remove':
+                        await markKeep(aid, options);
+                        break;
+                    case 'replace':
+                        replacePrompt(replaceAid, options);
+                        break;
+                    case 'delete-staged':
+                        await deleteStaged(stagedId, options);
+                        break;
+                    default:
+                        break;
+                }
+            } catch (error) {
+                if (window.showError) showError(error.message || 'Failed to update attachments');
+            }
+        });
+    }
+
+    function setupUploadUI(options, payload) {
+        const container = options.container;
+        if (!container) return;
+        const panel = options.panelElement || container.querySelector('[data-role="attachments-panel"]');
+        if (!panel) return;
+
+        const listEl = options.listElement || panel.querySelector('[data-role="attachments-list"]');
+        if (listEl) {
+            listEl.dataset.version = payload && payload.version !== undefined ? String(payload.version) : '';
+            ensureListHandler(listEl);
+        }
+
+        if (container && options.emailId) {
+            container.dataset.emailId = String(options.emailId);
+        }
+
+        if (!canEdit) return;
+
+        const fileInput = panel.querySelector('[data-role="file-input"]');
+        const dropzone = panel.querySelector('[data-role="dropzone"]');
+
+        if (fileInput && !fileInput.dataset.mailAttachBound) {
+            fileInput.dataset.mailAttachBound = 'true';
+            fileInput.addEventListener('change', (event) => {
+                const files = event.target.files;
+                event.target.value = '';
+                if (!files || !files.length) return;
+                const resolved = resolveOptionsFromNode(fileInput);
+                handleFileList(files, resolved, null).catch(() => {});
+            });
+        }
+
+        if (dropzone && !dropzone.dataset.mailAttachBound) {
+            dropzone.dataset.mailAttachBound = 'true';
+            dropzone.addEventListener('click', () => {
+                if (fileInput) fileInput.click();
+            });
+            dropzone.addEventListener('dragover', (event) => {
+                event.preventDefault();
+                dropzone.classList.add('is-dragover');
+            });
+            dropzone.addEventListener('dragleave', (event) => {
+                if (event.relatedTarget && dropzone.contains(event.relatedTarget)) return;
+                dropzone.classList.remove('is-dragover');
+            });
+            dropzone.addEventListener('drop', (event) => {
+                event.preventDefault();
+                dropzone.classList.remove('is-dragover');
+                const files = event.dataTransfer ? event.dataTransfer.files : null;
+                if (!files || !files.length) return;
+                const resolved = resolveOptionsFromNode(dropzone);
+                handleFileList(files, resolved, null).catch(() => {});
+            });
+        }
+    }
+
+    function renderList(options, payload) {
+        const listEl = options.listElement;
+        const emptyEl = options.emptyElement;
+        if (!listEl) return;
+
+        const attachments = (payload && payload.attachments) || [];
+        const manifest = payload ? payload.manifest : null;
+        const manifestIndex = buildManifestIndex(manifest || {});
+
+        if (!attachments.length) {
+            listEl.innerHTML = '';
+            toggleElement(emptyEl, true);
+            return;
+        }
+
+        const rows = attachments.map((att) => {
+            const manifestEntry = att.is_staged
+                ? manifestIndex.byStaged.get(Number(att.id))
+                : manifestIndex.byAid.get(Number(att.id));
+
+            const badges = [];
+            if (att.is_staged) {
+                badges.push('<span class="attachment-pill attachment-pill-staged">Staged</span>');
+                if (manifestEntry && manifestEntry.action === 'replace') {
+                    badges.push('<span class="attachment-pill attachment-pill-replace">Replacement</span>');
+                } else if (manifestEntry && manifestEntry.action === 'add') {
+                    badges.push('<span class="attachment-pill attachment-pill-new">New</span>');
+                }
+            } else if (manifestEntry) {
+                if (manifestEntry.action === 'remove') {
+                    badges.push('<span class="attachment-pill attachment-pill-remove">Will Remove</span>');
+                }
+                if (manifestEntry.action === 'replace') {
+                    badges.push('<span class="attachment-pill attachment-pill-replace">Will Replace</span>');
+                }
+                if (manifestEntry.action === 'keep') {
+                    badges.push('<span class="attachment-pill attachment-pill-keep">Keeping</span>');
+                }
+            }
+
+            const sizeLabel = formatSize(att.size);
+            const sizeHtml = sizeLabel ? `<span class="attachment-size">${escapeHtml(sizeLabel)}</span>` : '';
+
+            const rowAttrs = [
+                `data-attachment-id="${att.id}"`,
+                `data-is-staged="${att.is_staged ? '1' : '0'}"`,
+            ];
+            if (att.is_staged) {
+                rowAttrs.push(`data-staged-id="${att.id}"`);
+                if (manifestEntry && manifestEntry.aid) {
+                    rowAttrs.push(`data-aid="${manifestEntry.aid}"`);
+                }
+            } else {
+                rowAttrs.push(`data-aid="${att.id}"`);
+            }
+
+            const actions = [
+                '<button type="button" class="btn btn-ghost btn-sm" data-attachment-action="download"><i class="bi bi-download"></i> Download</button>',
+            ];
+
+            if (canEdit) {
+                if (att.is_staged) {
+                    actions.push('<button type="button" class="btn btn-ghost btn-sm" data-attachment-action="delete-staged"><i class="bi bi-x-circle"></i> Discard</button>');
+                    if (manifestEntry && manifestEntry.action === 'replace' && manifestEntry.aid) {
+                        actions.push(`<button type="button" class="btn btn-secondary btn-sm" data-attachment-action="replace" data-replace-aid="${manifestEntry.aid}"><i class="bi bi-arrow-repeat"></i> Reupload</button>`);
+                    }
+                } else {
+                    if (manifestEntry && manifestEntry.action === 'remove') {
+                        actions.push('<button type="button" class="btn btn-success btn-sm" data-attachment-action="undo-remove"><i class="bi bi-arrow-counterclockwise"></i> Undo Remove</button>');
+                    } else {
+                        actions.push('<button type="button" class="btn btn-danger btn-sm" data-attachment-action="remove-original"><i class="bi bi-trash"></i> Remove</button>');
+                    }
+                    actions.push(`<button type="button" class="btn btn-secondary btn-sm" data-attachment-action="replace" data-replace-aid="${att.id}"><i class="bi bi-arrow-repeat"></i> Replace</button>`);
+                }
+            }
+
+            const badgesHtml = badges.join(' ');
+            const actionsHtml = actions.join('\n');
+
+            return `
+                <div class="attachment-item-row" ${rowAttrs.join(' ')}>
+                    <div class="attachment-meta">
+                        <i class="bi bi-paperclip"></i>
+                        <span class="attachment-name">${escapeHtml(att.filename || 'attachment')}</span>
+                        ${badgesHtml}
+                        ${sizeHtml}
+                    </div>
+                    <div class="attachment-actions">
+                        ${actionsHtml}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        listEl.innerHTML = rows;
+        toggleElement(emptyEl, false);
+        ensureListHandler(listEl);
+    }
+
+    async function summarize(emailId, options = {}) {
+        const payload = await fetchAttachments(emailId, { force: !!options.force });
+        const summary = buildSummaryPayload(payload);
+        return { payload, summary };
+    }
+
+    async function render(options = {}) {
+        const container = options.container || null;
+        const derivedEmailId = container && container.dataset.emailId ? Number(container.dataset.emailId) : null;
+        const emailId = Number(options.emailId || derivedEmailId || 0);
+
+        if (!emailId || !isEnabled()) {
+            if (container) container.classList.add('hidden');
+            return;
+        }
+
+        const panelElement = options.panelElement || (container ? container.querySelector('[data-role="attachments-panel"]') : null);
+        const listElement = options.listElement || (panelElement ? panelElement.querySelector('[data-role="attachments-list"]') : null);
+        const emptyElement = options.emptyElement || (container ? container.querySelector('.attachments-empty') : null);
+        const skeletonElement = options.skeletonElement || (container ? container.querySelector('.attachments-skeleton') : null);
+
+        const panelOptions = {
+            emailId,
+            container,
+            panelElement,
+            listElement,
+            emptyElement,
+            skeletonElement,
+        };
+
+        if (container) {
+            container.dataset.emailId = String(emailId);
+            container.classList.remove('hidden');
+            container.classList.remove('attachments-error');
+            container._mailAttachOptions = panelOptions;
+            panelRegistry.set(container, panelOptions);
+        }
+
+        if (skeletonElement) skeletonElement.classList.remove('hidden');
+        if (emptyElement) emptyElement.classList.add('hidden');
+
+        try {
+            const payload = await fetchAttachments(emailId, { force: !!options.forceReload });
+            renderList(panelOptions, payload);
+            setupUploadUI(panelOptions, payload);
+        } catch (error) {
+            applyError(container, `Failed to load attachments: ${error.message}`);
+        } finally {
+            if (skeletonElement) skeletonElement.classList.add('hidden');
+        }
+    }
+
+    function download(attachmentId) {
+        if (!attachmentId) return;
+        window.location.href = `/api/attachment/${attachmentId}/download`;
+    }
+
+    window.MailAttach = {
+        render,
+        download,
+        uploadOne,
+        markRemove,
+        markKeep,
+        replacePrompt,
+        deleteStaged,
+        summarize,
+        _fetch: fetchAttachments,
+    };
+})();
+
+// ============================================================================
 // HTTP helper utilities
 // ============================================================================
 

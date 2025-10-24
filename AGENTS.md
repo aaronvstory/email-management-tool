@@ -66,3 +66,11 @@ Embed these tasks in each page refactor:
 - Touching unrelated CLI scripts or back-end Python files beyond template context tweaks.
 
 Follow this brief to produce a cohesive dark-theme dashboard that matches the quality of the `/watchers` view across the entire app.
+
+---
+
+## Prep Status — October 24, 2025
+- Serena project activated and indexed for symbol search.
+- Onboarding memories refreshed (overview, style conventions, suggested commands, completion checklist).
+- Prep notes appended here so all agents share the same brief.
+- Standing by for detailed implementation tasks from the user.
