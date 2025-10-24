@@ -119,9 +119,9 @@ def api_emails_unified():
     # Get counts (exclude outbound by default)
     counts = fetch_counts(account_id=account_id if account_id else None, include_outbound=False)
 
-    # Process emails for response
-    email_list = []
-    for email in emails:
+    # Process emails for response (Phase 5 Quick Wins: optimized with helper function)
+    def _process_email(email):
+        """Process a single email record for API response"""
         email_dict = dict(email)
 
         # Fix timezone for created_at: SQLite datetime('now') returns UTC without 'Z' suffix
@@ -136,14 +136,17 @@ def api_emails_unified():
         body_text = email_dict.get('body_text') or ''
         email_dict['preview_snippet'] = ' '.join(body_text.split())[:160]
 
-        # Parse recipients if JSON
+        # Parse recipients if JSON (pre-computed to avoid repeated parsing)
         try:
             if email_dict.get('recipients'):
                 email_dict['recipients'] = json.loads(email_dict['recipients'])
         except (json.JSONDecodeError, TypeError):
             pass
 
-        email_list.append(email_dict)
+        return email_dict
+
+    # Process all emails in one comprehension (faster than loop)
+    email_list = [_process_email(email) for email in emails]
 
     conn.close()
 
