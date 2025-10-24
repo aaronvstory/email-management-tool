@@ -114,12 +114,44 @@
     <button class="btn btn-ghost btn-sm" onclick="reloadInbox()">Apply</button>
   </div>
   <div id="inboxList"></div>
+
+  <!-- Pagination Controls -->
+  <div id="inboxPaginationControls" style="display: none; margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.03); border-radius: 8px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+      <div style="color: #9ca3af; font-size: 0.9rem;">
+        Showing <span id="inbox-pagination-start">0</span>-<span id="inbox-pagination-end">0</span> of <span id="inbox-pagination-total">0</span> emails
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <button class="btn btn-sm btn-secondary" id="inbox-pagination-first" onclick="inboxGoToPage(1)" disabled>
+          <i class="bi bi-chevron-double-left"></i> First
+        </button>
+        <button class="btn btn-sm btn-secondary" id="inbox-pagination-prev" onclick="inboxGoToPage(inboxCurrentPage - 1)" disabled>
+          <i class="bi bi-chevron-left"></i> Previous
+        </button>
+        <div id="inbox-pagination-numbers" style="display: flex; gap: 4px;">
+          <!-- Page numbers inserted here -->
+        </div>
+        <button class="btn btn-sm btn-secondary" id="inbox-pagination-next" onclick="inboxGoToPage(inboxCurrentPage + 1)" disabled>
+          Next <i class="bi bi-chevron-right"></i>
+        </button>
+        <button class="btn btn-sm btn-secondary" id="inbox-pagination-last" onclick="inboxGoToPage(inboxTotalPages)" disabled>
+          Last <i class="bi bi-chevron-double-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 let fetchOffset = 0;  // Track pagination offset
+
+// Pagination state
+let inboxCurrentPage = 1;
+let inboxItemsPerPage = 50;
+let inboxTotalPages = 1;
+let allInboxMessages = [];
 
 function switchAccount(accountId) {
     let url = '/inbox';
@@ -230,10 +262,37 @@ async function fetchInbox(){
     return r.json();
 }
 function renderInbox(msgs){
+    allInboxMessages = msgs;
+    inboxTotalPages = Math.max(1, Math.ceil(allInboxMessages.length / inboxItemsPerPage));
+
+    // Ensure currentPage is valid
+    if (inboxCurrentPage > inboxTotalPages) {
+        inboxCurrentPage = inboxTotalPages;
+    }
+
+    renderInboxWithPagination();
+    updateInboxPaginationControls();
+}
+
+function renderInboxWithPagination(){
     const container=document.getElementById('inboxList');
-    if(!msgs.length){container.innerHTML='<div style="padding:2rem;text-align:center;opacity:.7;">No messages in inbox</div>';return;}
+    const paginationControls = document.getElementById('inboxPaginationControls');
+
+    if(!allInboxMessages.length){
+        container.innerHTML='<div style="padding:2rem;text-align:center;opacity:.7;">No messages in inbox</div>';
+        paginationControls.style.display = 'none';
+        return;
+    }
+
+    paginationControls.style.display = 'block';
     container.innerHTML='';
-    msgs.forEach(m=>{
+
+    // Calculate pagination
+    const startIndex = (inboxCurrentPage - 1) * inboxItemsPerPage;
+    const endIndex = Math.min(startIndex + inboxItemsPerPage, allInboxMessages.length);
+    const pageMessages = allInboxMessages.slice(startIndex, endIndex);
+
+    pageMessages.forEach(m=>{
         const div=document.createElement('div');
         div.className='email-row';
         div.onclick=()=>window.location='/email/'+m.id;
@@ -265,9 +324,88 @@ function renderInbox(msgs){
     });
 }
 async function reloadInbox(){
+    inboxCurrentPage = 1; // Reset to first page on reload
     const data=await fetchInbox();
     renderInbox(data.messages||[]);
 }
+
+// Inbox pagination functions
+function inboxGoToPage(page) {
+    if (page < 1 || page > inboxTotalPages || page === inboxCurrentPage) return;
+    inboxCurrentPage = page;
+    renderInboxWithPagination();
+    updateInboxPaginationControls();
+
+    // Scroll to top of inbox list
+    const inboxPanel = document.querySelector('.inbox-panel');
+    if (inboxPanel) {
+        inboxPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function updateInboxPaginationControls() {
+    const paginationControls = document.getElementById('inboxPaginationControls');
+    if (!paginationControls) return;
+
+    // Update showing text
+    const startIndex = (inboxCurrentPage - 1) * inboxItemsPerPage + 1;
+    const endIndex = Math.min(inboxCurrentPage * inboxItemsPerPage, allInboxMessages.length);
+    document.getElementById('inbox-pagination-start').textContent = allInboxMessages.length === 0 ? 0 : startIndex;
+    document.getElementById('inbox-pagination-end').textContent = endIndex;
+    document.getElementById('inbox-pagination-total').textContent = allInboxMessages.length;
+
+    // Update button states
+    document.getElementById('inbox-pagination-first').disabled = inboxCurrentPage === 1;
+    document.getElementById('inbox-pagination-prev').disabled = inboxCurrentPage === 1;
+    document.getElementById('inbox-pagination-next').disabled = inboxCurrentPage === inboxTotalPages;
+    document.getElementById('inbox-pagination-last').disabled = inboxCurrentPage === inboxTotalPages;
+
+    // Render page numbers
+    const paginationNumbers = document.getElementById('inbox-pagination-numbers');
+    paginationNumbers.innerHTML = '';
+
+    if (inboxTotalPages <= 7) {
+        // Show all pages
+        for (let i = 1; i <= inboxTotalPages; i++) {
+            paginationNumbers.appendChild(createInboxPageButton(i));
+        }
+    } else {
+        // Show first, last, current and neighbors
+        paginationNumbers.appendChild(createInboxPageButton(1));
+
+        if (inboxCurrentPage > 3) {
+            paginationNumbers.appendChild(createInboxEllipsis());
+        }
+
+        for (let i = Math.max(2, inboxCurrentPage - 1); i <= Math.min(inboxCurrentPage + 1, inboxTotalPages - 1); i++) {
+            paginationNumbers.appendChild(createInboxPageButton(i));
+        }
+
+        if (inboxCurrentPage < inboxTotalPages - 2) {
+            paginationNumbers.appendChild(createInboxEllipsis());
+        }
+
+        paginationNumbers.appendChild(createInboxPageButton(inboxTotalPages));
+    }
+}
+
+function createInboxPageButton(pageNum) {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-sm ' + (pageNum === inboxCurrentPage ? 'btn-primary' : 'btn-secondary');
+    btn.textContent = pageNum;
+    btn.onclick = () => inboxGoToPage(pageNum);
+    btn.style.minWidth = '36px';
+    return btn;
+}
+
+function createInboxEllipsis() {
+    const span = document.createElement('span');
+    span.textContent = '...';
+    span.style.padding = '0 8px';
+    span.style.color = '#9ca3af';
+    return span;
+}
+
 reloadInbox();
 setInterval(()=>{ if(!document.hidden) reloadInbox(); }, 30000);
 </script>
