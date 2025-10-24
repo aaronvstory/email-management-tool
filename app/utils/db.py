@@ -49,6 +49,32 @@ def maybe_conn(provided: Optional[sqlite3.Connection]):
             _conn.close()
 
 
+@contextmanager
+def get_cursor():
+    """Thread-safe cursor with automatic cleanup and transaction management.
+
+    Usage:
+        with get_cursor() as cursor:
+            cursor.execute("INSERT INTO ...")
+            # Auto-commits on success, rolls back on exception
+
+    This is the recommended pattern for write operations to prevent connection leaks.
+    For read-only operations or when you need the connection object, use get_db() directly.
+
+    Phase 3: Quick Wins - Connection Leak Prevention
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        yield cursor
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 def __getattr__(name):  # dynamic DB_PATH for legacy references
     if name == 'DB_PATH':
         return get_db_path()
