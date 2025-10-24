@@ -407,6 +407,18 @@ def init_database():
     except Exception:
         pass
 
+    # Performance indices (Phase 2: Quick Wins)
+    try:
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_email_messages_account_id ON email_messages(account_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_email_messages_status ON email_messages(status)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_email_messages_interception_status ON email_messages(interception_status)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_email_messages_created_at ON email_messages(created_at DESC)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_moderation_rules_active ON moderation_rules(is_active) WHERE is_active=1")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_attachments_email_id ON email_attachments(email_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at DESC)")
+    except Exception:
+        pass
+
     # Attachment storage metadata
     cur.execute(
         """
