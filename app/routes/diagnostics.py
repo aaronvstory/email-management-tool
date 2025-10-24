@@ -53,6 +53,70 @@ def get_test_status():
         return jsonify({'error': str(e)}), 500
 
 
+@diagnostics_bp.route('/api/logs')
+@login_required
+def get_logs():
+    """Fetch recent application logs with filtering."""
+    import glob
+    import logging
+    
+    # Get filter parameters
+    severity = request.args.get('severity', '').upper()  # ERROR, WARNING, INFO, DEBUG
+    component = request.args.get('component', '')  # imap_watcher, smtp_handler, accounts, etc.
+    limit = int(request.args.get('limit', 100))
+    
+    logs = []
+    log_dir = 'logs'
+    
+    try:
+        # Read from app.log (JSON formatted logs)
+        log_file = os.path.join(log_dir, 'app.log')
+        if not os.path.exists(log_file):
+            return jsonify({'logs': [], 'message': 'No log file found'}), 200
+        
+        with open(log_file, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+            # Read last N lines for efficiency
+            recent_lines = lines[-1000:] if len(lines) > 1000 else lines
+            
+            for line in reversed(recent_lines):  # Most recent first
+                try:
+                    log_entry = json.loads(line.strip())
+                    
+                    # Apply severity filter
+                    if severity and log_entry.get('level', '').upper() != severity:
+                        continue
+                    
+                    # Apply component filter (check message or logger name)
+                    if component:
+                        msg = log_entry.get('message', '').lower()
+                        logger = log_entry.get('name', '').lower()
+                        if component.lower() not in msg and component.lower() not in logger:
+                            continue
+                    
+                    logs.append(log_entry)
+                    
+                    if len(logs) >= limit:
+                        break
+                except (json.JSONDecodeError, ValueError):
+                    # Skip malformed log lines
+                    continue
+        
+        return jsonify({
+            'logs': logs,
+            'count': len(logs),
+            'filters': {
+                'severity': severity or 'all',
+                'component': component or 'all',
+                'limit': limit
+            }
+        }), 200
+        
+    except Exception as e:
+        logging.getLogger(__name__).error(f"[diagnostics] Failed to fetch logs: {e}")
+        return jsonify({'error': 'Failed to read logs', 'details': str(e)}), 500
+
+
 @diagnostics_bp.route('/diagnostics/test', methods=['POST'])
 @login_required
 def test_email_send():

@@ -72,6 +72,45 @@
     </div>
   </div>
   <div class="panel-body">
+    <div class="row g-3 mb-3">
+      <div class="col-md-3">
+        <label class="form-label">Severity</label>
+        <select class="form-select" id="logSeverity" onchange="loadLogs()">
+          <option value="">All Levels</option>
+          <option value="ERROR">ERROR</option>
+          <option value="WARNING" selected>WARNING</option>
+          <option value="INFO">INFO</option>
+          <option value="DEBUG">DEBUG</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Component</label>
+        <select class="form-select" id="logComponent" onchange="loadLogs()">
+          <option value="">All Components</option>
+          <option value="imap_watcher">IMAP Watcher</option>
+          <option value="smtp_handler">SMTP Handler</option>
+          <option value="accounts">Accounts</option>
+          <option value="interception">Interception</option>
+          <option value="database">Database</option>
+          <option value="release">Release</option>
+          <option value="attachments">Attachments</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Limit</label>
+        <select class="form-select" id="logLimit" onchange="loadLogs()">
+          <option value="50">50 entries</option>
+          <option value="100" selected>100 entries</option>
+          <option value="200">200 entries</option>
+          <option value="500">500 entries</option>
+        </select>
+      </div>
+      <div class="col-md-3 d-flex align-items-end">
+        <button class="btn btn-secondary btn-sm w-100" onclick="loadLogs()">
+          <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+      </div>
+    </div>
     <div id="systemLogs" class="console-output">
       <div class="text-muted">Loading recent logs...</div>
     </div>
@@ -260,8 +299,24 @@ async function runFullDiagnostics() {
 let latestLogPayload = [];
 
 async function loadSystemLogs() {
+  // Wrapper for backward compatibility
+  await loadLogs();
+}
+
+async function loadLogs() {
   try {
-    const resp = await fetch('/api/system/logs?limit=200', { credentials: 'same-origin' });
+    // Get filter values
+    const severity = document.getElementById('logSeverity')?.value || '';
+    const component = document.getElementById('logComponent')?.value || '';
+    const limit = document.getElementById('logLimit')?.value || '100';
+    
+    // Build query string
+    const params = new URLSearchParams();
+    if (severity) params.append('severity', severity);
+    if (component) params.append('component', component);
+    params.append('limit', limit);
+    
+    const resp = await fetch(`/api/logs?${params.toString()}`, { credentials: 'same-origin' });
     if (!resp.ok) throw new Error(resp.statusText);
     const data = await resp.json();
     latestLogPayload = Array.isArray(data.logs) ? data.logs : [];
