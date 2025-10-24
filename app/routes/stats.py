@@ -3,7 +3,7 @@
 Extracted from simple_app.py lines 1011, 2207, 2274, 2297
 Routes: /api/stats, /api/unified-stats, /api/latency-stats, /stream/stats
 """
-from flask import Blueprint, jsonify, Response, stream_with_context
+from flask import Blueprint, jsonify, Response, stream_with_context, current_app
 from flask_login import login_required
 import time
 import json
@@ -17,8 +17,10 @@ stats_bp = Blueprint('stats', __name__)
 
 # TODO Phase 2: Unify stat sources (fetch_counts vs get_stats)
 
-# Cache for unified stats (5s TTL)
-_UNIFIED_CACHE = {'t': 0, 'v': None}
+# Helper to access cache (Phase 5: replaced manual cache dicts with Flask-Caching)
+def _get_cache():
+    """Get cache instance from app context"""
+    return current_app.cache
 
 
 @stats_bp.route('/api/stats')
@@ -32,17 +34,20 @@ def api_stats():
 @stats_bp.route('/api/unified-stats')
 @login_required
 def api_unified_stats():
-    """Get unified statistics with released count, optionally filtered by account"""
+    """Get unified statistics with released count, optionally filtered by account
+    
+    Phase 5 Quick Wins: Now uses Flask-Caching with automatic memoization by account_id
+    """
     from flask import request
-
     account_id = request.args.get('account_id')
-
-    # Don't use cache if filtering by account
-    if not account_id:
-        now = time.time()
-        if now - _UNIFIED_CACHE['t'] < 5 and _UNIFIED_CACHE['v'] is not None:
-            return jsonify(_UNIFIED_CACHE['v'])
-
+    
+    # Use cache with memoization (automatically handles different account_id values)
+    cache = _get_cache()
+    cache_key = f'unified_stats_{account_id or "all"}'
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return jsonify(cached)
+    
     # Get counts with optional account filtering
     if account_id:
         from app.utils.db import fetch_counts
@@ -51,24 +56,21 @@ def api_unified_stats():
         counts = get_stats()
 
     # Get released count with optional account filtering
-    conn = get_db()
-    cur = conn.cursor()
-
-    if account_id:
-        released = cur.execute("""
-            SELECT COUNT(*) FROM email_messages
-            WHERE (interception_status='RELEASED' OR status IN ('APPROVED','DELIVERED'))
-              AND (direction IS NULL OR direction!='outbound')
-              AND account_id = ?
-        """, (account_id,)).fetchone()[0]
-    else:
-        released = cur.execute("""
-            SELECT COUNT(*) FROM email_messages
-            WHERE (interception_status='RELEASED' OR status IN ('APPROVED','DELIVERED'))
-              AND (direction IS NULL OR direction!='outbound')
-        """).fetchone()[0]
-
-    conn.close()
+    with get_db() as conn:
+        cur = conn.cursor()
+        if account_id:
+            released = cur.execute("""
+                SELECT COUNT(*) FROM email_messages
+                WHERE (interception_status='RELEASED' OR status IN ('APPROVED','DELIVERED'))
+                  AND (direction IS NULL OR direction!='outbound')
+                  AND account_id = ?
+            """, (account_id,)).fetchone()[0]
+        else:
+            released = cur.execute("""
+                SELECT COUNT(*) FROM email_messages
+                WHERE (interception_status='RELEASED' OR status IN ('APPROVED','DELIVERED'))
+                  AND (direction IS NULL OR direction!='outbound')
+            """).fetchone()[0]
 
     val = {
         'total': counts['total'],
@@ -76,20 +78,14 @@ def api_unified_stats():
         'held': counts['held'],
         'released': released
     }
-
-    # Only cache if not filtering by account
-    if not account_id:
-        now = time.time()
-        _UNIFIED_CACHE['t'] = now
-        _UNIFIED_CACHE['v'] = val
-
+    
+    # Cache result (5 second TTL set in app config)
+    cache.set(cache_key, val, timeout=5)
     return jsonify(val)
 
 
-_LAT_CACHE = {'t': 0.0, 'v': None}
-
-
 def _percentile(sorted_vals, pct: float) -> float:
+    """Calculate percentile from sorted values"""
     if not sorted_vals:
         return 0.0
     n = len(sorted_vals)
@@ -104,20 +100,25 @@ def _percentile(sorted_vals, pct: float) -> float:
 
 @stats_bp.route('/api/latency-stats')
 def api_latency_stats():
-    """Get latency statistics with 10s cache"""
-    now = time.time()
-    if _LAT_CACHE['v'] is not None and (now - _LAT_CACHE['t']) < 10:
-        return jsonify(_LAT_CACHE['v'])
+    """Get latency statistics with 10s cache
+    
+    Phase 5 Quick Wins: Now uses Flask-Caching instead of manual dict
+    """
+    cache = _get_cache()
+    cache_key = 'latency_stats'
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return jsonify(cached)
 
-    conn = get_db(); cur = conn.cursor()
-    rows = cur.execute(
-        """
-        SELECT latency_ms FROM email_messages
-        WHERE latency_ms IS NOT NULL
-        ORDER BY id DESC LIMIT 1000
-        """
-    ).fetchall()
-    conn.close()
+    with get_db() as conn:
+        cur = conn.cursor()
+        rows = cur.execute(
+            """
+            SELECT latency_ms FROM email_messages
+            WHERE latency_ms IS NOT NULL
+            ORDER BY id DESC LIMIT 1000
+            """
+        ).fetchall()
 
     vals = [float(r[0]) for r in rows if r[0] is not None]
     vals.sort()
@@ -141,8 +142,8 @@ def api_latency_stats():
             'median': float(statistics.median(vals)),
         }
 
-    _LAT_CACHE['t'] = now
-    _LAT_CACHE['v'] = payload
+    # Cache for 10 seconds (longer than default 5s due to expensive percentile calculations)
+    cache.set(cache_key, payload, timeout=10)
     return jsonify(payload)
 
 

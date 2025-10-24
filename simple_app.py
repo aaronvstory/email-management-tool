@@ -207,6 +207,15 @@ from app.extensions import csrf, limiter
 csrf.init_app(app)
 limiter.init_app(app)
 
+# Flask-Caching for thread-safe performance (Phase 5 Quick Wins)
+from flask_caching import Cache
+cache = Cache(app, config={
+    'CACHE_TYPE': 'SimpleCache',  # In-memory cache
+    'CACHE_DEFAULT_TIMEOUT': 5     # 5 seconds default TTL
+})
+# Export cache for use in blueprints
+app.cache = cache
+
 # CSRF configuration - time-limited tokens and allow HTTP in dev
 app.config['WTF_CSRF_TIME_LIMIT'] = 7200  # 2 hours; rotate token periodically
 app.config['WTF_CSRF_SSL_STRICT'] = False  # Set True in production when HTTPS is enforced
