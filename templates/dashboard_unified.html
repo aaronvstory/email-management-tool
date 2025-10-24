@@ -71,15 +71,17 @@
   .selector-actions {
     grid-area: actions;
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
+    flex-direction: row;
+    align-items: center;
     justify-content: flex-end;
-    gap: 6px;
+    gap: 10px;
+    flex-wrap: wrap;
   }
 
   .selector-actions .btn {
     min-width: 110px;
     justify-content: center;
+    white-space: nowrap;
   }
 
   .selector-actions label {
@@ -87,6 +89,7 @@
     font-weight: 500;
     font-size: 0.85rem;
     margin: 0;
+    white-space: nowrap;
   }
 
   @media (max-width: 992px) {
@@ -198,7 +201,7 @@
 
   .email-list-item {
     display: grid;
-    grid-template-columns: 280px 1fr 110px 180px;
+    grid-template-columns: 40px 280px 1fr 110px 180px;
     align-items: center;
     padding: 14px;
     border-bottom: 1px solid rgba(255,255,255,0.06);
@@ -222,7 +225,7 @@
 
   .email-list-header {
     display: grid;
-    grid-template-columns: 280px 1fr 110px 180px;
+    grid-template-columns: 40px 280px 1fr 110px 180px;
     gap: 18px;
     padding: 12px 14px;
     border-bottom: 2px solid rgba(255,255,255,0.08);
@@ -740,11 +743,30 @@
     </div>
   </div>
 
+  <!-- Bulk Actions Bar -->
+  <div id="bulk-actions-bar" style="display:none; margin-bottom:12px; padding:12px; background:rgba(59,130,246,0.1); border-radius:8px; border:1px solid rgba(59,130,246,0.3);">
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+      <span id="bulk-selection-count" style="color:#60a5fa; font-weight:600;">0 selected</span>
+      <button class="btn btn-sm btn-primary" onclick="bulkReleaseEmails()">
+        <i class="bi bi-send-check"></i> Release Selected
+      </button>
+      <button class="btn btn-sm btn-danger" onclick="bulkDiscardEmails()">
+        <i class="bi bi-trash"></i> Discard Selected
+      </button>
+      <button class="btn btn-sm btn-secondary" onclick="clearBulkSelection()">
+        <i class="bi bi-x-circle"></i> Clear Selection
+      </button>
+    </div>
+  </div>
+
   <!-- Email Table -->
   <div style="overflow-x: auto;">
     <table class="email-table">
       <thead>
         <tr>
+          <th style="width: 40px;">
+            <input type="checkbox" id="select-all-emails" onchange="toggleSelectAll(this.checked)" style="cursor:pointer;">
+          </th>
           <th style="width: 150px;">Time</th>
           <th style="width: 260px;">Correspondents</th>
           <th>Subject</th>
@@ -1031,6 +1053,9 @@ function renderDashboardEmails(emails) {
     const watcherBadge = `<span class="watcher-chip ${watcherClassSafe}" title="Watcher state">${escapeHtml(watcherLabel)}</span>`;
     
     tr.innerHTML = `
+      <td onclick="event.stopPropagation()">
+        <input type="checkbox" class="email-checkbox" data-email-id="${email.id}" onchange="updateBulkSelection()" style="cursor:pointer;">
+      </td>
       <td>${createdAtCell}</td>
       <td>
         <div class="correspondent-cell">
@@ -1222,6 +1247,100 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+
+// Bulk operations
+let selectedEmailIds = new Set();
+
+function toggleSelectAll(checked) {
+  const checkboxes = document.querySelectorAll('.email-checkbox');
+  checkboxes.forEach(cb => {
+    cb.checked = checked;
+    if (checked) {
+      selectedEmailIds.add(parseInt(cb.dataset.emailId));
+    } else {
+      selectedEmailIds.delete(parseInt(cb.dataset.emailId));
+    }
+  });
+  updateBulkSelection();
+}
+
+function updateBulkSelection() {
+  selectedEmailIds.clear();
+  document.querySelectorAll('.email-checkbox:checked').forEach(cb => {
+    selectedEmailIds.add(parseInt(cb.dataset.emailId));
+  });
+
+  const count = selectedEmailIds.size;
+  const bulkBar = document.getElementById('bulk-actions-bar');
+  const countSpan = document.getElementById('bulk-selection-count');
+  const selectAllCheckbox = document.getElementById('select-all-emails');
+
+  if (count > 0) {
+    bulkBar.style.display = 'block';
+    countSpan.textContent = `${count} selected`;
+  } else {
+    bulkBar.style.display = 'none';
+    selectAllCheckbox.checked = false;
+  }
+}
+
+function clearBulkSelection() {
+  document.querySelectorAll('.email-checkbox').forEach(cb => cb.checked = false);
+  selectedEmailIds.clear();
+  updateBulkSelection();
+}
+
+async function bulkReleaseEmails() {
+  if (selectedEmailIds.size === 0) return;
+
+  if (!confirm(`Release ${selectedEmailIds.size} email(s) to inbox?`)) return;
+
+  try {
+    const res = await fetch('/api/emails/bulk-release', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email_ids: Array.from(selectedEmailIds)})
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      showToast('success', `Released ${data.released} email(s)`);
+      clearBulkSelection();
+      loadDashboardEmails();
+    } else {
+      showToast('error', data.error || 'Bulk release failed');
+    }
+  } catch (err) {
+    console.error('Bulk release error:', err);
+    showToast('error', 'Bulk release failed');
+  }
+}
+
+async function bulkDiscardEmails() {
+  if (selectedEmailIds.size === 0) return;
+
+  if (!confirm(`Discard ${selectedEmailIds.size} email(s)? This cannot be undone.`)) return;
+
+  try {
+    const res = await fetch('/api/emails/bulk-discard', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email_ids: Array.from(selectedEmailIds)})
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      showToast('success', `Discarded ${data.discarded} email(s)`);
+      clearBulkSelection();
+      loadDashboardEmails();
+    } else {
+      showToast('error', data.error || 'Bulk discard failed');
+    }
+  } catch (err) {
+    console.error('Bulk discard error:', err);
+    showToast('error', 'Bulk discard failed');
+  }
+}
 
 </script>
 {% endblock %}

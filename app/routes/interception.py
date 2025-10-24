@@ -2612,3 +2612,119 @@ def api_delete_all_discarded():
     except Exception as e:
         log.exception("[delete-all-discarded] Unexpected error")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp_interception.route('/api/emails/bulk-release', methods=['POST'])
+@login_required
+@csrf.exempt
+def bulk_release_emails():
+    """Bulk release multiple emails to inbox"""
+    try:
+        data = request.get_json()
+        email_ids = data.get('email_ids', [])
+
+        if not email_ids or not isinstance(email_ids, list):
+            return jsonify({'error': 'email_ids array required'}), 400
+
+        released_count = 0
+        errors = []
+
+        with get_db() as conn:
+            cursor = conn.cursor()
+
+            for email_id in email_ids:
+                try:
+                    row = cursor.execute(
+                        "SELECT interception_status, account_id FROM email_messages WHERE id=?",
+                        (email_id,)
+                    ).fetchone()
+
+                    if not row:
+                        errors.append(f"Email {email_id} not found")
+                        continue
+
+                    if row['interception_status'] != 'HELD':
+                        errors.append(f"Email {email_id} not in HELD status")
+                        continue
+
+                    cursor.execute(
+                        "UPDATE email_messages SET interception_status='RELEASED', status='RELEASED' WHERE id=?",
+                        (email_id,)
+                    )
+
+                    log_action('email_released', current_user.id if current_user.is_authenticated else None, email_id, f'Bulk release')
+                    released_count += 1
+
+                except Exception as e:
+                    log.error(f"Error releasing email {email_id}: {e}")
+                    errors.append(f"Email {email_id}: {str(e)}")
+
+            conn.commit()
+
+        response = {'released': released_count}
+        if errors:
+            response['errors'] = errors
+
+        return jsonify(response), 200
+
+    except Exception as e:
+        log.error(f"Bulk release error: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@bp_interception.route('/api/emails/bulk-discard', methods=['POST'])
+@login_required
+@csrf.exempt
+def bulk_discard_emails():
+    """Bulk discard multiple emails"""
+    try:
+        data = request.get_json()
+        email_ids = data.get('email_ids', [])
+
+        if not email_ids or not isinstance(email_ids, list):
+            return jsonify({'error': 'email_ids array required'}), 400
+
+        discarded_count = 0
+        errors = []
+
+        with get_db() as conn:
+            cursor = conn.cursor()
+
+            for email_id in email_ids:
+                try:
+                    row = cursor.execute(
+                        "SELECT interception_status FROM email_messages WHERE id=?",
+                        (email_id,)
+                    ).fetchone()
+
+                    if not row:
+                        errors.append(f"Email {email_id} not found")
+                        continue
+
+                    if row['interception_status'] == 'DISCARDED':
+                        errors.append(f"Email {email_id} already discarded")
+                        continue
+
+                    cursor.execute(
+                        "UPDATE email_messages SET interception_status='DISCARDED', status='DISCARDED' WHERE id=?",
+                        (email_id,)
+                    )
+
+                    log_action('email_discarded', current_user.id if current_user.is_authenticated else None, email_id, f'Bulk discard')
+                    discarded_count += 1
+
+                except Exception as e:
+                    log.error(f"Error discarding email {email_id}: {e}")
+                    errors.append(f"Email {email_id}: {str(e)}")
+
+            conn.commit()
+
+        response = {'discarded': discarded_count}
+        if errors:
+            response['errors'] = errors
+
+        return jsonify(response), 200
+
+    except Exception as e:
+        log.error(f"Bulk discard error: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
