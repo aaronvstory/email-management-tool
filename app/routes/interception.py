@@ -1567,7 +1567,11 @@ def api_interception_release(msg_id: int):
 
         # Fetch message metadata
         row = cur.execute(
-            """\n        SELECT em.*, ea.imap_host, ea.imap_port, ea.imap_username, ea.imap_password, ea.imap_use_ssl\n        FROM email_messages em JOIN email_accounts ea ON em.account_id = ea.id\n        WHERE em.id=? AND em.direction='inbound'\n        """",
+            """
+        SELECT em.*, ea.imap_host, ea.imap_port, ea.imap_username, ea.imap_password, ea.imap_use_ssl
+        FROM email_messages em JOIN email_accounts ea ON em.account_id = ea.id
+        WHERE em.id=? AND em.direction='inbound'
+        """,
             (msg_id,),
         ).fetchone()
         if not row:
@@ -2059,7 +2063,17 @@ def api_interception_release(msg_id: int):
 
         # Update database and clear manifest
         cur.execute(
-            """\n            UPDATE email_messages\n            SET interception_status='RELEASED',\n                status='DELIVERED',\n                edited_message_id=?,\n                attachments_manifest=NULL,\n                version=version+1,\n                processed_at=datetime('now'),\n                action_taken_at=datetime('now')\n            WHERE id=?\n            """",
+            """
+            UPDATE email_messages
+            SET interception_status='RELEASED',
+                status='DELIVERED',
+                edited_message_id=?,
+                attachments_manifest=NULL,
+                version=version+1,
+                processed_at=datetime('now'),
+                action_taken_at=datetime('now')
+            WHERE id=?
+            """,
             (msg.get('Message-ID'), msg_id),
         )
         cur.execute(
