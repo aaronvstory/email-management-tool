@@ -140,8 +140,8 @@ def _ensure_attachments_extracted(conn: sqlite3.Connection, row: sqlite3.Row) ->
     if raw_path and os.path.exists(raw_path):
         try:
             raw_bytes = Path(raw_path).read_bytes()
-        except Exception as exc:
-            log.warning("[attachments] Failed reading raw_path", extra={'email_id': email_id, 'error': str(exc)})
+        except (OSError, IOError) as exc:
+            log.warning("[attachments] Failed reading raw_path", extra={'email_id': email_id, 'path': raw_path, 'error': str(exc)})
     if raw_bytes is None and raw_content:
         raw_bytes = raw_content if isinstance(raw_content, bytes) else raw_content.encode('utf-8', 'ignore')
 
@@ -150,7 +150,7 @@ def _ensure_attachments_extracted(conn: sqlite3.Connection, row: sqlite3.Row) ->
 
     try:
         message = BytesParser(policy=default_policy).parsebytes(raw_bytes)
-    except Exception as exc:
+    except (ValueError, TypeError) as exc:
         log.warning("[attachments] Failed parsing raw email", extra={'email_id': email_id, 'error': str(exc)})
         return existing
 
@@ -158,8 +158,8 @@ def _ensure_attachments_extracted(conn: sqlite3.Connection, row: sqlite3.Row) ->
     email_dir = attachments_root / str(email_id)
     try:
         email_dir.mkdir(parents=True, exist_ok=True)
-    except Exception as exc:
-        log.warning("[attachments] Failed to create storage directory", extra={'email_id': email_id, 'error': str(exc)})
+    except OSError as exc:
+        log.warning("[attachments] Failed to create storage directory", extra={'email_id': email_id, 'path': str(email_dir), 'error': str(exc)})
         return existing
 
     counter = 0
@@ -194,7 +194,7 @@ def _ensure_attachments_extracted(conn: sqlite3.Connection, row: sqlite3.Row) ->
         destination = email_dir / final_name
         try:
             destination.write_bytes(payload)
-        except Exception as exc:
+        except (OSError, IOError) as exc:
             log.warning("[attachments] Failed writing attachment", extra={'email_id': email_id, 'file': final_name, 'error': str(exc)})
             continue
 
@@ -256,7 +256,7 @@ def _load_manifest_from_row(row: sqlite3.Row | Dict[str, Any]) -> Dict[str, Any]
 
     try:
         manifest = json.loads(raw)
-    except Exception as exc:
+    except (json.JSONDecodeError, ValueError) as exc:
         log.warning(
             '[attachments] Failed to decode manifest',
             extra={'email_id': email_id, 'error': str(exc)},
@@ -322,7 +322,8 @@ def _release_release_lock(conn: sqlite3.Connection, email_id: int) -> None:
             (email_id,),
         )
         conn.commit()
-    except Exception:
+    except sqlite3.Error as e:
+        log.warning(f"[release] Failed to release lock for email {email_id}: {e}")
         conn.rollback()
 
 
@@ -627,8 +628,8 @@ def _uid_store(imap_conn, uid, op, labels):
     """Wrapper for UID STORE operations with error handling."""
     try:
         return imap_conn.uid('STORE', str(uid), op, labels)
-    except Exception as e:
-        log.debug(f"[_uid_store] Failed uid={uid} op={op}: {e}")
+    except (imaplib.IMAP4.error, OSError) as e:
+        log.warning(f"[_uid_store] UID STORE failed uid={uid} op={op}: {e}")
         return ('NO', [])
 
 def _gm_search(imap_conn, raw_query):
@@ -638,8 +639,8 @@ def _gm_search(imap_conn, raw_query):
         if typ != 'OK' or not data or not data[0]:
             return []
         return [int(x) for x in data[0].split()]
-    except Exception as e:
-        log.debug(f"[_gm_search] Failed query={raw_query}: {e}")
+    except (imaplib.IMAP4.error, ValueError) as e:
+        log.warning(f"[_gm_search] Gmail search failed query={raw_query}: {e}")
         return []
 
 def _gm_fetch_thrid(imap_conn, uid):
@@ -666,7 +667,8 @@ def _find_uid_by_message_id(imap_conn, mailbox, msgid):
         if typ == 'OK' and data and data[0]:
             uids = [int(x) for x in data[0].split()]
             return uids[0] if uids else None
-    except:
+    except (imaplib.IMAP4.error, ValueError) as e:
+        log.warning(f"[_find_uid_by_message_id] Message-ID search failed in {mailbox}: {e}")
         return None
 
 def _robust_message_id_search(imap_conn, folder, message_id, is_gmail=False, tries=3, delay=0.4):
