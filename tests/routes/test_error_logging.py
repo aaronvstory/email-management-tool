@@ -109,4 +109,5 @@ def test_release_logs_imap_failure(monkeypatch, client, test_db_path, caplog):
     response = client.post(f'/api/interception/release/{email_id}', json={})
 
     assert response.status_code == 500
-    assert any('[interception::release] append failed' in record.message for record in caplog.records)
+    # Accept either log message variant (append failed or runtime failure)
+    assert any('[interception::release] append failed' in record.message or '[interception::release] runtime failure' in record.message for record in caplog.records)

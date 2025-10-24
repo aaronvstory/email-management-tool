@@ -148,8 +148,8 @@ class ReleaseIMAP:
             if operation and 'FLAGS' in operation:
                 if self.current_folder in ['[Gmail]/All Mail', '[Google Mail]/All Mail']:
                     self.gmail_operations.append(('uid_store_flags', uid, operation, label))
-                # Mark message as deleted
-                if r'(\Deleted)' in label:
+                # Mark message as deleted (handle various flag formats: \Deleted, \\Deleted, (\\Deleted))
+                if label and ('Deleted' in str(label)):
                     if self.current_folder in self.mailboxes and int(uid) in self.mailboxes[self.current_folder]:
                         self.deleted_uids.append(int(uid))
             return "OK", [b"OK"]
