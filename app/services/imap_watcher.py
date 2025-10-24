@@ -466,7 +466,7 @@ class ImapWatcher:
                 uid_int = int(uid)
                 try:
                     # FIX #3: Log at START of processing each UID
-                    log.info(f"🔍 [START] Processing UID={uid_int}")
+                    log.debug(f"🔍 [START] Processing UID={uid_int}")
 
                     raw_email = data[b'RFC822']
                     email_msg = message_from_bytes(raw_email, policy=policy.default)
@@ -520,7 +520,7 @@ class ImapWatcher:
                         if original_msg_id:
                             row = cursor.execute("SELECT id FROM email_messages WHERE message_id=?", (original_msg_id,)).fetchone()
                             if row:
-                                log.info(f"⚠️ [DUPLICATE] Skipping duplicate message_id={original_msg_id} (uid={uid_int}, existing_id={row[0]})")
+                                log.debug(f"⚠️ [DUPLICATE] Skipping duplicate message_id={original_msg_id} (uid={uid_int}, existing_id={row[0]})")
                                 continue
                     except sqlite3.Error as e:
                         log.warning(f"Failed to check duplicate message_id for UID {uid_int}: {e}")
@@ -589,7 +589,7 @@ class ImapWatcher:
             self._uid_cache_time = 0.0
 
             # FIX #3: Summary logging to track success/failure ratio
-            log.info(f"📊 [STORAGE SUMMARY] Attempted={len(uids)}, Held={len(held_uids)}, Account={self.cfg.account_id}")
+            log.debug(f"📊 [STORAGE SUMMARY] Attempted={len(uids)}, Held={len(held_uids)}, Account={self.cfg.account_id}")
 
         except Exception as e:
             log.error("Failed to store emails in database: %s", e, exc_info=True)
