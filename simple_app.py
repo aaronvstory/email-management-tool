@@ -90,12 +90,12 @@ def check_port_available(port, host='localhost'):
                         print(f"Killed process {pid} using port {port}")
                         time.sleep(2)
                         return True, pid
-                    except Exception as e:
+                    except subprocess.CalledProcessError as e:
                         import logging
-                        logging.getLogger(__name__).debug(f"[startup] Failed to kill process {pid} on port {port}: {e}")
-        except Exception as e:
+                        logging.getLogger(__name__).warning(f"[startup] Failed to kill process {pid} on port {port}: {e}")
+        except subprocess.CalledProcessError as e:
             import logging
-            logging.getLogger(__name__).debug(f"[startup] Port check command failed for port {port}: {e}")
+            logging.getLogger(__name__).warning(f"[startup] Port check command failed for port {port}: {e}")
     else:
         # Linux/Mac: use lsof
         try:
@@ -110,12 +110,12 @@ def check_port_available(port, host='localhost'):
                         print(f"Killed process {pid} using port {port}")
                         time.sleep(2)
                         return True, pid
-                    except Exception as e:
+                    except subprocess.CalledProcessError as e:
                         import logging
-                        logging.getLogger(__name__).debug(f"[startup] Failed to kill process {pid} on port {port}: {e}")
-        except Exception as e:
+                        logging.getLogger(__name__).warning(f"[startup] Failed to kill process {pid} on port {port}: {e}")
+        except subprocess.CalledProcessError as e:
             import logging
-            logging.getLogger(__name__).debug(f"[startup] lsof command failed for port {port}: {e}")
+            logging.getLogger(__name__).warning(f"[startup] lsof command failed for port {port}: {e}")
 
     return False, None
 
@@ -196,7 +196,7 @@ app.config['IMAP_ONLY'] = _bool_env('IMAP_ONLY', default=False)
 # CSRF + Rate Limiting (use shared extension instances)
 try:
     from flask_wtf.csrf import generate_csrf, CSRFError  # type: ignore[import]
-except Exception:
+except ImportError:
     def generate_csrf() -> str:  # type: ignore[misc]
         return ""
     class CSRFError(Exception):  # type: ignore[misc]
@@ -219,8 +219,9 @@ if (not app.debug) and (not secret or secret == _default_secret or len(str(secre
 if app.debug and (not secret or secret == _default_secret):
     try:
         app.logger.warning("SECURITY: Using development SECRET_KEY; do not use in production.")
-    except Exception:
-        pass
+    except RuntimeError as e:
+        import logging
+        logging.getLogger(__name__).debug(f"[startup] Failed to log dev secret warning: {e}")
 
 login_manager = LoginManager(app)
 login_manager.login_view = 'auth.login'  # type: ignore[reportAttributeAccessIssue]
@@ -251,9 +252,9 @@ def log_action(action, user_id, target_id, details):
         )
         conn.commit()
         conn.close()
-    except Exception:
-        # swallow so UI not impacted
-        pass
+    except sqlite3.Error as e:
+        import logging
+        logging.getLogger(__name__).warning(f"[audit] Failed to log action '{action}' for user {user_id}: {e}")
 
 # Compatibility alias for legacy code paths
 def decrypt_password(val: Optional[str]) -> Optional[str]:
@@ -303,15 +304,17 @@ def stop_imap_watcher_for_account(account_id: int) -> bool:
         with get_db() as conn:
             conn.execute("UPDATE email_accounts SET is_active=0 WHERE id=?", (account_id,))
             conn.commit()
-    except Exception:
-        pass
+    except sqlite3.Error as e:
+        import logging
+        logging.getLogger(__name__).warning(f"[imap_watcher] Failed to deactivate account {account_id}: {e}")
     # Close active watcher client if present to break out of IDLE promptly
     try:
         watcher = imap_watchers.get(account_id)
         if watcher:
             watcher.close()
-    except Exception:
-        pass
+    except (OSError, RuntimeError) as e:
+        import logging
+        logging.getLogger(__name__).warning(f"[imap_watcher] Failed to close watcher for account {account_id}: {e}")
     return True
 
 def init_database():
@@ -394,7 +397,9 @@ def init_database():
     # Ensure new columns for attachments manifest/version
     try:
         existing_columns = {row["name"] for row in cur.execute("PRAGMA table_info(email_messages)")}
-    except Exception:
+    except sqlite3.Error as e:
+        import logging
+        logging.getLogger(__name__).warning(f"[init_db] Failed to fetch email_messages columns: {e}")
         existing_columns = set()
     if "attachments_manifest" not in existing_columns:
         cur.execute("ALTER TABLE email_messages ADD COLUMN attachments_manifest TEXT")
@@ -404,8 +409,9 @@ def init_database():
     # Idempotency: avoid duplicate rows by Message-ID when present
     try:
         cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_email_messages_msgid_unique ON email_messages(message_id) WHERE message_id IS NOT NULL")
-    except Exception:
-        pass
+    except sqlite3.Error as e:
+        import logging
+        logging.getLogger(__name__).debug(f"[init_db] Index creation skipped (already exists): {e}")
 
     # Performance indices (Phase 2: Quick Wins)
     try:
@@ -416,8 +422,9 @@ def init_database():
         cur.execute("CREATE INDEX IF NOT EXISTS idx_moderation_rules_active ON moderation_rules(is_active) WHERE is_active=1")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_attachments_email_id ON email_attachments(email_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at DESC)")
-    except Exception:
-        pass
+    except sqlite3.Error as e:
+        import logging
+        logging.getLogger(__name__).debug(f"[init_db] Performance indices already exist: {e}")
 
     # Attachment storage metadata
     cur.execute(
@@ -503,8 +510,8 @@ def init_database():
         staged_root = app.config.get('ATTACHMENTS_STAGED_ROOT_DIR', 'attachments_staged')
         os.makedirs(attachments_root, exist_ok=True)
         os.makedirs(staged_root, exist_ok=True)
-    except Exception as exc:
-        app.logger.warning("Failed to ensure attachment directories", extra={"error": str(exc)})
+    except OSError as exc:
+        app.logger.warning(f"[init_db] Failed to create attachment directories: {exc}")
 
     conn.commit()
     conn.close()
@@ -549,7 +556,9 @@ def monitor_imap_account(account_id: int):
                 detected = {}
                 try:
                     detected = detect_email_settings(email_addr) if email_addr else {}
-                except Exception:
+                except (ValueError, TypeError, KeyError) as e:
+                    import logging
+                    logging.getLogger(__name__).warning(f"[imap_monitor] Failed to detect email settings for {email_addr}: {e}")
                     detected = {}
 
                 # Start with DB values or detected defaults
@@ -582,16 +591,22 @@ def monitor_imap_account(account_id: int):
                 # Allow environment overrides for faster dev/test cycles
                 try:
                     idle_timeout_env = int(os.getenv('IMAP_IDLE_TIMEOUT', str(25 * 60)))
-                except Exception:
+                except (ValueError, TypeError) as e:
+                    import logging
+                    logging.getLogger(__name__).warning(f"[imap_monitor] Invalid IMAP_IDLE_TIMEOUT env var: {e}")
                     idle_timeout_env = 25 * 60
                 try:
                     idle_ping_env = int(os.getenv('IMAP_IDLE_PING_INTERVAL', str(14 * 60)))
-                except Exception:
+                except (ValueError, TypeError) as e:
+                    import logging
+                    logging.getLogger(__name__).warning(f"[imap_monitor] Invalid IMAP_IDLE_PING_INTERVAL env var: {e}")
                     idle_ping_env = 14 * 60
                 # Mark-seen behavior configurable via env
                 try:
                     _mark_seen = str(os.getenv('IMAP_MARK_SEEN_QUARANTINE','1')).lower() in ('1','true','yes','on')
-                except Exception:
+                except (ValueError, TypeError, AttributeError) as e:
+                    import logging
+                    logging.getLogger(__name__).warning(f"[imap_monitor] Invalid IMAP_MARK_SEEN_QUARANTINE env var: {e}")
                     _mark_seen = True
                 cfg = AccountConfig(
                     imap_host=eff_host,
@@ -614,14 +629,16 @@ def monitor_imap_account(account_id: int):
             # Register watcher reference for external stop control
             try:
                 imap_watchers[account_id] = watcher
-            except Exception:
-                pass
+            except (KeyError, TypeError) as e:
+                import logging
+                logging.getLogger(__name__).warning(f"[imap_monitor] Failed to register watcher for account {account_id}: {e}")
             watcher.run_forever()  # Blocks; returns on stop or reconnect failure
             # Cleanup on exit
             try:
                 imap_watchers.pop(account_id, None)
-            except Exception:
-                pass
+            except (KeyError, TypeError) as e:
+                import logging
+                logging.getLogger(__name__).warning(f"[imap_monitor] Failed to unregister watcher for account {account_id}: {e}")
             # If account deactivated, stop permanently
             try:
                 with get_db() as _conn:
@@ -630,14 +647,22 @@ def monitor_imap_account(account_id: int):
                     if not row or int(row[0] or 0) == 0:
                         app.logger.info(f"IMAP monitor for account {account_id} stopped (inactive)")
                         return
-            except Exception:
-                pass
+            except sqlite3.Error as e:
+                import logging
+                logging.getLogger(__name__).warning(f"[imap_monitor] Failed to check active status for account {account_id}: {e}")
             # Successful cycle: reset backoff and short pause to avoid tight loop
             backoff_sec = 5
             time.sleep(1)
 
-        except Exception as e:
+        except (imaplib.IMAP4.error, sqlite3.Error, OSError, RuntimeError) as e:
             app.logger.error(f"IMAP monitor for account {account_id} failed: {e}", exc_info=True)
+            delay = min(max_backoff, backoff_sec)
+            jitter = random.uniform(0, delay * 0.5)
+            time.sleep(delay + jitter)
+            backoff_sec = min(max_backoff, backoff_sec * 2)
+        except Exception as e:
+            # Catch-all for unexpected errors to prevent thread crash
+            app.logger.critical(f"IMAP monitor for account {account_id} encountered unexpected error: {e}", exc_info=True)
             delay = min(max_backoff, backoff_sec)
             jitter = random.uniform(0, delay * 0.5)
             time.sleep(delay + jitter)
@@ -722,8 +747,9 @@ class EmailModerationHandler:
                     if rows:
                         account_id = rows[0][0]
                     conn_match.close()
-                except Exception:
-                    pass
+                except sqlite3.Error as e:
+                    import logging
+                    logging.getLogger(__name__).warning(f"[smtp_handler] Failed to match recipient to account: {e}")
 
             # Store in database with retry logic
             print(f"📨 SMTP Handler: Storing in database - Subject: {subject}, Risk: {risk_score}, Account: {account_id}")
@@ -768,10 +794,14 @@ class EmailModerationHandler:
             print(f"📧 Email intercepted: {subject} from {sender}")
             return '250 Message accepted for delivery'
 
+        except (sqlite3.Error, smtplib.SMTPException, ValueError) as e:
+            import logging
+            logging.getLogger(__name__).error(f"[smtp_handler] Email processing failed: {e}", exc_info=True)
+            return f'500 Error: {e}'
         except Exception as e:
-            print(f"Error processing email: {e}")
-            import traceback
-            traceback.print_exc()
+            # Catch-all for unexpected errors to prevent proxy crash
+            import logging
+            logging.getLogger(__name__).critical(f"[smtp_handler] Unexpected error processing email: {e}", exc_info=True)
             return f'500 Error: {e}'
 
     def check_rules(self, subject, body, sender='', recipients=None):
@@ -800,9 +830,9 @@ def inject_template_context():
             pending_count = cursor.execute("SELECT COUNT(*) FROM email_messages WHERE status = 'PENDING'").fetchone()[0]
             conn.close()
             context['pending_count'] = pending_count
-    except Exception as e:
+    except sqlite3.Error as e:
         import logging
-        logging.getLogger(__name__).debug(f"[context] Failed to fetch pending count: {e}")
+        logging.getLogger(__name__).warning(f"[context] Failed to fetch pending count: {e}")
 
     # Add CSRF token
     context['csrf_token'] = generate_csrf
@@ -845,8 +875,9 @@ def ratelimit_error(e):
     try:
         if request.endpoint == 'auth.login' or request.path.startswith('/login'):
             return ("Too many login attempts. Please wait a minute and try again.", 429)
-    except Exception:
-        pass
+    except (AttributeError, RuntimeError) as e:
+        import logging
+        logging.getLogger(__name__).debug(f"[rate_limit] Error checking endpoint: {e}")
     # For all other routes, return a simple 429 text response (no flash to avoid spam)
     return ("Too many requests. Please slow down and try again shortly.", 429)
 
@@ -861,10 +892,13 @@ def log_security_events(response):
                 app.logger.warning(f"CSRF validation failed: {request.method} {request.url} from {request.remote_addr}")
         elif response.status_code == 429:
             app.logger.warning(f"Rate limit exceeded: {request.method} {request.url} from {request.remote_addr}")
-    except Exception:
+    except RuntimeError as e:
+        import logging
+        log = logging.getLogger(__name__)
         try:
-            app.logger.exception("Security event logging failed")
-        except Exception:
+            log.warning(f"[security] Security event logging failed: {e}")
+        except (RuntimeError, OSError):
+            # Final safety catch-all - logging infrastructure failed
             pass
     return response
 
@@ -995,8 +1029,9 @@ def run_smtp_proxy():
             s.send_message(msg)
             try:
                 s.quit()
-            except Exception:
-                pass
+            except (smtplib.SMTPException, OSError) as e:
+                import logging
+                logging.getLogger(__name__).debug(f"[smtp_selfcheck] SMTP quit failed: {e}")
             # Record last successful self-check timestamp
             try:
                 conn = sqlite3.connect(DB_PATH)
@@ -1004,18 +1039,21 @@ def run_smtp_proxy():
                 cur.execute("CREATE TABLE IF NOT EXISTS system_status (key TEXT PRIMARY KEY, value TEXT)")
                 cur.execute("INSERT OR REPLACE INTO system_status(key, value) VALUES('smtp_last_selfcheck', datetime('now'))")
                 conn.commit(); conn.close()
-            except Exception:
-                pass
-        except Exception:
+            except sqlite3.Error as e:
+                import logging
+                logging.getLogger(__name__).debug(f"[smtp_selfcheck] Failed to record timestamp: {e}")
+        except (smtplib.SMTPException, OSError, socket.error) as e:
             # Best-effort only; do not crash proxy thread
+            import logging
+            logging.getLogger(__name__).warning(f"[smtp_selfcheck] Self-check failed: {e}")
             try:
                 conn = sqlite3.connect(DB_PATH)
                 cur = conn.cursor()
                 cur.execute("CREATE TABLE IF NOT EXISTS system_status (key TEXT PRIMARY KEY, value TEXT)")
                 cur.execute("INSERT OR REPLACE INTO system_status(key, value) VALUES('smtp_last_selfcheck', NULL)")
                 conn.commit(); conn.close()
-            except Exception:
-                pass
+            except sqlite3.Error as db_e:
+                logging.getLogger(__name__).debug(f"[smtp_selfcheck] Failed to record failure: {db_e}")
     except ImportError:
         print("⚠️  SMTP Proxy disabled (aiosmtpd not installed)")
         return
@@ -1094,9 +1132,9 @@ def cleanup_emergency_backups(days_to_keep=7):
                 try:
                     os.remove(filepath)
                     print(f"Cleaned up old backup: {filename}")
-                except Exception as e:
+                except OSError as e:
                     import logging
-                    logging.getLogger(__name__).debug(f"[cleanup] Failed to remove backup {filename}: {e}")
+                    logging.getLogger(__name__).warning(f"[cleanup] Failed to remove backup {filename}: {e}")
 
 # Schedule cleanup to run periodically
 def schedule_cleanup():
@@ -1117,7 +1155,7 @@ if __name__ == '__main__':
     try:
         import aiosmtpd  # noqa
         smtp_proxy_available = True
-    except Exception:
+    except ImportError:
         smtp_proxy_available = False
         app.logger.warning("SMTP proxy disabled (aiosmtpd not installed). Skipping proxy thread.")
 
