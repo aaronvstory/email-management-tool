@@ -72,7 +72,15 @@ class ReleaseIMAP:
 
     def uid(self, command, *args):
         if command == 'SEARCH':
-            _, criterion, data = args[0], args[1], args[2]
+            # Handle different SEARCH argument patterns
+            if len(args) == 2 and args[0] is None:
+                # Simple search like (None, 'ALL')
+                criterion = args[1]
+                data = None
+            elif len(args) >= 3:
+                _, criterion, data = args[0], args[1], args[2]
+            else:
+                return "NO", [b"Invalid SEARCH arguments"]
             # Handle X-GM-RAW searches (Gmail extension)
             if criterion == 'X-GM-RAW' and self.current_folder in self.mailboxes:
                 raw_query = data
@@ -99,9 +107,15 @@ class ReleaseIMAP:
                         self.gmail_operations.append(('uid_search', self.current_folder, value, 'HEADER-XGOOG'))
                     return "OK", [result]
             # Handle regular HEADER Message-ID searches
-            if criterion == 'HEADER' and self.current_folder in self.mailboxes:
+            if criterion == 'HEADER' and len(args) > 3 and self.current_folder in self.mailboxes:
                 value = args[3]
-                matches = [uid for uid, msgid in self.mailboxes[self.current_folder].items() if msgid == value]
+                # Support both exact and stripped message ID matching
+                # (e.g., "<id@example.com>" should match both "<id@example.com>" and "id@example.com")
+                value_stripped = value.strip('<>').strip()
+                matches = [
+                    uid for uid, msgid in self.mailboxes[self.current_folder].items()
+                    if msgid == value or msgid.strip('<>').strip() == value_stripped
+                ]
                 result = b" ".join(str(uid).encode() for uid in matches) if matches else b""
                 # Track All Mail search
                 if self.current_folder in ['[Gmail]/All Mail', '[Google Mail]/All Mail']:
