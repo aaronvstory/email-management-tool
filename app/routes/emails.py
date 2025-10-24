@@ -166,6 +166,64 @@ def api_emails_unified():
     })
 
 
+@emails_bp.route('/api/emails/search')
+@login_required
+def search_emails():
+    """Search emails by subject, sender, recipient, or body text"""
+    q = request.args.get('q', '').strip()
+    account_id = request.args.get('account_id', type=int)
+
+    if not q:
+        return jsonify({'emails': [], 'count': 0, 'query': q})
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # Search in subject, sender, recipients (JSON array), and body_text
+        query = """
+            SELECT id, account_id, sender, recipients, subject, body_text,
+                   interception_status, status, created_at,
+                   latency_ms, risk_score, keywords_matched
+            FROM email_messages
+            WHERE (direction IS NULL OR direction!='outbound')
+              AND (
+                subject LIKE ? OR
+                sender LIKE ? OR
+                recipients LIKE ? OR
+                body_text LIKE ?
+              )
+        """
+        search_pattern = f'%{q}%'
+        params = [search_pattern, search_pattern, search_pattern, search_pattern]
+
+        if account_id:
+            query += " AND account_id = ?"
+            params.append(account_id)
+
+        query += " ORDER BY created_at DESC LIMIT 100"
+
+        emails = cursor.execute(query, params).fetchall()
+
+        # Process emails
+        def _process_email(email):
+            email_dict = dict(email)
+            if email_dict.get('created_at') and isinstance(email_dict['created_at'], str):
+                if not email_dict['created_at'].endswith('Z') and 'T' not in email_dict['created_at']:
+                    email_dict['created_at'] = email_dict['created_at'].replace(' ', 'T') + 'Z'
+            body_text = email_dict.get('body_text') or ''
+            email_dict['preview_snippet'] = ' '.join(body_text.split())[:160]
+            try:
+                if email_dict.get('recipients'):
+                    email_dict['recipients'] = json.loads(email_dict['recipients'])
+            except (json.JSONDecodeError, TypeError):
+                pass
+            return email_dict
+
+        email_list = [_process_email(email) for email in emails]
+
+    return jsonify({'emails': email_list, 'count': len(email_list), 'query': q})
+
+
 @emails_bp.route('/emails')
 @login_required
 def email_queue():

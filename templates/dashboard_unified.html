@@ -687,6 +687,22 @@
     </a>
   </div>
 
+  <!-- Search Bar -->
+  <div class="mb-3">
+    <div class="input-group">
+      <input type="text" id="email-search-input" class="form-control input-modern" placeholder="Search emails by subject, sender, recipient, or content...">
+      <button class="btn btn-primary" id="email-search-btn" onclick="performEmailSearch()">
+        <i class="bi bi-search"></i> Search
+      </button>
+      <button class="btn btn-secondary" id="email-search-clear" onclick="clearEmailSearch()" style="display:none;">
+        <i class="bi bi-x-circle"></i> Clear
+      </button>
+    </div>
+    <div id="email-search-results" style="display:none; margin-top:12px;">
+      <div class="alert alert-info" id="email-search-status"></div>
+    </div>
+  </div>
+
   <!-- Filter Tabs -->
   <div class="status-tabs">
     <button class="status-tab active" data-status="ALL" onclick="switchDashboardFilter('ALL')">
@@ -1150,6 +1166,63 @@ try {
 } catch (error) {
   console.warn('SSE not supported, using polling');
 }
+
+// Email search functionality
+function performEmailSearch() {
+  const query = document.getElementById('email-search-input').value.trim();
+  if (!query) return;
+
+  const accountId = document.getElementById('account-selector')?.value || '';
+  const searchBtn = document.getElementById('email-search-btn');
+  const clearBtn = document.getElementById('email-search-clear');
+  const statusDiv = document.getElementById('email-search-status');
+  const resultsDiv = document.getElementById('email-search-results');
+
+  searchBtn.disabled = true;
+  statusDiv.textContent = 'Searching...';
+  resultsDiv.style.display = 'block';
+
+  let url = `/api/emails/search?q=${encodeURIComponent(query)}`;
+  if (accountId) url += `&account_id=${accountId}`;
+
+  fetch(url)
+    .then(r => r.json())
+    .then(data => {
+      statusDiv.textContent = `Found ${data.count} email(s) matching "${data.query}"`;
+      clearBtn.style.display = 'inline-block';
+
+      // Hide status tabs and display search results
+      document.querySelector('.status-tabs').style.display = 'none';
+      renderEmailList(data.emails);
+    })
+    .catch(err => {
+      console.error('Search error:', err);
+      statusDiv.textContent = 'Search failed. Please try again.';
+      statusDiv.className = 'alert alert-danger';
+    })
+    .finally(() => {
+      searchBtn.disabled = false;
+    });
+}
+
+function clearEmailSearch() {
+  document.getElementById('email-search-input').value = '';
+  document.getElementById('email-search-results').style.display = 'none';
+  document.getElementById('email-search-clear').style.display = 'none';
+  document.querySelector('.status-tabs').style.display = 'flex';
+  switchDashboardFilter('ALL'); // Reload all emails
+}
+
+// Allow Enter key to search
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('email-search-input');
+  if (searchInput) {
+    searchInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') performEmailSearch();
+    });
+  }
+});
+
 </script>
 {% endblock %}
 
