@@ -138,7 +138,7 @@ def get_all_messages(status_filter=None, limit: int = 200, *, conn: Optional[sql
         ).fetchall()
 
 
-def fetch_counts(account_id: int | None = None, *, conn: Optional[sqlite3.Connection] = None, include_outbound: bool = False, exclude_discarded: bool = True) -> dict:
+def fetch_counts(account_id: Optional[int] = None, *, conn: Optional[sqlite3.Connection] = None, include_outbound: bool = False, exclude_discarded: bool = True) -> dict:
     """Single-pass aggregate counts with optional connection injection.
 
     Includes 'released' defined as interception_status='RELEASED' OR legacy

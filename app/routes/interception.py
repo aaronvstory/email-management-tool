@@ -16,7 +16,7 @@ import hashlib
 from pathlib import Path
 import json
 
-from typing import Dict, Any, Optional, cast, Iterable
+from typing import Dict, Any, Optional, Union, cast, Iterable
 from flask import Blueprint, jsonify, render_template, request, current_app, send_file, abort
 from flask_login import login_required, current_user
 from email.parser import BytesParser
@@ -235,7 +235,7 @@ def _ensure_manifest_structure(manifest: Optional[Dict[str, Any]]) -> Dict[str, 
     return manifest
 
 
-def _load_manifest_from_row(row: sqlite3.Row | Dict[str, Any]) -> Dict[str, Any]:
+def _load_manifest_from_row(row: Union[sqlite3.Row, Dict[str, Any]]) -> Dict[str, Any]:
     raw = None
     email_id = None
     if isinstance(row, sqlite3.Row):

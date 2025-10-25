@@ -4,7 +4,7 @@ import os
 import sqlite3
 import time
 from datetime import datetime, timezone
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from flask import Blueprint, jsonify, request
 from flask_login import login_required
@@ -22,7 +22,7 @@ LOG_DIRS: List[str] = [
 ]
 
 
-def _query_system_status(key: str) -> str | None:
+def _query_system_status(key: str) -> Optional[str]:
     try:
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
