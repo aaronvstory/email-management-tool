@@ -2117,14 +2117,7 @@ a:focus-visible,
 }
 
 /* === LOADING SPINNER === */
-.loading-spinner {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 2px solid var(--white-20);
-  border-top-color: var(--accent-primary);
-  animation: spin 1s linear infinite;
-}
+/* Removed duplicate definition - see line ~3382 for correct implementation with display:none */
 
 @keyframes spin {
   to { transform: rotate(360deg); }
