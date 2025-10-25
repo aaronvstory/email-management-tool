@@ -1503,6 +1503,49 @@ h6 { font-size: var(--text-md); }
 }
 
 /* ========================================================================
+   RESPONSIVE UTILITIES
+   Reusable visibility helpers and adaptive spacing utilities
+   ======================================================================== */
+
+/* Visibility helpers - Mobile-first approach */
+.hidden-below-sm { display: none !important; }
+.hidden-below-md { display: none !important; }
+.hidden-below-lg { display: none !important; }
+.hidden-below-xl { display: none !important; }
+
+@media (min-width: 640px) {
+  .hidden-below-sm { display: revert !important; }
+  .visible-below-sm { display: none !important; }
+}
+
+@media (min-width: 768px) {
+  .hidden-below-md { display: revert !important; }
+  .visible-below-md { display: none !important; }
+}
+
+@media (min-width: 1024px) {
+  .hidden-below-lg { display: revert !important; }
+  .visible-below-lg { display: none !important; }
+}
+
+@media (min-width: 1280px) {
+  .hidden-below-xl { display: revert !important; }
+  .visible-below-xl { display: none !important; }
+}
+
+/* Text truncation for badges and labels */
+.truncate-badge {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Adaptive spacing utilities using CSS variables */
+.gap-adaptive { gap: var(--space-md); }
+.padding-adaptive { padding: var(--space-md); }
+
+/* ========================================================================
    MISSING CLASSES - COMPREHENSIVE ADDITION
    Classes from main.css, theme-dark.css, scoped_fixes.css that were
    missing from the initial consolidation

@@ -102,6 +102,7 @@
                     </nav>
                 </div>
                 <div class="command-controls">
+                    <!-- Zone 3: Adaptive search (hidden below 1024px) -->
                     <div class="global-search" role="search">
                         <i class="bi bi-search search-icon"></i>
                         <input type="search"
@@ -109,29 +110,34 @@
                                placeholder="Search mail, accounts, rules..."
                                aria-label="Global search">
                     </div>
+                    <!-- Zone 4: Always visible controls -->
                     <div class="command-actions">
                         <div class="toolbar-group">
-                            <a href="/compose" class="btn btn-secondary btn-sm">
+                            <!-- Compose button: hidden below 1024px (duplicate of nav link) -->
+                            <a href="/compose" class="btn btn-secondary btn-sm hidden-below-lg">
                                 <i class="bi bi-send-plus"></i> Compose
                             </a>
+                            <!-- Settings button: always visible -->
                             <a href="/settings" class="btn btn-ghost btn-sm">
                                 <i class="bi bi-sliders"></i> Settings
                             </a>
                         </div>
                         <div class="toolbar-group">
+                            <!-- Health pills: hidden below 768px -->
                             {% if not imap_only %}
-                            <span id="nav-smtp" class="health-pill" title="SMTP Proxy health">
+                            <span id="nav-smtp" class="health-pill hidden-below-md" title="SMTP Proxy health">
                                 <i class="bi bi-diagram-2"></i>
-                                <span class="pill-text">SMTP: --</span>
+                                <span class="pill-text truncate-badge">SMTP: --</span>
                             </span>
                             {% endif %}
-                            <span id="nav-watchers" class="health-pill" title="Active IMAP watchers">
+                            <span id="nav-watchers" class="health-pill hidden-below-md" title="Active IMAP watchers">
                                 <i class="bi bi-activity"></i>
-                                <span class="pill-text">Watchers: --</span>
+                                <span class="pill-text truncate-badge">Watchers: --</span>
                             </span>
+                            <!-- Pending badge: always visible, truncate on small screens -->
                             <span class="health-pill" title="Pending moderation items">
                                 <i class="bi bi-flag"></i>
-                                <span class="pill-text">Pending: {{ pending_count }}</span>
+                                <span class="pill-text truncate-badge">Pending: {{ pending_count }}</span>
                             </span>
                         </div>
                     </div>
