@@ -158,6 +158,13 @@
   /* Batch 5: Updated to match actual usage patterns */
   --transition-fast: all 0.2s ease;   /* 8x usage */
   --transition-base: all 0.3s ease;   /* 8x usage */
+
+  /* === RESPONSIVE BREAKPOINTS === */
+  /* Mobile-first breakpoint tokens */
+  --breakpoint-md: 768px;   /* Tablets portrait */
+  --breakpoint-lg: 1024px;  /* Tablets landscape / small laptops */
+  --breakpoint-xl: 1280px;  /* Laptops */
+  --breakpoint-2xl: 1440px; /* Desktop */
 }
 
 /* ========================================================================
@@ -1360,131 +1367,21 @@ h6 { font-size: var(--text-md); }
 .text-right { text-align: right; }
 
 /* ========================================================================
-   8. RESPONSIVE DESIGN
+   8. RESPONSIVE DESIGN - Mobile-First Architecture
    ======================================================================== */
 
-@media (max-width: 1100px) {
-  /* Collapse sidebar on medium screens */
-  .sidebar-modern {
-    transform: translateX(-100%);
-    transition: transform var(--transition-base);
-  }
-
-  .sidebar-modern.open {
-    transform: translateX(0);
-  }
-
-  .main-modern {
-    margin-left: 0;
-  }
-
-  .command-bar {
-    left: 0;
-  }
-
-  .command-bar .toggle-nav {
-    display: inline-flex;
-  }
-
-  /* Stack command bar */
-  .command-bar {
-    flex-wrap: wrap;
-    height: auto;
-    padding: var(--space-md) var(--space-xl);
-  }
-
-  .command-brand {
-    flex: 1 1 auto;
-  }
-
-  .command-nav {
-    display: none;
-  }
-
-  .command-controls {
-    flex: 1 1 100%;
-    order: 3;
-  }
-}
-
-@media (max-width: 1200px) {
-  /* Tablet adjustments */
-  .cards-grid {
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  }
-}
-
-@media (max-width: 768px) {
-  /* Mobile adjustments */
-  .content-scroll {
-    padding: calc(var(--header-height) + 80px) var(--space-xl) var(--space-xl);
-  }
-
-  .command-controls {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-md);
-  }
-
-  .global-search {
-    flex: 1 1 100%;
-    max-width: none;
-  }
-
-  .command-actions {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .health-pill .pill-text {
-    display: none;
-  }
-
-  .stats-grid-unified {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .stats-grid .stat-card-modern .stat-value {
-    font-size: 1.5rem;
-  }
-
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-md);
-  }
-
-  #watchers-page .watchers-grid {
-    grid-template-columns: 1fr;
-  }
-
-  /* Card layouts for mobile */
-  .cards-grid {
-    grid-template-columns: 1fr;
-    gap: var(--space-sm);
-    padding: var(--space-lg);
-  }
-
-  .watcher-card {
-    padding: var(--space-lg);
-  }
-
-  .panel-header {
-    padding: var(--space-md) var(--space-lg);
-  }
-
-  .panel-title {
-    font-size: 1rem;
-  }
-}
-
-/* Toggle nav button (hidden by default, shown on mobile) */
-.toggle-nav {
+/* === MOBILE BASE (default, <768px) === */
+/* Command bar is collapsed by default on mobile */
+.command-nav {
   display: none;
+}
+
+.global-search {
+  display: none;
+}
+
+.toggle-nav {
+  display: inline-flex;
   background: var(--white-05);
   border: 1px solid var(--border-default);
   color: var(--text-primary);
@@ -1499,6 +1396,110 @@ h6 { font-size: var(--text-md); }
 
 .toggle-nav:hover {
   background: var(--white-08);
+}
+
+.sidebar-modern {
+  position: fixed;
+  z-index: 40;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  transform: translateX(-100%);
+  transition: transform var(--transition-base);
+}
+
+.sidebar-modern.open {
+  transform: translateX(0);
+}
+
+.health-pill .pill-text {
+  display: none; /* Icons only on mobile */
+}
+
+.cards-grid {
+  grid-template-columns: 1fr;
+}
+
+.stats-grid,
+.stats-grid-unified {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* === TABLETS PORTRAIT (768px+) === */
+@media (min-width: 768px) {
+  .health-pill .pill-text {
+    display: inline; /* Show text on tablets+ */
+  }
+
+  .stats-grid,
+  .stats-grid-unified {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* === TABLETS LANDSCAPE (1024px+) === */
+@media (min-width: 1024px) {
+  /* Show sidebar permanently */
+  .sidebar-modern {
+    position: static;
+    transform: translateX(0);
+  }
+
+  .toggle-nav {
+    display: none; /* Hide hamburger on desktop */
+  }
+
+  /* Show command nav */
+  .command-nav {
+    display: flex;
+  }
+
+  /* Show search bar (compact) */
+  .global-search {
+    display: flex;
+    max-width: 200px;
+  }
+
+  .cards-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .stats-grid,
+  .stats-grid-unified {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* === LAPTOPS (1280px+) === */
+@media (min-width: 1280px) {
+  /* Expand search bar */
+  .global-search {
+    max-width: 300px;
+  }
+
+  .command-nav {
+    gap: var(--space-md);
+  }
+
+  .cards-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* === DESKTOP (1440px+) === */
+@media (min-width: 1440px) {
+  /* Full width search */
+  .global-search {
+    max-width: 400px;
+  }
+
+  .command-bar {
+    padding: 0 var(--space-2xl);
+  }
 }
 
 /* ========================================================================
