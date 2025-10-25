@@ -156,6 +156,7 @@ def _require_live_env():
 _require_live_env()
 
 app = Flask(__name__)
+
 from app.utils.logging import setup_app_logging
 setup_app_logging(app)
 
@@ -192,6 +193,11 @@ app.config['SECRET_KEY'] = (
 )
 # IMAP-only mode toggle (default OFF so SMTP proxy runs unless explicitly disabled)
 app.config['IMAP_ONLY'] = _bool_env('IMAP_ONLY', default=False)
+
+# Attachment feature flags (Phase 1-4 implementation)
+app.config['ATTACHMENTS_UI_ENABLED'] = _bool_env('ATTACHMENTS_UI_ENABLED', default=False)
+app.config['ATTACHMENTS_EDIT_ENABLED'] = _bool_env('ATTACHMENTS_EDIT_ENABLED', default=False)
+app.config['ATTACHMENTS_RELEASE_ENABLED'] = _bool_env('ATTACHMENTS_RELEASE_ENABLED', default=False)
 
 # CSRF + Rate Limiting (use shared extension instances)
 try:

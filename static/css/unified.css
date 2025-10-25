@@ -98,7 +98,7 @@
 
   /* Additional utility opacity variants (Batch 3) */
   --white-15: rgba(255, 255, 255, 0.15);
-  
+
   /* Semantic color palette */
   --color-blue-400: #60a5fa;
   --color-red-200: #fecaca;
@@ -107,7 +107,7 @@
   --color-yellow-400: #ffc107;
   --color-gray-200: #e2e8f0;
   --color-gray-500: #888888;
-  
+
   /* Additional surface colors */
   --surface-panel: #2a2a2a;
 
@@ -347,6 +347,7 @@ h6 { font-size: var(--text-md); }
   right: 0;
   height: var(--header-height);
   z-index: 100;
+  -webkit-backdrop-filter: blur(var(--space-sm));
   backdrop-filter: blur(var(--space-sm));
 }
 
@@ -2135,6 +2136,7 @@ a:focus-visible,
   gap: 1rem;
   padding: .7rem 1.25rem;
   background: rgba(26,26,26,0.95);
+  -webkit-backdrop-filter: blur(var(--space-base));
   backdrop-filter: blur(var(--space-base));
   border-bottom: 1px solid var(--surface-panel);
   position: sticky;
@@ -2263,8 +2265,9 @@ a:focus-visible,
   font-size: 0.82rem;
   color: var(--text-muted);
   display: -webkit-box;
-  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .email-table thead th {
@@ -2731,6 +2734,7 @@ a:focus-visible,
   padding: 0 24px;
   border-bottom: 1px solid var(--border-default);
   background: rgba(26,26,26,.9);
+  -webkit-backdrop-filter: blur(var(--space-sm));
   backdrop-filter: blur(var(--space-sm));
 }
 
@@ -3653,12 +3657,12 @@ a:focus-visible,
         background: #333333 !important;
         box-shadow: 0 0 0 2px var(--brand-overlay-medium);
     }
-    
+
     .form-select option {
         background: var(--surface-base);
         color: var(--text-primary);
     }
-    
+
     .form-input::placeholder,
     .form-textarea::placeholder {
         color: var(--text-muted);
@@ -3967,8 +3971,7 @@ a:focus-visible,
    Note: These styles may override earlier definitions for add account page
    ======================================================================== */
 
-{% block extra_css %}
-  /* ==================== STYLEGUIDE.MD COMPLIANT STYLES ==================== */
+/* ==================== STYLEGUIDE.MD COMPLIANT STYLES ==================== */
 
   /* Main Panel - Compact spacing */
   .unified-panel {
@@ -4048,6 +4051,7 @@ a:focus-visible,
   /* Collapsible SMTP Section */
   .form-section.collapsible .form-section-header {
     cursor: pointer;
+    -webkit-user-select: none;
     user-select: none;
     display: flex;
     align-items: center;
@@ -4747,7 +4751,7 @@ body.login-page {
             margin: 0;
             padding: 0;
         }
-        
+
         .login-container {
             background: var(--surface-highest) !important;
             border: 1px solid var(--border-subtle) !important;
@@ -4757,35 +4761,35 @@ body.login-page {
             width: 100%;
             max-width: 440px;
         }
-        
+
         .login-header {
             text-align: center;
             margin-bottom: 32px;
         }
-        
+
         .login-header h2 {
             color: var(--text-primary) !important;
             font-weight: 700;
             margin: var(--space-md) 0 var(--space-sm) 0;
         }
-        
+
         .login-header .icon {
             font-size: 3.5rem;
             color: var(--brand-primary);
             margin-bottom: var(--space-sm);
         }
-        
+
         .login-header p {
             color: var(--text-muted) !important;
             margin: 0;
         }
-        
+
         .form-label {
             color: var(--text-primary) !important;
             font-weight: 600;
             margin-bottom: var(--space-sm);
         }
-        
+
         .form-control {
             background: var(--white-06) !important;
             border: 1px solid var(--border-default) !important;
@@ -4793,7 +4797,7 @@ body.login-page {
             border-radius: var(--radius-md) !important;
             padding: var(--space-md) var(--space-lg) !important;
         }
-        
+
         .form-control:focus {
             background: var(--white-08) !important;
             border-color: rgba(127,29,29,0.5) !important;
@@ -4801,23 +4805,23 @@ body.login-page {
             box-shadow: 0 0 0 2px var(--brand-overlay-medium) !important;
             outline: none !important;
         }
-        
+
         .form-control::placeholder {
             color: var(--color-gray-500) !important;
             opacity: 1 !important;
         }
-        
+
         .input-group-text {
             background: var(--white-06) !important;
             border: 1px solid var(--border-default) !important;
             color: var(--text-muted) !important;
             border-radius: var(--radius-md) 0 0 var(--radius-md) !important;
         }
-        
+
         .input-group .form-control {
             border-radius: 0 var(--radius-md) var(--radius-md) 0 !important;
         }
-        
+
         .btn-login {
             background: var(--brand-overlay-light) !important;
             color: var(--text-primary) !important;
@@ -4829,26 +4833,26 @@ body.login-page {
             transition: var(--transition-fast);
             height: 48px;
         }
-        
+
         .btn-login:hover {
             background: rgba(127,29,29,0.24) !important;
             transform: translateY(-2px) !important;
             box-shadow: var(--shadow-md) !important;
             color: var(--text-primary) !important;
         }
-        
+
         .text-muted {
             color: var(--text-muted) !important;
         }
-        
+
         .small {
             color: var(--text-muted) !important;
         }
-        
+
         .alert {
             border-radius: var(--radius-md) !important;
         }
-        
+
         .alert-danger {
             background: var(--danger-bg) !important;
             border-color: var(--danger-border) !important;
@@ -5051,7 +5055,7 @@ body.login-page {
         box-shadow: 0 var(--space-xs) 16px rgba(0, 0, 0, 0.5);
         filter: brightness(1.1);
     }
-    
+
     .nav-tabs .nav-link .badge {
         margin-left: var(--space-sm);
         font-size: var(--text-sm);
@@ -5059,29 +5063,29 @@ body.login-page {
         font-weight: 600;
         vertical-align: middle;
     }
-    
+
     /* Ensure badges are visible in all states */
     .nav-tabs .nav-link.active .badge {
         background-color: rgba(255, 255, 255, 0.25) !important;
         color: white !important;
         border: 1px solid rgba(255, 255, 255, 0.4);
     }
-    
+
     .nav-tabs .nav-link:not(.active) .badge.bg-warning {
         background-color: var(--color-yellow-400) !important;
         color: #000 !important;
     }
-    
+
     .nav-tabs .nav-link:not(.active) .badge.bg-success {
         background-color: var(--color-green-600) !important;
         color: white !important;
     }
-    
+
     .nav-tabs .nav-link:not(.active) .badge.bg-danger {
         background-color: var(--color-red-600) !important;
         color: white !important;
     }
-    
+
     .nav-tabs .nav-link:not(.active) .badge.bg-info {
         background-color: #17a2b8 !important;
         color: white !important;
@@ -5364,7 +5368,7 @@ body.login-page {
   .container {
     max-width: 1140px;
   }
-  
+
   .stats-grid {
     grid-template-columns: repeat(4, 1fr);
   }
@@ -5375,7 +5379,7 @@ body.login-page {
   .page-header h1 {
     font-size: 1.75rem;
   }
-  
+
   .stats-grid {
     grid-template-columns: repeat(3, 1fr);
   }
@@ -5386,20 +5390,20 @@ body.login-page {
   .sidebar-modern {
     width: 200px;
   }
-  
+
   .command-nav {
     gap: var(--space-sm);
   }
-  
+
   .command-link {
     font-size: var(--text-base);
     padding: var(--space-sm) var(--space-md);
   }
-  
+
   .email-table {
     font-size: var(--text-base);
   }
-  
+
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -5413,99 +5417,99 @@ body.login-page {
     position: fixed;
     z-index: 1000;
   }
-  
+
   .sidebar-modern.open {
     transform: translateX(0);
   }
-  
+
   /* Show hamburger menu */
   .toggle-nav {
     display: block !important;
   }
-  
+
   /* Stack page header */
   .page-header {
     flex-direction: column;
     align-items: flex-start;
     gap: var(--space-md);
   }
-  
+
   .header-actions {
     width: 100%;
     justify-content: flex-start;
     flex-wrap: wrap;
   }
-  
+
   /* Stack command bar */
   .command-bar {
     flex-direction: column;
     gap: var(--space-md);
     padding: var(--space-md);
   }
-  
+
   .command-nav {
     flex-wrap: wrap;
     justify-content: flex-start;
   }
-  
+
   .global-search {
     width: 100%;
   }
-  
+
   /* Stats grid to single column on small screens */
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   /* Email table responsiveness */
   .email-table {
     display: block;
     overflow-x: auto;
   }
-  
+
   .email-row {
     grid-template-columns: 1fr;
     gap: var(--space-sm);
   }
-  
+
   /* Form layouts stack */
   .form-row {
     flex-direction: column;
   }
-  
+
   .form-group {
     width: 100% !important;
   }
-  
+
   /* Panel padding reduction */
   .panel {
     padding: var(--space-lg);
   }
-  
+
   .panel-body {
     padding: var(--space-md);
   }
-  
+
   /* Button groups stack */
   .btn-group {
     flex-direction: column;
   }
-  
+
   .btn-group .btn {
     width: 100%;
   }
-  
+
   /* Hide less important columns in tables */
   .email-table .time-cell,
   .email-table .latency-cell {
     display: none;
   }
-  
+
   /* Account selector compact */
   .account-selector {
     padding: var(--space-md);
   }
-  
+
   .selector-grid {
     grid-template-columns: 1fr;
     gap: var(--space-md);
@@ -5518,95 +5522,95 @@ body.login-page {
   h1, .h1 {
     font-size: 1.5rem;
   }
-  
+
   h2, .h2 {
     font-size: 1.25rem;
   }
-  
+
   h3, .h3 {
     font-size: 1.1rem;
   }
-  
+
   /* Tighter spacing */
   .content-scroll {
     padding: var(--space-md);
   }
-  
+
   .page-header {
     margin-bottom: var(--space-lg);
   }
-  
+
   /* Buttons full width */
   .btn {
     width: 100%;
     justify-content: center;
   }
-  
+
   .btn-group {
     gap: var(--space-sm);
   }
-  
+
   /* Status tabs stack */
   .status-tabs {
     flex-direction: column;
   }
-  
+
   .status-tab {
     width: 100%;
   }
-  
+
   /* Filters stack */
   .filters-bar {
     flex-direction: column;
   }
-  
+
   .search-input {
     width: 100%;
   }
-  
+
   /* Cards stack */
   .card-grid {
     grid-template-columns: 1fr;
   }
-  
+
   /* Modal full screen on mobile */
   .modal-dialog {
     margin: 0;
     max-width: 100%;
     height: 100vh;
   }
-  
+
   .modal-content {
     border-radius: 0;
     height: 100%;
   }
-  
+
   /* Compact navigation */
   .command-link {
     padding: var(--space-sm) var(--space-base);
     font-size: var(--text-sm);
   }
-  
+
   /* Hide secondary info */
   .text-muted.mb-0 {
     display: none;
   }
-  
+
   /* Provider grid single column */
   .provider-grid {
     grid-template-columns: 1fr;
   }
-  
+
   /* Test controls stack */
   .test-controls {
     grid-template-columns: 1fr;
   }
-  
+
   /* Flow steps vertical */
   .flow-steps {
     flex-direction: column;
   }
-  
+
   .flow-line {
     display: none;
   }
@@ -5618,22 +5622,22 @@ body.login-page {
   .panel {
     padding: var(--space-base);
   }
-  
+
   .btn {
     padding: var(--space-sm) var(--space-md);
     font-size: var(--text-base);
   }
-  
+
   /* Smaller icons */
   .bi, .fas, .fa {
     font-size: var(--text-lg);
   }
-  
+
   /* Compact stat cards */
   .stat-card {
     padding: var(--space-md);
   }
-  
+
   .stat-value {
     font-size: 1.5rem;
   }
