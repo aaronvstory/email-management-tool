@@ -23,29 +23,29 @@
 :root {
   /* === COLORS === */
   /* Surface colors */
-  --surface-base: var(--surface-base);
-  --surface-elevated: var(--surface-elevated);
-  --surface-highest: var(--surface-highest);
+  --surface-base: #1a1a1a;
+  --surface-elevated: #1f1f1f;
+  --surface-highest: #242424;
   --surface-overlay: rgba(26, 26, 26, 0.95);
 
   /* Brand colors */
-  --brand-primary: var(--brand-primary);
-  --brand-primary-dark: var(--brand-primary-dark);
-  --accent-primary: var(--accent-primary);
+  --brand-primary: #7f1d1d;
+  --brand-primary-dark: #991b1b;
+  --accent-primary: #dc2626;
   --accent-primary-soft: var(--danger-overlay-light);
 
   /* Semantic colors */
-  --color-success: var(--color-success);
+  --color-success: #10b981;
   --color-success-soft: var(--success-overlay-light);
-  --color-warning: var(--color-warning);
+  --color-warning: #f59e0b;
   --color-danger: var(--brand-primary);
   --color-info: #06b6d4;
 
   /* Text colors */
-  --text-primary: var(--text-primary);
-  --text-secondary: var(--text-secondary);
-  --text-muted: var(--text-muted);
-  --text-disabled: var(--text-muted);
+  --text-primary: #ffffff;
+  --text-secondary: #e5e7eb;
+  --text-muted: #9ca3af;
+  --text-disabled: #6b7280;
 
   /* Border colors */
   --border-subtle: var(--white-06);
