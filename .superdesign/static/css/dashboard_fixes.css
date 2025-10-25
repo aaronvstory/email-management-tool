@@ -165,6 +165,7 @@
     right: 0;
     height: 66px; /* Explicit height */
     z-index: 100;
+    -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
 }
 

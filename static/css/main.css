@@ -29,19 +29,19 @@
     --dark-bg: #0a0a0a;
     --card-bg: #1a1a1a;
     --text-light: #ffffff;
-    
+
     /* === SURFACE COLORS === */
     --surface-base: #1a1a1a;
     --surface-elevated: #1f1f1f;
     --surface-highest: #242424;
     --surface-overlay: rgba(26, 26, 26, 0.95);
     --surface-gradient: linear-gradient(160deg, #1a1a1a 0%, #242424 100%);
-    
+
     /* === BORDER COLORS === */
     --border-subtle: rgba(255, 255, 255, 0.06);
     --border-default: rgba(255, 255, 255, 0.12);
     --border-emphasis: rgba(220, 38, 38, 0.15);
-    
+
     /* === BRAND COLORS === */
     --brand-primary: #7f1d1d;
     --brand-primary-dark: #991b1b;
@@ -60,53 +60,53 @@
     --accent-info: #06b6d4;
     --accent-info-soft: rgba(6, 182, 212, 0.18);
     --accent-info-border: rgba(6, 182, 212, 0.35);
-    
+
     /* === SEMANTIC COLORS === */
     --success-base: #10b981;
     --success-light: #22c55e;
     --success-bg: rgba(16, 185, 129, 0.15);
     --success-border: rgba(16, 185, 129, 0.35);
-    
+
     --warning-base: #f59e0b;
     --warning-light: #fbbf24;
     --warning-bg: rgba(251, 191, 36, 0.15);
     --warning-border: rgba(251, 191, 36, 0.35);
-    
+
     --danger-base: #7f1d1d;
     --danger-light: #fca5a5;
     --danger-bg: rgba(127, 29, 29, 0.15);
     --danger-border: rgba(127, 29, 29, 0.35);
-    
+
     --info-base: #06b6d4;
     --info-light: #60a5fa;
     --info-bg: rgba(59, 130, 246, 0.15);
     --info-border: rgba(59, 130, 246, 0.35);
-    
+
     /* === TEXT COLORS === */
     --text-primary: #ffffff;
     --text-secondary: #e5e7eb;
     --text-muted: #9ca3af;
     --text-disabled: #6b7280;
-    
+
     /* === SPACING === */
     --space-xs: 8px;
     --space-sm: 12px;
     --space-md: 20px;
     --space-lg: 30px;
     --space-xl: 40px;
-    
+
     /* === BORDER RADIUS === */
     --radius-sm: 6px;
     --radius-md: 8px;
     --radius-lg: 12px;
     --radius-xl: 15px;
-    
+
     /* === SHADOWS === */
     --shadow-sm: 0 2px 4px -1px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.4);
     --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.6);
     --shadow-lg: 0 4px 12px -2px rgba(0, 0, 0, 0.75), 0 2px 6px rgba(0, 0, 0, 0.5);
     --shadow-xl: 0 10px 30px rgba(0, 0, 0, 0.6);
-    
+
     /* === LEGACY GRADIENT TOKENS (FLAT NOW) === */
     --gradient-surface: var(--surface-highest);
     --gradient-brand: var(--brand-primary);
@@ -190,6 +190,7 @@ body {
 
 .sidebar {
     background: var(--surface-overlay);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     min-height: 100vh;
     box-shadow: 4px 0 10px rgba(0,0,0,0.3);
@@ -901,7 +902,7 @@ button[type="button"],
 .provider-btn {
   /* Reset all sizing and spacing */
   height: auto !important;
-  min-height: auto !important;
+  min-height: 0 !important;
   padding: 0 !important;
   margin: 0 !important;
   font-size: inherit !important;
@@ -1258,7 +1259,9 @@ a:focus-visible,
     gap: 1rem;
     padding: .7rem 1.25rem;
     background: rgba(26,26,26,0.95);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
+    border-bottom: 1px solid #2a2a2a;
     border-bottom: 1px solid #2a2a2a;
     position: sticky;
     top: 0;
@@ -1350,6 +1353,7 @@ a:focus-visible,
     left: 0;
     right: 0;
     z-index: 100;
+    -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
 }
 
@@ -3276,9 +3280,9 @@ a:focus-visible,
 }
 
 /* Make list-view buttons mirror card-view variants by position without HTML changes */
-.accounts-view .btn-group-unified .btn { 
-    background: transparent !important; 
-    color: var(--text-primary) !important; 
+.accounts-view .btn-group-unified .btn {
+    background: transparent !important;
+    color: var(--text-primary) !important;
     border: 1px solid var(--border-default) !important;
 }
 
@@ -3383,7 +3387,7 @@ a:focus-visible,
         grid-template-columns: 1fr;
         gap: 8px !important;
     }
-    
+
     .btn-account {
         font-size: 0.75rem;
         padding: 5px 6px;
@@ -3700,3 +3704,60 @@ a:focus-visible,
 .attachments-error {
     border-color: var(--danger-border) !important;
 }
+
+/* ============================================
+   RESPONSIVE DESIGN
+   Added: 2025-10-25
+   ============================================ */
+
+/* Responsive utility classes */
+.hidden-below-sm { display: none !important; }
+.hidden-below-md { display: none !important; }
+.hidden-below-lg { display: none !important; }
+.hidden-below-xl { display: none !important; }
+
+@media (min-width: 640px) {
+  .hidden-below-sm { display: revert !important; }
+  .visible-below-sm { display: none !important; }
+}
+
+@media (min-width: 768px) {
+  .hidden-below-md { display: revert !important; }
+  .visible-below-md { display: none !important; }
+}
+
+@media (min-width: 1024px) {
+  .hidden-below-lg { display: revert !important; }
+  .visible-below-lg { display: none !important; }
+}
+
+@media (min-width: 1280px) {
+  .hidden-below-xl { display: revert !important; }
+  .visible-below-xl { display: none !important; }
+}
+
+/* Text truncation for badges */
+.truncate-badge {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Command bar responsive behavior */
+@media (max-width: 1023px) {
+  .command-nav {
+    display: none;
+  }
+
+  .global-search {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .health-pill .pill-text {
+    max-width: 80px;
+  }
+}
+
