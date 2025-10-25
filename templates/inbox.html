@@ -1,47 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Inbox - Email Management Tool{% endblock %}
 {% block extra_css %}
-<style>
-  /* Account Selector */
-  .account-selector {
-    background: rgba(26,26,26,0.9);
-    border-radius: 15px;
-    padding: 15px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 4px -1px rgba(0,0,0,.6),0 1px 2px rgba(0,0,0,.4);
-    border: 1px solid rgba(255,255,255,0.06);
-  }
-
-  .account-selector label {
-    color: #ffffff;
-    font-weight: 600;
-    margin-bottom: 8px;
-    display: block;
-  }
-
-  .account-selector select {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.12);
-    color: #ffffff;
-    width: 100%;
-    padding: 10px;
-    border-radius: 8px;
-  }
-
-  .account-selector select option {
-    background: #1a1a1a;
-    color: #ffffff;
-  }
-
-  .inbox-panel { background: var(--surface-highest); border:1px solid var(--border-subtle); border-radius: var(--radius-lg); padding:20px; box-shadow: var(--shadow-sm); }
-  .email-row { display:grid; grid-template-columns: 70px 1fr 120px 90px; gap:1rem; padding:.75rem 1rem; border-bottom:1px solid rgba(255,255,255,0.06); cursor:pointer; transition: background .2s; }
-  .email-row:hover { background: rgba(255,255,255,0.05); }
-  .email-row:last-child { border-bottom:none; }
-  /* Status chips use unified styles from main.css (.status-chip/.status-badge + .status-*) */
-  .filters-bar { display:flex; gap:.75rem; flex-wrap:wrap; margin-bottom:1rem; }
-  .search-input { flex:1; min-width:220px; }
-  .preview-snippet { font-size:.7rem; opacity:.8; margin-top:.25rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-</style>
+<!-- Inbox styles now in unified.css (extracted Oct 25, 2025) -->
 {% endblock %}
 
 {% block content %}

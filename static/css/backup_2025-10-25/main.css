@@ -1306,23 +1306,24 @@ a:focus-visible,
 
 .global-search .search-icon {
     position: absolute;
-    left: 14px;
+    left: 12px;
     top: 50%;
     transform: translateY(-50%);
     color: var(--text-muted);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    pointer-events: none;
 }
 
 .global-search input[type="search"],
 .global-search input[type="text"] {
     width: 100%;
-    padding: 8px 14px 8px 40px;
+    padding: 8px 14px 8px 42px;
     height: 38px;
     border-radius: 999px;
     background: rgba(255,255,255,0.06);
     border: 1px solid var(--border-emphasis);
     color: var(--text-primary);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     letter-spacing: 0.01em;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -1338,14 +1339,17 @@ a:focus-visible,
     align-items: center;
     gap: var(--space-sm);
     padding: 14px 20px;
-    margin: 0 36px 24px;
+    margin: 0;
     background: var(--surface-highest);
-    border: 1px solid var(--border-emphasis);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-sm);
-    position: sticky;
+    border: none;
+    border-bottom: 1px solid var(--border-emphasis);
+    border-radius: 0;
+    box-shadow: none;
+    position: fixed;
     top: 0;
-    z-index: 50;
+    left: 0;
+    right: 0;
+    z-index: 100;
     backdrop-filter: blur(8px);
 }
 
@@ -1390,7 +1394,7 @@ a:focus-visible,
     align-items: center;
     gap: 8px;
     padding: 6px 12px;
-    border-radius: 999px;
+    border-radius: 8px;
     color: var(--text-muted);
     font-size: 0.78rem;
     font-weight: 600;
@@ -1426,8 +1430,8 @@ a:focus-visible,
 .command-actions {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
+    gap: 16px;  /* Increased from 10px for better visual separation */
+    flex-wrap: nowrap;
 }
 
 .health-pill {
@@ -1435,7 +1439,7 @@ a:focus-visible,
     align-items: center;
     gap: 6px;
     padding: 6px 12px;
-    border-radius: 999px;
+    border-radius: 8px;
     background: rgba(255,255,255,0.08);
     border: 1px solid rgba(255,255,255,0.14);
     color: var(--text-muted);
@@ -1460,6 +1464,21 @@ a:focus-visible,
     background: rgba(220, 38, 38, 0.18);
     color: #fca5a5;
     border-color: rgba(220, 38, 38, 0.35);
+}
+
+/* Better organization for top-right button cluster */
+.command-actions .toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.command-actions .toolbar-group:not(:last-child)::after {
+    content: '';
+    width: 1px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.12);
+    margin-left: 12px;
 }
 
 .sidebar-footer {
