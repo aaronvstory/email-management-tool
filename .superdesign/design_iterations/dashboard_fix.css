@@ -1,0 +1,204 @@
+/* ================================================= */
+/* SUPERDESIGN FIX: DASHBOARD OVERHAUL (Phase 3B) */
+/* ================================================= */
+
+/* 1. Unified Panel/Card Component */
+/* This single class will replace .account-selector, .stat-card-modern, and .recent-emails-panel */
+.panel-unified {
+  background: var(--surface-highest, #242424);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+  border-radius: 16px; /* Modern, larger radius */
+  padding: 24px;
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.4);
+  margin-bottom: 24px;
+}
+
+/* Header style for panels */
+.panel-unified-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border-default, rgba(255, 255, 255, 0.12));
+}
+
+.panel-unified-title {
+  font-size: 1.125rem; /* 18px */
+  font-weight: 600;
+  color: var(--text-primary, #ffffff);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 2. Stat Card Grid inside a Unified Panel */
+.stats-grid-unified {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.stat-card-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.stat-card-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.stat-card-item .stat-value {
+  font-size: 2rem; /* 32px */
+  font-weight: 700;
+  color: var(--text-primary, #ffffff);
+  margin-bottom: 4px;
+}
+
+.stat-card-item .stat-label {
+  font-size: 0.8rem; /* 13px */
+  color: var(--text-muted, #9ca3af);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Specific colors for stats */
+.stat-card-item.held .stat-value { color: #fca5a5; }
+.stat-card-item.released .stat-value { color: #6ee7b7; }
+
+/* 3. Standardize Dashboard Buttons and Inputs */
+
+/* General button reset for this page */
+.panel-unified .btn {
+  margin: 0 !important;
+  min-width: auto !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  transition: all 0.2s ease !important;
+  height: 38px !important;
+  padding: 0 16px !important;
+  font-size: 0.875rem !important;
+  border-radius: 8px !important;
+}
+
+/* Primary Button (e.g., Search) */
+.panel-unified .btn-primary {
+  background: var(--brand-primary, #7f1d1d) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--brand-primary, #7f1d1d) !important;
+}
+.panel-unified .btn-primary:hover {
+  background: var(--brand-primary-dark, #991b1b) !important;
+  transform: translateY(-2px);
+}
+
+/* Secondary Button (e.g., Clear, Refresh) */
+.panel-unified .btn-secondary {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--text-secondary, #e5e7eb) !important;
+  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.12)) !important;
+}
+.panel-unified .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+  transform: translateY(-2px);
+}
+
+/* Ghost Button (e.g., View All) */
+.panel-unified .btn-ghost {
+  background: transparent !important;
+  color: var(--text-muted, #9ca3af) !important;
+  border: 1px solid transparent !important;
+}
+.panel-unified .btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #ffffff !important;
+}
+
+/* 4. Refine Layout and Spacing */
+
+/* Account Selector */
+.account-selector-unified {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+.account-selector-unified .selector-field {
+  flex: 1 1 300px; /* Allow it to grow and shrink */
+}
+.account-selector-unified .selector-actions {
+  margin-left: auto; /* Push actions to the right */
+}
+
+/* Recent Emails Toolbar */
+.email-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-default, rgba(255, 255, 255, 0.12));
+}
+.email-toolbar .search-group {
+  flex: 1 1 350px;
+}
+.email-toolbar .toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+/* Status Tabs */
+.status-tabs-unified {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.status-tabs-unified .status-tab {
+  background: transparent;
+  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.12));
+  color: var(--text-muted, #9ca3af);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.status-tabs-unified .status-tab:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+.status-tabs-unified .status-tab.active {
+  background: var(--brand-primary, #7f1d1d);
+  border-color: var(--brand-primary, #7f1d1d);
+  color: #ffffff;
+}
+
+/* 5. Clean up the original conflicting classes */
+/* This will neutralize the old styles so our new ones can take over */
+.account-selector,
+.recent-emails-panel {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+.stats-grid {
+  display: none; /* Hide the old grid; we will replace it in HTML */
+}

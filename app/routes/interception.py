@@ -1583,7 +1583,14 @@ def api_interception_release(msg_id: int):
 
         app_log.debug("Entered release handler", extra={"email_id": msg_id})
 
-        interception_status = str((row['interception_status'] or '')).upper()
+        # Enhanced debugging for error tracking
+        try:
+            app_log.debug(f"[Release DEBUG] Checking interception_status for email {msg_id}")
+            interception_status = str((row['interception_status'] or '')).upper()
+            app_log.debug(f"[Release DEBUG] Interception status: {interception_status}")
+        except Exception as e:
+            app_log.error(f"[Release ERROR] Failed to get interception_status: {e}", exc_info=True)
+            return jsonify({'ok': False, 'error': f'Failed to read status: {str(e)}'}), 500
         if interception_status == 'RELEASED':
             return jsonify({'ok': True, 'reason': 'already-released'})
         if interception_status == 'DISCARDED':
@@ -1605,8 +1612,14 @@ def api_interception_release(msg_id: int):
             _set_idempotency_record(conn, idempotency_key, msg_id, 'pending')
 
         # Load original raw message
-        raw_path = row['raw_path']
-        raw_content = row['raw_content']
+        try:
+            app_log.debug(f"[Release DEBUG] Loading raw message for email {msg_id}")
+            raw_path = row['raw_path']
+            raw_content = row['raw_content']
+            app_log.debug(f"[Release DEBUG] Raw path: {raw_path}, Raw content length: {len(raw_content) if raw_content else 0}")
+        except Exception as e:
+            app_log.error(f"[Release ERROR] Failed to access raw message fields: {e}", exc_info=True)
+            return jsonify({'ok': False, 'error': f'Failed to access raw message: {str(e)}'}), 500
         if raw_path and os.path.exists(raw_path):
             with open(raw_path, 'rb') as f:
                 original_bytes = f.read()
@@ -2135,16 +2148,42 @@ def api_interception_release(msg_id: int):
         error_payload = {'ok': False, 'reason': reason}
         if idempotency_key:
             _set_idempotency_record(conn, idempotency_key, msg_id, 'failed', error_payload)
-        log.error("[interception::release] runtime failure", extra={'email_id': msg_id, 'reason': reason})
+        log.error(
+            "[interception::release] runtime failure",
+            extra={'email_id': msg_id, 'reason': reason, 'traceback': traceback.format_exc()},
+            exc_info=True
+        )
         return jsonify(error_payload), 502 if reason == 'verify-failed' else 500
     except Exception as exc:
         conn.rollback()
-        error_payload = {'ok': False, 'reason': 'append-failed', 'error': str(exc)}
+        error_type = type(exc).__name__
+        error_payload = {
+            'ok': False,
+            'reason': 'append-failed',
+            'error': str(exc),
+            'error_type': error_type
+        }
         if idempotency_key:
             _set_idempotency_record(conn, idempotency_key, msg_id, 'failed', error_payload)
         log.exception(
             "[interception::release] append failed",
-            extra={'email_id': msg_id, 'target': target_folder},
+            extra={
+                'email_id': msg_id,
+                'target': target_folder,
+                'error_type': error_type,
+                'error_message': str(exc),
+                'traceback': traceback.format_exc()
+            },
+        )
+        app_log.error(
+            f"[Release] CRITICAL ERROR during release operation",
+            extra={
+                'email_id': msg_id,
+                'error_type': error_type,
+                'error': str(exc),
+                'traceback': traceback.format_exc()
+            },
+            exc_info=True
         )
         return jsonify(error_payload), 500
     finally:

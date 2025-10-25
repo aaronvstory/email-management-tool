@@ -76,7 +76,9 @@ def api_unified_stats():
         'total': counts['total'],
         'pending': counts['pending'],
         'held': counts['held'],
-        'released': released
+        'released': released,
+        'rejected': counts.get('rejected', 0),
+        'discarded': counts.get('discarded', 0)
     }
     
     # Cache result (5 second TTL set in app config)

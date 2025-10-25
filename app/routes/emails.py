@@ -369,7 +369,7 @@ def view_email(email_id):
         else:
             email_data['keywords_matched'] = []
 
-    return render_template('email_viewer.html', email=email_data)
+    return render_template('email_viewer.html', email=email_data, attachments_flags={'ui': True, 'edit': email_data.get('interception_status') == 'HELD'})
 
 
 @emails_bp.route('/email/<int:email_id>/action', methods=['POST'])
