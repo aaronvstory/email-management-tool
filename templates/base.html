@@ -24,8 +24,15 @@
     <!-- Chart.js (deferred - only loaded on dashboard pages) -->
     <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script> -->
 
-    <!-- Application Styles (Consolidated) -->
+    {% set use_unified = request.args.get('css') == 'unified' %}
+    {% if use_unified %}
+    <!-- Application Styles (Unified) -->
     <link rel="stylesheet" href="/static/css/unified.css">
+    {% else %}
+    <!-- Application Styles (Legacy combo) -->
+    <link rel="stylesheet" href="/static/css/theme-dark.css">
+    <link rel="stylesheet" href="/static/css/main.css">
+    {% endif %}
 {% block extra_css %}{% endblock %}
 </head>
 <body class="dark-enabled">

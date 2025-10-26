@@ -225,6 +225,30 @@ body {
     background: var(--surface-highest);
     border-radius: var(--radius-lg);
     padding: 24px;
+/* ==============================
+     Responsive/sticky safety net
+     (appended for current legacy path)
+     ============================== */
+/* Reserve space for sticky header */
+:root { --header-h: 72px; }
+.command-bar { position: sticky; top: 0; z-index: 1000; }
+main, .app-content, .content, .content-scroll { padding-top: var(--header-h); }
+
+/* Keep topbar row from spilling */
+.topbar, .command-bar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-height: var(--header-h);
+}
+.topbar .nav-links, .topbar .meta, .topbar .search { min-width: 0; }
+
+/* Collapse sidebar + extra nav below 1024px */
+@media (max-width: 1023.98px) {
+    .sidebar-modern { display: none !important; }
+    .command-bar .command-nav { display: none !important; }
+    .global-search { width: 100%; }
+}
+
+/* Hide spinner when data is ready (non-destructive) */
+.table-ready .loading-spinner { display: none !important; }
     box-shadow: var(--shadow-sm);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     border: 1px solid var(--border-subtle);
@@ -2098,6 +2122,7 @@ a:focus-visible,
     color: var(--text-muted);
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;

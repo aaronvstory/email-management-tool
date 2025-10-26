@@ -5683,12 +5683,8 @@ body.login-page {
 
 /* 1) Reserve space for sticky header so it doesn't cover content */
 :root { --header-h: 72px; } /* adjust to your actual header height */
-.app-header {
-  position: sticky;
-  top: 0;
-  z-index: 1000;           /* keep it above content */
-}
-main, .app-content, .content {
+.command-bar { position: sticky; top: 0; z-index: 1000; }
+main, .app-content, .content, .content-scroll {
   padding-top: var(--header-h) !important;
 }
 
@@ -5708,9 +5704,9 @@ main, .app-content, .content {
 
 /* 3) Collapse nav + sidebar on small screens (safe default) */
 @media (max-width: 1023.98px) {
-  .sidebar { display: none !important; }
-  .topbar .nav-links { display: none !important; }
-  .topbar .search { width: 100%; }
+  .sidebar-modern { display: none !important; }
+  .command-bar .command-nav { display: none !important; }
+  .global-search { width: 100%; }
 }
 
 /* 4) Spinner: hide when table is ready (non-destructive) */
