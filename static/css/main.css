@@ -29,19 +29,19 @@
     --dark-bg: #0a0a0a;
     --card-bg: #1a1a1a;
     --text-light: #ffffff;
-    
+
     /* === SURFACE COLORS === */
     --surface-base: #1a1a1a;
     --surface-elevated: #1f1f1f;
     --surface-highest: #242424;
     --surface-overlay: rgba(26, 26, 26, 0.95);
     --surface-gradient: linear-gradient(160deg, #1a1a1a 0%, #242424 100%);
-    
+
     /* === BORDER COLORS === */
     --border-subtle: rgba(255, 255, 255, 0.06);
     --border-default: rgba(255, 255, 255, 0.12);
     --border-emphasis: rgba(220, 38, 38, 0.15);
-    
+
     /* === BRAND COLORS === */
     --brand-primary: #7f1d1d;
     --brand-primary-dark: #991b1b;
@@ -60,53 +60,53 @@
     --accent-info: #06b6d4;
     --accent-info-soft: rgba(6, 182, 212, 0.18);
     --accent-info-border: rgba(6, 182, 212, 0.35);
-    
+
     /* === SEMANTIC COLORS === */
     --success-base: #10b981;
     --success-light: #22c55e;
     --success-bg: rgba(16, 185, 129, 0.15);
     --success-border: rgba(16, 185, 129, 0.35);
-    
+
     --warning-base: #f59e0b;
     --warning-light: #fbbf24;
     --warning-bg: rgba(251, 191, 36, 0.15);
     --warning-border: rgba(251, 191, 36, 0.35);
-    
+
     --danger-base: #7f1d1d;
     --danger-light: #fca5a5;
     --danger-bg: rgba(127, 29, 29, 0.15);
     --danger-border: rgba(127, 29, 29, 0.35);
-    
+
     --info-base: #06b6d4;
     --info-light: #60a5fa;
     --info-bg: rgba(59, 130, 246, 0.15);
     --info-border: rgba(59, 130, 246, 0.35);
-    
+
     /* === TEXT COLORS === */
     --text-primary: #ffffff;
     --text-secondary: #e5e7eb;
     --text-muted: #9ca3af;
     --text-disabled: #6b7280;
-    
+
     /* === SPACING === */
     --space-xs: 8px;
     --space-sm: 12px;
     --space-md: 20px;
     --space-lg: 30px;
     --space-xl: 40px;
-    
+
     /* === BORDER RADIUS === */
     --radius-sm: 6px;
     --radius-md: 8px;
     --radius-lg: 12px;
     --radius-xl: 15px;
-    
+
     /* === SHADOWS === */
     --shadow-sm: 0 2px 4px -1px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.4);
     --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.6);
     --shadow-lg: 0 4px 12px -2px rgba(0, 0, 0, 0.75), 0 2px 6px rgba(0, 0, 0, 0.5);
     --shadow-xl: 0 10px 30px rgba(0, 0, 0, 0.6);
-    
+
     /* === LEGACY GRADIENT TOKENS (FLAT NOW) === */
     --gradient-surface: var(--surface-highest);
     --gradient-brand: var(--brand-primary);
@@ -190,6 +190,7 @@ body {
 
 .sidebar {
     background: var(--surface-overlay);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     min-height: 100vh;
     box-shadow: 4px 0 10px rgba(0,0,0,0.3);
@@ -224,6 +225,52 @@ body {
     background: var(--surface-highest);
     border-radius: var(--radius-lg);
     padding: 24px;
+/* ==============================
+     Responsive/sticky safety net
+     (appended for current legacy path)
+     ============================== */
+/* Reserve space for sticky header */
+:root { --header-h: 72px; }
+.command-bar { position: sticky; top: 0; z-index: 1000; }
+main, .app-content, .content, .content-scroll { padding-top: var(--header-h); }
+
+/* Keep topbar row from spilling */
+.topbar, .command-bar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-height: var(--header-h);
+}
+.topbar .nav-links, .topbar .meta, .topbar .search { min-width: 0; }
+
+/* Collapse sidebar + extra nav below 1024px */
+@media (max-width: 1023.98px) {
+    .sidebar-modern { display: none !important; }
+    .command-bar .command-nav { display: none !important; }
+    .global-search { width: 100%; }
+}
+
+/* Hide spinner when data is ready (non-destructive) */
+.table-ready .loading-spinner { display: none !important; }
+
+/* ===== Guardrails: sticky header, wrapping, responsive collapse, spinner hide (appended) ===== */
+/* reserve space for sticky command bar */
+:root { --header-h: 72px; }
+.command-bar { position: sticky; top: 0; z-index: 1000; min-height: var(--header-h); }
+main, .app-content, .content, .content-scroll { padding-top: var(--header-h); }
+
+/* keep the top row from spilling under the header */
+.topbar, .command-bar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-height: var(--header-h);
+}
+.topbar .nav-links, .topbar .meta, .topbar .search { min-width: 0; }
+
+/* collapse sidebar + extra nav on small screens */
+@media (max-width: 1023.98px) {
+    .sidebar-modern { display: none !important; }
+    .command-bar .command-nav { display: none !important; }
+    .global-search { width: 100%; }
+}
+
+/* hide spinner when data is ready (JS should add .table-ready) */
+.table-ready .loading-spinner { display: none !important; }
     box-shadow: var(--shadow-sm);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     border: 1px solid var(--border-subtle);
@@ -901,7 +948,7 @@ button[type="button"],
 .provider-btn {
   /* Reset all sizing and spacing */
   height: auto !important;
-  min-height: auto !important;
+  min-height: 0 !important;
   padding: 0 !important;
   margin: 0 !important;
   font-size: inherit !important;
@@ -1258,7 +1305,9 @@ a:focus-visible,
     gap: 1rem;
     padding: .7rem 1.25rem;
     background: rgba(26,26,26,0.95);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
+    border-bottom: 1px solid #2a2a2a;
     border-bottom: 1px solid #2a2a2a;
     position: sticky;
     top: 0;
@@ -1306,23 +1355,24 @@ a:focus-visible,
 
 .global-search .search-icon {
     position: absolute;
-    left: 14px;
+    left: 12px;
     top: 50%;
     transform: translateY(-50%);
     color: var(--text-muted);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    pointer-events: none;
 }
 
 .global-search input[type="search"],
 .global-search input[type="text"] {
     width: 100%;
-    padding: 8px 14px 8px 40px;
+    padding: 8px 14px 8px 42px;
     height: 38px;
     border-radius: 999px;
     background: rgba(255,255,255,0.06);
     border: 1px solid var(--border-emphasis);
     color: var(--text-primary);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     letter-spacing: 0.01em;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -1338,14 +1388,18 @@ a:focus-visible,
     align-items: center;
     gap: var(--space-sm);
     padding: 14px 20px;
-    margin: 0 36px 24px;
+    margin: 0;
     background: var(--surface-highest);
-    border: 1px solid var(--border-emphasis);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-sm);
-    position: sticky;
+    border: none;
+    border-bottom: 1px solid var(--border-emphasis);
+    border-radius: 0;
+    box-shadow: none;
+    position: fixed;
     top: 0;
-    z-index: 50;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
 }
 
@@ -1390,7 +1444,7 @@ a:focus-visible,
     align-items: center;
     gap: 8px;
     padding: 6px 12px;
-    border-radius: 999px;
+    border-radius: 8px;
     color: var(--text-muted);
     font-size: 0.78rem;
     font-weight: 600;
@@ -1426,8 +1480,8 @@ a:focus-visible,
 .command-actions {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
+    gap: 16px;  /* Increased from 10px for better visual separation */
+    flex-wrap: nowrap;
 }
 
 .health-pill {
@@ -1435,7 +1489,7 @@ a:focus-visible,
     align-items: center;
     gap: 6px;
     padding: 6px 12px;
-    border-radius: 999px;
+    border-radius: 8px;
     background: rgba(255,255,255,0.08);
     border: 1px solid rgba(255,255,255,0.14);
     color: var(--text-muted);
@@ -1460,6 +1514,21 @@ a:focus-visible,
     background: rgba(220, 38, 38, 0.18);
     color: #fca5a5;
     border-color: rgba(220, 38, 38, 0.35);
+}
+
+/* Better organization for top-right button cluster */
+.command-actions .toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.command-actions .toolbar-group:not(:last-child)::after {
+    content: '';
+    width: 1px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.12);
+    margin-left: 12px;
 }
 
 .sidebar-footer {
@@ -2075,6 +2144,7 @@ a:focus-visible,
     color: var(--text-muted);
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -3257,9 +3327,9 @@ a:focus-visible,
 }
 
 /* Make list-view buttons mirror card-view variants by position without HTML changes */
-.accounts-view .btn-group-unified .btn { 
-    background: transparent !important; 
-    color: var(--text-primary) !important; 
+.accounts-view .btn-group-unified .btn {
+    background: transparent !important;
+    color: var(--text-primary) !important;
     border: 1px solid var(--border-default) !important;
 }
 
@@ -3364,7 +3434,7 @@ a:focus-visible,
         grid-template-columns: 1fr;
         gap: 8px !important;
     }
-    
+
     .btn-account {
         font-size: 0.75rem;
         padding: 5px 6px;
@@ -3681,3 +3751,60 @@ a:focus-visible,
 .attachments-error {
     border-color: var(--danger-border) !important;
 }
+
+/* ============================================
+   RESPONSIVE DESIGN
+   Added: 2025-10-25
+   ============================================ */
+
+/* Responsive utility classes */
+.hidden-below-sm { display: none !important; }
+.hidden-below-md { display: none !important; }
+.hidden-below-lg { display: none !important; }
+.hidden-below-xl { display: none !important; }
+
+@media (min-width: 640px) {
+  .hidden-below-sm { display: revert !important; }
+  .visible-below-sm { display: none !important; }
+}
+
+@media (min-width: 768px) {
+  .hidden-below-md { display: revert !important; }
+  .visible-below-md { display: none !important; }
+}
+
+@media (min-width: 1024px) {
+  .hidden-below-lg { display: revert !important; }
+  .visible-below-lg { display: none !important; }
+}
+
+@media (min-width: 1280px) {
+  .hidden-below-xl { display: revert !important; }
+  .visible-below-xl { display: none !important; }
+}
+
+/* Text truncation for badges */
+.truncate-badge {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Command bar responsive behavior */
+@media (max-width: 1023px) {
+  .command-nav {
+    display: none;
+  }
+
+  .global-search {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .health-pill .pill-text {
+    max-width: 80px;
+  }
+}
+

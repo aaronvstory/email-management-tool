@@ -1,7 +1,7 @@
 import json
 import re
 import sqlite3
-from typing import Any, Dict, List, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Union
 
 from app.utils.db import DB_PATH
 
@@ -9,7 +9,7 @@ from app.utils.db import DB_PATH
 _HOLD_ACTIONS = {'HOLD', 'QUARANTINE', 'REJECT', 'BLOCK'}
 
 
-def _normalize_recipients(recipients: Sequence[str] | str | None) -> List[str]:
+def _normalize_recipients(recipients: Union[Sequence[str], str, None]) -> List[str]:
     if recipients is None:
         return []
     if isinstance(recipients, (list, tuple, set)):
@@ -33,10 +33,10 @@ def _extract_sender_domain(sender: str) -> str:
 
 
 def evaluate_rules(
-    subject: str | None = None,
-    body_text: str | None = None,
-    sender: str | None = None,
-    recipients: Sequence[str] | str | None = None,
+    subject: Optional[str] = None,
+    body_text: Optional[str] = None,
+    sender: Optional[str] = None,
+    recipients: Union[Sequence[str], str, None] = None,
     db_path: str = DB_PATH,
 ) -> Dict[str, Any]:
     subject_text = subject or ''

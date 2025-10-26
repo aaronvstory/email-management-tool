@@ -207,7 +207,7 @@ function saveEmailDraft() {
 }
 
 // Approve and send email
-function approveAndSendEmail() {
+async function approveAndSendEmail() {
     const emailId = document.getElementById('editorEmailId').value;
     const subject = document.getElementById('editorEmailSubject').value;
     const bodyText = document.getElementById('editorEmailBody').value;
@@ -215,11 +215,15 @@ function approveAndSendEmail() {
     const reviewNotes = document.getElementById('editorReviewNotes').value;
 
     if (!subject || !bodyText) {
-        alert('Subject and body are required');
+        if (window.showError) showError('Subject and body are required');
+        else alert('Subject and body are required');
         return;
     }
 
-    if (!confirm('Are you sure you want to approve and send this email?')) {
+    const confirmed = window.confirmToast
+        ? await new Promise(resolve => confirmToast('Are you sure you want to approve and send this email?', () => resolve(true), () => resolve(false)))
+        : confirm('Are you sure you want to approve and send this email?');
+    if (!confirmed) {
         return;
     }
 
@@ -272,11 +276,14 @@ function approveAndSendEmail() {
 }
 
 // Reject email from editor
-function rejectEmailFromEditor() {
+async function rejectEmailFromEditor() {
     const emailId = document.getElementById('editorEmailId').value;
     const reviewNotes = document.getElementById('editorReviewNotes').value;
 
-    if (!confirm('Are you sure you want to reject this email? It will not be sent.')) {
+    const confirmed = window.confirmToast
+        ? await new Promise(resolve => confirmToast('Are you sure you want to reject this email? It will not be sent.', () => resolve(true), () => resolve(false)))
+        : confirm('Are you sure you want to reject this email? It will not be sent.');
+    if (!confirmed) {
         return;
     }
 

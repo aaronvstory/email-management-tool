@@ -3,6 +3,7 @@ from cryptography.fernet import Fernet, InvalidToken
 import os
 import logging
 from functools import lru_cache
+from typing import Optional
 
 log = logging.getLogger(__name__)
 
@@ -27,13 +28,13 @@ def get_cipher() -> Fernet:
     """Get Fernet cipher instance"""
     return Fernet(get_encryption_key())
 
-def encrypt_credential(text: str | None) -> str | None:
+def encrypt_credential(text: Optional[str]) -> Optional[str]:
     """Encrypt credential text"""
     if text is None:
         return None
     return get_cipher().encrypt(text.encode("utf-8")).decode("utf-8")
 
-def decrypt_credential(encrypted_text: str | None) -> str | None:
+def decrypt_credential(encrypted_text: Optional[str]) -> Optional[str]:
     """Decrypt credential text"""
     if not encrypted_text:
         return None
