@@ -5680,3 +5680,40 @@ body.login-page {
   }
 }
 
+
+/* 1) Reserve space for sticky header so it doesn't cover content */
+:root { --header-h: 72px; } /* adjust to your actual header height */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;           /* keep it above content */
+}
+main, .app-content, .content {
+  padding-top: var(--header-h) !important;
+}
+
+/* 2) Keep the topbar row from spilling over content */
+.topbar, .command-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;         /* allow wrap instead of overflow */
+  min-height: var(--header-h);
+}
+.topbar .nav-links,
+.topbar .meta,
+.topbar .search {
+  min-width: 0;            /* so flex children can shrink */
+}
+
+/* 3) Collapse nav + sidebar on small screens (safe default) */
+@media (max-width: 1023.98px) {
+  .sidebar { display: none !important; }
+  .topbar .nav-links { display: none !important; }
+  .topbar .search { width: 100%; }
+}
+
+/* 4) Spinner: hide when table is ready (non-destructive) */
+.table-ready .loading-spinner { display: none !important; }
+/* JS can add .table-ready to the table container once data arrives */
+
