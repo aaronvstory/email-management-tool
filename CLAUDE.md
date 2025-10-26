@@ -6,12 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Email Management Tool** is a Python Flask application for local email interception, moderation, and management. Dev-focused; runs entirely on localhost with SQLite—no cloud services, no Docker required.
 
-**Version**: 2.8
-**Status**: 🟢 Fully functional — SMTP proxy running; IMAP watchers using hybrid IDLE+polling strategy; core UI accessible.
+**Version**: 2.9.1
+**Status**: 🟢 Fully functional — SMTP proxy running; IMAP watchers using hybrid IDLE+polling strategy; core UI accessible with responsive design.
 **Last Updated**: October 25, 2025
 
 ### Recent Major Updates
-- ✅ **CSS Consolidation** - Unified 3 CSS files (4,136 lines) into single unified.css (2,803 lines), 32% smaller, 200+ classes added (See: [CSS_CONSOLIDATION_COMPLETE.md](CSS_CONSOLIDATION_COMPLETE.md))
+- ✅ **Responsive Design & CSS Consolidation** - Unified.css (145KB) with A/B toggle, sticky header fix, sidebar collapse, responsive guardrails; merged to master Oct 25 (See: [MASTER_MERGE_COMPLETE.md](MASTER_MERGE_COMPLETE.md))
 - ✅ **Root Directory Cleanup** - Consolidated scattered docs, organized 19 files into `archive/2025-10-20_root_cleanup/`
 - ✅ **Gmail Fixes Consolidated** - Single comprehensive reference: [docs/GMAIL_FIXES_CONSOLIDATED.md](docs/GMAIL_FIXES_CONSOLIDATED.md)
 - ✅ **Implementation History** - Chronological feature history: [docs/IMPLEMENTATION_HISTORY.md](docs/IMPLEMENTATION_HISTORY.md)
