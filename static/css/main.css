@@ -249,6 +249,28 @@ main, .app-content, .content, .content-scroll { padding-top: var(--header-h); }
 
 /* Hide spinner when data is ready (non-destructive) */
 .table-ready .loading-spinner { display: none !important; }
+
+/* ===== Guardrails: sticky header, wrapping, responsive collapse, spinner hide (appended) ===== */
+/* reserve space for sticky command bar */
+:root { --header-h: 72px; }
+.command-bar { position: sticky; top: 0; z-index: 1000; min-height: var(--header-h); }
+main, .app-content, .content, .content-scroll { padding-top: var(--header-h); }
+
+/* keep the top row from spilling under the header */
+.topbar, .command-bar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-height: var(--header-h);
+}
+.topbar .nav-links, .topbar .meta, .topbar .search { min-width: 0; }
+
+/* collapse sidebar + extra nav on small screens */
+@media (max-width: 1023.98px) {
+    .sidebar-modern { display: none !important; }
+    .command-bar .command-nav { display: none !important; }
+    .global-search { width: 100%; }
+}
+
+/* hide spinner when data is ready (JS should add .table-ready) */
+.table-ready .loading-spinner { display: none !important; }
     box-shadow: var(--shadow-sm);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     border: 1px solid var(--border-subtle);
