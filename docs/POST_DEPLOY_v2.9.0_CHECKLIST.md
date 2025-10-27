@@ -218,7 +218,7 @@ curl http://localhost:5000/healthz
 
 ## 🔗 **Resources**
 
-- **Release Notes**: `RELEASE_NOTES_v2.9.0.md`
+- **Release Notes**: `docs/release-notes/RELEASE_NOTES_v2.9.0.md`
 - **API Reference**: `docs/API_REFERENCE.md`
 - **User Guide**: `docs/USER_GUIDE.md`
 - **Troubleshooting**: `docs/TROUBLESHOOTING.md`
