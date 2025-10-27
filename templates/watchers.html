@@ -2,26 +2,23 @@
 {% block title %}Watchers - Email Management Tool{% endblock %}
 
 {% block content %}
-<div id="watchers-page">
-<div class="page-header">
-  <div>
+<div class="hero-card">
     <h1><i class="bi bi-activity"></i> Watchers</h1>
-    <p class="text-muted mb-0">Monitor and manage IMAP watchers for real-time email interception.</p>
-  </div>
-  <div class="header-actions">
-    <a href="/settings" class="btn btn-ghost btn-sm">
-      <i class="bi bi-sliders"></i> Settings
-    </a>
-    <button class="btn btn-secondary btn-sm" onclick="refreshAll()">
-      <i class="bi bi-arrow-clockwise"></i> Refresh
-    </button>
-    <button class="btn btn-secondary btn-sm" onclick="validateCounts()">
-      <i class="bi bi-check2-circle"></i> Validate Counts
-    </button>
-  </div>
+    <p class="text-muted">Monitor and manage IMAP watchers for real-time email interception.</p>
+    <div class="hero-badges">
+        <a href="/settings" class="btn btn-ghost btn-sm">
+            <i class="bi bi-sliders"></i> Settings
+        </a>
+        <button class="btn btn-secondary btn-sm" onclick="refreshAll()">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="validateCounts()">
+            <i class="bi bi-check2-circle"></i> Validate Counts
+        </button>
+    </div>
 </div>
 
-<!-- System overview -->
+<section class="section">
 <div class="cards-grid">
   <div class="stat-card-modern">
     <div class="stat-label">SMTP Proxy</div>
@@ -70,7 +67,7 @@
     </p>
   </div>
 </div>
-</div><!-- /#watchers-page -->
+</section>
 
 {% endblock %}
 

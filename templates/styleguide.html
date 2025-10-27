@@ -6,24 +6,23 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <div>
-    <h1><i class="bi bi-palette"></i> Style Guide</h1>
-    <p class="text-muted mb-0">Design system tokens, components, and patterns for consistent UI.</p>
-  </div>
-  <div class="header-actions">
-    <button class="btn btn-secondary btn-sm" onclick="showSuccess('Toast: success')">
-      <i class="bi bi-check-circle"></i> Success Toast
-    </button>
-    <button class="btn btn-secondary btn-sm" onclick="showError('Toast: error')">
-      <i class="bi bi-x-circle"></i> Error Toast
-    </button>
-    <button class="btn btn-secondary btn-sm" onclick="confirmToast('Confirm action?', ()=>showSuccess('Confirmed'))">
-      <i class="bi bi-question-circle"></i> Confirm
-    </button>
-  </div>
+<div class="hero-card">
+    <h1><i class="bi bi-palette2"></i> Style Guide</h1>
+    <p class="text-muted">Design system tokens, components, and patterns for consistent UI.</p>
+    <div class="hero-badges">
+        <button class="btn btn-secondary btn-sm" onclick="showSuccess('Toast: success')">
+            <i class="bi bi-check-circle"></i> Success Toast
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="showError('Toast: error')">
+            <i class="bi bi-x-circle"></i> Error Toast
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="confirmToast('Confirm action?', ()=>showSuccess('Confirmed'))">
+            <i class="bi bi-question-circle"></i> Confirm
+        </button>
+    </div>
 </div>
 
+<section class="section">
 <div id="styleguide">
   <div class="panel">
     <div class="panel-body">
@@ -178,5 +177,6 @@ confirmToast('Are you sure?', onConfirm)</div>
     </div>
   </div>
 </div>
+</section>
 {% endblock %}
 

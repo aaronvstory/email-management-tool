@@ -6,16 +6,16 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <div>
+<div class="hero-card">
     <h1><i class="bi bi-sliders"></i> Settings</h1>
-  </div>
-  <div class="header-actions">
-    <button class="btn btn-secondary btn-sm" onclick="saveSettings()"><i class="bi bi-save"></i> Save</button>
-    <a href="/watchers" class="btn btn-ghost btn-sm"><i class="bi bi-activity"></i> Watchers</a>
-  </div>
+    <p class="text-muted">Configure watcher behavior and service parameters.</p>
+    <div class="hero-badges">
+        <button class="btn btn-secondary btn-sm" onclick="saveSettings()"><i class="bi bi-save"></i> Save</button>
+        <a href="/watchers" class="btn btn-ghost btn-sm"><i class="bi bi-activity"></i> Watchers</a>
+    </div>
 </div>
 
+<section class="section">
 <div class="panel">
   <div class="panel-header">
     <div class="panel-title">Watcher & Service Flags</div>
@@ -33,6 +33,7 @@
   <div class="panel-note">Changes apply to new connections; restart watchers to apply runtime parameters.</div>
   </div>
 </div>
+</section>
 
 {% endblock %}
 
