@@ -1199,3 +1199,170 @@ button[disabled] {
     background: rgba(255,255,255,0.08) !important;
     color: #fff !important;
 }
+
+/* ========================================================================
+   CSS VARIABLES FOR LOGIN PAGE
+   Minimal subset extracted from unified.css for login page compatibility
+   ======================================================================== */
+:root {
+  /* Surface colors */
+  --surface-base: #1a1a1a;
+  --surface-highest: #242424;
+
+  /* Brand colors */
+  --brand-primary: #7f1d1d;
+
+  /* Text colors */
+  --text-primary: #ffffff;
+  --text-muted: #9ca3af;
+
+  /* Opacity utilities */
+  --white-06: rgba(255, 255, 255, 0.06);
+  --white-08: rgba(255, 255, 255, 0.08);
+  --white-12: rgba(255, 255, 255, 0.12);
+
+  /* Border colors */
+  --border-subtle: var(--white-06);
+  --border-default: var(--white-12);
+
+  /* Brand overlays */
+  --brand-overlay-light: rgba(127, 29, 29, 0.18);
+  --brand-overlay-medium: rgba(127, 29, 29, 0.2);
+  --brand-overlay-strong: rgba(127, 29, 29, 0.3);
+
+  /* Spacing */
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 15px;
+
+  /* Effects */
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  --transition-fast: all 0.2s ease;
+
+  /* Misc */
+  --color-gray-500: #888888;
+}
+
+/* ========================================================================
+   LOGIN.HTML SPECIFIC STYLES
+   Extracted from inline <style> block (Oct 25, 2025)
+   SCOPED to .login-page to prevent global override
+   ======================================================================== */
+
+body.login-page {
+            background: var(--surface-base) !important;
+            background-attachment: fixed !important;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 0;
+        }
+
+        .login-container {
+            background: var(--surface-highest) !important;
+            border: 1px solid var(--border-subtle) !important;
+            border-radius: var(--radius-lg) !important;
+            padding: 40px !important;
+            box-shadow: var(--shadow-md) !important;
+            width: 100%;
+            max-width: 440px;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .login-header h2 {
+            color: var(--text-primary) !important;
+            font-weight: 700;
+            margin: var(--space-md) 0 var(--space-sm) 0;
+        }
+
+        .login-header .icon {
+            font-size: 3.5rem;
+            color: var(--brand-primary);
+            margin-bottom: var(--space-sm);
+        }
+
+        .login-header p {
+            color: var(--text-muted) !important;
+            margin: 0;
+        }
+
+        .form-label {
+            color: var(--text-primary) !important;
+            font-weight: 600;
+            margin-bottom: var(--space-sm);
+        }
+
+        .form-control {
+            background: var(--white-06) !important;
+            border: 1px solid var(--border-default) !important;
+            color: var(--text-primary) !important;
+            border-radius: var(--radius-md) !important;
+            padding: var(--space-md) var(--space-lg) !important;
+            height: 46px !important;
+            line-height: normal !important;
+        }
+
+        .form-control:focus {
+            background: var(--white-08) !important;
+            border-color: rgba(127,29,29,0.5) !important;
+            color: var(--text-primary) !important;
+            box-shadow: 0 0 0 2px var(--brand-overlay-medium) !important;
+            outline: none !important;
+        }
+
+        .form-control::placeholder {
+            color: var(--color-gray-500) !important;
+            opacity: 1 !important;
+        }
+
+        .input-group-text {
+            background: var(--white-06) !important;
+            border: 1px solid var(--border-default) !important;
+            color: var(--text-muted) !important;
+            border-radius: var(--radius-md) 0 0 var(--radius-md) !important;
+            height: 46px !important;
+            display: flex !important;
+            align-items: center !important;
+            padding: var(--space-md) !important;
+        }
+
+        .input-group .form-control {
+            border-radius: 0 var(--radius-md) var(--radius-md) 0 !important;
+        }
+
+        .btn-login {
+            background: var(--brand-overlay-light) !important;
+            color: var(--text-primary) !important;
+            border: 1px solid var(--brand-overlay-strong) !important;
+            border-radius: var(--radius-md) !important;
+            padding: var(--space-md) !important;
+            font-weight: 600;
+            width: 100%;
+            transition: var(--transition-fast);
+            height: 48px;
+        }
+
+        .btn-login:hover {
+            background: rgba(127,29,29,0.24) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: var(--shadow-md) !important;
+            color: var(--text-primary) !important;
+        }
+
+        .text-muted {
+            color: var(--text-muted) !important;
+        }
+
+        .small {
+            color: var(--text-muted) !important;
+        }
+
+        .alert {
+            border-radius: var(--radius-md) !important;
+        }

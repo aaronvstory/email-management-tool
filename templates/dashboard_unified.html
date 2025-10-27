@@ -5,10 +5,7 @@
 {% block title %}Dashboard - Email Management Tool{% endblock %}
 
 {% block extra_css %}
-<!-- Dashboard-specific styles now in unified.css (extracted Oct 25, 2025) -->
-<link rel="stylesheet" href="{{ url_for('static', filename='css/patch.dashboard-emails.css') }}">
-<!-- Dashboard UI Fixes for 8 specific issues -->
-<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-ui-fixes.css') }}">
+<!-- Dashboard uses base styles from base.html (theme-dark.css + main.css) -->
 {% endblock %}
 
 {% block content %}
