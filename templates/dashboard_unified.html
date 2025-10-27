@@ -7,6 +7,8 @@
 {% block extra_css %}
 <!-- Dashboard-specific styles now in unified.css (extracted Oct 25, 2025) -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/patch.dashboard-emails.css') }}">
+<!-- Dashboard UI Fixes for 8 specific issues -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-ui-fixes.css') }}">
 {% endblock %}
 
 {% block content %}
