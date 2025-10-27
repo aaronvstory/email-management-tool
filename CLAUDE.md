@@ -72,6 +72,24 @@ taskkill /F /PID <pid>
 python simple_app.py
 ```
 
+## 🔐 Git Credentials (Automation)
+
+**GitHub Repository**: https://github.com/aaronvstory/email-management-tool
+**Username**: aaronvstory
+**PAT Location**: Stored in `~/.git-credentials` (local only, not committed)
+
+**Setup for automated git push in WSL:**
+```bash
+# One-time setup (already configured)
+echo "https://aaronvstory:<YOUR_PAT_TOKEN>@github.com" > ~/.git-credentials
+git config --global credential.helper store
+
+# Then push normally
+git push origin master
+```
+
+⚠️ **Note**: PAT credentials are **already configured** in this WSL environment and stored locally in `~/.git-credentials`. Do not commit tokens to the repository.
+
 ## 🔑 Test Accounts (DO NOT MODIFY)
 
 **CRITICAL**: These are the ONLY two accounts with confirmed working credentials.
