@@ -84,8 +84,9 @@ body {
 
 /* ============================================================================
    COMPONENTS LAYER: All component styles
-   Will be wrapped in Phase 2A-A2
+   Wrapped in @layer to establish cascade priority over base styles
    ============================================================================ */
+@layer components {
 
 .sidebar {
     background: rgba(26, 26, 26, 0.95);
@@ -1604,3 +1605,5 @@ body.login-page {
         .alert {
             border-radius: var(--radius-md) !important;
         }
+
+} /* End @layer components */
