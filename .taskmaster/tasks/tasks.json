@@ -1,0 +1,70 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Fix CSS Issues and Improve Styling Consistency",
+        "description": "Eliminate !important declarations, fix specificity conflicts, ensure responsive design, maintain dark theme without white flashes",
+        "details": "- Remove excessive !important declarations from stylesheets\n- Use proper CSS specificity with scoped selectors\n- Fix responsive breakpoints and mobile layout issues\n- Ensure background-attachment: fixed prevents white flashes\n- Follow patterns in docs/STYLEGUIDE.md\n- Test across different viewport sizes",
+        "testStrategy": "",
+        "status": "in-progress",
+        "dependencies": [
+          "5"
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Improve UI/UX for Better User Experience",
+        "description": "Enhance form controls, add visual feedback, improve navigation flow, ensure consistent spacing",
+        "details": "- Apply .input-modern class consistently across all forms\n- Add loading indicators for async operations\n- Improve toast notification placement and timing\n- Ensure consistent button styling and hover states\n- Add helpful tooltips for complex features\n- Improve dashboard layout and information hierarchy",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          "1"
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "Increase Test Coverage from 36% to 50%",
+        "description": "Add tests for untested routes, improve edge case coverage, add integration tests",
+        "details": "- Identify untested routes in app/routes/\n- Add unit tests for service layer (app/services/)\n- Create integration tests for SMTP/IMAP flows\n- Test edge cases and error conditions\n- Add tests for email interception workflow\n- Ensure all critical paths have coverage",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "Optimize IMAP Polling Performance",
+        "description": "Review hybrid IDLE+polling strategy, reduce unnecessary cycles, improve connection management",
+        "details": "- Analyze current polling intervals and adjust based on activity\n- Implement exponential backoff for idle periods\n- Improve connection pooling and reuse\n- Handle IDLE timeout exceptions more gracefully\n- Add metrics to track polling efficiency\n- Reduce CPU usage during inactive periods",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Baseline UI Audit - Screenshots and STYLEGUIDE.md Improvements",
+        "description": "Take comprehensive screenshots of all pages, improve STYLEGUIDE.md documentation, document current styling problems before making fixes",
+        "details": "- Enable chrome-devtools/puppeteer MCP for automation\n- Start the Flask app on localhost:5000\n- Take screenshots of all major pages: login, dashboard, inbox, compose, moderation, accounts\n- Test different viewport sizes (desktop, tablet, mobile)\n- Document all identified CSS issues with visual references\n- Improve STYLEGUIDE.md with better patterns and examples\n- Create a visual baseline document for before/after comparison\n- Identify all !important usage and specificity conflicts",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-10-27T17:24:43.127Z",
+      "description": "Default tasks context",
+      "updated": "2025-10-27T17:51:48.735Z"
+    }
+  }
+}
