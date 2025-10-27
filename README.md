@@ -89,6 +89,19 @@ The application will start with:
 - Web Dashboard on `http://localhost:5000`
 - Default login: `admin` / `admin123`
 
+### WSL: Double-click Launcher
+
+If you are developing with WSL and prefer to launch by double‑click from Windows:
+
+1. Use the provided batch file: `Launch (WSL).bat` in the project root.
+2. Optionally copy it to your Windows Desktop for easier access.
+3. Double‑click it. It will open Windows Terminal (if available) and run `./launch.sh` inside WSL.
+
+Notes:
+- The batch file targets your WSL path `'/home/d0nbx/email-management-tool'`. If your username or path differs, edit the line beginning with `WSL_PROJECT_DIR` inside the `.bat` file.
+- The launcher opens your default Windows browser to `http://localhost:5000` via WSL‑aware commands.
+- You can also run the Linux launcher manually in WSL: `chmod +x launch.sh && ./launch.sh`.
+
 ## 💻 Management Options
 
 ### Using Batch Scripts

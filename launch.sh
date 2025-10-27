@@ -1,17 +1,44 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ============================================================
-#    EMAIL MANAGEMENT TOOL - QUICK LAUNCHER (macOS)
+#    EMAIL MANAGEMENT TOOL - QUICK LAUNCHER (macOS / Linux / WSL)
 # ============================================================
 #    One-click launcher that starts the app and opens browser
+#    Now cross-platform: macOS, Linux, and WSL on Windows
 # ============================================================
 
 clear
 
 echo ""
 echo "============================================================"
-echo "   EMAIL MANAGEMENT TOOL - PROFESSIONAL LAUNCHER (macOS)"
+echo "   EMAIL MANAGEMENT TOOL - PROFESSIONAL LAUNCHER"
 echo "============================================================"
 echo ""
+
+# --- helpers -------------------------------------------------
+have() { command -v "$1" >/dev/null 2>&1; }
+
+open_url() {
+    local url="$1"
+    # Prefer platform-specific options
+    if have wslview; then
+        # WSL-friendly browser opener
+        wslview "$url" >/dev/null 2>&1 &
+        return 0
+    fi
+    if have xdg-open; then
+        xdg-open "$url" >/dev/null 2>&1 &
+        return 0
+    fi
+    if have powershell.exe; then
+        powershell.exe -NoProfile -Command "Start-Process '$url'" >/dev/null 2>&1 &
+        return 0
+    fi
+    if have open; then
+        open "$url" >/dev/null 2>&1 &
+        return 0
+    fi
+    echo "[INFO] Open your browser to: $url"
+}
 
 # Check if Python is installed
 if ! command -v python3 &> /dev/null; then
@@ -25,7 +52,8 @@ fi
 echo "[PREFLIGHT] Checking for port conflicts..."
 
 # Check port 5000 (Flask)
-if lsof -Pi :5000 -sTCP:LISTEN -t >/dev/null 2>&1; then
+if (have lsof && lsof -Pi :5000 -sTCP:LISTEN -t >/dev/null 2>&1) || \
+   (! have lsof && netstat -tuln 2>/dev/null | grep -q ":5000 "); then
     echo "[WARNING] Port 5000 is in use. Checking if it's our application..."
 
     # Try to access health endpoint
@@ -34,7 +62,7 @@ if lsof -Pi :5000 -sTCP:LISTEN -t >/dev/null 2>&1; then
         echo ""
         echo "Opening dashboard in browser..."
         sleep 2
-        open http://localhost:5000
+        open_url http://localhost:5000
         echo ""
         echo "[OK] Browser launched!"
         sleep 3
@@ -44,24 +72,37 @@ if lsof -Pi :5000 -sTCP:LISTEN -t >/dev/null 2>&1; then
         echo "[ACTION] Attempting safe cleanup..."
 
         # Kill only our Python processes running simple_app.py
-        for pid in $(lsof -ti :5000); do
-            if ps -p $pid -o command= | grep -q "simple_app.py"; then
-                kill -9 $pid 2>/dev/null
+        if have lsof; then
+            for pid in $(lsof -ti :5000); do
+                if ps -p $pid -o command= | grep -q "simple_app.py"; then
+                    kill -9 $pid 2>/dev/null
+                fi
+            done
+        else
+            # Best-effort fallback: attempt to kill python using port 5000
+            if have fuser; then
+                fuser -k 5000/tcp 2>/dev/null || true
             fi
-        done
+        fi
         sleep 2
     fi
 fi
 
 # Check port 8587 (SMTP Proxy)
-if lsof -Pi :8587 -sTCP:LISTEN -t >/dev/null 2>&1; then
+if (have lsof && lsof -Pi :8587 -sTCP:LISTEN -t >/dev/null 2>&1) || \
+   (! have lsof && netstat -tuln 2>/dev/null | grep -q ":8587 "); then
     echo "[WARNING] Port 8587 is in use. Attempting safe cleanup..."
-
-    for pid in $(lsof -ti :8587); do
-        if ps -p $pid -o command= | grep -q "simple_app.py"; then
-            kill -9 $pid 2>/dev/null
+    if have lsof; then
+        for pid in $(lsof -ti :8587); do
+            if ps -p $pid -o command= | grep -q "simple_app.py"; then
+                kill -9 $pid 2>/dev/null
+            fi
+        done
+    else
+        if have fuser; then
+            fuser -k 8587/tcp 2>/dev/null || true
         fi
-    done
+    fi
     sleep 2
 fi
 
@@ -72,7 +113,11 @@ echo ""
 
 # Activate virtual environment if it exists
 if [ -d "venv" ]; then
+    # Legacy venv folder
     source venv/bin/activate
+elif [ -d ".venv" ]; then
+    # Common name used by uv/venv
+    source .venv/bin/activate
 fi
 
 # Start the Flask application in background
@@ -96,7 +141,7 @@ echo "[3/3] Opening dashboard in browser..."
 echo ""
 
 # Open the dashboard in default browser
-open http://localhost:5000
+open_url http://localhost:5000
 
 echo "============================================================"
 echo "   APPLICATION STARTED SUCCESSFULLY!"
