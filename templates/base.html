@@ -27,7 +27,6 @@
     <!-- Base stylesheets -->
     <link rel="stylesheet" href="/static/css/theme-dark.css">
     <link rel="stylesheet" href="/static/css/main.css">
-    <link rel="stylesheet" href="/static/css/layout-hotfix.css">
 {% block extra_css %}{% endblock %}
 </head>
 <body class="app dark-app-shell">
@@ -75,14 +74,13 @@
         </aside>
         <div class="main-modern">
             <header class="command-bar">
-                <button class="toggle-nav" type="button" aria-label="Toggle navigation" onclick="document.querySelector('.sidebar-modern').classList.toggle('is-open')">
+                <button class="toggle-nav" type="button" aria-label="Toggle navigation" onclick="document.querySelector('.sidebar-modern').classList.toggle('open')">
                     <i class="bi bi-list"></i>
                 </button>
                 <div class="command-brand">
                     <a href="/" class="brand-chip">
                         <i class="bi bi-envelope-heart"></i>
                         <span>Mail Ops</span>
-                        <small class="build-tag">Taskmaster · 9ecdf6a</small>
                     </a>
                 </div>
                 <nav class="command-nav" aria-label="Primary navigation">

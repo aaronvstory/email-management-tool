@@ -1366,3 +1366,62 @@ body.login-page {
         .alert {
             border-radius: var(--radius-md);
         }
+
+/* ========================================
+   Unified Shell Layout (consolidated)
+   ======================================== */
+
+/* Shell foundation */
+.dark-app-shell { display:flex; min-height:100vh; background:#0f0f10; }
+.sidebar-modern { width:240px; flex:0 0 240px; position:fixed; inset:0 auto 0 0; overflow-y:auto; z-index:1001; }
+.main-modern { margin-left:240px; flex:1; min-height:100vh; display:flex; flex-direction:column; }
+
+/* Top bar */
+.command-bar { position:sticky; top:0; z-index:1000; display:flex; align-items:center; gap:16px;
+  padding:10px 16px; background:rgba(18,18,19,.9); backdrop-filter:saturate(120%) blur(6px);
+  border-bottom:1px solid rgba(255,255,255,.06); flex-wrap:wrap; }
+
+.command-brand .brand-chip { display:flex; align-items:center; gap:8px; color:var(--text-primary,#e5e7eb); text-decoration:none; }
+
+/* Top nav links */
+.command-nav { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.command-link { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:8px;
+  color:var(--text-primary,#e5e7eb); text-decoration:none; line-height:1; font-weight:500; transition:background .15s ease; }
+.command-link:hover { background:rgba(255,255,255,.06); }
+.command-link.active { background:rgba(124,58,237,.18); outline:1px solid rgba(124,58,237,.35); color:#c4b5fd; }
+
+/* Content area */
+.content-scroll { max-width:1200px; margin:0 auto; padding:20px; flex:1; }
+.section { margin-bottom:24px; }
+
+/* Dashboard grid/cards */
+#statsGrid { display:grid; grid-template-columns:repeat(5, minmax(170px,1fr)); gap:20px; }
+@media (max-width:1200px){ #statsGrid{ grid-template-columns:repeat(3, minmax(170px,1fr)); } }
+@media (max-width:768px){  #statsGrid{ grid-template-columns:repeat(2, minmax(150px,1fr)); } }
+@media (max-width:520px){  #statsGrid{ grid-template-columns:1fr; } }
+
+.stat-card-modern {
+  background:linear-gradient(145deg,#1a1a1a 0%,#1f1f1f 60%,#242424 100%);
+  border:1px solid rgba(255,255,255,.06); border-radius:12px; padding:16px; text-align:center;
+}
+
+/* Controls sizing */
+.app .btn, .app .form-control, .app .form-select { height:42px; min-height:42px; }
+
+/* Table header tone */
+.email-table thead th { text-transform:uppercase; font-size:12px; letter-spacing:.06em; color:#9ca3af; }
+
+/* Bulk & pagination */
+#bulk-actions-bar { display:flex; gap:10px; align-items:center; }
+#paginationControls.card { padding:12px 16px; border-radius:10px; }
+
+/* Responsive: sidebar collapse on small screens */
+@media (max-width:1024px){
+  .sidebar-modern { transform:translateX(-100%); transition:transform .2s ease; }
+  .sidebar-modern.open { transform:none; }
+  .main-modern { margin-left:0; }
+  .command-bar .toggle-nav { display:block; }
+}
+@media (min-width:1025px){
+  .command-bar .toggle-nav { display:none; }
+}
