@@ -1,0 +1,15 @@
+{
+  "extends": ["stylelint-config-standard"],
+  "rules": {
+    "declaration-no-important": true,
+    "selector-max-specificity": "0,3,0",
+    "no-descending-specificity": null,
+    "color-named": "never",
+    "selector-max-id": 0
+  },
+  "ignoreFiles": [
+    "**/node_modules/**",
+    "**/vendor/**",
+    "static/css/backup_*/**"
+  ]
+}

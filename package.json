@@ -16,7 +16,6 @@
     "eslint-plugin-import": "^2.29.1",
     "prettier": "^3.3.3",
     "stylelint": "^16.9.0",
-    "stylelint-config-prettier": "^10.0.5",
     "stylelint-config-standard": "^36.0.0"
   },
   "eslintConfig": {
@@ -41,21 +40,6 @@
     "rules": {
       "no-console": "off",
       "import/no-unresolved": "off"
-    }
-  },
-  "stylelint": {
-    "extends": [
-      "stylelint-config-standard",
-      "stylelint-config-prettier"
-    ],
-    "ignoreFiles": [
-      "**/node_modules/**"
-    ],
-    "rules": {
-      "selector-max-id": 0,
-      "color-named": "never",
-      "declaration-no-important": null,
-      "no-descending-specificity": null
     }
   },
   "prettier": {

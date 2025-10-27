@@ -1,3 +1,14 @@
+/* ============================================================================
+   CSS CASCADE LAYERS
+   Layers define cascade order: reset → base → components → utilities
+   This eliminates the need for !important declarations
+   ============================================================================ */
+@layer reset, base, components, utilities;
+
+/* ============================================================================
+   BASE LAYER: Tokens, Variables, and Base Elements
+   ============================================================================ */
+@layer base {
 :root {
     /* === BRAND COLORS (STYLEGUIDE.md compliant) === */
     --brand-primary: #7f1d1d;           /* Dark red - PRIMARY brand color */
@@ -69,6 +80,12 @@ body {
     min-height: 100vh;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
+} /* End @layer base */
+
+/* ============================================================================
+   COMPONENTS LAYER: All component styles
+   Will be wrapped in Phase 2A-A2
+   ============================================================================ */
 
 .sidebar {
     background: rgba(26, 26, 26, 0.95);
