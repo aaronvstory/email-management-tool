@@ -30,8 +30,7 @@
     <link rel="stylesheet" href="/static/css/layout-hotfix.css">
 {% block extra_css %}{% endblock %}
 </head>
-<body class="app dark-enabled">
-    <div class="dark-app-shell">
+<body class="app dark-app-shell">
         <!-- Modern Sidebar (kept original nav for fallback) -->
         <aside class="sidebar-modern">
             <div class="brand">
@@ -76,33 +75,33 @@
         </aside>
         <div class="main-modern">
             <header class="command-bar">
-                <button class="toggle-nav" type="button" aria-label="Toggle navigation" onclick="document.querySelector('.sidebar-modern').classList.toggle('open')">
+                <button class="toggle-nav" type="button" aria-label="Toggle navigation" onclick="document.querySelector('.sidebar-modern').classList.toggle('is-open')">
                     <i class="bi bi-list"></i>
                 </button>
                 <div class="command-brand">
                     <a href="/" class="brand-chip">
                         <i class="bi bi-envelope-heart"></i>
                         <span>Mail Ops</span>
-                        <small style="font-size: 0.65rem; opacity: 0.6; margin-left: 8px;">Claude Hive Wizard Flow | 9ecdf6a</small>
+                        <small class="build-tag">Taskmaster · 9ecdf6a</small>
                     </a>
-                    <nav class="command-nav" aria-label="Primary navigation">
-                        <a href="/dashboard" class="command-link {% if request.endpoint == 'dashboard.dashboard' %}active{% endif %}">
-                            <i class="bi bi-speedometer2"></i> Dashboard
-                        </a>
-                        <a href="/emails-unified" class="command-link {% if request.path.startswith('/emails') or request.path.startswith('/inbox') %}active{% endif %}">
-                            <i class="bi bi-inbox-fill"></i> Emails
-                        </a>
-                        <a href="/compose" class="command-link {% if request.path.startswith('/compose') %}active{% endif %}">
-                            <i class="bi bi-pencil-square"></i> Compose
-                        </a>
-                        <a href="/diagnostics" class="command-link {% if request.path.startswith('/diagnostics') %}active{% endif %}">
-                            <i class="bi bi-heart-pulse"></i> Diagnostics
-                        </a>
-                        <a href="/watchers" class="command-link {% if request.path.startswith('/watchers') %}active{% endif %}">
-                            <i class="bi bi-activity"></i> Watchers
-                        </a>
-                    </nav>
                 </div>
+                <nav class="command-nav" aria-label="Primary navigation">
+                    <a href="/dashboard" class="command-link {% if request.endpoint == 'dashboard.dashboard' %}active{% endif %}">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                    <a href="/emails-unified" class="command-link {% if request.path.startswith('/emails') or request.path.startswith('/inbox') %}active{% endif %}">
+                        <i class="bi bi-inbox-fill"></i> Emails
+                    </a>
+                    <a href="/compose" class="command-link {% if request.path.startswith('/compose') %}active{% endif %}">
+                        <i class="bi bi-pencil-square"></i> Compose
+                    </a>
+                    <a href="/diagnostics" class="command-link {% if request.path.startswith('/diagnostics') %}active{% endif %}">
+                        <i class="bi bi-heart-pulse"></i> Diagnostics
+                    </a>
+                    <a href="/watchers" class="command-link {% if request.path.startswith('/watchers') %}active{% endif %}">
+                        <i class="bi bi-activity"></i> Watchers
+                    </a>
+                </nav>
                 <div class="command-controls">
                     <!-- Zone 3: Adaptive search (hidden below 1024px) -->
                     <div class="global-search" role="search">
