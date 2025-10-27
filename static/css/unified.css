@@ -146,8 +146,8 @@
   --btn-height-md: 38px;
   --btn-height-lg: 44px;
 
-  --sidebar-width: 250px;
-  --header-height: 66px;
+  --sidebar-width: 260px;
+  --header-height: 72px;
 
   /* === SHADOWS === */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
@@ -167,25 +167,7 @@
   --breakpoint-2xl: 1440px; /* Desktop */
 }
 
-/* ===== Guardrails: sticky header, wrapping, responsive collapse, spinner hide (appended) ===== */
-/* reserve space for sticky command bar */
-:root { --header-h: 72px; }
-.command-bar { position: sticky; top: 0; z-index: 1000; min-height: var(--header-h); }
-main, .app-content, .content, .content-scroll { padding-top: var(--header-h); }
-
-/* keep the top row from spilling under the header */
-.topbar, .command-bar {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-height: var(--header-h);
-}
-.topbar .nav-links, .topbar .meta, .topbar .search { min-width: 0; }
-
-/* collapse sidebar + extra nav on small screens */
-@media (max-width: 1023.98px) {
-  .sidebar-modern { display: none !important; }
-  .command-bar .command-nav { display: none !important; }
-  .global-search { width: 100%; }
-}
-
+/* ===== Responsive safeguards ===== */
 /* hide spinner when data is ready (JS should add .table-ready) */
 .table-ready .loading-spinner { display: none !important; }
 
@@ -5468,6 +5450,34 @@ body.login-page {
   }
 }
 
+/* Tablet/Small Laptop - Sidebar collapse (below 1024px) */
+@media (max-width: 1023.98px) {
+  /* When sidebar hides, header must span full width */
+  .command-bar {
+    left: 0 !important;
+  }
+
+  /* Main content shouldn't reserve sidebar space */
+  .main-modern {
+    margin-left: 0;
+  }
+
+  /* Collapse extra nav items */
+  .command-bar .command-nav {
+    display: none !important;
+  }
+
+  /* Search expands to fill available space */
+  .global-search {
+    width: 100%;
+  }
+
+  /* Hide sidebar */
+  .sidebar-modern {
+    display: none !important;
+  }
+}
+
 /* Small Tablet/Large Phone (768px) */
 @media (max-width: 768px) {
   /* Hide sidebar by default on mobile */
@@ -5501,6 +5511,7 @@ body.login-page {
 
   /* Stack command bar */
   .command-bar {
+    left: 0 !important;
     flex-direction: column;
     gap: var(--space-md);
     padding: var(--space-md);
@@ -5701,37 +5712,3 @@ body.login-page {
     font-size: 1.5rem;
   }
 }
-
-
-/* 1) Reserve space for sticky header so it doesn't cover content */
-:root { --header-h: 72px; } /* adjust to your actual header height */
-.command-bar { position: sticky; top: 0; z-index: 1000; }
-main, .app-content, .content, .content-scroll {
-  padding-top: var(--header-h) !important;
-}
-
-/* 2) Keep the topbar row from spilling over content */
-.topbar, .command-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;         /* allow wrap instead of overflow */
-  min-height: var(--header-h);
-}
-.topbar .nav-links,
-.topbar .meta,
-.topbar .search {
-  min-width: 0;            /* so flex children can shrink */
-}
-
-/* 3) Collapse nav + sidebar on small screens (safe default) */
-@media (max-width: 1023.98px) {
-  .sidebar-modern { display: none !important; }
-  .command-bar .command-nav { display: none !important; }
-  .global-search { width: 100%; }
-}
-
-/* 4) Spinner: hide when table is ready (non-destructive) */
-.table-ready .loading-spinner { display: none !important; }
-/* JS can add .table-ready to the table container once data arrives */
-
