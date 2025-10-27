@@ -7,18 +7,17 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <div>
-        <h1><i class="bi bi-envelope-plus"></i> Compose Email</h1>
-        <p class="text-muted mb-0">Create and send new email messages through your configured accounts.</p>
-    </div>
-    <div class="header-actions">
+<div class="hero-card">
+    <h1><i class="bi bi-envelope-plus"></i> Compose Email</h1>
+    <p class="text-muted">Create and send new email messages through your configured accounts.</p>
+    <div class="hero-badges">
         <a href="/emails-unified" class="btn btn-ghost btn-sm">
             <i class="bi bi-arrow-left"></i> Back to Emails
         </a>
     </div>
 </div>
 
+<section class="section">
 <div class="compose-container">
     <form method="POST" action="/compose" id="composeForm">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -26,7 +25,7 @@
         <div class="form-row">
             <div>
                 <label for="from_account" class="form-label required-field">From Account</label>
-                <select class="form-select" id="from_account" name="from_account" required>
+                <select class="input-modern" id="from_account" name="from_account" required>
                     <option value="">Select sending account...</option>
                     {% for account in accounts %}
                     <option value="{{ account.id }}">
@@ -39,7 +38,7 @@
 
             <div>
                 <label for="to" class="form-label required-field">To</label>
-                <input type="email" class="form-control" id="to" name="to"
+                <input type="email" class="input-modern" id="to" name="to"
                        placeholder="recipient@example.com" required>
                 <div class="help-text">Enter recipient's email address</div>
             </div>
@@ -48,15 +47,15 @@
         <!-- CC Address (Optional) - full width -->
         <div class="mb-4">
             <label for="cc" class="form-label">CC</label>
-            <input type="text" class="form-control" id="cc" name="cc"
+            <input type="text" class="input-modern" id="cc" name="cc"
                    placeholder="cc1@example.com, cc2@example.com">
             <div class="help-text">Optional: Enter CC recipients (comma-separated for multiple)</div>
         </div>
-        
+
         <!-- Subject -->
         <div class="mb-4">
             <label for="subject" class="form-label required-field">Subject</label>
-            <input type="text" class="form-control" id="subject" name="subject" 
+            <input type="text" class="input-modern" id="subject" name="subject"
                    placeholder="Enter email subject" required maxlength="200">
             <div class="char-counter">
                 <span id="subjectCounter">0</span> / 200 characters
@@ -83,7 +82,7 @@
                 </button>
             </div>
             
-            <textarea class="form-control" id="body" name="body" rows="12" 
+            <textarea class="input-modern" id="body" name="body" rows="12"
                       placeholder="Type your message here..." required></textarea>
             <div class="char-counter">
                 <span id="bodyCounter">0</span> characters
@@ -95,12 +94,13 @@
             <a href="/emails-unified" class="btn btn-ghost">
                 <i class="bi bi-x-circle"></i> Cancel
             </a>
-            <button type="submit" class="btn btn-primary-modern">
+            <button type="submit" class="btn btn-primary">
                 <i class="bi bi-send"></i> Send Email
             </button>
         </div>
     </form>
 </div>
+</section>
 
 <!-- Success/Error Messages -->
 {% with messages = get_flashed_messages(with_categories=true) %}
