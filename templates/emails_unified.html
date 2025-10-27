@@ -6,55 +6,54 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <div>
-    <h1><i class="bi bi-envelope-fill"></i> Email Management</h1>
-    <p class="text-muted mb-0">View and manage all email messages across your accounts.</p>
-  </div>
-  <div class="header-actions">
+<div class="hero-card">
+  <h1><i class="bi bi-envelope-fill"></i> Email Management</h1>
+  <p class="text-muted">View and manage all email messages across your accounts.</p>
+  <div class="hero-badges">
     <a href="/compose" class="btn btn-secondary btn-sm">
       <i class="bi bi-pencil-square"></i> Compose
     </a>
   </div>
 </div>
 
-<!-- Account Selector with Fetch Controls -->
-<div class="account-selector selector-card">
-  <div class="selector-field flex-grow">
-    <label for="accountSelector" class="form-label">Select Email Account</label>
-    <select class="form-select" id="accountSelector" onchange="switchAccount(this.value)">
-      <option value="">All Accounts</option>
-      {% for account in accounts %}
-      <option value="{{ account.id }}" {% if selected_account == account.id %}selected{% endif %}>
-        {{ account.account_name }} ({{ account.email_address }})
-      </option>
-      {% endfor %}
-    </select>
+<section class="section">
+  <!-- Account Selector with Fetch Controls -->
+  <div class="account-selector selector-card">
+    <div class="selector-field flex-grow">
+      <label for="accountSelector" class="form-label">Select Email Account</label>
+      <select class="input-modern" id="accountSelector" onchange="switchAccount(this.value)">
+        <option value="">All Accounts</option>
+        {% for account in accounts %}
+        <option value="{{ account.id }}" {% if selected_account == account.id %}selected{% endif %}>
+          {{ account.account_name }} ({{ account.email_address }})
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="selector-field small">
+      <label for="fetchCount" class="form-label">Fetch Count</label>
+      <select class="input-modern" id="fetchCount">
+        <option value="10">10</option>
+        <option value="20" selected>20</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+      </select>
+    </div>
+    <div class="selector-actions">
+      <button type="button" class="btn btn-primary btn-sm" onclick="fetchEmails()">
+        <i class="bi bi-cloud-download"></i> Fetch
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="fetchMore()">
+        <i class="bi bi-plus-circle"></i> More
+      </button>
+    </div>
   </div>
-  <div class="selector-field small">
-    <label for="fetchCount" class="form-label">Fetch Count</label>
-    <select class="form-select" id="fetchCount">
-      <option value="10">10</option>
-      <option value="20" selected>20</option>
-      <option value="50">50</option>
-      <option value="100">100</option>
-    </select>
+  <div id="fetchStatus" class="status-banner hidden">
+    <span id="fetchMessage"></span>
   </div>
-  <div class="selector-actions">
-    <button type="button" class="btn btn-primary btn-sm" onclick="fetchEmails()">
-      <i class="bi bi-cloud-download"></i> Fetch
-    </button>
-    <button type="button" class="btn btn-secondary btn-sm" onclick="fetchMore()">
-      <i class="bi bi-plus-circle"></i> More
-    </button>
-  </div>
-</div>
-<div id="fetchStatus" class="status-banner hidden">
-  <span id="fetchMessage"></span>
-</div>
 
-<!-- Unified Email Panel -->
-<div class="panel">
+  <!-- Unified Email Panel -->
+  <div class="panel">
   <div class="panel-header">
     <div class="panel-title"><i class="bi bi-inboxes"></i> Unified Inbox</div>
     <div class="panel-actions">
@@ -92,7 +91,7 @@
         <label for="searchBox">Search</label>
         <div class="input-with-icon emails-search">
           <i class="bi bi-search input-icon"></i>
-          <input id="searchBox" type="search" class="form-control" placeholder="Search subject, sender, or recipient..." />
+          <input id="searchBox" type="search" class="input-modern" placeholder="Search subject, sender, or recipient..." />
         </div>
       </div>
       <div class="filter-control compact-switch">
@@ -154,6 +153,7 @@
     </div>
   </div>
 </div>
+</section>
 
 <!-- Edit Email Modal -->
 <div class="modal fade modal-modern" id="editEmailModal" tabindex="-1" aria-labelledby="editEmailModalLabel" aria-hidden="true">
@@ -181,12 +181,12 @@
           
           <div class="mb-3">
             <label for="editEmailSubject" class="form-label fw-bold">Subject:</label>
-            <input type="text" class="form-control" id="editEmailSubject" required>
+            <input type="text" class="input-modern" id="editEmailSubject" required>
           </div>
-          
+
           <div class="mb-3">
             <label for="editEmailBody" class="form-label fw-bold">Message Body:</label>
-            <textarea class="form-control font-monospace" id="editEmailBody" rows="10" required></textarea>
+            <textarea class="input-modern font-monospace" id="editEmailBody" rows="10" required></textarea>
           </div>
 
           <div id="modalAttachments" class="panel-card attachments-card mt-4" data-visible="{{ 'true' if attachments_flags.ui else 'false' }}">
