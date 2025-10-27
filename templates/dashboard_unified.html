@@ -9,7 +9,7 @@
 {% endblock %}
 
 {% block content %}
-<div id="dashboard-page">
+<div id="dashboard-page" class="container-page">
 <div class="page-header">
   <div>
     <h1><i class="bi bi-speedometer2"></i> Dashboard</h1>
@@ -230,7 +230,7 @@
 
 {% block extra_js %}
 <script>
-const currentAccountId = '{{ selected_account_id or "" }}';
+let currentAccountId = '{{ selected_account_id or "" }}';
 const { renderTimeCell, applyTimeFormatting, escapeHtml } = window.MailOps;
 
 applyTimeFormatting();
@@ -699,7 +699,7 @@ function performEmailSearch() {
   const query = document.getElementById('email-search-input').value.trim();
   if (!query) return;
 
-  const accountId = document.getElementById('account-selector')?.value || '';
+  const accountId = document.getElementById('accountSelector')?.value || '';
   const searchBtn = document.getElementById('email-search-btn');
   const clearBtn = document.getElementById('email-search-clear');
   const statusDiv = document.getElementById('email-search-status');
