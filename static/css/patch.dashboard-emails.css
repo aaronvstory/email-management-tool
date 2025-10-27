@@ -1,0 +1,150 @@
+/* --- VISIBILITY NORMALIZATION --- */
+@media (max-width: 1024px) {
+  .hidden-below-lg { display: none !important; }
+}
+@media (max-width: 768px) {
+  .hidden-below-md { display: none !important; }
+}
+.visible-below-lg { display: none !important; }
+@media (max-width: 1024px) {
+  .visible-below-lg { display: initial !important; }
+}
+.visible-below-md { display: none !important; }
+@media (max-width: 768px) {
+  .visible-below-md { display: initial !important; }
+}
+
+/* --- COMMAND BAR / TOP TOOLING --- */
+.command-bar, .top-toolbar, .dashboard-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.command-bar .btn, .top-toolbar .btn {
+  line-height: 1.25;
+}
+
+/* Health pills (avoid overflow/truncation) */
+.health-pill, .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.05);
+  max-width: 220px;
+}
+.pill-text, .truncate-badge {
+  max-width: 160px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* --- STATUS TABS (ALL/HELD/RELEASED/REJECTED) --- */
+.status-tabs, .email-status-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 10px 0 12px;
+}
+.status-tab, .email-status-tab, .filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.05);
+  color: #e5e7eb;
+  cursor: pointer;
+}
+.status-tab.active, .email-status-tab.active, .filter-chip.active {
+  border-color: rgba(239,68,68,0.35);
+  background: rgba(239,68,68,0.10);
+  color: #fecaca;
+}
+.status-tab .badge, .email-status-tab .badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.18);
+  font-size: 11px;
+}
+
+/* --- SEARCH AREAS (GLOBAL + LOCAL) --- */
+.global-search, .search-group, .emails-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+  min-width: 280px;
+}
+.global-search input, .search-group input, .emails-search input {
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: #e5e7eb;
+}
+.global-search input::placeholder,
+.search-group input::placeholder,
+.emails-search input::placeholder {
+  color: #9ca3af;
+}
+
+/* --- TABLE NORMALIZATION --- */
+.table, .email-table, table.email-list {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.02);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.table th, .table td,
+.email-table th, .email-table td,
+table.email-list th, table.email-list td {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Remove hard coded widths; use breakpoints */
+@media (min-width: 1024px) {
+  .col-select { width: 48px; }
+  .col-from { width: 18ch; }
+  .col-subject { width: 32ch; }
+  .col-status { width: 12ch; }
+  .col-actions { width: 16ch; }
+}
+
+/* Row hover */
+.table tbody tr:hover,
+.email-table tbody tr:hover,
+table.email-list tbody tr:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+/* --- BULK TOOLBAR (emails-unified) --- */
+.bulk-toolbar {
+  display: none; /* toggled via JS when selection > 0 */
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(59,130,246,0.07);
+  border: 1px solid rgba(59,130,246,0.25);
+  margin-bottom: 12px;
+}
+.bulk-toolbar.show { display: flex; }
+
+/* --- MOBILE SAFETIES --- */
+@media (max-width: 768px) {
+  .global-search, .emails-search { min-width: 0; width: 100%; }
+  .command-bar, .top-toolbar { justify-content: space-between; }
+}
