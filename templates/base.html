@@ -27,6 +27,7 @@
     <!-- Base stylesheets -->
     <link rel="stylesheet" href="/static/css/theme-dark.css">
     <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="/static/css/layout-hotfix.css">
 {% block extra_css %}{% endblock %}
 </head>
 <body class="app dark-enabled">
@@ -82,6 +83,7 @@
                     <a href="/" class="brand-chip">
                         <i class="bi bi-envelope-heart"></i>
                         <span>Mail Ops</span>
+                        <small style="font-size: 0.65rem; opacity: 0.6; margin-left: 8px;">Claude Hive Wizard Flow | 9ecdf6a</small>
                     </a>
                     <nav class="command-nav" aria-label="Primary navigation">
                         <a href="/dashboard" class="command-link {% if request.endpoint == 'dashboard.dashboard' %}active{% endif %}">
