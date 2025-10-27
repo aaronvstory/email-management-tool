@@ -647,3 +647,158 @@
   border-color: rgba(239, 68, 68, 0.3);
   color: var(--bad);
 }
+
+/* ============================================================================
+   11. DASHBOARD HERO & 5-UP STATS
+   Dashboard-specific layout components
+   ============================================================================ */
+
+/* Dashboard hero */
+.hero-card {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.hero-card .title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.page-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+/* Badges row at top-right */
+.page-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Make stats 5-up at desktop, then 4/2/1 down the breakpoints */
+.stats-grid.stats-5 {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+@media (max-width: 1280px) {
+  .stats-grid.stats-5 { grid-template-columns: repeat(4, 1fr); }
+}
+@media (max-width: 1024px) {
+  .stats-grid.stats-5 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .stats-grid.stats-5 { grid-template-columns: 1fr; }
+}
+
+/* Slightly tighten global section rhythm on this page */
+#dashboard-page .section { margin-block: var(--space-4); }
+
+/* Row utilities */
+.row-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* ============================================================================
+   12. COHESION FIXES
+   Ensure top/bottom areas match polished middle section
+   ============================================================================ */
+
+/* 1) Page shell: center content, consistent gutters */
+@layer base {
+  .content-shell {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--space-5);
+  }
+}
+
+/* 2) Section rhythm: same spacing as the "good" middle */
+@layer utilities {
+  .section {
+    margin: var(--space-6) 0;
+  }
+  .section > * + * { margin-top: var(--space-5); }
+}
+
+/* 3) Panels: one border token, one background, one radius */
+@layer components {
+  .panel {
+    background: var(--surface-1);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-2);
+    box-shadow: var(--shadow-sm);
+  }
+  .panel-header {
+    padding: var(--space-4) var(--space-5);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .panel-content { padding: var(--space-5); }
+}
+
+/* 4) Tables: align with panels and remove mismatched lines */
+@layer components {
+  .table-modern {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  .table-modern th,
+  .table-modern td {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .table-modern tr:last-child td { border-bottom: 0; }
+}
+
+/* 5) Inputs + chips align height with search row */
+@layer components {
+  .input-modern {
+    height: 38px;
+    padding: 6px 12px;
+    border-radius: var(--radius-2);
+  }
+  .chip,
+  .pill,
+  .badge { height: 28px; line-height: 26px; }
+}
+
+/* 6) Header brand: keep the small meta line tidy */
+@layer components {
+  .brand-chip small {
+    display: inline-block;
+    margin-left: 8px;
+    opacity: .7;
+    font-size: .72em;
+    vertical-align: baseline;
+  }
+}
+
+/* 7) Background flashes guard (dark mode) */
+@layer base {
+  html, body {
+    background-attachment: fixed;
+    background-color: #0b0b0b;
+  }
+}
+
+/* 8) Stats grid: tighten at desktop, keep 3-2-1 below */
+@layer components {
+  .stats-grid { gap: var(--space-4); }
+}
