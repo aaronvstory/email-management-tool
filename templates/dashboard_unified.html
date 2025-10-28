@@ -545,15 +545,24 @@ function renderDashboardEmailsWithPagination() {
     const subjectDisplay = escapeHtml(email.subject || '(No Subject)');
     const createdAtCell = renderTimeCell(email.created_at, 'N/A');
 
-    // Determine actions
+    // Determine actions - 6 buttons for HELD emails
     let actions = '';
     if (status === 'HELD') {
       actions = `
+        <button class="action-btn action-view" onclick="event.stopPropagation(); window.location.href='/email/${email.id}'" title="View Details">
+          <i class="bi bi-eye"></i>
+        </button>
         <button class="action-btn action-edit" onclick="event.stopPropagation(); window.location.href='/email/${email.id}'" title="Edit">
           <i class="bi bi-pencil"></i>
         </button>
         <button class="action-btn action-release" onclick="event.stopPropagation(); releaseEmailDashboard(${email.id})" title="Release">
-          <i class="bi bi-unlock"></i>
+          <i class="bi bi-check-circle"></i>
+        </button>
+        <button class="action-btn action-reply" onclick="event.stopPropagation(); window.location.href='/compose?reply_to=${email.id}'" title="Reply">
+          <i class="bi bi-reply"></i>
+        </button>
+        <button class="action-btn action-forward" onclick="event.stopPropagation(); window.location.href='/compose?forward=${email.id}'" title="Forward">
+          <i class="bi bi-arrow-right"></i>
         </button>
         <button class="action-btn action-discard" onclick="event.stopPropagation(); discardEmailDashboard(${email.id})" title="Discard">
           <i class="bi bi-trash"></i>

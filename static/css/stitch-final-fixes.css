@@ -8,8 +8,8 @@
    FIX 0: Status Column - Unified Design Language (Minimal !important)
    ======================================== */
 
-/* Use scoped selectors for status badges */
-#emailTable .status-badge {
+/* Use scoped selectors for status badges - target .email-table class */
+.email-table .status-badge {
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 0.7rem;
@@ -21,32 +21,32 @@
   gap: 4px;
 }
 
-#emailTable .status-badge.status-HELD {
+.email-table .status-badge.status-HELD {
   background: rgba(251, 191, 36, 0.12);
   color: #fbbf24;
   border: 1px solid rgba(251, 191, 36, 0.25);
 }
 
-#emailTable .status-badge.status-RELEASED {
+.email-table .status-badge.status-RELEASED {
   background: rgba(190, 242, 100, 0.12);
   color: #bef264;
   border: 1px solid rgba(190, 242, 100, 0.25);
 }
 
-#emailTable .status-badge.status-REJECTED {
+.email-table .status-badge.status-REJECTED {
   background: rgba(239, 68, 68, 0.12);
   color: #f87171;
   border: 1px solid rgba(239, 68, 68, 0.25);
 }
 
-#emailTable .status-badge.status-DISCARDED {
+.email-table .status-badge.status-DISCARDED {
   background: rgba(156, 163, 175, 0.12);
   color: #9ca3af;
   border: 1px solid rgba(156, 163, 175, 0.25);
 }
 
 /* Watcher chips */
-#emailTable .watcher-chip {
+.email-table .watcher-chip {
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 0.7rem;
@@ -55,26 +55,26 @@
   letter-spacing: 0.5px;
 }
 
-#emailTable .watcher-chip.active {
+.email-table .watcher-chip.active {
   background: rgba(190, 242, 100, 0.12);
   color: #bef264;
   border: 1px solid rgba(190, 242, 100, 0.25);
 }
 
-#emailTable .watcher-chip.stopped {
+.email-table .watcher-chip.stopped {
   background: rgba(239, 68, 68, 0.12);
   color: #f87171;
   border: 1px solid rgba(239, 68, 68, 0.25);
 }
 
-#emailTable .watcher-chip.unknown {
+.email-table .watcher-chip.unknown {
   background: rgba(156, 163, 175, 0.12);
   color: #9ca3af;
   border: 1px solid rgba(156, 163, 175, 0.25);
 }
 
 /* Restart button */
-#emailTable .status-restart {
+.email-table .status-restart {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: rgba(255, 255, 255, 0.6);
@@ -88,20 +88,20 @@
   justify-content: center;
 }
 
-#emailTable .status-restart:hover {
+.email-table .status-restart:hover {
   background: rgba(190, 242, 100, 0.12);
   border-color: rgba(190, 242, 100, 0.25);
   color: #bef264;
   transform: rotate(90deg);
 }
 
-#emailTable .status-restart i {
+.email-table .status-restart i {
   font-size: 0.85rem;
   margin: 0;
 }
 
 /* Stack status items vertically */
-#emailTable .status-meta {
+.email-table .status-meta {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -109,7 +109,7 @@
   width: 100%;
 }
 
-#emailTable .status-cell {
+.email-table .status-cell {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -147,7 +147,7 @@
    ======================================== */
 
 /* Use scoped selector for proper specificity without !important */
-#emailTable .action-buttons {
+.email-table .action-buttons {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 4px;
@@ -156,7 +156,7 @@
   max-width: 120px;
 }
 
-#emailTable .action-btn {
+.email-table .action-btn {
   width: 100%;
   height: 30px;
   padding: 0;
@@ -172,43 +172,43 @@
   font-size: 14px;
 }
 
-#emailTable .action-btn:hover {
+.email-table .action-btn:hover {
   background: rgba(255,255,255,0.12);
   color: #ffffff;
   transform: translateY(-1px);
 }
 
-#emailTable .action-btn.action-view:hover {
+.email-table .action-btn.action-view:hover {
   background: rgba(59, 130, 246, 0.15);
   border-color: #60a5fa;
   color: #93c5fd;
 }
 
-#emailTable .action-btn.action-edit:hover {
+.email-table .action-btn.action-edit:hover {
   background: rgba(139, 92, 246, 0.15);
   border-color: #a78bfa;
   color: #c4b5fd;
 }
 
-#emailTable .action-btn.action-release:hover {
+.email-table .action-btn.action-release:hover {
   background: rgba(190, 242, 100, 0.15);
   border-color: #bef264;
   color: #bef264;
 }
 
-#emailTable .action-btn.action-reply:hover {
+.email-table .action-btn.action-reply:hover {
   background: rgba(20, 184, 166, 0.15);
   border-color: #5eead4;
   color: #5eead4;
 }
 
-#emailTable .action-btn.action-forward:hover {
+.email-table .action-btn.action-forward:hover {
   background: rgba(245, 158, 11, 0.15);
   border-color: #fbbf24;
   color: #fbbf24;
 }
 
-#emailTable .action-btn.action-discard:hover {
+.email-table .action-btn.action-discard:hover {
   background: rgba(239, 68, 68, 0.15);
   border-color: #f87171;
   color: #fca5a5;
@@ -218,7 +218,7 @@
    FIX 4: Correspondent Labels - Styled properly
    ======================================== */
 
-#emailTable .correspondent-label {
+.email-table .correspondent-label {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 0.7rem;
   font-weight: 700;
@@ -230,13 +230,13 @@
   margin-right: 6px;
 }
 
-#emailTable .correspondent-value {
+.email-table .correspondent-value {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.85);
 }
 
-#emailTable .correspondent-line {
+.email-table .correspondent-line {
   display: flex;
   align-items: baseline;
   gap: 4px;
@@ -249,12 +249,12 @@
    ======================================== */
 
 @media (max-width: 768px) {
-  #emailTable .action-buttons {
+  .email-table .action-buttons {
     grid-template-columns: repeat(2, 1fr);
     max-width: 80px;
   }
 
-  #emailTable .action-btn {
+  .email-table .action-btn {
     height: 32px;
   }
 }
