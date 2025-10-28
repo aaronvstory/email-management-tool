@@ -1272,7 +1272,60 @@ body.login-page {
   color: var(--text-primary, #e5e7eb);
 }
 
-/* Top navigation links (now sibling of .command-brand) */
+/* ===== Shell constants ===== */
+:root {
+  /* tweak these two lines any time without hunting through CSS */
+  --sidebar-width: 240px;
+  --content-max: 100%; /* set 1200px if you want the centered look */
+}
+
+/* Foundation */
+.dark-app-shell {
+  background: #0f0f10;
+  min-height: 100vh;
+}
+
+.sidebar-modern {
+  position: fixed;
+  inset: 0 auto 0 0; /* top/right/bottom/left */
+  width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width);
+  overflow-y: auto;
+  z-index: 1001;
+}
+
+.main-modern {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  /* This line replaces the "mystery margin-left" you were forcing in DevTools */
+  margin-left: var(--sidebar-width);
+}
+
+/* Top bar */
+.command-bar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  background: rgba(18,18,19,0.9);
+  backdrop-filter: saturate(120%) blur(6px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-wrap: wrap;
+}
+
+.command-brand .brand-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: #e5e7eb;
+}
+
+/* Top nav links */
 .command-nav {
   display: flex;
   align-items: center;
@@ -1286,42 +1339,39 @@ body.login-page {
   gap: 6px;
   padding: 6px 10px;
   border-radius: 8px;
-  color: var(--text-primary, #e5e7eb);
+  color: #e5e7eb;
   text-decoration: none;
   line-height: 1;
   font-weight: 500;
-  transition: background 0.15s ease, outline-color 0.15s ease;
+  transition: background .15s ease;
 }
 
-.command-link:hover {
-  background: rgba(255,255,255,0.06);
-}
-
+.command-link:hover { background: rgba(255,255,255,0.06); }
 .command-link.active {
   background: rgba(124,58,237,0.18);
   outline: 1px solid rgba(124,58,237,0.35);
   color: #c4b5fd;
 }
 
-/* Content container rhythm */
+/* Content sizing */
 .content-scroll {
-  max-width: 1200px;
+  max-width: var(--content-max);
   margin: 0 auto;
   padding: 20px;
+  flex: 1;
 }
 
-/* Dashboard stats grid (5 → 3 → 2 → 1) */
+/* Dashboard stats grid keeps working in both "wide" and "1200px" modes */
 #statsGrid {
   display: grid;
   grid-template-columns: repeat(5, minmax(170px, 1fr));
   gap: 20px;
 }
-@media (max-width: 1200px){ #statsGrid { grid-template-columns: repeat(3, minmax(170px,1fr)); } }
-@media (max-width: 768px) { #statsGrid { grid-template-columns: repeat(2, minmax(150px,1fr)); } }
-@media (max-width: 520px) { #statsGrid { grid-template-columns: 1fr; } }
+@media (max-width: 1200px){ #statsGrid{ grid-template-columns: repeat(3, minmax(170px,1fr)); } }
+@media (max-width: 768px){  #statsGrid{ grid-template-columns: repeat(2, minmax(150px,1fr)); } }
+@media (max-width: 520px){  #statsGrid{ grid-template-columns: 1fr; } }
 
-/* Card surface */
-.stat-card-modern {
+.stat-card-modern{
   background: linear-gradient(145deg,#1a1a1a 0%,#1f1f1f 60%,#242424 100%);
   border: 1px solid rgba(255,255,255,0.06);
   border-radius: 12px;
@@ -1330,25 +1380,29 @@ body.login-page {
 }
 
 /* Controls height harmony */
-.btn,
-.form-control,
-.form-select {
-  height: 42px;
-  min-height: 42px;
-}
+.btn, .form-control, .form-select { height: 42px; min-height: 42px; }
 
-/* Table header style */
-.email-table thead th {
+/* Table header polish */
+.email-table thead th{
   text-transform: uppercase;
   font-size: 12px;
   letter-spacing: .06em;
   color: #9ca3af;
 }
 
-/* Mobile behavior: collapse sidebar and let the button reveal it */
-@media (max-width: 1024px) {
-  .sidebar-modern { transform: translateX(-100%); transition: transform 0.2s ease; }
-  .sidebar-modern.open { transform: translateX(0); }
-  .main-modern { margin-left: 0 !important; }
-  .command-bar .toggle-nav { display: inline-flex; }
+/* Bulk toolbar spacing */
+#bulk-actions-bar{ display:flex; gap:10px; align-items:center; }
+
+/* Responsive: collapse sidebar under 1024px */
+@media (max-width: 1024px){
+  .sidebar-modern{
+    transform: translateX(-100%);
+    transition: transform .2s ease;
+  }
+  .sidebar-modern.is-open{ transform: none; }
+  .main-modern{ margin-left: 0; }
+  .command-bar .toggle-nav{ display: inline-flex; }
+}
+@media (min-width: 1025px){
+  .command-bar .toggle-nav{ display: none; }
 }
