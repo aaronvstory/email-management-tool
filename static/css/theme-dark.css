@@ -40,8 +40,8 @@ body.login-page .login-header h2 {
 }
 
 body.login-page .login-header .icon {
-  font-size: 2rem;
-  color: var(--brand-primary);
+  font-size: 2.5rem;
+  color: #bef264;
 }
 
 body.login-page .form-label {
@@ -49,43 +49,67 @@ body.login-page .form-label {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   font-size: 0.75rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+body.login-page .input-group {
+  display: flex;
+  align-items: stretch;
 }
 
 body.login-page .input-group-text {
-  background: rgba(30,30,30,0.85);
-  border: 1px solid rgba(255,255,255,0.08);
-  color: rgba(209,213,219,0.8);
+  background: #27272a;
+  border: 1px solid #3f3f46;
+  border-right: none;
+  color: #a1a1aa;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: 6px 0 0 6px;
 }
 
-body.login-page .form-control {
-  background: rgba(30,30,30,0.88);
-  border: 1px solid rgba(255,255,255,0.1);
+body.login-page .input-group .form-control {
+  background: #27272a;
+  border: 1px solid #3f3f46;
+  border-left: none;
   color: #ffffff;
-  border-radius: var(--radius-md);
+  border-radius: 0 6px 6px 0;
+  padding: 10px 14px;
+  min-height: 44px;
 }
 
 body.login-page .form-control:focus {
-  border-color: rgba(220,38,38,0.45);
-  box-shadow: 0 0 0 1px rgba(220,38,38,0.25);
-  background: rgba(36,36,36,0.96);
+  border-color: #bef264;
+  box-shadow: 0 0 0 3px rgba(190, 242, 100, 0.1);
+  background: #18181b;
+  outline: none;
+}
+
+body.login-page .input-group:focus-within .input-group-text {
+  border-color: #bef264;
+  background: #18181b;
 }
 
 body.login-page .btn-login {
   width: 100%;
-  margin-top: 4px;
-  background: linear-gradient(140deg, rgba(220,38,38,0.55) 0%, rgba(220,38,38,0.32) 100%);
-  border: 1px solid rgba(220,38,38,0.55);
-  border-radius: var(--radius-md);
-  min-height: 44px;
-  font-size: 0.85rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  font-weight: 600;
-  color: #ffffff;
+  margin-top: 8px;
+  background: #bef264;
+  border: 1px solid #bef264;
+  border-radius: 6px;
+  min-height: 48px;
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: #18181b;
+  transition: all 0.2s ease;
 }
 
 body.login-page .btn-login:hover {
-  background: linear-gradient(140deg, rgba(220,38,38,0.68) 0%, rgba(220,38,38,0.38) 100%);
+  background: #a3e635;
+  border-color: #a3e635;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(190, 242, 100, 0.3);
 }
 
 body.login-page .alert {
