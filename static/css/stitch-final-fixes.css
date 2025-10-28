@@ -5,6 +5,106 @@
 */
 
 /* ========================================
+   FIX 0: Status Column - Unified Design Language
+   ======================================== */
+
+/* Make "Held" status badge match watcher-chip style */
+.status-badge {
+  padding: 2px 8px !important;
+  border-radius: 4px !important;  /* Consistent with theme */
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+/* Held status - amber/yellow to match pending/warning state */
+.status-badge.status-HELD {
+  background: rgba(251, 191, 36, 0.12) !important;
+  color: #fbbf24 !important;
+  border: 1px solid rgba(251, 191, 36, 0.25) !important;
+}
+
+/* Released status - lime green to match theme */
+.status-badge.status-RELEASED {
+  background: rgba(190, 242, 100, 0.12) !important;
+  color: #bef264 !important;
+  border: 1px solid rgba(190, 242, 100, 0.25) !important;
+}
+
+/* Rejected status - red/danger */
+.status-badge.status-REJECTED {
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(239, 68, 68, 0.25) !important;
+}
+
+/* Discarded status - gray/muted */
+.status-badge.status-DISCARDED {
+  background: rgba(156, 163, 175, 0.12) !important;
+  color: #9ca3af !important;
+  border: 1px solid rgba(156, 163, 175, 0.25) !important;
+}
+
+/* Watcher chips - already styled well, just ensure consistency */
+.watcher-chip {
+  padding: 2px 8px !important;
+  border-radius: 4px !important;
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+.watcher-chip.active {
+  background: rgba(190, 242, 100, 0.12) !important;  /* Lime green for active/polling */
+  color: #bef264 !important;
+  border: 1px solid rgba(190, 242, 100, 0.25) !important;
+}
+
+.watcher-chip.stopped {
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(239, 68, 68, 0.25) !important;
+}
+
+.watcher-chip.unknown {
+  background: rgba(156, 163, 175, 0.12) !important;
+  color: #9ca3af !important;
+  border: 1px solid rgba(156, 163, 175, 0.25) !important;
+}
+
+/* Restart button - make it a proper icon button */
+.status-restart {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+  cursor: pointer !important;
+  padding: 4px 6px !important;
+  border-radius: 4px !important;
+  font-size: 0.75rem !important;
+  transition: all 0.2s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.status-restart:hover {
+  background: rgba(190, 242, 100, 0.12) !important;  /* Lime green on hover */
+  border-color: rgba(190, 242, 100, 0.25) !important;
+  color: #bef264 !important;
+  transform: rotate(90deg) !important;  /* Fun rotation effect */
+}
+
+.status-restart i {
+  font-size: 0.85rem !important;
+  margin: 0 !important;
+}
+
+/* ========================================
    FIX 1: Status Indicators - Lime Green Theme
    ======================================== */
 
