@@ -194,3 +194,4 @@ launch_vscode_*.bat
 launch_vscode_*.vbs
 
 .claude-flow
+.claude-flow/metrics/system-metrics.json

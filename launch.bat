@@ -26,27 +26,27 @@ if %ERRORLEVEL% NEQ 0 (
 REM Check for port conflicts and clean up if needed
 echo [PREFLIGHT] Checking for port conflicts...
 
-REM Check port 5000 (Flask)
-C:\Windows\System32\netstat.exe -ano | findstr :5000 >nul 2>&1
+REM Check port 5500 (Flask)
+C:\Windows\System32\netstat.exe -ano | findstr :5500 >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
-    echo [WARNING] Port 5000 is in use. Checking if it's our application...
+    echo [WARNING] Port 5500 is in use. Checking if it's our application...
 
     REM Try to access health endpoint
-    curl -s http://localhost:5000/healthz >nul 2>&1
+    curl -s http://172.29.108.26:5500/healthz >nul 2>&1
     if %ERRORLEVEL% EQU 0 (
         echo [INFO] Application is already running and healthy!
         echo.
         echo Opening dashboard in browser...
         timeout /t 2 /nobreak >nul
-        start http://localhost:5000
+        start http://172.29.108.26:5500
         echo.
         echo [OK] Browser launched!
         timeout /t 3 /nobreak >nul
         exit /b 0
     ) else (
-        echo [WARNING] Port 5000 occupied by unresponsive process.
-        echo [ACTION] Attempting safe cleanup of our own Python process on port 5000...
-        for /f "tokens=5" %%a in ('netstat -ano ^| findstr :5000') do (
+        echo [WARNING] Port 5500 occupied by unresponsive process.
+        echo [ACTION] Attempting safe cleanup of our own Python process on port 5500...
+        for /f "tokens=5" %%a in ('netstat -ano ^| findstr :5500') do (
             for /f "usebackq delims=" %%c in (`wmic process where "ProcessId=%%a" get CommandLine ^| findstr /I /C:"Email-Management-Tool"`) do (
                 taskkill /F /PID %%a >nul 2>&1
             )
@@ -81,11 +81,11 @@ echo [2/3] Waiting for services to initialize...
 timeout /t 5 /nobreak >nul
 
 REM Check if app started successfully
-C:\Windows\System32\netstat.exe -an | findstr :5000 >nul 2>&1
+C:\Windows\System32\netstat.exe -an | findstr :5500 >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
     echo.
     echo [ERROR] Failed to start application!
-    echo Please check if port 5000 is available.
+    echo Please check if port 5500 is available.
     pause
     exit /b 1
 )
@@ -94,14 +94,14 @@ echo [3/3] Opening dashboard in browser...
 echo.
 
 REM Open the dashboard in default browser
-start http://localhost:5000
+start http://172.29.108.26:5500
 
 echo ============================================================
 echo    APPLICATION STARTED SUCCESSFULLY!
 echo ============================================================
 echo.
-echo    Web Dashboard:  http://localhost:5000
-echo    SMTP Proxy:     localhost:8587
+echo    Web Dashboard:  http://172.29.108.26:5500
+echo    SMTP Proxy:     http://172.29.108.26:8587
 echo    Login:          admin / admin123
 echo.
 echo    The dashboard has been opened in your browser.
