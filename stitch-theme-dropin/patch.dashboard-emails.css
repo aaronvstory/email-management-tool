@@ -1,0 +1,13 @@
+
+/* patch.dashboard-emails.css
+   bring emails_unified into the Stitch theme
+*/
+.page-header { display:flex; align-items: start; justify-content: space-between; gap: .75rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+.page-header h1 { font-weight: 800; color: var(--on-surface-strong); }
+.page-header p { color: var(--on-surface); }
+
+.filters { display:flex; gap:.5rem; flex-wrap: wrap; }
+.filters .btn { border-radius: 6px; }
+
+.table thead th { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--on-surface); border-bottom: 1px solid var(--border) !important; }
+.table-hover tbody tr:hover { background: color-mix(in srgb, var(--on-surface) 6%, transparent); }

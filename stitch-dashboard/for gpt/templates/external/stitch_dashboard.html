@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Dashboard - Email Management</title>
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography,container-queries"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#bef264",
+            background: "#18181b",
+            surface: "#27272a",
+            "on-surface": "#a1a1aa",
+            "on-surface-strong": "#f4f4f5"
+          },
+          fontFamily: {
+            sans: ["Inter", "sans-serif"],
+          },
+          borderRadius: {
+            DEFAULT: "0",
+            none: "0",
+            sm: "0.125rem",
+            md: "0.25rem",
+            lg: "0.5rem",
+            xl: "0.75rem",
+            "2xl": "1rem",
+            "3xl": "1.5rem",
+            full: "9999px"
+          },
+        },
+      },
+    };
+  </script>
+  <style type="text/tailwindcss">
+    @layer base {
+            .material-symbols-outlined {
+                font-variation-settings:
+                'FILL' 0,
+                'wght' 300,
+                'GRAD' 0,
+                'opsz' 20
+            }
+        }
+    </style>
+</head>
+
+<body class="font-sans bg-background text-on-surface antialiased">
+  <div class="flex h-screen overflow-hidden">
+    <aside class="w-64 flex-shrink-0 bg-background border-r border-surface flex flex-col">
+      <div class="h-16 flex items-center px-6 border-b border-surface flex-shrink-0">
+        <h1 class="text-xl font-bold text-on-surface-strong">Email Manager</h1>
+      </div>
+      <nav class="flex-1 overflow-y-auto py-6">
+        <div class="px-4">
+          <h2 class="px-2 mb-2 text-xs font-semibold text-on-surface uppercase tracking-wider">Core</h2>
+          <ul class="space-y-1">
+            <li>
+              <a class="flex items-center gap-3 px-2 py-2 text-sm font-medium text-primary bg-primary/10 relative"
+                href="#">
+                <span class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></span>
+                <span class="material-symbols-outlined text-lg">dashboard</span>
+                Dashboard
+              </a>
+            </li>
+            <li>
+              <a class="flex items-center gap-3 px-2 py-2 text-sm font-medium text-on-surface hover:bg-surface hover:text-on-surface-strong relative"
+                href="#">
+                <span class="material-symbols-outlined text-lg">mail</span>
+                Emails
+                <span
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-semibold bg-surface text-on-surface px-2 py-0.5 rounded-sm">337</span>
+              </a>
+            </li>
+            <li>
+              <a class="flex items-center gap-3 px-2 py-2 text-sm font-medium text-on-surface hover:bg-surface hover:text-on-surface-strong"
+                href="#">
+                <span class="material-symbols-outlined text-lg">edit_square</span>
+                Compose
+              </a>
+            </li>
+          </ul>
+        </div>
+        <div class="mt-6 px-4">
+          <h2 class="px-2 mb-2 text-xs font-semibold text-on-surface uppercase tracking-wider">Management</h2>
+          <ul class="space-y-1">
+            <li><a
+                class="flex items-center gap-3 px-2 py-2 text-sm font-medium text-on-surface hover:bg-surface hover:text-on-surface-strong"
+                href="#"><span class="material-symbols-outlined text-lg">visibility</span> Watchers</a></li>
+            <li><a
+                class="flex items-center gap-3 px-2 py-2 text-sm font-medium text-on-surface hover:bg-surface hover:text-on-surface-strong"
+                href="#"><span class="material-symbols-outlined text-lg">rule</span> Rules</a></li>
+            <li><a
+                class="flex items-center gap-3 px-2 py-2 text-sm font-medium text-on-surface hover:bg-surface hover:text-on-surface-strong"
+                href="#"><span class="material-symbols-outlined text-lg">group</span> Accounts</a></li>
+            <li><a
+                class="flex items-center gap-3 px-2 py-2 text-sm font-medium text-on-surface hover:bg-surface hover:text-on-surface-strong"
+                href="#"><span class="material-symbols-outlined text-lg">upload_file</span> Import Accounts</a></li>
+            <li><a
+                class="flex items-center gap-3 px-2 py-2 text-sm font-medium text-on-surface hover:bg-surface hover:text-on-surface-strong"
+                href="#"><span class="material-symbols-outlined text-lg">diagnosis</span> Diagnostics</a></li>
+          </ul>
+        </div>
+        <div class="mt-6 px-4">
+          <h2 class="px-2 mb-2 text-xs font-semibold text-on-surface uppercase tracking-wider">Tools</h2>
+          <ul class="space-y-1">
+            <li><a
+                class="flex items-center gap-3 px-2 py-2 text-sm font-medium text-on-surface hover:bg-surface hover:text-on-surface-strong"
+                href="#"><span class="material-symbols-outlined text-lg">palette</span> Style Guide</a></li>
+            <li><a
+                class="flex items-center gap-3 px-2 py-2 text-sm font-medium text-on-surface hover:bg-surface hover:text-on-surface-strong"
+                href="#"><span class="material-symbols-outlined text-lg">build</span> Interception Tool</a></li>
+          </ul>
+        </div>
+      </nav>
+      <div class="p-4 border-t border-surface flex-shrink-0">
+        <div class="p-4 bg-surface rounded-md">
+          <p class="text-sm font-medium text-on-surface-strong">Signed in:</p>
+          <p class="text-sm text-on-surface">admin</p>
+          <div class="mt-4 space-y-2">
+            <a class="flex items-center gap-3 text-sm font-medium text-on-surface hover:text-primary" href="#"><span
+                class="material-symbols-outlined text-lg">settings</span> Settings</a>
+            <a class="flex items-center gap-3 text-sm font-medium text-on-surface hover:text-primary" href="#"><span
+                class="material-symbols-outlined text-lg">logout</span> Logout</a>
+          </div>
+        </div>
+      </div>
+    </aside>
+    <div class="flex-1 flex flex-col overflow-y-auto bg-surface">
+      <main class="flex-1 p-6 md:p-8 space-y-8">
+        <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4 border-b border-surface pb-6">
+          <div>
+            <h1 class="text-3xl font-bold text-on-surface-strong">Dashboard</h1>
+            <p class="mt-2 text-on-surface">Overview of your email interception activity.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              class="bg-surface border border-zinc-700/50 text-on-surface-strong font-medium py-2 px-3 hover:bg-zinc-700 transition-colors flex items-center gap-2 rounded-md">
+              <span class="material-symbols-outlined text-lg">calendar_today</span>
+              Last 24 Hours
+              <span class="material-symbols-outlined text-lg">expand_more</span>
+            </button>
+            <button
+              class="bg-primary text-zinc-900 font-bold py-2 px-4 hover:bg-primary/90 transition-colors flex items-center gap-2 rounded-md">
+              <span class="material-symbols-outlined text-lg font-semibold">add</span>
+              New Watcher
+            </button>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div class="bg-background p-5 border border-surface rounded-md">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-medium text-on-surface uppercase tracking-wider">Emails Processed</h3>
+              <span class="material-symbols-outlined text-on-surface">mail</span>
+            </div>
+            <p class="text-3xl font-bold text-on-surface-strong mt-4">1,234</p>
+            <p class="text-xs text-primary flex items-center gap-1 mt-1">
+              <span class="material-symbols-outlined text-base">arrow_upward</span>
+              12% from last 24h
+            </p>
+          </div>
+          <div class="bg-background p-5 border border-surface rounded-md">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-medium text-on-surface uppercase tracking-wider">Emails Held</h3>
+              <span class="material-symbols-outlined text-on-surface">pause_circle</span>
+            </div>
+            <p class="text-3xl font-bold text-on-surface-strong mt-4">337</p>
+            <p class="text-xs text-on-surface flex items-center gap-1 mt-1">
+              <span class="material-symbols-outlined text-base text-yellow-400">warning</span>
+              2 new in last hour
+            </p>
+          </div>
+          <div class="bg-background p-5 border border-surface rounded-md">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-medium text-on-surface uppercase tracking-wider">Emails Released</h3>
+              <span class="material-symbols-outlined text-on-surface">send</span>
+            </div>
+            <p class="text-3xl font-bold text-on-surface-strong mt-4">897</p>
+            <p class="text-xs text-primary flex items-center gap-1 mt-1">
+              <span class="material-symbols-outlined text-base">arrow_upward</span>
+              8% from last 24h
+            </p>
+          </div>
+          <div class="bg-background p-5 border border-surface rounded-md">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-medium text-on-surface uppercase tracking-wider">Watchers Active</h3>
+              <span class="material-symbols-outlined text-on-surface">visibility</span>
+            </div>
+            <p class="text-3xl font-bold text-on-surface-strong mt-4">12</p>
+            <p class="text-xs text-on-surface mt-1 h-5"> </p>
+          </div>
+        </div>
+        <div class="bg-background border border-surface rounded-md">
+          <div class="p-4 border-b border-surface flex items-center justify-between">
+            <h2 class="text-lg font-bold text-on-surface-strong">Recent Emails Held</h2>
+            <button class="text-primary hover:text-primary/90 font-medium text-sm flex items-center gap-1">
+              View All
+              <span class="material-symbols-outlined text-lg">arrow_forward</span>
+            </button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="border-b border-surface">
+                <tr>
+                  <th class="p-3 font-semibold text-left text-on-surface uppercase tracking-wider text-xs">Time</th>
+                  <th class="p-3 font-semibold text-left text-on-surface uppercase tracking-wider text-xs">
+                    Correspondents</th>
+                  <th class="p-3 font-semibold text-left text-on-surface uppercase tracking-wider text-xs">Subject</th>
+                  <th class="p-3 font-semibold text-left text-on-surface uppercase tracking-wider text-xs">Watcher</th>
+                  <th class="p-3 font-semibold text-left text-on-surface uppercase tracking-wider text-xs">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-surface">
+                <tr class="hover:bg-surface/50">
+                  <td class="p-3 text-on-surface whitespace-nowrap">Oct 24, 07:11 AM</td>
+                  <td class="p-3">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs font-semibold text-on-surface/80 w-8 text-right">FROM</span>
+                      <span class="font-medium text-on-surface-strong">rdeyjeska@gmail.com</span>
+                    </div>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span class="text-xs font-semibold text-on-surface/80 w-8 text-right">TO</span>
+                      <span class="font-medium text-on-surface-strong">rdeyjeska@gmail.com</span>
+                    </div>
+                  </td>
+                  <td class="p-3">
+                    <div class="font-medium text-on-surface-strong">Quarantine Flow 63bd310...</div>
+                    <div class="text-on-surface truncate max-w-xs mt-1">Automated quarantine flow...</div>
+                  </td>
+                  <td class="p-3">
+                    <span
+                      class="inline-flex items-center text-xs font-medium px-2 py-1 bg-primary/10 text-primary rounded-md">Invoice
+                      Watcher</span>
+                  </td>
+                  <td class="p-3">
+                    <div class="flex items-center gap-1">
+                      <button class="p-2 text-on-surface hover:bg-surface hover:text-primary rounded-md"
+                        title="All"><span class="material-symbols-outlined text-lg">inventory</span></button>
+                      <button class="p-2 text-on-surface hover:bg-surface hover:text-primary rounded-md"
+                        title="Release"><span class="material-symbols-outlined text-lg">send</span></button>
+                      <button class="p-2 text-on-surface hover:bg-surface hover:text-primary rounded-md"
+                        title="Reject"><span class="material-symbols-outlined text-lg">block</span></button>
+                      <button class="p-2 text-on-surface hover:bg-surface hover:text-primary rounded-md"
+                        title="Delete"><span class="material-symbols-outlined text-lg">delete</span></button>
+                    </div>
+                  </td>
+                </tr>
+                <tr class="hover:bg-surface/50">
+                  <td class="p-3 text-on-surface whitespace-nowrap">Oct 24, 07:10 AM</td>
+                  <td class="p-3">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs font-semibold text-on-surface/80 w-8 text-right">FROM</span>
+                      <span class="font-medium text-on-surface-strong">rdeyjeska@gmail.com</span>
+                    </div>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span class="text-xs font-semibold text-on-surface/80 w-8 text-right">TO</span>
+                      <span class="font-medium text-on-surface-strong">rdeyjeska@gmail.com</span>
+                    </div>
+                  </td>
+                  <td class="p-3">
+                    <div class="font-medium text-on-surface-strong">Quarantine Flow 56d678b...</div>
+                    <div class="text-on-surface truncate max-w-xs mt-1">Automated quarantine flow...</div>
+                  </td>
+                  <td class="p-3">
+                    <span
+                      class="inline-flex items-center text-xs font-medium px-2 py-1 bg-primary/10 text-primary rounded-md">Invoice
+                      Watcher</span>
+                  </td>
+                  <td class="p-3">
+                    <div class="flex items-center gap-1">
+                      <button class="p-2 text-on-surface hover:bg-surface hover:text-primary rounded-md"
+                        title="All"><span class="material-symbols-outlined text-lg">inventory</span></button>
+                      <button class="p-2 text-on-surface hover:bg-surface hover:text-primary rounded-md"
+                        title="Release"><span class="material-symbols-outlined text-lg">send</span></button>
+                      <button class="p-2 text-on-surface hover:bg-surface hover:text-primary rounded-md"
+                        title="Reject"><span class="material-symbols-outlined text-lg">block</span></button>
+                      <button class="p-2 text-on-surface hover:bg-surface hover:text-primary rounded-md"
+                        title="Delete"><span class="material-symbols-outlined text-lg">delete</span></button>
+                    </div>
+                  </td>
+                </tr>
+                <tr class="hover:bg-surface/50">
+                  <td class="p-3 text-on-surface whitespace-nowrap">Oct 24, 06:55 AM</td>
+                  <td class="p-3">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs font-semibold text-on-surface/80 w-8 text-right">FROM</span>
+                      <span class="font-medium text-on-surface-strong">security@alerts.com</span>
+                    </div>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span class="text-xs font-semibold text-on-surface/80 w-8 text-right">TO</span>
+                      <span class="font-medium text-on-surface-strong">admin@company.com</span>
+                    </div>
+                  </td>
+                  <td class="p-3">
+                    <div class="font-medium text-on-surface-strong">Security Alert: New Login</div>
+                    <div class="text-on-surface truncate max-w-xs mt-1">New sign-in from device...</div>
+                  </td>
+                  <td class="p-3">
+                    <span
+                      class="inline-flex items-center text-xs font-medium px-2 py-1 bg-primary/10 text-primary rounded-md">Security
+                      Alerts</span>
+                  </td>
+                  <td class="p-3">
+                    <div class="flex items-center gap-1">
+                      <button class="p-2 text-on-surface hover:bg-surface hover:text-primary rounded-md"
+                        title="All"><span class="material-symbols-outlined text-lg">inventory</span></button>
+                      <button class="p-2 text-on-surface hover:bg-surface hover:text-primary rounded-md"
+                        title="Release"><span class="material-symbols-outlined text-lg">send</span></button>
+                      <button class="p-2 text-on-surface hover:bg-surface hover:text-primary rounded-md"
+                        title="Reject"><span class="material-symbols-outlined text-lg">block</span></button>
+                      <button class="p-2 text-on-surface hover:bg-surface hover:text-primary rounded-md"
+                        title="Delete"><span class="material-symbols-outlined text-lg">delete</span></button>
+                    </div>
+                  </td>
+                </tr>
+                <tr class="hover:bg-surface/50">
+                  <td class="p-3 text-on-surface whitespace-nowrap">Oct 24, 06:30 AM</td>
+                  <td class="p-3">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs font-semibold text-on-surface/80 w-8 text-right">FROM</span>
+                      <span class="font-medium text-on-surface-strong">no-reply@example.com</span>
+                    </div>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span class="text-xs font-semibold text-on-surface/80 w-8 text-right">TO</span>
+                      <span class="font-medium text-on-surface-strong">user@example.com</span>
+                    </div>
+                  </td>
+                  <td class="p-3">
+                    <div class="font-medium text-on-surface-strong">Your weekly report is ready</div>
+                    <div class="text-on-surface truncate max-w-xs mt-1">Please review the attached...</div>
+                  </td>
+                  <td class="p-3">
+                    <span
+                      class="inline-flex items-center text-xs font-medium px-2 py-1 bg-primary/10 text-primary rounded-md">Internal
+                      Reports</span>
+                  </td>
+                  <td class="p-3">
+                    <div class="flex items-center gap-1">
+                      <button class="p-2 text-on-surface hover:bg-surface hover:text-primary rounded-md"
+                        title="All"><span class="material-symbols-outlined text-lg">inventory</span></button>
+                      <button class="p-2 text-on-surface hover:bg-surface hover:text-primary rounded-md"
+                        title="Release"><span class="material-symbols-outlined text-lg">send</span></button>
+                      <button class="p-2 text-on-surface hover:bg-surface hover:text-primary rounded-md"
+                        title="Reject"><span class="material-symbols-outlined text-lg">block</span></button>
+                      <button class="p-2 text-on-surface hover:bg-surface hover:text-primary rounded-md"
+                        title="Delete"><span class="material-symbols-outlined text-lg">delete</span></button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</body>
+
+</html>
