@@ -1,4 +1,5 @@
 @echo off
+setlocal enabledelayedexpansion
 REM ============================================================
 REM    EMAIL MANAGEMENT TOOL - QUICK LAUNCHER
 REM ============================================================
@@ -26,49 +27,27 @@ if %ERRORLEVEL% NEQ 0 (
 REM Check for port conflicts and clean up if needed
 echo [PREFLIGHT] Checking for port conflicts...
 
-REM Check port 5500 (Flask)
-C:\Windows\System32\netstat.exe -ano | findstr :5500 >nul 2>&1
+REM Quick health check first - if app is running and healthy, just launch browser
+curl -s --max-time 2 http://127.0.0.1:5000/healthz >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
-    echo [WARNING] Port 5500 is in use. Checking if it's our application...
-
-    REM Try to access health endpoint
-    curl -s http://172.29.108.26:5500/healthz >nul 2>&1
-    if %ERRORLEVEL% EQU 0 (
-        echo [INFO] Application is already running and healthy!
-        echo.
-        echo Opening dashboard in browser...
-        timeout /t 2 /nobreak >nul
-        start http://172.29.108.26:5500
-        echo.
-        echo [OK] Browser launched!
-        timeout /t 3 /nobreak >nul
-        exit /b 0
-    ) else (
-        echo [WARNING] Port 5500 occupied by unresponsive process.
-        echo [ACTION] Attempting safe cleanup of our own Python process on port 5500...
-        for /f "tokens=5" %%a in ('netstat -ano ^| findstr :5500') do (
-            for /f "usebackq delims=" %%c in (`wmic process where "ProcessId=%%a" get CommandLine ^| findstr /I /C:"Email-Management-Tool"`) do (
-                taskkill /F /PID %%a >nul 2>&1
-            )
-        )
-        timeout /t 2 /nobreak >nul
-    )
-)
-
-REM Check port 8587 (SMTP Proxy)
-C:\Windows\System32\netstat.exe -ano | findstr :8587 >nul 2>&1
-if %ERRORLEVEL% EQU 0 (
-    echo [WARNING] Port 8587 is in use. Attempting safe cleanup...
-    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8587') do (
-        for /f "usebackq delims=" %%c in (`wmic process where "ProcessId=%%a" get CommandLine ^| findstr /I /C:"Email-Management-Tool"`) do (
-            taskkill /F /PID %%a >nul 2>&1
-        )
-    )
+    echo [INFO] Application is already running and healthy!
+    echo [OK] Opening dashboard in browser...
+    start http://127.0.0.1:5000
     timeout /t 2 /nobreak >nul
+    exit /b 0
 )
 
-echo [OK] Ports are clear!
+REM Get all PIDs on our ports in one netstat call (much faster)
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":5000 :8587"') do (
+    REM Skip if not a PID (header lines)
+    echo %%a | findstr /R "^[0-9][0-9]*$" >nul
+    if !ERRORLEVEL! EQU 0 (
+        REM Kill without checking commandline (faster, safer than WMIC)
+        taskkill /F /PID %%a >nul 2>&1
+    )
+)
 
+echo [OK] Ports cleared!
 echo [STARTING] Email Management Tool...
 echo.
 
@@ -76,38 +55,53 @@ REM Start the Flask application in background
 echo [1/3] Starting Flask application...
 start /min cmd /c "python simple_app.py"
 
-REM Wait for application to initialize
+REM Smart wait - poll for ready state instead of fixed delay
 echo [2/3] Waiting for services to initialize...
-timeout /t 5 /nobreak >nul
+set MAX_RETRIES=15
+set RETRY_COUNT=0
 
-REM Check if app started successfully
-C:\Windows\System32\netstat.exe -an | findstr :5500 >nul 2>&1
-if %ERRORLEVEL% NEQ 0 (
-    echo.
-    echo [ERROR] Failed to start application!
-    echo Please check if port 5500 is available.
-    pause
-    exit /b 1
+:WAIT_LOOP
+timeout /t 1 /nobreak >nul
+set /a RETRY_COUNT+=1
+
+REM Check if app is listening on port 5000
+netstat -an | findstr :5000 | findstr LISTENING >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    REM Port is open, now check health endpoint
+    curl -s --max-time 2 http://127.0.0.1:5000/healthz >nul 2>&1
+    if %ERRORLEVEL% EQU 0 (
+        echo [OK] Application is healthy!
+        goto APP_READY
+    )
 )
 
+if %RETRY_COUNT% LSS %MAX_RETRIES% goto WAIT_LOOP
+
+echo.
+echo [ERROR] Failed to start application after %MAX_RETRIES% seconds!
+echo Please check logs/app.log for errors.
+pause
+exit /b 1
+
+:APP_READY
 echo [3/3] Opening dashboard in browser...
 echo.
 
 REM Open the dashboard in default browser
-start http://172.29.108.26:5500
+start http://127.0.0.1:5000
 
 echo ============================================================
 echo    APPLICATION STARTED SUCCESSFULLY!
 echo ============================================================
 echo.
-echo    Web Dashboard:  http://172.29.108.26:5500
-echo    SMTP Proxy:     http://172.29.108.26:8587
+echo    Web Dashboard:  http://127.0.0.1:5000
+echo    SMTP Proxy:     localhost:8587
 echo    Login:          admin / admin123
 echo.
-echo    The dashboard has been opened in your browser.
+echo    Dashboard opened in browser (took %RETRY_COUNT% seconds)
 echo    Keep this window open while using the application.
 echo.
-echo    Press Ctrl+C to stop the application.
+echo    Press any key to stop the application...
 echo ============================================================
 echo.
 
