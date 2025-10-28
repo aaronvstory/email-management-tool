@@ -192,3 +192,5 @@ archive/
 # VS Code launcher scripts (temporary helpers)
 launch_vscode_*.bat
 launch_vscode_*.vbs
+
+.claude-flow
