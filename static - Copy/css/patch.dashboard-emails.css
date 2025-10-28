@@ -1,0 +1,37 @@
+/* PATCH: Dashboard and header layout fixes (Oct 26, 2025)
+   Scope: minimal overrides to resolve wrapping, padding, icon alignment, and radius consistency.
+   Note: strictly no !important unless absolutely necessary. */
+
+/* 1) Command actions wrapping: keep buttons grouped and prevent scatter at 1280-1440px */
+.command-actions { gap: 10px; flex-wrap: nowrap; align-items: center; }
+@media (max-width: 1440px) {
+  .command-actions { flex-wrap: wrap; justify-content: flex-end; row-gap: 8px; }
+  .command-actions .toolbar-group { gap: 8px; }
+}
+@media (max-width: 1280px) {
+  .command-actions { justify-content: flex-start; }
+}
+
+/* 2) Global search icon alignment inside input */
+.global-search { position: relative; }
+.global-search .search-icon { left: 12px; top: 50%; transform: translateY(-50%); }
+.global-search input { padding-left: 40px; height: 40px; }
+
+/* 3) Page header not covered when width shrinks (reserve space and z-index) */
+.page-header { position: relative; z-index: 2; padding-top: 6px; }
+.content-scroll { padding-top: calc(var(--header-height) + 16px); }
+
+/* 4) Account selector actions padding */
+#dashboard-page .selector-actions { padding: 6px 0; gap: 10px; }
+#dashboard-page .selector-actions .btn { min-height: 32px; }
+
+/* 5) Recent emails: panel title and search input-group spacing */
+#dashboard-page .recent-emails-panel .panel-title { margin-bottom: 10px; padding: 0 4px; }
+#dashboard-page .recent-emails-panel .input-group { padding: 0 4px; }
+
+/* 6) Status tabs radius consistency */
+#dashboard-page .recent-emails-panel .status-tab { border-radius: var(--radius-sm); }
+
+/* 7) Loading spinner: ensure it hides after data render when container marks ready */
+.recent-emails-panel.table-ready .loading-spinner { display: none; }
+

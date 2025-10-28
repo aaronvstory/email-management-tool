@@ -3,6 +3,19 @@
 
 {% block extra_css %}
 <!-- Dashboard Interception styles now in unified.css (extracted Oct 25, 2025) -->
+<style>
+/* Hotfix for horizontal scrolling */
+.dark-app-shell .main-modern .content-scroll {
+  overflow-x: auto;
+  margin-left: 0px;
+  margin-right: 0px;
+}
+
+header.command-bar {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -179,9 +192,9 @@ async function reloadHeld(){
       <td class="col-subject">${subj}</td>
       <td>${m.latency_ms??''}</td>
       <td><span class="status-pill status-${m.interception_status}">${m.interception_status}</span></td>
-      <td><button class="btn-ghost" data-id="${m.id}" onclick="selectHeld(${m.id})">View</button></td>`;
-    tr.addEventListener('click', ()=> selectHeld(m.id));
-    tr.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); selectHeld(m.id); }});
+      <td><button class="btn-ghost" data-id="${m.id}" onclick="selectHeld(event, ${m.id})">View</button></td>`;
+    tr.addEventListener('click', (e)=> selectHeld(e, m.id));
+    tr.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); selectHeld(e, m.id); }});
     tbody.appendChild(tr);
   });
   if (data.messages.length === 0){
@@ -198,7 +211,12 @@ async function reloadHeld(){
 }
 
 let currentMessageId = null;
-async function selectHeld(id){
+async function selectHeld(event, id){
+  if (event) {
+    event.stopPropagation();
+    event.preventDefault(); // Prevent default action for key events (e.g., spacebar scrolls page)
+  }
+  
   const res = await fetch('/api/interception/held/'+id+'?include_diff=1');
   if(!res.ok) return;
   const m = await res.json();
@@ -263,7 +281,7 @@ async function releaseCurrent(){
     if(!res.ok || j.ok===false){ throw new Error(j.error || j.reason || 'Release failed'); }
     if (window.showSuccess) showSuccess('Released to INBOX');
     await reloadHeld();
-    selectHeld(currentMessageId);
+    clearSelection(); // Clear selection after action
   }catch(e){ if(window.showError) showError(e.message||'Release failed'); }
   finally{ setBusy(false); }
 }
@@ -284,12 +302,13 @@ async function discardCurrent(){
     document.getElementById('pv-meta').innerHTML = '';
     document.getElementById('pv-body').textContent = '';
     await reloadHeld();
+    clearSelection(); // Clear selection after action
   }catch(e){ if(window.showError) showError(e.message||'Discard failed'); }
   finally{ setBusy(false); }
 }
 
-document.getElementById('btn-release').addEventListener('click', releaseCurrent);
-document.getElementById('btn-discard').addEventListener('click', discardCurrent);
+document.getElementById('btn-release').addEventListener('click', () => { if (confirmToast) { confirmToast('Are you sure you want to release this email?', releaseCurrent); } else { if (confirm('Are you sure you want to release this email?')) releaseCurrent(); } });
+document.getElementById('btn-discard').addEventListener('click', () => { if (confirmToast) { confirmToast('Are you sure you want to discard this email? This cannot be undone.', discardCurrent); } else { if (confirm('Are you sure you want to discard this email? This cannot be undone.')) discardCurrent(); } });
 
 // Inline edit/save and release
 async function saveEdit(){
@@ -322,12 +341,13 @@ async function releaseEdited(){
     if(!r.ok || j.ok===false){ throw new Error(j.error||'Release failed'); }
     if (window.showSuccess) showSuccess('Released to INBOX');
     await reloadHeld();
+    clearSelection(); // Clear selection after action
   }catch(e){ showError(e.message||'Release failed'); }
   finally{ setBusy(false); }
 }
 
 document.getElementById('btn-save-edit').addEventListener('click', saveEdit);
-document.getElementById('btn-release-edited').addEventListener('click', releaseEdited);
+document.getElementById('btn-release-edited').addEventListener('click', () => { if (confirmToast) { confirmToast('Release this edited email? The original will be discarded.', releaseEdited); } else { if (confirm('Release this edited email? The original will be discarded.')) releaseEdited(); }});
 
 reloadHeld();
 // Watcher status badge
@@ -349,8 +369,9 @@ document.addEventListener('keydown', (e)=>{
   if (['input','textarea','select','button'].includes(tag)) return;
   if (e.key === 'Escape') { clearSelection(); return; }
   if (!currentMessageId) return;
-  if (e.key === 'r' || e.key === 'R'){ e.preventDefault(); releaseCurrent(); }
-  if (e.key === 'd' || e.key === 'D'){ e.preventDefault(); discardCurrent(); }
+  // Use a confirmation for destructive actions
+  if (e.key === 'r' || e.key === 'R'){ e.preventDefault(); if (confirmToast) { confirmToast('Are you sure you want to release this email?', releaseCurrent); } else { if (confirm('Are you sure you want to release this email?')) releaseCurrent(); } }
+  if (e.key === 'd' || e.key === 'D'){ e.preventDefault(); if (confirmToast) { confirmToast('Are you sure you want to discard this email? This cannot be undone.', discardCurrent); } else { if (confirm('Are you sure you want to discard this email? This cannot be undone.')) discardCurrent(); } }
   if (e.key === 's' || e.key === 'S'){ e.preventDefault(); saveEdit(); }
   if (e.key === 'ArrowDown'){
     e.preventDefault();
@@ -359,7 +380,7 @@ document.addEventListener('keydown', (e)=>{
     const cur = document.querySelector('#held-table tbody tr.selected-row');
     let idx = rows.indexOf(cur);
     idx = Math.min(rows.length-1, (idx<0?0:idx+1));
-    const id = rows[idx].getAttribute('data-id'); if (id) selectHeld(id);
+    const id = rows[idx].getAttribute('data-id'); if (id) selectHeld(null, id);
   }
   if (e.key === 'ArrowUp'){
     e.preventDefault();
@@ -368,7 +389,7 @@ document.addEventListener('keydown', (e)=>{
     const cur = document.querySelector('#held-table tbody tr.selected-row');
     let idx = rows.indexOf(cur);
     idx = Math.max(0, (idx<0?0:idx-1));
-    const id = rows[idx].getAttribute('data-id'); if (id) selectHeld(id);
+    const id = rows[idx].getAttribute('data-id'); if (id) selectHeld(null, id);
   }
 });
 

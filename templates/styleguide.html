@@ -3,6 +3,25 @@
 
 {% block extra_css %}
 <!-- Styleguide styles now in unified.css (extracted Oct 25, 2025) -->
+<style>
+/* Hotfix for horizontal scrolling */
+.dark-app-shell .main-modern .content-scroll {
+  overflow-x: auto;
+  margin-left: 0px;
+  margin-right: 0px;
+}
+
+header.command-bar {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -179,4 +198,3 @@ confirmToast('Are you sure?', onConfirm)</div>
   </div>
 </div>
 {% endblock %}
-

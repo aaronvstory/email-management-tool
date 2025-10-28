@@ -1,0 +1,599 @@
+/* ========================================
+   DASHBOARD UI FIXES - Missing CSS Selectors
+   Fixes for 8 specific UI issues identified
+   ======================================== */
+
+/* 1. Command Actions - Responsive flexbox layout for buttons */
+.command-actions,
+.action-buttons {
+    display: flex !important;
+    gap: 8px !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+}
+
+/* Prevent button scattering below 1440px */
+@media (max-width: 1440px) {
+    .command-actions,
+    .action-buttons {
+        flex-direction: row !important;
+        justify-content: flex-start !important;
+        gap: 6px !important;
+    }
+    
+    .command-actions .btn,
+    .action-buttons .btn {
+        min-width: auto !important;
+        padding: 6px 12px !important;
+        font-size: 13px !important;
+    }
+}
+
+/* 2. Global Search Icon Alignment */
+.global-search {
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.global-search .search-icon,
+.search-group i {
+    position: absolute !important;
+    left: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    color: #9ca3af !important;
+    z-index: 2 !important;
+}
+
+.global-search input,
+.search-group input {
+    padding-left: 40px !important;
+}
+
+/* 3. Dashboard Page Header - Proper layout and visibility */
+#dashboard-page .page-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    padding: 20px 0 !important;
+    margin-bottom: 30px !important;
+    border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+    position: relative !important;
+    z-index: 10 !important;
+}
+
+/* Prevent header from being covered on width shrink */
+@media (max-width: 1200px) {
+    #dashboard-page .page-header {
+        position: static !important;
+        flex-direction: column !important;
+        gap: 15px !important;
+        padding: 15px 0 !important;
+    }
+    
+    #dashboard-page .page-header .header-actions {
+        align-self: flex-end !important;
+    }
+}
+
+/* 4. Selector Actions - Add proper padding */
+#dashboard-page .selector-actions {
+    padding: 15px 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+}
+
+#dashboard-page .selector-actions .form-label {
+    margin-bottom: 8px !important;
+    font-weight: 600 !important;
+    color: #ffffff !important;
+}
+
+/* 5. Recent Emails Panel Title - Add proper padding */
+#dashboard-page .recent-emails-panel .panel-title {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 20px 0 15px 0 !important;
+    margin-bottom: 20px !important;
+    border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+}
+
+#dashboard-page .recent-emails-panel .panel-title span {
+    font-size: 1.25rem !important;
+    font-weight: 600 !important;
+    color: #ffffff !important;
+}
+
+/* 6. Recent Emails Panel Input Group - Add proper padding */
+#dashboard-page .recent-emails-panel .input-group {
+    padding: 0 0 15px 0 !important;
+    margin-bottom: 20px !important;
+}
+
+#dashboard-page .recent-emails-panel .mb-3 {
+    padding-bottom: 15px !important;
+    margin-bottom: 20px !important;
+    border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+}
+
+/* 7. Status Tab Border Radius - Consistent with app design */
+#dashboard-page .recent-emails-panel .status-tab {
+    border-radius: 6px !important; /* Changed from default rounded to consistent 6px */
+    padding: 8px 15px !important;
+    border: 2px solid rgba(255,255,255,0.12) !important;
+    background: rgba(255,255,255,0.06) !important;
+    color: #ffffff !important;
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+}
+
+#dashboard-page .recent-emails-panel .status-tab:hover {
+    background: rgba(255,255,255,0.12) !important;
+    border-color: rgba(255,255,255,0.2) !important;
+}
+
+#dashboard-page .recent-emails-panel .status-tab.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    border-color: #667eea !important;
+    color: #ffffff !important;
+}
+
+#dashboard-page .recent-emails-panel .status-tab .badge {
+    background: rgba(255,255,255,0.2) !important;
+    color: #ffffff !important;
+    border-radius: 4px !important;
+    padding: 2px 6px !important;
+    font-size: 0.75rem !important;
+    margin-left: 4px !important;
+}
+
+/* 8. Dashboard Loading Spinner - Hide logic and proper styling */
+#dashboardLoadingSpinner {
+    display: none !important; /* Hidden by default */
+    text-align: center !important;
+    padding: 40px 20px !important;
+    color: #9ca3af !important;
+}
+
+#dashboardLoadingSpinner.active {
+    display: block !important;
+}
+
+#dashboardLoadingSpinner .spinner {
+    width: 40px !important;
+    height: 40px !important;
+    border: 3px solid rgba(255,255,255,0.1) !important;
+    border-top: 3px solid #667eea !important;
+    border-radius: 50% !important;
+    animation: dashboardSpin 1s linear infinite !important;
+    margin: 0 auto 15px auto !important;
+}
+
+@keyframes dashboardSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ========================================
+   ADDITIONAL ARCHITECTURAL FIXES
+   ======================================== */
+
+/* Account Selector Grid Layout */
+.account-selector {
+    background: rgba(255,255,255,0.03) !important;
+    border-radius: 10px !important;
+    padding: 20px !important;
+    margin-bottom: 30px !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+}
+
+.selector-grid {
+    display: grid !important;
+    grid-template-columns: 1fr auto auto !important;
+    gap: 20px !important;
+    align-items: end !important;
+}
+
+@media (max-width: 768px) {
+    .selector-grid {
+        grid-template-columns: 1fr !important;
+        gap: 15px !important;
+    }
+}
+
+.selector-field {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+}
+
+.selector-meta {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    font-size: 0.875rem !important;
+    color: #9ca3af !important;
+}
+
+/* Stats Grid Layout */
+.stats-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
+    gap: 20px !important;
+    margin-bottom: 30px !important;
+}
+
+.stat-card-modern {
+    background: linear-gradient(145deg, #1a1a1a 0%, #1f1f1f 60%, #242424 100%) !important;
+    border-radius: 12px !important;
+    padding: 20px !important;
+    text-align: center !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+    transition: transform 0.2s ease !important;
+}
+
+.stat-card-modern:hover {
+    transform: translateY(-2px) !important;
+}
+
+.stat-card-modern .stat-value {
+    display: block !important;
+    font-size: 2rem !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+    margin-bottom: 5px !important;
+}
+
+.stat-card-modern .stat-label {
+    display: block !important;
+    font-size: 0.875rem !important;
+    color: #9ca3af !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
+
+/* Email Table Styling */
+.email-table {
+    width: 100% !important;
+    background: #1a1a1a !important;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+    margin-bottom: 20px !important;
+}
+
+.email-table thead {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+.email-table th {
+    padding: 15px 12px !important;
+    font-weight: 600 !important;
+    color: #ffffff !important;
+    border: none !important;
+    font-size: 0.875rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
+
+.email-table td {
+    padding: 15px 12px !important;
+    border-top: 1px solid rgba(255,255,255,0.06) !important;
+    background: #1a1a1a !important;
+    color: #ffffff !important;
+    vertical-align: middle !important;
+}
+
+.email-table tbody tr:hover td {
+    background: rgba(255,255,255,0.03) !important;
+}
+
+/* Status Tabs Container */
+.status-tabs {
+    display: flex !important;
+    gap: 10px !important;
+    margin-bottom: 20px !important;
+    flex-wrap: wrap !important;
+}
+
+/* Filters Bar Layout */
+.filters-bar {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 15px !important;
+    margin-bottom: 20px !important;
+    padding: 15px !important;
+    background: rgba(255,255,255,0.03) !important;
+    border-radius: 8px !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+}
+
+@media (max-width: 768px) {
+    .filters-bar {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+}
+
+.search-group {
+    position: relative !important;
+    flex-grow: 1 !important;
+    max-width: 300px !important;
+}
+
+.search-input {
+    width: 100% !important;
+    padding: 8px 15px 8px 40px !important;
+    background: rgba(255,255,255,0.06) !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+    border-radius: 6px !important;
+    color: #ffffff !important;
+}
+
+.search-input:focus {
+    outline: none !important;
+    border-color: #667eea !important;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2) !important;
+}
+
+.toolbar-actions {
+    display: flex !important;
+    gap: 10px !important;
+    align-items: center !important;
+}
+
+/* Bulk Toolbar */
+.bulk-toolbar {
+    display: none !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 12px 15px !important;
+    background: rgba(102, 126, 234, 0.1) !important;
+    border: 1px solid rgba(102, 126, 234, 0.3) !important;
+    border-radius: 8px !important;
+    margin-bottom: 15px !important;
+    color: #ffffff !important;
+}
+
+.bulk-toolbar.show {
+    display: flex !important;
+}
+
+.bulk-toolbar span {
+    font-weight: 600 !important;
+    color: #ffffff !important;
+}
+
+/* Cell Styling */
+.correspondent-cell {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+}
+
+.correspondent-line {
+    display: flex !important;
+    gap: 8px !important;
+    align-items: center !important;
+}
+
+.correspondent-label {
+    font-size: 0.7rem !important;
+    font-weight: 600 !important;
+    color: #9ca3af !important;
+    text-transform: uppercase !important;
+    min-width: 30px !important;
+}
+
+.correspondent-value {
+    color: #ffffff !important;
+    font-size: 0.875rem !important;
+}
+
+.subject-cell {
+    color: #ffffff !important;
+    font-weight: 500 !important;
+}
+
+.status-cell {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+}
+
+.status-main {
+    display: flex !important;
+    align-items: center !important;
+}
+
+.status-badge {
+    padding: 4px 8px !important;
+    border-radius: 4px !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+}
+
+.status-badge.status-HELD {
+    background: rgba(251, 191, 36, 0.2) !important;
+    color: #fbbf24 !important;
+    border: 1px solid rgba(251, 191, 36, 0.3) !important;
+}
+
+.status-badge.status-RELEASED {
+    background: rgba(34, 197, 94, 0.2) !important;
+    color: #4ade80 !important;
+    border: 1px solid rgba(34, 197, 94, 0.3) !important;
+}
+
+.status-badge.status-REJECTED {
+    background: rgba(239, 68, 68, 0.2) !important;
+    color: #f87171 !important;
+    border: 1px solid rgba(239, 68, 68, 0.3) !important;
+}
+
+.status-meta {
+    display: flex !important;
+    gap: 6px !important;
+    align-items: center !important;
+}
+
+.watcher-chip {
+    padding: 2px 6px !important;
+    border-radius: 3px !important;
+    font-size: 0.7rem !important;
+    font-weight: 500 !important;
+    text-transform: uppercase !important;
+}
+
+.watcher-chip.active {
+    background: rgba(34, 197, 94, 0.2) !important;
+    color: #4ade80 !important;
+}
+
+.watcher-chip.stopped {
+    background: rgba(239, 68, 68, 0.2) !important;
+    color: #f87171 !important;
+}
+
+.watcher-chip.unknown {
+    background: rgba(156, 163, 175, 0.2) !important;
+    color: #9ca3af !important;
+}
+
+.status-restart {
+    background: none !important;
+    border: none !important;
+    color: #9ca3af !important;
+    cursor: pointer !important;
+    padding: 2px 4px !important;
+    border-radius: 3px !important;
+    font-size: 0.75rem !important;
+}
+
+.status-restart:hover {
+    background: rgba(255,255,255,0.1) !important;
+    color: #ffffff !important;
+}
+
+/* Action Buttons */
+.action-btn {
+    width: 28px !important;
+    height: 28px !important;
+    padding: 0 !important;
+    border-radius: 4px !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+    background: rgba(255,255,255,0.06) !important;
+    color: #9ca3af !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.action-btn:hover {
+    background: rgba(255,255,255,0.12) !important;
+    color: #ffffff !important;
+}
+
+.action-btn.action-release:hover {
+    background: rgba(34, 197, 94, 0.2) !important;
+    border-color: #4ade80 !important;
+    color: #4ade80 !important;
+}
+
+.action-btn.action-discard:hover {
+    background: rgba(239, 68, 68, 0.2) !important;
+    border-color: #f87171 !important;
+    color: #f87171 !important;
+}
+
+.action-btn.action-edit:hover,
+.action-btn.action-view:hover {
+    background: rgba(102, 126, 234, 0.2) !important;
+    border-color: #667eea !important;
+    color: #667eea !important;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center !important;
+    padding: 60px 20px !important;
+    color: #9ca3af !important;
+}
+
+.empty-state i {
+    font-size: 3rem !important;
+    margin-bottom: 15px !important;
+    color: #6b7280 !important;
+}
+
+.empty-state p {
+    font-size: 1.1rem !important;
+    margin-bottom: 8px !important;
+}
+
+/* Loading Spinner */
+.loading-spinner {
+    text-align: center !important;
+    padding: 40px 20px !important;
+    color: #9ca3af !important;
+}
+
+.loading-spinner.active {
+    display: block !important;
+}
+
+/* Form Check Labels */
+.form-check {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.form-check span {
+    color: #ffffff !important;
+    font-size: 0.875rem !important;
+}
+
+/* Tag Chips */
+.tag-chip {
+    padding: 4px 8px !important;
+    border-radius: 4px !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+}
+
+.tag-chip.success {
+    background: rgba(34, 197, 94, 0.2) !important;
+    color: #4ade80 !important;
+    border: 1px solid rgba(34, 197, 94, 0.3) !important;
+}
+
+.tag-chip.accent {
+    background: rgba(102, 126, 234, 0.2) !important;
+    color: #667eea !important;
+    border: 1px solid rgba(102, 126, 234, 0.3) !important;
+}
+
+/* Selector Notes */
+.selector-note {
+    font-size: 0.8rem !important;
+    color: #9ca3af !important;
+}
+
+/* Time Cell Styling */
+.time-cell {
+    color: #9ca3af !important;
+    font-size: 0.875rem !important;
+}
