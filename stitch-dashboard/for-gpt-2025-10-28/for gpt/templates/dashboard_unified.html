@@ -208,8 +208,8 @@
           <th class="tw-p-3 tw-font-semibold tw-text-left tw-text-[#a1a1aa] tw-uppercase tw-tracking-wider tw-text-xs">Time</th>
           <th class="col-from tw-p-3 tw-font-semibold tw-text-left tw-text-[#a1a1aa] tw-uppercase tw-tracking-wider tw-text-xs">Correspondents</th>
           <th class="col-subject tw-p-3 tw-font-semibold tw-text-left tw-text-[#a1a1aa] tw-uppercase tw-tracking-wider tw-text-xs">Subject</th>
-          <th class="col-status tw-p-3 tw-font-semibold tw-text-left tw-text-[#a1a1aa] tw-uppercase tw-tracking-wider tw-text-xs tw-w-[320px]">Status</th>
-          <th class="col-actions tw-p-3 tw-font-semibold tw-text-left tw-text-[#a1a1aa] tw-uppercase tw-tracking-wider tw-text-xs tw-w-[320px]">Actions</th>
+          <th class="col-status tw-p-3 tw-font-semibold tw-text-left tw-text-[#a1a1aa] tw-uppercase tw-tracking-wider tw-text-xs">Status</th>
+          <th class="col-actions tw-p-3 tw-font-semibold tw-text-left tw-text-[#a1a1aa] tw-uppercase tw-tracking-wider tw-text-xs">Actions</th>
         </tr>
       </thead>
       <tbody id="dashboardEmailTableBody" class="tw-divide-y tw-divide-[#27272a]">
@@ -545,24 +545,15 @@ function renderDashboardEmailsWithPagination() {
     const subjectDisplay = escapeHtml(email.subject || '(No Subject)');
     const createdAtCell = renderTimeCell(email.created_at, 'N/A');
 
-    // Determine actions - 6 buttons for HELD emails
+    // Determine actions
     let actions = '';
     if (status === 'HELD') {
       actions = `
-        <button class="action-btn action-view" onclick="event.stopPropagation(); window.location.href='/email/${email.id}'" title="View Details">
-          <i class="bi bi-eye"></i>
-        </button>
         <button class="action-btn action-edit" onclick="event.stopPropagation(); window.location.href='/email/${email.id}'" title="Edit">
           <i class="bi bi-pencil"></i>
         </button>
         <button class="action-btn action-release" onclick="event.stopPropagation(); releaseEmailDashboard(${email.id})" title="Release">
-          <i class="bi bi-check-circle"></i>
-        </button>
-        <button class="action-btn action-reply" onclick="event.stopPropagation(); window.location.href='/compose?reply_to=${email.id}'" title="Reply">
-          <i class="bi bi-reply"></i>
-        </button>
-        <button class="action-btn action-forward" onclick="event.stopPropagation(); window.location.href='/compose?forward=${email.id}'" title="Forward">
-          <i class="bi bi-arrow-right"></i>
+          <i class="bi bi-unlock"></i>
         </button>
         <button class="action-btn action-discard" onclick="event.stopPropagation(); discardEmailDashboard(${email.id})" title="Discard">
           <i class="bi bi-trash"></i>
@@ -611,13 +602,11 @@ function renderDashboardEmailsWithPagination() {
         <div class="subject-cell">${subjectDisplay}</div>
       </td>
       <td>
-        <div class="status-cell tw-w-full">
-          <div class="status-main tw-w-full"><span class="status-badge status-${status} tw-inline-flex tw-items-center tw-justify-center tw-w-full tw-min-h-[36px]">${statusLabel}</span></div>
-          <!--
+        <div class="status-cell">
+          <div class="status-main"><span class="status-badge status-${status}">${statusLabel}</span></div>
           <div class="status-meta">${watcherBadge}
             <button type="button" class="status-restart" title="Restart watcher" onclick="restartWatcherFor(${email.account_id})"><i class="bi bi-arrow-repeat"></i></button>
           </div>
-          -->
         </div>
       </td>
       <td>

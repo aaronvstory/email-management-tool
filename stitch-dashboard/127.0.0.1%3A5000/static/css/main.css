@@ -356,13 +356,15 @@ body.login-page .btn-login { background: var(--brand-primary); border:1px solid 
 /* === Content Area === */
 .content-scroll {
   flex: 1;
-  padding: 28px;   /* bumped from 24px for a bit more breathing room */
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
   width: 100%;
-  max-width: none; /* full-width across the app */
-  margin: 0;       /* left/top alignment (no centering) */
+  align-items: flex-start; /* ensures children align left */
+  justify-content: flex-start; /* ensures children align top */
 }
 
-/* On very small screens we already reduce padding elsewhere; keep 24px default here. */
+@media (min-width: 1440px) { .content-scroll { max-width: 1280px; } }
 
 /* === Dashboard Components === */
 .page-header {
