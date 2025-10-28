@@ -100,20 +100,24 @@
   margin: 0;
 }
 
-/* Stack status items vertically */
-.email-table .status-meta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  width: 100%;
-}
-
+/* Status layout - HELD badge on top, then POLLING + restart button horizontal */
 .email-table .status-cell {
   display: flex;
   flex-direction: column;
   gap: 6px;
   align-items: flex-start;
+}
+
+.email-table .status-main {
+  width: 100%;
+}
+
+.email-table .status-meta {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
 }
 
 /* ========================================
