@@ -53,42 +53,48 @@ body.login-page .form-label {
   margin-bottom: 8px;
 }
 
-body.login-page .input-group {
-  display: flex;
-  align-items: stretch;
+body.login-page .login-input-group {
+  display: flex !important;
+  align-items: stretch !important;
+  width: 100%;
 }
 
-body.login-page .input-group-text {
-  background: #27272a;
-  border: 1px solid #3f3f46;
-  border-right: none;
-  color: #a1a1aa;
-  display: flex;
-  align-items: center;
-  padding: 0 14px;
-  border-radius: 6px 0 0 6px;
+body.login-page .login-icon {
+  background: #27272a !important;
+  border: 1px solid #3f3f46 !important;
+  border-right: none !important;
+  color: #a1a1aa !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 14px !important;
+  border-radius: 6px 0 0 6px !important;
+  width: 44px !important;
+  flex-shrink: 0 !important;
 }
 
-body.login-page .input-group .form-control {
-  background: #27272a;
-  border: 1px solid #3f3f46;
-  border-left: none;
-  color: #ffffff;
-  border-radius: 0 6px 6px 0;
-  padding: 10px 14px;
-  min-height: 44px;
+body.login-page .login-input {
+  background: #27272a !important;
+  border: 1px solid #3f3f46 !important;
+  border-left: none !important;
+  color: #ffffff !important;
+  border-radius: 0 6px 6px 0 !important;
+  padding: 10px 14px !important;
+  min-height: 44px !important;
+  flex: 1 !important;
 }
 
-body.login-page .form-control:focus {
-  border-color: #bef264;
-  box-shadow: 0 0 0 3px rgba(190, 242, 100, 0.1);
-  background: #18181b;
-  outline: none;
+body.login-page .login-input:focus {
+  border-color: #bef264 !important;
+  box-shadow: 0 0 0 3px rgba(190, 242, 100, 0.1) !important;
+  background: #18181b !important;
+  outline: none !important;
 }
 
-body.login-page .input-group:focus-within .input-group-text {
-  border-color: #bef264;
-  background: #18181b;
+body.login-page .login-input-group:focus-within .login-icon {
+  border-color: #bef264 !important;
+  background: #18181b !important;
+  color: #bef264 !important;
 }
 
 body.login-page .btn-login {

@@ -34,20 +34,24 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-3">
                 <label for="username" class="form-label">Username</label>
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-person"></i></span>
-                    <input type="text" class="form-control" id="username" name="username" autocomplete="username" required autofocus>
+                <div class="input-group login-input-group">
+                    <span class="input-group-text login-icon">
+                        <i class="bi bi-person"></i>
+                    </span>
+                    <input type="text" class="form-control login-input" id="username" name="username" autocomplete="username" required autofocus>
                 </div>
             </div>
-            
+
             <div class="mb-4">
                 <label for="password" class="form-label">Password</label>
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                    <input type="password" class="form-control" id="password" name="password" autocomplete="current-password" required>
+                <div class="input-group login-input-group">
+                    <span class="input-group-text login-icon">
+                        <i class="bi bi-lock"></i>
+                    </span>
+                    <input type="password" class="form-control login-input" id="password" name="password" autocomplete="current-password" required>
                 </div>
             </div>
-            
+
             <button type="submit" class="btn btn-login">
                 <i class="bi bi-box-arrow-in-right"></i> Sign In
             </button>
