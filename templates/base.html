@@ -26,7 +26,9 @@
 
     <!-- Base stylesheets -->
     <link rel="stylesheet" href="/static/css/theme-dark.css">
-    <link rel="stylesheet" href="/static/css/main.css">
+    {% set css_file = request.args.get('css', 'main') %}
+    {% if css_file not in ['main', 'main2', 'main3'] %}{% set css_file = 'main' %}{% endif %}
+    <link rel="stylesheet" href="/static/css/{{ css_file }}.css">
     <link rel="stylesheet" href="/static/css/design-system.css">
 {% block extra_css %}{% endblock %}
 </head>
