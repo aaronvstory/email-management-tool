@@ -12,6 +12,7 @@ import time
 import smtplib
 import imaplib
 import ssl
+import socket
 from typing import Tuple, Optional
 
 from flask import Response  # needed for SSE / events
@@ -223,7 +224,8 @@ cache = Cache(app, config={
     'CACHE_DEFAULT_TIMEOUT': 5     # 5 seconds default TTL
 })
 # Export cache for use in blueprints
-app.cache = cache
+# Use a global variable instead of attaching to app
+GLOBAL_CACHE = cache
 
 # CSRF configuration - time-limited tokens and allow HTTP in dev
 app.config['WTF_CSRF_TIME_LIMIT'] = 7200  # 2 hours; rotate token periodically
@@ -704,6 +706,21 @@ app.register_blueprint(system_bp)        # System diagnostics APIs
 app.register_blueprint(watchers_bp)      # Watchers & Settings management
 
         # (Legacy inline IMAP loop removed during refactor)
+
+# Lightweight readiness endpoint that does not depend on DB/SMTP
+_PROCESS_START_TS = time.time()
+
+@app.route('/readyz')
+def readyz():
+    """Simple readiness probe returning 200 once Flask is serving.
+
+    Does not touch database or external services to avoid flapping during startup.
+    """
+    try:
+        uptime = max(0, int(time.time() - _PROCESS_START_TS))
+    except Exception:
+        uptime = None
+    return jsonify({'ok': True, 'uptime_seconds': uptime}), 200
 
 # SMTP Proxy Handler
 class EmailModerationHandler:
