@@ -75,3 +75,69 @@
 
 /* Ensure header height remains balanced */
 .command-bar { min-height: var(--header-height); }
+
+/* ========================================
+   DASHBOARD INTERNAL SPACING (Oct 27)
+   Fix crowding inside #dashboard-page
+   ======================================== */
+
+/* Container padding and max-width */
+#dashboard-page {
+  padding: 20px 24px;
+  max-width: 1800px;
+  margin: 0 auto;
+}
+
+/* Vertical rhythm between major sections */
+#dashboard-page > .page-header {
+  margin-bottom: 20px;
+}
+
+#dashboard-page > .account-selector {
+  margin-bottom: 24px;
+  padding: 16px 20px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+#dashboard-page > .stats-grid {
+  margin-bottom: 28px;
+}
+
+#dashboard-page > .recent-emails-panel {
+  margin-top: 28px;
+}
+
+/* Panel internal spacing */
+.recent-emails-panel > .panel-title {
+  margin-bottom: 18px;
+}
+
+.recent-emails-panel > .mb-3 {
+  margin-bottom: 16px !important;
+}
+
+.recent-emails-panel > .status-tabs {
+  margin-bottom: 16px;
+}
+
+.recent-emails-panel > .filters-bar {
+  margin-bottom: 14px;
+}
+
+/* Account selector internal spacing */
+.selector-grid {
+  gap: 16px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  #dashboard-page {
+    padding: 16px 12px;
+  }
+  
+  #dashboard-page > .account-selector {
+    padding: 12px 16px;
+  }
+}
