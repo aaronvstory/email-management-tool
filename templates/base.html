@@ -23,7 +23,6 @@
     <!-- Our clean, unified CSS -->
     <link rel="stylesheet" href="/static/css/main.css">
     <link rel="stylesheet" href="/static/css/patch.clean.css">
-    <link rel="stylesheet" href="/static/css/dashboard.clean.css">
 {% block extra_css %}{% endblock %}
 </head>
 <body class="dark-app-shell">
@@ -99,8 +98,7 @@
     <div class="main-modern">
         <!-- Top Command Bar -->
         <header class="command-bar">
-            <button class="toggle-nav" type="button" aria-label="Toggle navigation"
-                    onclick="document.querySelector('.sidebar-modern').classList.toggle('open')">
+            <button class="toggle-nav" type="button" aria-label="Toggle navigation">
                 <i class="bi bi-list"></i>
             </button>
 
@@ -272,6 +270,30 @@
     }
     refreshTopbarHealth();
     setInterval(refreshTopbarHealth, 10000);
+    </script>
+
+    <!-- Mobile hamburger toggle -->
+    <script>
+    (function(){
+      const sidebar = document.querySelector('.sidebar-modern');
+      const toggle = document.querySelector('.toggle-nav');
+
+      function closeSidebar(){ sidebar && sidebar.classList.remove('open'); }
+      function toggleSidebar(){ sidebar && sidebar.classList.toggle('open'); }
+
+      toggle?.addEventListener('click', function(e){ e.stopPropagation(); toggleSidebar(); });
+
+      // Close on overlay click (any click outside sidebar)
+      document.addEventListener('click', function(e){
+        if (!sidebar?.classList.contains('open')) return;
+        if (!sidebar.contains(e.target) && !toggle.contains(e.target)) closeSidebar();
+      });
+
+      // Close on ESC
+      document.addEventListener('keydown', function(e){
+        if (e.key === 'Escape') closeSidebar();
+      });
+    })();
     </script>
 </body>
 </html>

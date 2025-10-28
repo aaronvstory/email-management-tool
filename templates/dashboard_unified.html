@@ -5,7 +5,7 @@
 {% block title %}Dashboard - Email Management Tool{% endblock %}
 
 {% block extra_css %}
-<!-- Dashboard uses base styles from base.html (theme-dark.css + main.css) -->
+<link rel="stylesheet" href="/static/css/dashboard.clean.css">
 {% endblock %}
 
 {% block content %}
@@ -499,19 +499,19 @@ function renderDashboardEmailsWithPagination() {
   pageEmails.forEach(email => {
     const tr = document.createElement('tr');
     tr.dataset.emailId = email.id;
-    
+
     let status = (email.interception_status || email.status || 'UNKNOWN').toUpperCase();
     if (status === 'PENDING') status = 'HELD';
     if (status === 'APPROVED' || status === 'DELIVERED') status = 'RELEASED';
     if (status === 'DISCARDED') status = 'REJECTED';
     const statusLabel = status.charAt(0) + status.slice(1).toLowerCase();
-    
+
     const recipients = Array.isArray(email.recipients) ? email.recipients.join(', ') : (email.recipients || '');
     const senderDisplay = escapeHtml(email.sender || 'Unknown');
     const recipientDisplay = escapeHtml(recipients || '—');
     const subjectDisplay = escapeHtml(email.subject || '(No Subject)');
     const createdAtCell = renderTimeCell(email.created_at, 'N/A');
-    
+
     // Determine actions
     let actions = '';
     if (status === 'HELD') {
@@ -533,7 +533,7 @@ function renderDashboardEmailsWithPagination() {
         </button>
       `;
     }
-    
+
     // Generate watcher badge
     const watcherStateRaw = watchersMap[email.account_id] || 'unknown';
     const watcherClass = watcherStateRaw === 'active' ? 'active' : (watcherStateRaw === 'stopped' ? 'stopped' : 'unknown');
@@ -547,7 +547,7 @@ function renderDashboardEmailsWithPagination() {
     }
     const watcherClassSafe = escapeHtml(watcherClass);
     const watcherBadge = `<span class="watcher-chip ${watcherClassSafe}" title="Watcher state">${escapeHtml(watcherLabel)}</span>`;
-    
+
     tr.innerHTML = `
       <td onclick="event.stopPropagation()">
         <input type="checkbox" class="email-checkbox" data-email-id="${email.id}" onchange="updateBulkSelection()" style="cursor:pointer;">
@@ -582,10 +582,10 @@ function renderDashboardEmailsWithPagination() {
         </div>
       </td>
     `;
-    
+
     tbody.appendChild(tr);
   });
-  
+
   applyTimeFormatting(tbody);
 }
 
@@ -636,14 +636,14 @@ function toggleDashboardAutoRefresh(enabled) {
     clearInterval(dashboardAutoRefreshTimer);
     dashboardAutoRefreshTimer = null;
   }
-  
+
   if (enabled) {
     dashboardAutoRefreshTimer = setInterval(() => {
       loadDashboardEmails();
       loadStats();
     }, 10000); // Refresh every 10 seconds
   }
-  
+
   localStorage.setItem('dashboard_auto_refresh', enabled ? 'true' : 'false');
 }
 

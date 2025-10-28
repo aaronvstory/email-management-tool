@@ -33,6 +33,16 @@
   --radius-lg: 12px;
   --shadow: 0 2px 8px rgba(0,0,0,0.3);
   --transition: all 0.2s ease;
+
+  /* Aliases for login */
+  --surface-base: var(--bg-base);
+  --surface-highest: var(--bg-surface);
+  --border-default: rgba(255,255,255,0.12);
+  --text-primary: #ffffff;
+  --text-muted: #6b7280;
+  --brand-overlay-light: var(--brand-primary);
+  --brand-overlay-strong: var(--brand-secondary);
+  --white-06: rgba(255,255,255,0.06);
 }
 
 /* === Base Styles === */
@@ -48,6 +58,21 @@ body {
 body.login-page .form-control,
 body.login-page .input-group-text,
 body.login-page .btn-login { all: revert; }
+
+/* Make sure dashboard CSS never affects login */
+body.login-page .form-control,
+body.login-page .input-group-text,
+body.login-page .btn-login,
+body.login-page .login-container,
+body.login-page .login-header,
+body.login-page .text-muted { all: revert; }
+
+/* Re-apply our intended login skin explicitly */
+body.login-page { background: var(--bg-base); min-height: 100vh; display:flex; align-items:center; justify-content:center; }
+body.login-page .login-container { background: var(--bg-surface); border:1px solid var(--border-subtle); border-radius: var(--radius-lg); padding:40px; width:100%; max-width:440px; }
+body.login-page .form-control { background: var(--bg-accent); border:1px solid var(--border-default); color: var(--text-primary); border-radius: var(--radius); height:46px; }
+body.login-page .input-group-text { background: var(--bg-accent); border:1px solid var(--border-default); color: var(--text-muted); height:46px; }
+body.login-page .btn-login { background: var(--brand-primary); border:1px solid var(--brand-secondary); height:48px; }
 
 
 /* === Layout Foundation === */
@@ -288,6 +313,24 @@ body.login-page .btn-login { all: revert; }
   gap: 8px;
 }
 
+/* Command controls robust wrapping */
+.command-controls { display: flex; gap: 12px; align-items: center; margin-left: auto; flex-wrap: wrap; }
+.command-actions { display:flex; gap:12px; flex-wrap: wrap; }
+.command-actions .toolbar-group { display:flex; gap:8px; flex-wrap: wrap; }
+
+/* Health pills stay compact */
+.health-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; min-height: 32px; border-radius: var(--radius); }
+.health-pill .pill-text { white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+
+/* When width drops under ~1400px, hide long text but keep icons */
+@media (max-width: 1440px) {
+  #nav-smtp .pill-text, #nav-watchers .pill-text { display:none; }
+}
+
+/* Search box flexes before pills break */
+.global-search { flex: 1 1 300px; min-width: 260px; }
+.command-nav { flex: 0 0 auto; }
+
 .health-pill {
   display: flex;
   align-items: center;
@@ -313,11 +356,13 @@ body.login-page .btn-login { all: revert; }
 /* === Content Area === */
 .content-scroll {
   flex: 1;
-  padding: 30px;
-  max-width: 1400px;
+  padding: 24px;
+  max-width: 1200px;
   margin: 0 auto;
   width: 100%;
 }
+
+@media (min-width: 1440px) { .content-scroll { max-width: 1280px; } }
 
 /* === Dashboard Components === */
 .page-header {
