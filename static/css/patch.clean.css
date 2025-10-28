@@ -289,13 +289,6 @@ nav.command-nav { display: none !important; }
   overflow-y: auto;
 }
 
-/* Dashboard gets constrained within content-scroll */
-#dashboard-page {
-  max-width: 1200px;
-  margin: 0 auto;
-  width: 100%;
-}
-
 /* ========================================
    DASHBOARD & PILL REFINEMENTS (Oct 27)
    Container stability, modern pill styling
@@ -305,9 +298,9 @@ nav.command-nav { display: none !important; }
 #dashboard-page {
   contain-intrinsic-block-size: auto 100px;
   max-width: 1200px;
-  margin: 0 auto;
+  margin: 0;
   width: 100%;
-  padding: 20px 0;
+  padding: 20px 20px;
 }
 
 /* Health pills: less rounded, more compact */
