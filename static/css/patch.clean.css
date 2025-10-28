@@ -48,3 +48,30 @@
 .app .card-body { padding: 18px 20px; }
 .app .card-header, .app .card-footer { padding: 10px 16px; }
 #statsGrid { gap: 14px; }
+
+/* ========================================
+   HEADER SIMPLIFICATION (Oct 27)
+   Remove duplicate nav, search, compose/settings buttons
+   ======================================== */
+
+/* Hide removed header elements in case any template includes remain */
+.command-nav, .global-search { display: none !important; }
+
+/* Pills take the space, wrap nicely */
+.command-controls { margin-left: auto; display:flex; align-items:center; }
+.command-actions { display:flex; gap:12px; flex-wrap: wrap; }
+.toolbar-group { display:flex; gap:8px; flex-wrap: wrap; }
+
+.health-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 10px;
+  background: var(--bg-accent); border:1px solid var(--border-default);
+  border-radius: var(--radius); font-size:.8rem; color: var(--text-secondary);
+  min-height: 32px; white-space: nowrap;
+}
+.health-pill .pill-text { max-width: 160px; overflow:hidden; text-overflow:ellipsis; }
+@media (max-width: 1440px){ #nav-smtp .pill-text, #nav-watchers .pill-text { display:none; } }
+
+/* Brand area spacing after nav removal */
+.command-brand { margin-right: 8px; }
+
+/* Ensure header height remains balanced */
+.command-bar { min-height: var(--header-height); }

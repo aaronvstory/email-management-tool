@@ -109,53 +109,17 @@
                 </a>
             </div>
 
-            <nav class="command-nav" aria-label="Primary navigation">
-                <a href="/dashboard" class="command-link {% if request.endpoint == 'dashboard.dashboard' %}active{% endif %}">
-                    <i class="bi bi-speedometer2"></i> Dashboard
-                </a>
-                <a href="/emails-unified" class="command-link {% if request.path.startswith('/emails') or request.path.startswith('/inbox') %}active{% endif %}">
-                    <i class="bi bi-inbox-fill"></i> Emails
-                </a>
-                <a href="/compose" class="command-link {% if request.path.startswith('/compose') %}active{% endif %}">
-                    <i class="bi bi-pencil-square"></i> Compose
-                </a>
-                <a href="/diagnostics" class="command-link {% if request.path.startswith('/diagnostics') %}active{% endif %}">
-                    <i class="bi bi-heart-pulse"></i> Diagnostics
-                </a>
-                <a href="/watchers" class="command-link {% if request.path.startswith('/watchers') %}active{% endif %}">
-                    <i class="bi bi-activity"></i> Watchers
-                </a>
-            </nav>
-
+            <!-- Pills only, right aligned -->
             <div class="command-controls">
-                <!-- Global Search -->
-                <div class="global-search" role="search">
-                    <i class="bi bi-search search-icon"></i>
-                    <input type="search" name="global-search"
-                           placeholder="Search mail, accounts, rules..."
-                           aria-label="Global search">
-                </div>
-
-                <!-- Action Buttons -->
                 <div class="command-actions">
                     <div class="toolbar-group">
-                        <a href="/compose" class="btn btn-secondary btn-sm hidden-below-lg">
-                            <i class="bi bi-send-plus"></i> Compose
-                        </a>
-                        <a href="/settings" class="btn btn-ghost btn-sm">
-                            <i class="bi bi-sliders"></i> Settings
-                        </a>
-                    </div>
-
-                    <!-- Health Pills -->
-                    <div class="toolbar-group">
                         {% if not imap_only %}
-                        <span id="nav-smtp" class="health-pill hidden-below-md" title="SMTP Proxy health">
+                        <span id="nav-smtp" class="health-pill" title="SMTP Proxy health">
                             <i class="bi bi-diagram-2"></i>
                             <span class="pill-text">SMTP: --</span>
                         </span>
                         {% endif %}
-                        <span id="nav-watchers" class="health-pill hidden-below-md" title="Active IMAP watchers">
+                        <span id="nav-watchers" class="health-pill" title="Active IMAP watchers">
                             <i class="bi bi-activity"></i>
                             <span class="pill-text">Watchers: --</span>
                         </span>
