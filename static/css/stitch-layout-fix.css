@@ -7,11 +7,24 @@
    Solution: Use responsive max-width that adapts to screen size
 */
 
-/* Dashboard page - responsive max-width with proper centering */
+/* Hide toggle button on desktop (should only show on mobile) */
+@media (min-width: 769px) {
+  .toggle-nav {
+    display: none !important;
+  }
+}
+
+/* Ensure main-modern fills space properly without gaps */
+.main-modern {
+  margin-left: 240px !important;  /* Match sidebar width (tw-w-60 = 240px) */
+  min-height: 100vh !important;
+}
+
+/* Dashboard page - responsive max-width, flush with layout */
 #dashboard-page {
   max-width: 1600px !important;  /* Larger than 1200px but not infinite */
   width: 100% !important;
-  margin: 0 auto !important;
+  margin: 0 !important;  /* No auto centering - flush with main-modern */
   padding: 24px 40px !important;
 }
 
@@ -38,6 +51,7 @@
   /* On large screens (1920px+), use more padding */
   #dashboard-page {
     max-width: 1800px !important;
+    margin: 0 !important;  /* Keep flush, no centering */
     padding: 32px 60px !important;
   }
 }
