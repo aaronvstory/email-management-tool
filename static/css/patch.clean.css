@@ -1,4 +1,89 @@
 /* Patch: ideal alignment & depth tuning */
+/* ========================================
+   LOGIN PAGE RESTORATION (Oct 27)
+   Override any dashboard CSS bleeding
+   ======================================== */
+
+/* Login page restoration - override any dashboard bleeding */
+body.login-page {
+  background: #1a1a1a !important;
+  min-height: 100vh !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body.login-page * {
+  max-width: none !important;
+}
+
+body.login-page .login-container {
+  background: #2d2d2d !important;
+  border: 1px solid #404040 !important;
+  border-radius: 12px !important;
+  padding: 40px !important;
+  width: 100% !important;
+  max-width: 440px !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+}
+
+body.login-page .login-header {
+  text-align: center !important;
+  margin-bottom: 32px !important;
+}
+
+body.login-page .login-header h1 {
+  color: #ffffff !important;
+  font-size: 1.75rem !important;
+  margin-bottom: 8px !important;
+}
+
+body.login-page .login-header p {
+  color: #888888 !important;
+  margin: 0 !important;
+}
+
+body.login-page .form-control {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid #404040 !important;
+  border-radius: 8px !important;
+  height: 46px !important;
+  color: #ffffff !important;
+  padding: 10px 14px !important;
+}
+
+body.login-page .form-control:focus {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 2px rgba(220,38,38,0.2) !important;
+}
+
+body.login-page .input-group-text {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid #404040 !important;
+  color: #888888 !important;
+  height: 46px !important;
+}
+
+body.login-page .btn-login {
+  background: #dc2626 !important;
+  border: 1px solid #dc2626 !important;
+  color: white !important;
+  height: 48px !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+}
+
+body.login-page .btn-login:hover {
+  background: #b91c1c !important;
+  border-color: #b91c1c !important;
+}
+
+/* ========================================
+   DASHBOARD/GENERAL STYLES BELOW
+   ======================================== */
+
 .section-band{background:linear-gradient(180deg,rgba(255,255,255,.025) 0%,rgba(0,0,0,.25) 100%);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:14px 18px;margin-bottom:16px}
 .page-header{margin-bottom:18px}.content-scroll>.card:first-child,.content-scroll>.section-band:first-child{margin-top:6px}
 .stat-card-modern{background:radial-gradient(120% 120% at 50% 0%,rgba(220,38,38,.06) 0%,rgba(255,255,255,.02) 40%,rgba(0,0,0,.28) 100%),var(--bg-surface);border:1px solid rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 8px 20px rgba(0,0,0,.35)}
