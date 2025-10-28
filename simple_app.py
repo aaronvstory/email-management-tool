@@ -194,6 +194,9 @@ app.config['SECRET_KEY'] = (
 # IMAP-only mode toggle (default OFF so SMTP proxy runs unless explicitly disabled)
 app.config['IMAP_ONLY'] = _bool_env('IMAP_ONLY', default=False)
 
+# Force template reloading in development (disable template cache)
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+
 # Attachment feature flags (Phase 1-4 implementation)
 app.config['ATTACHMENTS_UI_ENABLED'] = _bool_env('ATTACHMENTS_UI_ENABLED', default=False)
 app.config['ATTACHMENTS_EDIT_ENABLED'] = _bool_env('ATTACHMENTS_EDIT_ENABLED', default=False)

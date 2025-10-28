@@ -24,30 +24,33 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
-REM Check for port conflicts and clean up if needed
-echo [PREFLIGHT] Checking for port conflicts...
+REM ALWAYS kill old processes - force clean start every time
+echo [CLEANUP] Killing old Flask processes...
 
-REM Quick health check first - if app is running and healthy, just launch browser
-curl -s --max-time 2 http://127.0.0.1:5000/healthz >nul 2>&1
-if %ERRORLEVEL% EQU 0 (
-    echo [INFO] Application is already running and healthy!
-    echo [OK] Opening dashboard in browser...
-    start http://127.0.0.1:5000
-    timeout /t 2 /nobreak >nul
-    exit /b 0
-)
-
-REM Get all PIDs on our ports in one netstat call (much faster)
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":5000 :8587"') do (
-    REM Skip if not a PID (header lines)
-    echo %%a | findstr /R "^[0-9][0-9]*$" >nul
+REM Method 1: Kill all python processes running simple_app.py
+for /f "tokens=2" %%a in ('tasklist ^| findstr /I "python.exe"') do (
+    REM Check if this python is running simple_app.py
+    tasklist /FI "PID eq %%a" /V 2>nul | findstr /I "simple_app.py" >nul 2>&1
     if !ERRORLEVEL! EQU 0 (
-        REM Kill without checking commandline (faster, safer than WMIC)
+        echo [KILL] Terminating old Flask process (PID %%a)
         taskkill /F /PID %%a >nul 2>&1
     )
 )
 
-echo [OK] Ports cleared!
+REM Method 2: Kill anything on our ports (5000, 8587)
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":5000 :8587"') do (
+    REM Skip if not a PID (header lines)
+    echo %%a | findstr /R "^[0-9][0-9]*$" >nul
+    if !ERRORLEVEL! EQU 0 (
+        echo [KILL] Clearing port conflict (PID %%a)
+        taskkill /F /PID %%a >nul 2>&1
+    )
+)
+
+REM Wait a moment for ports to fully release
+timeout /t 1 /nobreak >nul
+
+echo [OK] All old processes terminated!
 echo [STARTING] Email Management Tool...
 echo.
 
@@ -87,8 +90,13 @@ exit /b 1
 echo [3/3] Opening dashboard in browser...
 echo.
 
-REM Open the dashboard in default browser
-start http://127.0.0.1:5000
+REM Generate cache-busting timestamp
+set TIMESTAMP=%DATE:~-4%%DATE:~4,2%%DATE:~7,2%%TIME:~0,2%%TIME:~3,2%%TIME:~6,2%
+set TIMESTAMP=%TIMESTAMP: =0%
+
+REM Open with cache-busting parameter to force reload
+echo [CACHE] Forcing browser cache refresh with timestamp: %TIMESTAMP%
+start http://127.0.0.1:5000/?v=%TIMESTAMP%
 
 echo ============================================================
 echo    APPLICATION STARTED SUCCESSFULLY!
