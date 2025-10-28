@@ -202,7 +202,8 @@
       <thead class="tw-border-b tw-border-[#27272a]">
         <tr>
           <th class="col-select tw-p-3 tw-font-semibold tw-text-left tw-text-[#a1a1aa] tw-uppercase tw-tracking-wider tw-text-xs">
-            <input type="checkbox" id="select-all-emails" onchange="toggleSelectAll(this.checked)" class="tw-cursor-pointer">
+            <label for="select-all-emails" class="tw-sr-only">Select all emails</label>
+            <input type="checkbox" id="select-all-emails" title="Select all emails" onchange="toggleSelectAll(this.checked)" class="tw-cursor-pointer">
           </th>
           <th class="tw-p-3 tw-font-semibold tw-text-left tw-text-[#a1a1aa] tw-uppercase tw-tracking-wider tw-text-xs">Time</th>
           <th class="col-from tw-p-3 tw-font-semibold tw-text-left tw-text-[#a1a1aa] tw-uppercase tw-tracking-wider tw-text-xs">Correspondents</th>
@@ -262,7 +263,7 @@
 {% block extra_js %}
 <script>
 const currentAccountId = '{{ selected_account_id or "" }}';
-const { renderTimeCell, applyTimeFormatting, escapeHtml } = window.MailOps;
+const { renderTimeCell, applyTimeFormatting } = window.MailOps;
 
 applyTimeFormatting();
 
