@@ -1,0 +1,354 @@
+/* Patch: ideal alignment & depth tuning */
+/* ========================================
+   LOGIN PAGE RESTORATION (Oct 27)
+   Override any dashboard CSS bleeding
+   ======================================== */
+
+/* Login page restoration - override any dashboard bleeding */
+body.login-page {
+  background: #1a1a1a !important;
+  min-height: 100vh !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body.login-page * {
+  max-width: none !important;
+}
+
+body.login-page .login-container {
+  background: #2d2d2d !important;
+  border: 1px solid #404040 !important;
+  border-radius: 12px !important;
+  padding: 40px !important;
+  width: 100% !important;
+  max-width: 440px !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+}
+
+body.login-page .login-header {
+  text-align: center !important;
+  margin-bottom: 32px !important;
+}
+
+body.login-page .login-header h1 {
+  color: #ffffff !important;
+  font-size: 1.75rem !important;
+  margin-bottom: 8px !important;
+}
+
+body.login-page .login-header p {
+  color: #888888 !important;
+  margin: 0 !important;
+}
+
+body.login-page .form-control {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid #404040 !important;
+  border-radius: 8px !important;
+  height: 46px !important;
+  color: #ffffff !important;
+  padding: 10px 14px !important;
+}
+
+body.login-page .form-control:focus {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 2px rgba(220,38,38,0.2) !important;
+}
+
+body.login-page .input-group-text {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid #404040 !important;
+  color: #888888 !important;
+  height: 46px !important;
+}
+
+body.login-page .btn-login {
+  background: #dc2626 !important;
+  border: 1px solid #dc2626 !important;
+  color: white !important;
+  height: 48px !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+}
+
+body.login-page .btn-login:hover {
+  background: #b91c1c !important;
+  border-color: #b91c1c !important;
+}
+
+/* ========================================
+   DASHBOARD/GENERAL STYLES BELOW
+   ======================================== */
+
+.section-band{background:linear-gradient(180deg,rgba(255,255,255,.025) 0%,rgba(0,0,0,.25) 100%);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:14px 18px;margin-bottom:16px}
+.page-header{margin-bottom:18px}.content-scroll>.card:first-child,.content-scroll>.section-band:first-child{margin-top:6px}
+.stat-card-modern{background:radial-gradient(120% 120% at 50% 0%,rgba(190,242,100,.06) 0%,rgba(255,255,255,.02) 40%,rgba(0,0,0,.28) 100%),var(--bg-surface);border:1px solid rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 8px 20px rgba(0,0,0,.35)}
+.stat-number{letter-spacing:.5px}
+.command-bar .btn,.command-bar .form-control{min-height:36px;height:36px;padding:6px 12px}.global-search input{height:36px}
+.health-pill{padding:5px 10px;border:1px solid var(--border-default)}
+.table-container,.card.table-shell{background:linear-gradient(180deg,rgba(0,0,0,.24) 0%,rgba(0,0,0,.4) 100%),var(--bg-surface);border:1px solid rgba(255,255,255,.12);box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.table thead th{background:linear-gradient(180deg,rgba(255,255,255,.04) 0%,rgba(0,0,0,.28) 100%),var(--bg-elevated);color:var(--text-secondary)}
+.table tbody tr td{background:rgba(0,0,0,.25)}
+.btn-primary{background:var(--brand-primary);border-color:transparent}.btn-primary:hover{background:var(--brand-secondary)}
+.btn-ghost{border-color:var(--border-default);color:var(--text-secondary)}.btn-ghost:hover{color:var(--text-primary)}
+.card .form-select,.card .form-control{height:40px;min-height:40px}
+.content-scroll{padding-top:18px}
+
+/* ========================================
+   IMMEDIATE HIGH-IMPACT FIXES (Oct 27)
+   ======================================== */
+
+/* Header density + spacing */
+.page-header { margin-bottom: 14px; }
+.content-scroll { padding-top: 16px; }
+
+/* Stat cards: stronger depth and compact height */
+.stat-card-modern {
+  background:
+    radial-gradient(120% 120% at 50% 0%, rgba(190,242,100,.06) 0%, rgba(255,255,255,.02) 40%, rgba(0,0,0,.32) 100%),
+    var(--bg-surface);
+  border: 1px solid rgba(255,255,255,.10);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 10px 26px rgba(0,0,0,.38);
+  min-height: 74px;
+}
+.stat-number { letter-spacing: .4px; }
+
+/* Search bar row alignment */
+.content-scroll .input-group .form-control { height: 40px; }
+.content-scroll .btn { min-height: 40px; }
+
+/* Pills: prevent deformation, allow clean wrap */
+.command-actions, .toolbar-group { flex-wrap: wrap; gap: 8px; }
+.health-pill { white-space: nowrap; min-height: 32px; }
+.health-pill .pill-text { display: inline-block; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 1440px){
+  #nav-smtp .pill-text, #nav-watchers .pill-text { display: none; }
+}
+
+/* Denser global spacing */
+.app .card-body { padding: 18px 20px; }
+.app .card-header, .app .card-footer { padding: 10px 16px; }
+#statsGrid { gap: 14px; }
+
+/* ========================================
+   HEADER SIMPLIFICATION (Oct 27)
+   Remove duplicate nav, search, compose/settings buttons
+   ======================================== */
+
+/* Hide removed header elements in case any template includes remain */
+.command-nav, .global-search { display: none !important; }
+
+/* Pills take the space, wrap nicely */
+.command-controls { margin-left: auto; display:flex; align-items:center; }
+.command-actions { display:flex; gap:12px; flex-wrap: wrap; }
+.toolbar-group { display:flex; gap:8px; flex-wrap: wrap; }
+
+.health-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 10px;
+  background: var(--bg-accent); border:1px solid var(--border-default);
+  border-radius: var(--radius); font-size:.8rem; color: var(--text-secondary);
+  min-height: 32px; white-space: nowrap;
+}
+.health-pill .pill-text { max-width: 160px; overflow:hidden; text-overflow:ellipsis; }
+@media (max-width: 1440px){ #nav-smtp .pill-text, #nav-watchers .pill-text { display:none; } }
+
+/* Brand area spacing after nav removal */
+.command-brand { margin-right: 8px; }
+
+/* Ensure header height remains balanced */
+.command-bar { min-height: var(--header-height); }
+
+/* ========================================
+   DASHBOARD INTERNAL SPACING (Oct 27)
+   Fix crowding inside #dashboard-page
+   ======================================== */
+
+/* Container padding and max-width */
+#dashboard-page {
+  padding: 20px 24px;
+  max-width: 1800px;
+  margin: 0 auto;
+}
+
+/* Vertical rhythm between major sections */
+#dashboard-page > .page-header {
+  margin-bottom: 20px;
+}
+
+#dashboard-page > .account-selector {
+  margin-bottom: 24px;
+  padding: 16px 20px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+#dashboard-page > .stats-grid {
+  margin-bottom: 28px;
+}
+
+#dashboard-page > .recent-emails-panel {
+  margin-top: 28px;
+}
+
+/* Panel internal spacing */
+.recent-emails-panel > .panel-title {
+  margin-bottom: 18px;
+}
+
+.recent-emails-panel > .mb-3 {
+  margin-bottom: 16px !important;
+}
+
+.recent-emails-panel > .status-tabs {
+  margin-bottom: 16px;
+}
+
+.recent-emails-panel > .filters-bar {
+  margin-bottom: 14px;
+}
+
+/* Account selector internal spacing */
+.selector-grid {
+  gap: 16px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  #dashboard-page {
+    padding: 16px 12px;
+  }
+  
+  #dashboard-page > .account-selector {
+    padding: 12px 16px;
+  }
+}
+
+/* ========================================
+   HEADER ALIGNMENT AND RESILIENCE (Oct 27)
+   CSS variables for unified width/padding
+   ======================================== */
+
+/* Header and content share the same max width and gutters */
+:root { --page-max: 1200px; --page-pad: 24px; }
+
+.command-bar { padding: 8px var(--page-pad); }
+.content-scroll { max-width: var(--page-max); margin: 0 auto; padding: 16px var(--page-pad); }
+.command-controls { max-width: var(--page-max); margin: 0 auto; width: 100%; display: flex; justify-content: flex-end; }
+
+/* Pill row: stable wrap and no deformation */
+.command-actions { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+.toolbar-group { display:flex; gap:8px; flex-wrap:wrap; }
+.health-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; min-height:32px; border-radius:16px; white-space:nowrap; }
+.health-pill .pill-text { max-width:160px; overflow:hidden; text-overflow:ellipsis; }
+@media (max-width:1440px){ #nav-smtp .pill-text, #nav-watchers .pill-text { display:none; } }
+
+/* ========================================
+   REGRESSION FIXES (Oct 27)
+   Force hide duplicates, fix sidebar footer
+   ======================================== */
+
+/* Force hide any regressed duplicate navigation */
+nav.command-nav { display: none !important; }
+.global-search { display: none !important; }
+.btn[href="/compose"], .btn[href="/settings"] { display: none !important; }
+
+/* Fix sidebar footer layout */
+.sidebar-modern .sidebar-footer {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: center;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.sidebar-modern .sidebar-footer .btn {
+  flex: 1;
+  text-align: center;
+  min-width: 0;
+}
+
+.sidebar-modern .sidebar-footer .btn-sm {
+  padding: 6px 8px;
+  font-size: 0.8rem;
+}
+
+/* Content scroll: full width, proper flex behavior */
+.content-scroll {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  flex-shrink: 1;
+  max-width: none;
+  margin: 0;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* ========================================
+   DASHBOARD & PILL REFINEMENTS (Oct 27)
+   Container stability, modern pill styling
+   ======================================== */
+
+/* Dashboard page: clean container reset */
+#dashboard-page {
+  contain-intrinsic-block-size: auto 100px;
+  max-width: 1200px;
+  margin: 0;
+  width: 100%;
+  padding: 20px 20px;
+}
+
+/* Health pills: less rounded, more compact */
+.health-pill {
+  border-radius: 8px !important; /* Override the 16px from before */
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  min-height: 32px;
+  background: var(--bg-accent);
+  border: 1px solid var(--border-default);
+  white-space: nowrap;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* Pill states with better visual feedback */
+.health-pill.ok {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.health-pill.down,
+.health-pill.error {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.health-pill.warning {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+}
+
+/* Pill text truncation for responsive behavior */
+.health-pill .pill-text {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Progressive pill text hiding */
+@media (max-width: 1440px) {
+  #nav-smtp .pill-text, 
+  #nav-watchers .pill-text { 
+    display: none; 
+  }
+}

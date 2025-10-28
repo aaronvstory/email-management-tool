@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Conditional dev overrides: put this AFTER your base CSS -->
+    {% if request.args.get('devcss') == '1' %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='dev-overrides.css') }}">
+    {% endif %}
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{% block title %}Email Management Tool{% endblock %}</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="alternate icon" href="/static/favicon.svg">
+
+    <!-- Fonts: Inter (consistent modern font) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Material Symbols for Stitch design -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+
+    <!-- Tailwind CSS for modern dashboard -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            prefix: 'tw-',
+            corePlugins: {
+                preflight: false  // Don't reset Bootstrap
+            },
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#bef264",
+                        background: "#18181b",
+                        surface: "#27272a",
+                        "on-surface": "#a1a1aa",
+                        "on-surface-strong": "#f4f4f5"
+                    },
+                    fontFamily: {
+                        sans: ["Inter", "sans-serif"],
+                    },
+                },
+            },
+        };
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+        }
+    </style>
+
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
+
+    <!-- Our clean, unified CSS -->
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="/static/css/patch.clean.css">
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body class="dark-app-shell">
+    <!-- Sidebar -->
+    <aside
+        class="tw-fixed tw-left-0 tw-top-0 tw-h-screen tw-w-60 tw-bg-[#27272a] tw-border-r tw-border-[#3f3f46] tw-flex tw-flex-col tw-z-50 sidebar-modern">
+        <!-- Brand -->
+        <div class="tw-px-4 tw-py-4 tw-border-b tw-border-[#3f3f46] tw-flex tw-items-center tw-gap-2.5">
+            <span class="material-symbols-outlined tw-text-[#bef264] tw-text-[22px]">mail</span>
+            <span class="tw-text-white tw-font-semibold tw-text-[15px] tw-tracking-tight">EMAIL MANAGER</span>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="tw-flex-1 tw-overflow-y-auto tw-py-3 tw-px-2">
+            <!-- CORE Section -->
+            <div class="tw-mb-5">
+                <span
+                    class="tw-text-[10px] tw-font-bold tw-text-[#71717a] tw-uppercase tw-tracking-widest tw-px-3 tw-mb-1.5 tw-block">CORE</span>
+
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'dashboard.dashboard' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                    href="/dashboard">
+                    <span class="material-symbols-outlined tw-text-[18px]">dashboard</span>
+                    <span class="tw-font-medium">Dashboard</span>
+                </a>
+
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'emails.emails_unified' or request.endpoint == 'emails.email_queue' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                    href="/emails-unified">
+                    <span class="material-symbols-outlined tw-text-[18px]">inbox</span>
+                    <span class="tw-font-medium">Emails</span>
+                    {% if pending_count > 0 %}
+                    <span
+                        class="tw-ml-auto tw-bg-[#bef264] tw-text-[#18181b] tw-text-[11px] tw-font-bold tw-px-1.5 tw-py-0.5 tw-rounded">{{
+                        pending_count }}</span>
+                    {% endif %}
+                </a>
+
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'compose.compose_email' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                    href="/compose">
+                    <span class="material-symbols-outlined tw-text-[18px]">edit</span>
+                    <span class="tw-font-medium">Compose</span>
+                </a>
+            </div>
+
+            <!-- MANAGEMENT Section -->
+            <div class="tw-mb-5">
+                <span
+                    class="tw-text-[10px] tw-font-bold tw-text-[#71717a] tw-uppercase tw-tracking-widest tw-px-3 tw-mb-1.5 tw-block">MANAGEMENT</span>
+
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'watchers.watchers_page' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                    href="/watchers">
+                    <span class="material-symbols-outlined tw-text-[18px]">visibility</span>
+                    <span class="tw-font-medium">Watchers</span>
+                </a>
+
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'moderation.rules' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                    href="/rules">
+                    <span class="material-symbols-outlined tw-text-[18px]">rule</span>
+                    <span class="tw-font-medium">Rules</span>
+                </a>
+
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'accounts.email_accounts' or request.endpoint == 'accounts.add_email_account' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                    href="/accounts">
+                    <span class="material-symbols-outlined tw-text-[18px]">group</span>
+                    <span class="tw-font-medium">Accounts</span>
+                </a>
+
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'accounts.accounts_import_page' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                    href="/accounts/import">
+                    <span class="material-symbols-outlined tw-text-[18px]">upload</span>
+                    <span class="tw-font-medium">Import Accounts</span>
+                </a>
+
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'diagnostics' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                    href="/diagnostics">
+                    <span class="material-symbols-outlined tw-text-[18px]">monitoring</span>
+                    <span class="tw-font-medium">Diagnostics</span>
+                </a>
+
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'watchers.settings_page' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                    href="/settings">
+                    <span class="material-symbols-outlined tw-text-[18px]">settings</span>
+                    <span class="tw-font-medium">Settings</span>
+                </a>
+            </div>
+
+            <!-- TOOLS Section -->
+            <div>
+                <span
+                    class="tw-text-[10px] tw-font-bold tw-text-[#71717a] tw-uppercase tw-tracking-widest tw-px-3 tw-mb-1.5 tw-block">TOOLS</span>
+
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'styleguide.styleguide' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                    href="/styleguide">
+                    <span class="material-symbols-outlined tw-text-[18px]">palette</span>
+                    <span class="tw-font-medium">Style Guide</span>
+                </a>
+
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'diagnostics.interception_test_dashboard' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                    href="/interception-test">
+                    <span class="material-symbols-outlined tw-text-[18px]">science</span>
+                    <span class="tw-font-medium">Interception Test</span>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Footer -->
+        <div class="tw-border-t tw-border-[#3f3f46] tw-p-3">
+            <div class="tw-mb-2.5">
+                <div class="tw-text-[10px] tw-text-[#71717a] tw-mb-0.5 tw-uppercase tw-tracking-wider">SIGNED IN</div>
+                <div class="tw-text-[13px] tw-text-white tw-font-medium">{% if current_user.is_authenticated %}{{
+                    current_user.username }}{% else %}admin{% endif %}</div>
+            </div>
+            <div class="tw-flex tw-gap-2">
+                <a href="/settings"
+                    class="tw-flex-1 tw-text-center tw-py-1.5 tw-px-2 tw-rounded tw-text-[12px] tw-text-[#a1a1aa] tw-bg-[#3f3f46] hover:tw-bg-[#52525b] tw-transition-all">
+                    <span class="material-symbols-outlined tw-text-[14px] tw-align-middle">settings</span>
+                </a>
+                {% if current_user.is_authenticated %}
+                <a href="/logout"
+                    class="tw-flex-1 tw-text-center tw-py-1.5 tw-px-2 tw-rounded tw-text-[12px] tw-text-[#a1a1aa] tw-bg-[#3f3f46] hover:tw-bg-[#52525b] tw-transition-all">
+                    <span class="material-symbols-outlined tw-text-[14px] tw-align-middle">logout</span>
+                </a>
+                {% else %}
+                <a href="/login"
+                    class="tw-flex-1 tw-text-center tw-py-1.5 tw-px-2 tw-rounded tw-text-[12px] tw-text-white tw-bg-[#bef264] hover:tw-bg-[#a3e635] tw-transition-all">
+                    <span class="material-symbols-outlined tw-text-[14px] tw-align-middle">login</span>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-modern">
+        <!-- Top Command Bar -->
+        <header class="command-bar">
+            <button class="toggle-nav" type="button" aria-label="Toggle navigation">
+                <i class="bi bi-list"></i>
+            </button>
+
+            <!-- Pills only, right aligned -->
+            <div class="command-controls">
+                <div class="command-actions">
+                    <div class="toolbar-group">
+                        {% if not imap_only %}
+                        <span id="nav-smtp" class="health-pill" title="SMTP Proxy health">
+                            <i class="bi bi-diagram-2"></i>
+                            <span class="pill-text">SMTP: --</span>
+                        </span>
+                        {% endif %}
+                        <span id="nav-watchers" class="health-pill" title="Active IMAP watchers">
+                            <i class="bi bi-activity"></i>
+                            <span class="pill-text">Watchers: --</span>
+                        </span>
+                        <span class="health-pill" title="Pending moderation items">
+                            <i class="bi bi-flag"></i>
+                            <span class="pill-text">Pending: {{ pending_count }}</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Content Area -->
+        <div class="content-scroll">
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    const flashMessages = {{ messages| tojson
+                }};
+                flashMessages.forEach(function (entry) {
+                    const category = (entry[0] || '').toLowerCase();
+                    const text = entry[1] || '';
+                    switch (category) {
+                        case 'success':
+                            if (window.showSuccess) window.showSuccess(text);
+                            break;
+                        case 'error':
+                        case 'danger':
+                            if (window.showError) window.showError(text);
+                            break;
+                        case 'warning':
+                            if (window.showWarning) window.showWarning(text);
+                            break;
+                        default:
+                            if (window.showInfo) window.showInfo(text);
+                    }
+                });
+                    });
+            </script>
+            {% endif %}
+            {% endwith %}
+
+            <!-- Page Content -->
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Global JavaScript -->
+    <script>
+        window.ATTACHMENTS_FLAGS = {{ (attachments_flags | default ({ 'ui': false, 'edit': false })) | tojson }};
+    </script>
+    <script src="/static/js/app.js"></script>
+
+    {% block extra_js %}{% endblock %}
+
+    <!-- Health Status Updates -->
+    <script>
+        async function refreshTopbarHealth() {
+            try {
+                const r = await fetch('/healthz');
+                if (!r.ok) return;
+                const j = await r.json();
+
+                // SMTP Status
+                const smtp = document.getElementById('nav-smtp');
+                if (smtp) {
+                    const ok = j.smtp && j.smtp.listening;
+                    const label = smtp.querySelector('.pill-text');
+                    if (label) {
+                        label.textContent = ok ? 'SMTP: OK' : 'SMTP: DOWN';
+                    }
+                    smtp.classList.remove('ok', 'down');
+                    smtp.classList.add(ok ? 'ok' : 'down');
+                }
+
+                // Watchers Status
+                const w = document.getElementById('nav-watchers');
+                if (w) {
+                    let statusCounts = {};
+                    if (Array.isArray(j.workers)) {
+                        j.workers.forEach(worker => {
+                            const status = (worker.status || 'unknown').toLowerCase();
+                            statusCounts[status] = (statusCounts[status] || 0) + 1;
+                        });
+                    }
+                    const polling = statusCounts['polling'] || 0;
+                    const idle = statusCounts['idle'] || 0;
+                    const active = statusCounts['active'] || 0;
+                    const total = polling + idle + active;
+
+                    const label = w.querySelector('.pill-text');
+                    if (total === 0) {
+                        if (label) label.textContent = 'Watchers: 0';
+                        w.classList.remove('ok', 'down');
+                        w.classList.add('down');
+                    } else {
+                        let parts = [];
+                        if (polling > 0) parts.push(`P:${polling}`);
+                        if (idle > 0) parts.push(`I:${idle}`);
+                        if (active > 0) parts.push(`A:${active}`);
+                        if (label) label.textContent = `Watchers: ${total} (${parts.join(', ')})`;
+                        w.classList.remove('ok', 'down');
+                        w.classList.add('ok');
+                        w.title = `Active watchers - P=Polling, I=IDLE, A=Active`;
+                    }
+                }
+            } catch (e) {/* ignore */ }
+        }
+        refreshTopbarHealth();
+        setInterval(refreshTopbarHealth, 10000);
+    </script>
+
+    <!-- Mobile hamburger toggle -->
+    <script>
+        (function () {
+            const sidebar = document.querySelector('.sidebar-modern');
+            const toggle = document.querySelector('.toggle-nav');
+
+            function closeSidebar() { sidebar && sidebar.classList.remove('open'); }
+            function toggleSidebar() { sidebar && sidebar.classList.toggle('open'); }
+
+            toggle?.addEventListener('click', function (e) { e.stopPropagation(); toggleSidebar(); });
+
+            // Close on overlay click (any click outside sidebar)
+            document.addEventListener('click', function (e) {
+                if (!sidebar?.classList.contains('open')) return;
+                if (!sidebar.contains(e.target) && !toggle.contains(e.target)) closeSidebar();
+            });
+
+            // Close on ESC
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') closeSidebar();
+            });
+        })();
+    </script>
+</body>
+
+</html>

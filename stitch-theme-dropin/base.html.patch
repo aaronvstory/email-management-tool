@@ -1,0 +1,10 @@
+--- templates/base.html (current)
++++ templates/base.html (proposed)
+@@ -63,6 +63,7 @@
+     <!-- Our clean, unified CSS -->
+     <link rel="stylesheet" href="/static/css/main.css">
+     <link rel="stylesheet" href="/static/css/patch.clean.css">
++    <link rel="stylesheet" href="{{ url_for('static', filename='stitch.theme.css') }}">
+     {% block extra_css %}{% endblock %}
+ </head>
+ 
