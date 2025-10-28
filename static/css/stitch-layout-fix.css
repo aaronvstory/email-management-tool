@@ -1,55 +1,64 @@
 /* stitch-layout-fix.css
 
-   Fix for dashboard boundary issue - removes max-width constraint
-   that was creating huge empty space on right side of screen
+   Fix for dashboard boundary issue - proper responsive width
+   that doesn't create huge empty space OR stretch content too wide
 
-   Issue: Multiple CSS files were setting max-width: 1200px on #dashboard-page
-   Solution: Override with no max-width, let content fill viewport naturally
+   Issue: Multiple CSS files were setting max-width: 1200px (too narrow)
+   Solution: Use responsive max-width that adapts to screen size
 */
 
-/* Remove max-width constraint from dashboard page */
+/* Dashboard page - responsive max-width with proper centering */
 #dashboard-page {
-  max-width: none !important;
+  max-width: 1600px !important;  /* Larger than 1200px but not infinite */
   width: 100% !important;
   margin: 0 auto !important;
-  padding: 24px 32px !important;
+  padding: 24px 40px !important;
 }
 
-/* Ensure tables fill available width */
+/* Ensure content fills container */
 #dashboard-page .table-container,
 #dashboard-page table {
   width: 100% !important;
-  max-width: none !important;
 }
 
-/* Stats grid responsive but fills width */
 #dashboard-page .stats-grid {
   width: 100% !important;
-  max-width: none !important;
 }
 
-/* Account selector fills width */
 #dashboard-page .account-selector {
   width: 100% !important;
-  max-width: none !important;
 }
 
-/* Recent emails panel fills width */
 #dashboard-page .recent-emails-panel {
   width: 100% !important;
-  max-width: none !important;
 }
 
-/* Optional: Add max-width on very wide screens for readability */
-@media (min-width: 2000px) {
+/* Responsive breakpoints */
+@media (min-width: 1920px) {
+  /* On large screens (1920px+), use more padding */
   #dashboard-page {
     max-width: 1800px !important;
-    margin: 0 auto !important;
+    padding: 32px 60px !important;
   }
 }
 
-/* Responsive adjustments */
+@media (max-width: 1440px) {
+  /* Standard laptop/desktop */
+  #dashboard-page {
+    max-width: 1400px !important;
+    padding: 24px 32px !important;
+  }
+}
+
+@media (max-width: 1024px) {
+  /* Tablet landscape */
+  #dashboard-page {
+    padding: 20px 24px !important;
+  }
+}
+
 @media (max-width: 768px) {
+  /* Mobile/tablet portrait */
   #dashboard-page {
     padding: 16px 12px !important;
   }
