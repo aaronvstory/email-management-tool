@@ -143,45 +143,20 @@
 }
 
 /* ========================================
-   HEADER PILL ALIGNMENT (Oct 27)
-   Remove brand chip, align pills to content
+   HEADER ALIGNMENT AND RESILIENCE (Oct 27)
+   CSS variables for unified width/padding
    ======================================== */
 
-/* Header becomes a simple bar with pills aligned to page content */
-.command-bar { 
-  display:flex; align-items:center;
-  gap: 12px; min-height: var(--header-height, 56px);
-  padding: 8px 16px;
-}
-.sidebar-modern + .main-modern .command-bar { padding-left: 24px; padding-right: 24px; }
+/* Header and content share the same max width and gutters */
+:root { --page-max: 1200px; --page-pad: 24px; }
 
-.command-controls { margin-left:auto; max-width: 1200px; width:100%; display:flex; justify-content:flex-end; }
-.main-modern .content-scroll { max-width: 1200px; margin: 0 auto; }
+.command-bar { padding: 8px var(--page-pad); }
+.content-scroll { max-width: var(--page-max); margin: 0 auto; padding: 16px var(--page-pad); }
+.command-controls { max-width: var(--page-max); margin: 0 auto; width: 100%; display: flex; justify-content: flex-end; }
 
-/* Pills: unbreakable layout with graceful wrap */
-.command-actions { display:flex; gap:10px; flex-wrap: wrap; align-items:center; }
-.toolbar-group { display:flex; gap:8px; flex-wrap: wrap; }
-
-.health-pill { 
-  display:inline-flex; align-items:center; gap:6px;
-  padding:6px 10px; min-height:32px; border-radius: 16px;
-  background: var(--bg-accent); border:1px solid var(--border-default);
-  white-space: nowrap; 
-}
-.health-pill .pill-text { max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
-
-/* Tighten pill text progressively on narrower widths */
-@media (max-width: 1440px) {
-  #nav-smtp .pill-text, #nav-watchers .pill-text { display:none; }
-}
-@media (max-width: 1024px) {
-  .command-actions { justify-content:flex-start; }
-}
-
-/* Keep header and content visually aligned */
-.command-bar,
-.content-scroll { padding-left: 24px; padding-right: 24px; }
-@media (min-width: 1280px){
-  .command-bar, .content-scroll { padding-left: 0; padding-right: 0; }
-  .command-controls, .content-scroll { max-width: 1200px; margin: 0 auto; }
-}
+/* Pill row: stable wrap and no deformation */
+.command-actions { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+.toolbar-group { display:flex; gap:8px; flex-wrap:wrap; }
+.health-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; min-height:32px; border-radius:16px; white-space:nowrap; }
+.health-pill .pill-text { max-width:160px; overflow:hidden; text-overflow:ellipsis; }
+@media (max-width:1440px){ #nav-smtp .pill-text, #nav-watchers .pill-text { display:none; } }
