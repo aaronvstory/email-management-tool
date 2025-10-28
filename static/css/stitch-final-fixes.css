@@ -104,6 +104,22 @@
   margin: 0 !important;
 }
 
+/* Stack all 3 status items vertically */
+.status-meta {
+  display: flex !important;
+  flex-direction: column !important;  /* Stack vertically, not horizontally */
+  align-items: flex-start !important;  /* Align to left */
+  gap: 6px !important;
+  width: 100% !important;
+}
+
+.status-cell {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  align-items: flex-start !important;  /* Align all items to left */
+}
+
 /* ========================================
    FIX 1: Status Indicators - Lime Green Theme
    ======================================== */
