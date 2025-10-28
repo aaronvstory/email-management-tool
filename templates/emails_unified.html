@@ -566,11 +566,20 @@ function renderEmails(emails) {
     let actions = '';
     if (status === 'HELD') {
       actions = `
+        <button class="action-btn action-view" onclick="viewEmail(${email.id})" title="View Details">
+          <i class="bi bi-eye"></i>
+        </button>
         <button class="action-btn action-edit" onclick="editEmail(${email.id})" title="Edit">
           <i class="bi bi-pencil"></i>
         </button>
         <button class="action-btn action-release" onclick="releaseEmail(${email.id})" title="Release">
-          <i class="bi bi-unlock"></i>
+          <i class="bi bi-check-circle"></i>
+        </button>
+        <button class="action-btn action-reply" onclick="replyEmail(${email.id})" title="Reply">
+          <i class="bi bi-reply"></i>
+        </button>
+        <button class="action-btn action-forward" onclick="forwardEmail(${email.id})" title="Forward">
+          <i class="bi bi-arrow-right"></i>
         </button>
         <button class="action-btn action-discard" onclick="discardEmail(${email.id})" title="Discard">
           <i class="bi bi-trash"></i>
@@ -1072,6 +1081,18 @@ async function performDiscard(emailId) {
   } catch (error) {
     if (window.showError) showError(`Failed to discard: ${error.message}`);
   }
+}
+
+// Reply to email - navigate to compose with reply context
+function replyEmail(emailId) {
+  // Navigate to compose page with reply parameter
+  window.location.href = `/compose?reply_to=${emailId}`;
+}
+
+// Forward email - navigate to compose with forward context
+function forwardEmail(emailId) {
+  // Navigate to compose page with forward parameter
+  window.location.href = `/compose?forward=${emailId}`;
 }
 
 async function approveEmail(emailId) {
