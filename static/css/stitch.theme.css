@@ -1,0 +1,360 @@
+/* stitch.theme.css
+
+Small cohesive theme for Email Management Tool
+
+Scope: dev + prod safe. No !important unless needed.
+
+*/
+
+:root {
+  --primary: #bef264;
+  --bg: #18181b;
+  --surface: #27272a;
+  --surface-alt: #1f1f23;
+  --on-surface: #a1a1aa;
+  --on-surface-strong: #f4f4f5;
+  --border: #3f3f46;
+  --muted: #9ca3af;
+  --radius: 8px;
+  --shadow-1: 0 1px 0 rgba(0,0,0,.25), 0 0 0 1px rgba(255,255,255,.02) inset;
+}
+
+body.dark-app-shell {
+  background: var(--bg);
+  color: var(--on-surface);
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+}
+
+/* Cards */
+body.dark-app-shell .card,
+body.dark-app-shell .stitch-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+/* Headings & tiny-caps */
+body.dark-app-shell .tiny-caps,
+body.dark-app-shell table thead th,
+body.dark-app-shell h3.section-label {
+  font-size: 11px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--on-surface);
+  font-weight: 600;
+}
+
+/* Stat cards components */
+body.dark-app-shell .stat-head {
+  font-size: 11px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--on-surface);
+  font-weight: 600;
+}
+
+body.dark-app-shell .stat-value {
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--on-surface-strong);
+}
+
+/* Table improvements */
+body.dark-app-shell table thead th {
+  border-bottom: 1px solid var(--border);
+}
+
+body.dark-app-shell table tbody tr {
+  transition: background-color .12s ease;
+}
+
+body.dark-app-shell table tbody tr:hover {
+  background: color-mix(in srgb, var(--on-surface) 6%, transparent);
+}
+
+/* Table row actions - reveal on hover */
+body.dark-app-shell table tbody tr td:last-child .row-actions,
+body.dark-app-shell table tbody tr td:last-child .flex {
+  opacity: 0;
+  transition: opacity .12s ease;
+}
+
+body.dark-app-shell table tbody tr:hover td:last-child .row-actions,
+body.dark-app-shell table tbody tr:hover td:last-child .flex {
+  opacity: 1;
+}
+
+/* Pills & chips */
+body.dark-app-shell .pill,
+body.dark-app-shell .chip {
+  display: inline-flex;
+  align-items: center;
+  padding: .25rem .5rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Input styling */
+body.dark-app-shell input,
+body.dark-app-shell select,
+body.dark-app-shell textarea {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  color: var(--on-surface-strong);
+  border-radius: 6px;
+}
+
+body.dark-app-shell input:focus,
+body.dark-app-shell select:focus,
+body.dark-app-shell textarea:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: -1px;
+  border-color: var(--primary);
+}
+
+/* Sidebar active accent */
+body.dark-app-shell aside .active {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  color: var(--on-surface-strong);
+  position: relative;
+}
+
+body.dark-app-shell aside .active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--primary);
+}
+
+/* Clean borders */
+body.dark-app-shell .border-surface { border-color: var(--border); }
+body.dark-app-shell .bg-surface { background-color: var(--surface); }
+body.dark-app-shell .bg-background { background-color: var(--bg); }
+
+/* TEMP: prove the theme file is active */
+html::before{
+  content:"stitch.theme.css loaded";
+  position:fixed; left:8px; bottom:8px; z-index:2147483647;
+  background:rgba(125,211,252,.16); color:#7dd3fc;
+  border:1px solid rgba(125,211,252,.35); border-radius:6px;
+  padding:4px 8px; font:12px/1.2 system-ui; pointer-events:none;
+}
+
+/* =================== STITCH COMPAT SHIM (dash + tables + sidebar) =================== */
+/* 0) remove the “loaded” badge once you confirm */
+html::before { display:none !important; }
+
+/* 1) Sidebar: active item gets a thin left accent and bolder text */
+.dark-app-shell .sidebar-modern .nav-item-link.active {
+  position: relative;
+  font-weight: 600;
+  color: #f4f4f5;
+  background: rgba(190,242,100,0.08); /* subtle primary wash */
+}
+.dark-app-shell .sidebar-modern .nav-item-link.active::before {
+  content: "";
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 4px; border-radius: 2px; background: currentColor;
+}
+
+/* 2) “KPI tiles” (those big gradient blocks) -> clean stat cards */
+.dark-app-shell .dashboard .card,
+.dark-app-shell .dashboard .panel,
+.dark-app-shell .dashboard [class*="tile"],
+.dark-app-shell .dashboard [class*="stat"],
+.dark-app-shell .dashboard [data-role="stat-card"] {
+  background: #18181b !important;
+  border: 1px solid #3f3f46 !important;
+  box-shadow: none !important;
+  border-radius: 12px !important;
+}
+
+/* Big number */
+.dark-app-shell .dashboard .card .value,
+.dark-app-shell .dashboard [class*="tile"] .value,
+.dark-app-shell .dashboard [class*="stat"] .value,
+.dark-app-shell .dashboard [data-role="stat-card"] .value,
+.dark-app-shell .dashboard .card .display-4,
+.dark-app-shell .dashboard .card h2 {
+  color: #f4f4f5 !important;
+  font-weight: 800 !important;
+  font-size: 2.25rem !important; /* ~text-4xl */
+  line-height: 1.1 !important;
+}
+
+/* Label (TOTAL / HELD / RELEASED) */
+.dark-app-shell .dashboard .card .label,
+.dark-app-shell .dashboard [class*="tile"] .label,
+.dark-app-shell .dashboard [class*="stat"] .label,
+.dark-app-shell .dashboard [data-role="stat-card"] .label,
+.dark-app-shell .dashboard .card small,
+.dark-app-shell .dashboard .card .text-muted {
+  text-transform: uppercase !important;
+  font-size: 11px !important;
+  letter-spacing: .12em !important;
+  color: #d4d4d8 !important;
+}
+
+/* 3) Page header + subtitle polish */
+.dark-app-shell h1, .dark-app-shell .page-title { letter-spacing: .015em; }
+.dark-app-shell .page-subtitle, .dark-app-shell .lead { color: #a1a1aa; }
+
+/* 4) Filters/inputs surface */
+.dark-app-shell input[type="text"],
+.dark-app-shell select,
+.dark-app-shell .form-control {
+  background: #27272a !important;
+  border: 1px solid #3f3f46 !important;
+  color: #f4f4f5 !important;
+}
+.dark-app-shell .form-control:focus {
+  border-color: #3f3f46 !important;
+  outline: 2px solid rgba(190,242,100,.25) !important;
+  outline-offset: 0;
+}
+
+/* 5) Table header tiny caps + color */
+.dark-app-shell table thead th,
+.dark-app-shell .table thead th {
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: .12em !important;
+  color: #d4d4d8 !important;
+}
+
+/* Row hover + actions reveal on hover (last column) */
+.dark-app-shell table tbody tr { transition: background-color .15s ease; }
+.dark-app-shell table tbody tr:hover { background: rgba(255,255,255,.03); }
+.dark-app-shell table tbody tr td:last-child .flex,
+.dark-app-shell table tbody tr td:last-child .btn-group {
+  opacity: 0; transition: opacity .12s ease;
+}
+.dark-app-shell table tbody tr:hover td:last-child .flex,
+.dark-app-shell table tbody tr:hover td:last-child .btn-group {
+  opacity: 1;
+}
+
+/* Watcher chips */
+.dark-app-shell .badge,
+.dark-app-shell .chip,
+.dark-app-shell span[class*="watcher"] {
+  border: 1px solid rgba(190,242,100,.25);
+  background: rgba(190,242,100,.1);
+  color: #bef264;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+/* 6) Hairlines + surfaces */
+.border-surface { border-color: #3f3f46 !important; }
+.bg-surface { background: rgba(39,39,42,.6) !important; }
+.bg-background { background: #18181b !important; }
+
+/* ===================== STITCH COMPAT SHIM (DASHBOARD) ===================== */
+/* Remove probe badge if you still have it */
+html::before { display:none !important; }
+
+/* 1) Sidebar active state (matches .sidebar-modern from base.html) */
+.dark-app-shell .sidebar-modern .nav-item-link.active {
+  position: relative;
+  font-weight: 600;
+  color: #f4f4f5;
+  background: rgba(190,242,100,0.08);
+}
+.dark-app-shell .sidebar-modern .nav-item-link.active::before {
+  content: "";
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 4px; border-radius: 2px; background: currentColor;
+}
+
+/* 2) Stat tiles → clean cards (catch current DOM without touching HTML) */
+.dark-app-shell .dashboard .card,
+.dark-app-shell .dashboard [class*="tile"],
+.dark-app-shell .dashboard [data-role="stat-card"] {
+  background: #18181b !important;
+  border: 1px solid #3f3f46 !important;
+  box-shadow: none !important;
+  border-radius: 12px !important;
+}
+
+/* Big number */
+.dark-app-shell .dashboard .card .value,
+.dark-app-shell .dashboard [class*="tile"] .value,
+.dark-app-shell .dashboard .card .display-4,
+.dark-app-shell .dashboard .card h2 {
+  color: #f4f4f5 !important;
+  font-weight: 800 !important;
+  font-size: 2.25rem !important;
+  line-height: 1.1 !important;
+}
+
+/* Label (TOTAL / HELD / RELEASED) */
+.dark-app-shell .dashboard .card .label,
+.dark-app-shell .dashboard .card small,
+.dark-app-shell .dashboard .card .text-muted {
+  text-transform: uppercase !important;
+  font-size: 11px !important;
+  letter-spacing: .12em !important;
+  color: #d4d4d8 !important;
+}
+
+/* 3) Page subtitle tone */
+.dark-app-shell .page-subtitle, .dark-app-shell .lead { color: #a1a1aa; }
+
+/* 4) Inputs surface */
+.dark-app-shell input[type="text"],
+.dark-app-shell select,
+.dark-app-shell .form-control {
+  background: #27272a !important;
+  border: 1px solid #3f3f46 !important;
+  color: #f4f4f5 !important;
+}
+.dark-app-shell .form-control:focus {
+  border-color: #3f3f46 !important;
+  outline: 2px solid rgba(190,242,100,.25) !important;
+  outline-offset: 0;
+}
+
+/* 5) Tables: tiny-caps header + row hover + reveal actions */
+.dark-app-shell table thead th,
+.dark-app-shell .table thead th {
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: .12em !important;
+  color: #d4d4d8 !important;
+}
+.dark-app-shell table tbody tr { transition: background-color .15s ease; }
+.dark-app-shell table tbody tr:hover { background: rgba(255,255,255,.03); }
+.dark-app-shell table tbody tr td:last-child .flex,
+.dark-app-shell table tbody tr td:last-child .btn-group {
+  opacity: 0; transition: opacity .12s ease;
+}
+.dark-app-shell table tbody tr:hover td:last-child .flex,
+.dark-app-shell table tbody tr:hover td:last-child .btn-group {
+  opacity: 1;
+}
+
+/* 6) Watcher chips */
+.dark-app-shell .badge,
+.dark-app-shell .chip,
+.dark-app-shell span[class*="watcher"] {
+  border: 1px solid rgba(190,242,100,.25);
+  background: rgba(190,242,100,.1);
+  color: #bef264;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+/* grid wrapper for stat cards, if your HTML uses .stats-grid */
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:20px; }
