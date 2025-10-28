@@ -106,8 +106,9 @@ body.login-page .btn-login {
   min-height: 48px;
   font-size: 0.9rem;
   letter-spacing: 0.05em;
-  font-weight: 700;
-  color: #18181b;
+  font-weight: 900 !important;  /* Heavy/Black weight */
+  font-family: 'Inter', sans-serif !important;
+  color: #000000 !important;  /* Pure black */
   transition: all 0.2s ease;
 }
 
