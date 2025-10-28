@@ -5,28 +5,30 @@
 {% block title %}Dashboard - Email Management Tool{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/dashboard.clean.css">
+<!-- Stitch dashboard uses Tailwind from base.html -->
 {% endblock %}
 
 {% block content %}
-<div id="dashboard-page">
-<div class="page-header">
+<div id="dashboard-page" class="tw-p-6 md:tw-p-8 tw-space-y-8 tw-bg-[#18181b] tw-min-h-screen">
+<div class="page-header tw-flex tw-flex-col md:tw-flex-row md:tw-items-start md:tw-justify-between tw-gap-4 tw-border-b tw-border-[#27272a] tw-pb-6">
   <div>
-    <h1><i class="bi bi-speedometer2"></i> Dashboard</h1>
-    <p class="text-muted mb-0">Track email activity and manage your monitored accounts.</p>
+    <h1 class="tw-text-3xl tw-font-bold tw-text-[#f4f4f5]">
+      <i class="bi bi-speedometer2"></i> Dashboard
+    </h1>
+    <p class="tw-mt-2 tw-text-[#a1a1aa]">Track email activity and manage your monitored accounts.</p>
   </div>
   <div class="header-actions">
-    <button class="btn btn-secondary btn-sm" type="button" onclick="location.reload()">
+    <button class="tw-bg-[#27272a] tw-border tw-border-zinc-700/50 tw-text-[#f4f4f5] tw-font-medium tw-py-2 tw-px-4 hover:tw-bg-zinc-700 tw-transition-colors tw-flex tw-items-center tw-gap-2 tw-rounded-md" type="button" onclick="location.reload()">
       <i class="bi bi-arrow-clockwise"></i> Refresh
     </button>
   </div>
 </div>
 
-<div class="account-selector">
-  <div class="selector-grid">
+<div class="account-selector tw-bg-[#18181b] tw-border tw-border-[#27272a] tw-rounded-md tw-p-5">
+  <div class="selector-grid tw-grid tw-grid-cols-1 md:tw-grid-cols-[1fr_auto_auto] tw-gap-4 tw-items-center">
     <div class="selector-field">
-      <label for="accountSelector">Filter by account</label>
-      <select class="form-select" id="accountSelector" onchange="switchAccount(this.value)">
+      <label for="accountSelector" class="tw-block tw-text-sm tw-font-medium tw-text-[#a1a1aa] tw-mb-2">Filter by account</label>
+      <select class="form-select tw-bg-[#27272a] tw-border tw-border-zinc-700/50 tw-text-[#f4f4f5] tw-rounded-md tw-px-3 tw-py-2" id="accountSelector" onchange="switchAccount(this.value)">
         <option value="">All accounts</option>
         {% for account in accounts %}
         <option value="{{ account.id }}" {% if selected_account_id == account.id|string %}selected{% endif %}>
@@ -36,30 +38,29 @@
       </select>
     </div>
 
-    <div class="selector-meta">
+    <div class="selector-meta tw-flex tw-items-center tw-gap-3">
       {% if selected_account_id %}
         {% for account in accounts %}
           {% if account.id|string == selected_account_id %}
-          <span class="tag-chip {% if account.is_active %}success{% else %}accent{% endif %}">
+          <span class="tw-inline-flex tw-items-center tw-text-xs tw-font-medium tw-px-2 tw-py-1 {% if account.is_active %}tw-bg-[#bef264]/10 tw-text-[#bef264]{% else %}tw-bg-zinc-700/50 tw-text-[#a1a1aa]{% endif %} tw-rounded-md">
             {% if account.is_active %}Active{% else %}Inactive{% endif %}
           </span>
           {% if account.last_checked %}
-          <span class="selector-note">
-            Last checked: <span class="time-cell" data-ts="{{ account.last_checked }}">{{ account.last_checked }}</span>
+          <span class="tw-text-sm tw-text-[#a1a1aa]">
+            Last: <span class="time-cell" data-ts="{{ account.last_checked }}">{{ account.last_checked }}</span>
           </span>
           {% else %}
-          <span class="selector-note">Last checked: Never</span>
+          <span class="tw-text-sm tw-text-[#a1a1aa]">Never checked</span>
           {% endif %}
           {% endif %}
         {% endfor %}
       {% else %}
-        <span class="selector-note">Showing aggregated telemetry across all monitored accounts.</span>
+        <span class="tw-text-sm tw-text-[#a1a1aa]">Showing all monitored accounts</span>
       {% endif %}
     </div>
 
     <div class="selector-actions">
-      <label class="form-label">Actions</label>
-      <a href="{{ url_for('accounts.email_accounts') }}" class="btn btn-ghost btn-sm">
+      <a href="{{ url_for('accounts.email_accounts') }}" class="tw-bg-[#27272a] tw-border tw-border-zinc-700/50 tw-text-[#f4f4f5] tw-font-medium tw-py-2 tw-px-4 hover:tw-bg-zinc-700 tw-transition-colors tw-flex tw-items-center tw-gap-2 tw-rounded-md">
         <i class="bi bi-gear"></i> Manage
       </a>
     </div>
@@ -73,39 +74,67 @@
   {% set totals.value = totals.held + totals.released + (stats.rejected|default(0)) + (stats.discarded|default(0)) %}
 {% endif %}
 
-<!-- Compact Stats Grid -->
-<div class="stats-grid" id="statsGrid">
-  <div class="stat-card-modern">
-    <span class="stat-value" id="statTotal">{{ totals.value }}</span>
-    <span class="stat-label">Total</span>
+<!-- Stitch Stats Grid -->
+<div class="stats-grid tw-grid tw-grid-cols-1 md:tw-grid-cols-2 lg:tw-grid-cols-4 tw-gap-6" id="statsGrid">
+  <div class="stat-card-modern tw-bg-[#18181b] tw-p-5 tw-border tw-border-[#27272a] tw-rounded-md">
+    <div class="tw-flex tw-items-center tw-justify-between">
+      <h3 class="tw-text-sm tw-font-medium tw-text-[#a1a1aa] tw-uppercase tw-tracking-wider">Emails Processed</h3>
+      <span class="material-symbols-outlined tw-text-[#a1a1aa]">mail</span>
+    </div>
+    <p class="stat-value tw-text-3xl tw-font-bold tw-text-[#f4f4f5] tw-mt-4" id="statTotal">{{ totals.value }}</p>
   </div>
-  <div class="stat-card-modern held">
-    <span class="stat-value" id="statHeld">{{ totals.held }}</span>
-    <span class="stat-label">Held</span>
+  <div class="stat-card-modern held tw-bg-[#18181b] tw-p-5 tw-border tw-border-[#27272a] tw-rounded-md">
+    <div class="tw-flex tw-items-center tw-justify-between">
+      <h3 class="tw-text-sm tw-font-medium tw-text-[#a1a1aa] tw-uppercase tw-tracking-wider">Emails Held</h3>
+      <span class="material-symbols-outlined tw-text-[#a1a1aa]">pause_circle</span>
+    </div>
+    <p class="stat-value tw-text-3xl tw-font-bold tw-text-[#f4f4f5] tw-mt-4" id="statHeld">{{ totals.held }}</p>
+    <p class="tw-text-xs tw-text-yellow-400 tw-flex tw-items-center tw-gap-1 tw-mt-1">
+      <span class="material-symbols-outlined tw-text-base">warning</span>
+      Pending review
+    </p>
   </div>
-  <div class="stat-card-modern released">
-    <span class="stat-value" id="statReleased">{{ totals.released }}</span>
-    <span class="stat-label">Released</span>
+  <div class="stat-card-modern released tw-bg-[#18181b] tw-p-5 tw-border tw-border-[#27272a] tw-rounded-md">
+    <div class="tw-flex tw-items-center tw-justify-between">
+      <h3 class="tw-text-sm tw-font-medium tw-text-[#a1a1aa] tw-uppercase tw-tracking-wider">Emails Released</h3>
+      <span class="material-symbols-outlined tw-text-[#a1a1aa]">send</span>
+    </div>
+    <p class="stat-value tw-text-3xl tw-font-bold tw-text-[#f4f4f5] tw-mt-4" id="statReleased">{{ totals.released }}</p>
+    <p class="tw-text-xs tw-text-[#bef264] tw-flex tw-items-center tw-gap-1 tw-mt-1">
+      <span class="material-symbols-outlined tw-text-base">arrow_upward</span>
+      Delivered
+    </p>
+  </div>
+  <div class="stat-card-modern tw-bg-[#18181b] tw-p-5 tw-border tw-border-[#27272a] tw-rounded-md">
+    <div class="tw-flex tw-items-center tw-justify-between">
+      <h3 class="tw-text-sm tw-font-medium tw-text-[#a1a1aa] tw-uppercase tw-tracking-wider">Watchers Active</h3>
+      <span class="material-symbols-outlined tw-text-[#a1a1aa]">visibility</span>
+    </div>
+    <p class="stat-value tw-text-3xl tw-font-bold tw-text-[#f4f4f5] tw-mt-4" id="statWatchers">--</p>
+    <p class="tw-text-xs tw-text-[#a1a1aa] tw-mt-1 tw-h-5"> </p>
   </div>
 </div>
 
-<!-- Recent Emails -->
-<div class="recent-emails-panel">
-  <div class="panel-title">
-    <span><i class="bi bi-envelope"></i> Recent Emails</span>
-    <a href="{{ url_for('emails.emails_unified') }}" class="btn btn-ghost btn-sm">
-      View All <i class="bi bi-arrow-right"></i>
+<!-- Recent Emails Panel -->
+<div class="recent-emails-panel tw-bg-[#18181b] tw-border tw-border-[#27272a] tw-rounded-md">
+  <div class="panel-title tw-p-4 tw-border-b tw-border-[#27272a] tw-flex tw-items-center tw-justify-between">
+    <h2 class="tw-text-lg tw-font-bold tw-text-[#f4f4f5]">
+      <i class="bi bi-envelope"></i> Recent Emails Held
+    </h2>
+    <a href="{{ url_for('emails.emails_unified') }}" class="tw-text-[#bef264] hover:tw-text-[#bef264]/90 tw-font-medium tw-text-sm tw-flex tw-items-center tw-gap-1">
+      View All
+      <span class="material-symbols-outlined tw-text-lg">arrow_forward</span>
     </a>
   </div>
 
   <!-- Search Bar -->
-  <div class="mb-3">
-    <div class="input-group">
-      <input type="text" id="email-search-input" class="form-control input-modern" placeholder="Search emails by subject, sender, recipient, or content...">
-      <button class="btn btn-primary" id="email-search-btn" onclick="performEmailSearch()">
+  <div class="tw-p-4 tw-border-b tw-border-[#27272a]">
+    <div class="tw-flex tw-gap-2">
+      <input type="text" id="email-search-input" class="tw-flex-1 tw-bg-[#27272a] tw-border tw-border-zinc-700/50 tw-text-[#f4f4f5] tw-rounded-md tw-px-3 tw-py-2 focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-[#bef264]/50" placeholder="Search emails by subject, sender, recipient, or content...">
+      <button class="tw-bg-[#bef264] tw-text-zinc-900 tw-font-bold tw-py-2 tw-px-4 hover:tw-bg-[#bef264]/90 tw-transition-colors tw-flex tw-items-center tw-gap-2 tw-rounded-md" id="email-search-btn" onclick="performEmailSearch()">
         <i class="bi bi-search"></i> Search
       </button>
-      <button class="btn btn-secondary" id="email-search-clear" onclick="clearEmailSearch()" style="display:none;">
+      <button class="tw-bg-[#27272a] tw-border tw-border-zinc-700/50 tw-text-[#f4f4f5] tw-font-medium tw-py-2 tw-px-4 hover:tw-bg-zinc-700 tw-transition-colors tw-rounded-md" id="email-search-clear" onclick="clearEmailSearch()" style="display:none;">
         <i class="bi bi-x-circle"></i> Clear
       </button>
     </div>
@@ -115,110 +144,112 @@
   </div>
 
   <!-- Filter Tabs -->
-  <div class="status-tabs">
-    <button class="status-tab active" data-status="ALL" onclick="switchDashboardFilter('ALL')">
+  <div class="status-tabs tw-p-4 tw-flex tw-flex-wrap tw-gap-2 tw-border-b tw-border-[#27272a]">
+    <button class="status-tab active tw-inline-flex tw-items-center tw-gap-2 tw-rounded-full tw-border tw-border-[#27272a] tw-bg-[#bef264]/20 tw-border-[#bef264]/30 tw-text-[#bef264] tw-px-4 tw-py-2 tw-text-sm hover:tw-bg-[#bef264]/30 tw-transition-colors" data-status="ALL" onclick="switchDashboardFilter('ALL')">
       <i class="bi bi-inbox"></i> All
-      <span class="badge" id="dashboard-badge-all">0</span>
+      <span class="badge tw-ml-1 tw-rounded-full tw-bg-white/10 tw-px-2 tw-py-0.5 tw-text-[11px]" id="dashboard-badge-all">0</span>
     </button>
-    <button class="status-tab" data-status="HELD" onclick="switchDashboardFilter('HELD')">
+    <button class="status-tab tw-inline-flex tw-items-center tw-gap-2 tw-rounded-full tw-border tw-border-[#27272a] tw-bg-[#18181b] hover:tw-bg-[#27272a]/50 tw-px-4 tw-py-2 tw-text-sm tw-text-[#a1a1aa] hover:tw-text-[#f4f4f5] tw-transition-colors" data-status="HELD" onclick="switchDashboardFilter('HELD')">
       <i class="bi bi-hand-stop"></i> Held
-      <span class="badge" id="dashboard-badge-held">0</span>
+      <span class="badge tw-ml-1 tw-rounded-full tw-bg-white/10 tw-px-2 tw-py-0.5 tw-text-[11px]" id="dashboard-badge-held">0</span>
     </button>
-    <button class="status-tab" data-status="RELEASED" onclick="switchDashboardFilter('RELEASED')">
+    <button class="status-tab tw-inline-flex tw-items-center tw-gap-2 tw-rounded-full tw-border tw-border-[#27272a] tw-bg-[#18181b] hover:tw-bg-[#27272a]/50 tw-px-4 tw-py-2 tw-text-sm tw-text-[#a1a1aa] hover:tw-text-[#f4f4f5] tw-transition-colors" data-status="RELEASED" onclick="switchDashboardFilter('RELEASED')">
       <i class="bi bi-send-check"></i> Released
-      <span class="badge" id="dashboard-badge-released">0</span>
+      <span class="badge tw-ml-1 tw-rounded-full tw-bg-white/10 tw-px-2 tw-py-0.5 tw-text-[11px]" id="dashboard-badge-released">0</span>
     </button>
-    <button class="status-tab" data-status="REJECTED" onclick="switchDashboardFilter('REJECTED')">
+    <button class="status-tab tw-inline-flex tw-items-center tw-gap-2 tw-rounded-full tw-border tw-border-[#27272a] tw-bg-[#18181b] hover:tw-bg-[#27272a]/50 tw-px-4 tw-py-2 tw-text-sm tw-text-[#a1a1aa] hover:tw-text-[#f4f4f5] tw-transition-colors" data-status="REJECTED" onclick="switchDashboardFilter('REJECTED')">
       <i class="bi bi-x-circle"></i> Rejected
-      <span class="badge" id="dashboard-badge-rejected">0</span>
+      <span class="badge tw-ml-1 tw-rounded-full tw-bg-white/10 tw-px-2 tw-py-0.5 tw-text-[11px]" id="dashboard-badge-rejected">0</span>
     </button>
   </div>
 
   <!-- Search and Controls -->
-  <div class="filters-bar">
-    <div class="search-group">
-      <i class="bi bi-search"></i>
-      <input id="dashboardSearchBox" class="search-input" placeholder="Search subject, sender, or recipient..." oninput="filterDashboardEmails()" />
+  <div class="filters-bar tw-p-4 tw-flex tw-items-center tw-justify-between tw-gap-4 tw-bg-[#18181b] tw-border-b tw-border-[#27272a]">
+    <div class="search-group tw-flex tw-items-center tw-gap-2 tw-flex-1">
+      <i class="bi bi-search tw-text-[#a1a1aa]"></i>
+      <input id="dashboardSearchBox" class="search-input tw-flex-1 tw-bg-transparent tw-border-0 tw-text-[#f4f4f5] focus:tw-outline-none" placeholder="Search subject, sender, or recipient..." oninput="filterDashboardEmails()" />
     </div>
-    <div class="toolbar-actions">
-      <label class="form-check">
+    <div class="toolbar-actions tw-flex tw-items-center tw-gap-3">
+      <label class="form-check tw-flex tw-items-center tw-gap-2 tw-text-sm tw-text-[#a1a1aa] tw-cursor-pointer">
         <input type="checkbox" class="form-check-input" id="dashboardAutoRefresh" onchange="toggleDashboardAutoRefresh(this.checked)">
         <span>Auto-refresh</span>
       </label>
-      <button class="btn-secondary" type="button" onclick="loadDashboardEmails()">
+      <button class="tw-bg-[#27272a] tw-border tw-border-zinc-700/50 tw-text-[#f4f4f5] tw-font-medium tw-py-1.5 tw-px-3 hover:tw-bg-zinc-700 tw-transition-colors tw-flex tw-items-center tw-gap-2 tw-rounded-md tw-text-sm" type="button" onclick="loadDashboardEmails()">
         <i class="bi bi-arrow-clockwise"></i> Refresh
       </button>
     </div>
   </div>
 
   <!-- Bulk Actions Bar -->
-  <div id="bulk-actions-bar" class="bulk-toolbar">
-    <span id="bulk-selection-count">0 selected</span>
-    <button class="btn btn-sm btn-primary" onclick="bulkReleaseEmails()">
-      <i class="bi bi-send-check"></i> Release Selected
-    </button>
-    <button class="btn btn-sm btn-danger" onclick="bulkDiscardEmails()">
-      <i class="bi bi-trash"></i> Discard Selected
-    </button>
-    <button class="btn btn-sm btn-secondary" onclick="clearBulkSelection()">
-      <i class="bi bi-x-circle"></i> Clear Selection
-    </button>
+  <div id="bulk-actions-bar" class="bulk-toolbar tw-hidden tw-sticky tw-top-2 tw-z-20 tw-flex tw-items-center tw-justify-between tw-gap-3 tw-rounded-xl tw-bg-sky-500/15 tw-border tw-border-sky-500/30 tw-backdrop-blur tw-p-3 tw-mx-4 tw-mt-3">
+    <span id="bulk-selection-count" class="tw-text-sm tw-font-medium tw-text-[#f4f4f5]">0 selected</span>
+    <div class="tw-flex tw-gap-2">
+      <button class="tw-bg-emerald-500/90 hover:tw-bg-emerald-500 tw-text-white tw-font-medium tw-text-sm tw-rounded-md tw-border tw-border-emerald-600 tw-px-3 tw-py-1.5 tw-flex tw-items-center tw-gap-1" onclick="bulkReleaseEmails()">
+        <i class="bi bi-send-check"></i> Release
+      </button>
+      <button class="tw-bg-rose-500/90 hover:tw-bg-rose-500 tw-text-white tw-font-medium tw-text-sm tw-rounded-md tw-border tw-border-rose-600 tw-px-3 tw-py-1.5 tw-flex tw-items-center tw-gap-1" onclick="bulkDiscardEmails()">
+        <i class="bi bi-trash"></i> Discard
+      </button>
+      <button class="tw-bg-white/10 hover:tw-bg-white/20 tw-text-[#f4f4f5] tw-font-medium tw-text-sm tw-rounded-md tw-border tw-border-white/10 tw-px-3 tw-py-1.5" onclick="clearBulkSelection()">
+        <i class="bi bi-x-circle"></i> Clear
+      </button>
+    </div>
   </div>
 
   <!-- Email Table -->
-  <div style="overflow-x: auto;">
-    <table class="email-table">
-      <thead>
+  <div class="tw-overflow-x-auto">
+    <table class="email-table tw-w-full tw-text-sm">
+      <thead class="tw-border-b tw-border-[#27272a]">
         <tr>
-          <th class="col-select">
-            <input type="checkbox" id="select-all-emails" onchange="toggleSelectAll(this.checked)" style="cursor:pointer;">
+          <th class="col-select tw-p-3 tw-font-semibold tw-text-left tw-text-[#a1a1aa] tw-uppercase tw-tracking-wider tw-text-xs">
+            <input type="checkbox" id="select-all-emails" onchange="toggleSelectAll(this.checked)" class="tw-cursor-pointer">
           </th>
-          <th>Time</th>
-          <th class="col-from">Correspondents</th>
-          <th class="col-subject">Subject</th>
-          <th class="col-status">Status</th>
-          <th class="col-actions">Actions</th>
+          <th class="tw-p-3 tw-font-semibold tw-text-left tw-text-[#a1a1aa] tw-uppercase tw-tracking-wider tw-text-xs">Time</th>
+          <th class="col-from tw-p-3 tw-font-semibold tw-text-left tw-text-[#a1a1aa] tw-uppercase tw-tracking-wider tw-text-xs">Correspondents</th>
+          <th class="col-subject tw-p-3 tw-font-semibold tw-text-left tw-text-[#a1a1aa] tw-uppercase tw-tracking-wider tw-text-xs">Subject</th>
+          <th class="col-status tw-p-3 tw-font-semibold tw-text-left tw-text-[#a1a1aa] tw-uppercase tw-tracking-wider tw-text-xs">Status</th>
+          <th class="col-actions tw-p-3 tw-font-semibold tw-text-left tw-text-[#a1a1aa] tw-uppercase tw-tracking-wider tw-text-xs">Actions</th>
         </tr>
       </thead>
-      <tbody id="dashboardEmailTableBody">
+      <tbody id="dashboardEmailTableBody" class="tw-divide-y tw-divide-[#27272a]">
         <!-- Dynamic content loaded via JavaScript -->
       </tbody>
     </table>
   </div>
 
   <!-- Loading Spinner -->
-  <div id="dashboardLoadingSpinner" class="loading-spinner">
+  <div id="dashboardLoadingSpinner" class="loading-spinner tw-flex tw-flex-col tw-items-center tw-gap-3 tw-text-[#a1a1aa] tw-py-10">
     <div class="spinner"></div>
     <p>Loading emails...</p>
   </div>
 
   <!-- Empty State -->
-  <div id="dashboardEmptyState" class="empty-state" style="display: none;">
-    <i class="bi bi-inbox"></i>
-    <p id="emptyStateMessage">No emails found</p>
-    <p id="emptyStateHint" style="font-size: 0.85rem; margin-top: 8px; opacity: 0.7;"></p>
+  <div id="dashboardEmptyState" class="empty-state tw-text-center tw-text-[#a1a1aa] tw-space-y-2 tw-p-10" style="display: none;">
+    <i class="bi bi-inbox tw-text-4xl"></i>
+    <p id="emptyStateMessage" class="tw-font-medium">No emails found</p>
+    <p id="emptyStateHint" class="tw-text-sm tw-opacity-70"></p>
   </div>
 
   <!-- Pagination Controls -->
-  <div id="paginationControls" style="display: none; margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.03); border-radius: 8px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-      <div style="color: #9ca3af; font-size: 0.9rem;">
+  <div id="paginationControls" class="tw-p-4 tw-border-t tw-border-[#27272a]" style="display: none;">
+    <div class="tw-flex tw-justify-between tw-items-center tw-flex-wrap tw-gap-3">
+      <div class="tw-text-[#9ca3af] tw-text-sm">
         Showing <span id="pagination-showing-start">0</span>-<span id="pagination-showing-end">0</span> of <span id="pagination-total">0</span> emails
       </div>
-      <div style="display: flex; gap: 8px; align-items: center;">
-        <button class="btn btn-sm btn-secondary" id="pagination-first" onclick="goToPage(1)" disabled>
+      <div class="tw-flex tw-gap-2 tw-items-center">
+        <button class="tw-bg-[#27272a] tw-border tw-border-zinc-700/50 tw-text-[#f4f4f5] tw-font-medium tw-py-1.5 tw-px-3 hover:tw-bg-zinc-700 tw-transition-colors tw-rounded-md tw-text-sm disabled:tw-opacity-50 disabled:tw-cursor-not-allowed" id="pagination-first" onclick="goToPage(1)" disabled>
           <i class="bi bi-chevron-double-left"></i> First
         </button>
-        <button class="btn btn-sm btn-secondary" id="pagination-prev" onclick="goToPage(currentPage - 1)" disabled>
+        <button class="tw-bg-[#27272a] tw-border tw-border-zinc-700/50 tw-text-[#f4f4f5] tw-font-medium tw-py-1.5 tw-px-3 hover:tw-bg-zinc-700 tw-transition-colors tw-rounded-md tw-text-sm disabled:tw-opacity-50 disabled:tw-cursor-not-allowed" id="pagination-prev" onclick="goToPage(currentPage - 1)" disabled>
           <i class="bi bi-chevron-left"></i> Previous
         </button>
-        <div id="pagination-numbers" style="display: flex; gap: 4px;">
+        <div id="pagination-numbers" class="tw-flex tw-gap-1">
           <!-- Page numbers inserted here -->
         </div>
-        <button class="btn btn-sm btn-secondary" id="pagination-next" onclick="goToPage(currentPage + 1)" disabled>
+        <button class="tw-bg-[#27272a] tw-border tw-border-zinc-700/50 tw-text-[#f4f4f5] tw-font-medium tw-py-1.5 tw-px-3 hover:tw-bg-zinc-700 tw-transition-colors tw-rounded-md tw-text-sm disabled:tw-opacity-50 disabled:tw-cursor-not-allowed" id="pagination-next" onclick="goToPage(currentPage + 1)" disabled>
           Next <i class="bi bi-chevron-right"></i>
         </button>
-        <button class="btn btn-sm btn-secondary" id="pagination-last" onclick="goToPage(totalPages)" disabled>
+        <button class="tw-bg-[#27272a] tw-border tw-border-zinc-700/50 tw-text-[#f4f4f5] tw-font-medium tw-py-1.5 tw-px-3 hover:tw-bg-zinc-700 tw-transition-colors tw-rounded-md tw-text-sm disabled:tw-opacity-50 disabled:tw-cursor-not-allowed" id="pagination-last" onclick="goToPage(totalPages)" disabled>
           Last <i class="bi bi-chevron-double-right"></i>
         </button>
       </div>
@@ -498,6 +529,7 @@ function renderDashboardEmailsWithPagination() {
 
   pageEmails.forEach(email => {
     const tr = document.createElement('tr');
+    tr.className = 'hover:tw-bg-[#27272a]/50 tw-transition-colors';
     tr.dataset.emailId = email.id;
 
     let status = (email.interception_status || email.status || 'UNKNOWN').toUpperCase();
