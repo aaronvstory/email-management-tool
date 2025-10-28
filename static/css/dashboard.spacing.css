@@ -292,3 +292,202 @@
 #dashboard-page .table thead th { background: linear-gradient(180deg, rgba(255,255,255,.04) 0%, rgba(0,0,0,.28) 100%), var(--bg-elevated); color:var(--text-secondary); padding:12px 16px; }
 #dashboard-page .table tbody td { background: rgba(0,0,0,.22); padding:14px 16px; }
 #dashboard-page .table tbody tr:hover td { background: rgba(255,255,255,.03); }
+
+/* ========================================
+   COMPREHENSIVE SPACING FIX (Oct 27)
+   Add proper breathing room to all dashboard elements
+   ======================================== */
+
+/* Dashboard internal vertical spacing - add breathing room */
+#dashboard-page {
+  contain-intrinsic-block-size: auto 100px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 24px 0;
+}
+
+#dashboard-page > * {
+  margin-bottom: 32px; /* Universal spacing between major sections */
+}
+
+#dashboard-page > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Page header - space from title area to content */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 28px !important;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.page-header h1 {
+  margin-bottom: 6px;
+  font-size: 1.75rem;
+}
+
+.page-header .text-muted {
+  margin-bottom: 0;
+}
+
+/* Account selector - structured spacing */
+.account-selector {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  padding: 20px 24px;
+  margin-bottom: 32px !important;
+}
+
+.selector-grid {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 20px;
+  align-items: end;
+}
+
+.selector-field label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+}
+
+.selector-meta {
+  padding-top: 24px; /* Align with form field */
+}
+
+.selector-actions label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+}
+
+/* Stats grid - space above and below */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 18px;
+  margin: 32px 0 40px 0 !important;
+}
+
+/* Recent emails panel - structured internal spacing */
+.recent-emails-panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  padding: 24px;
+  margin-bottom: 24px !important;
+}
+
+.panel-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+/* Spacing between internal panel sections */
+.recent-emails-panel .mb-3 {
+  margin-bottom: 20px !important;
+}
+
+.status-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.filters-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 16px 0;
+}
+
+.bulk-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--bg-accent);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+/* Table container - space it properly */
+.recent-emails-panel > div[style*="overflow-x"] {
+  margin-bottom: 24px;
+}
+
+.email-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.email-table th,
+.email-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.email-table thead th {
+  background: var(--bg-elevated);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* Loading and empty states */
+.loading-spinner,
+.empty-state {
+  padding: 40px 20px;
+  text-align: center;
+  margin: 24px 0;
+}
+
+/* Pagination controls */
+#paginationControls {
+  margin-top: 24px !important;
+  padding: 16px 20px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  #dashboard-page {
+    padding: 16px 0;
+  }
+
+  #dashboard-page > * {
+    margin-bottom: 24px;
+  }
+
+  .account-selector {
+    padding: 16px 20px;
+  }
+
+  .selector-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .recent-emails-panel {
+    padding: 20px 16px;
+  }
+}
