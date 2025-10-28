@@ -1,0 +1,35 @@
+/* Dashboard specific layout + styling */
+.dashboard { max-width: 1200px; margin: 0 auto; }
+
+/* Section header band */
+.section-band { background: linear-gradient(180deg, rgba(255,255,255,.02) 0%, rgba(0,0,0,.25) 100%);
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 14px 18px; margin-bottom: 16px; }
+.section-band h3 { margin: 0; font-size: 0.95rem; letter-spacing: .06em; color: var(--text-secondary); text-transform: uppercase; }
+
+/* Stats grid 5-up with responsive fallbacks */
+#statsGrid { display: grid; grid-template-columns: repeat(5, minmax(170px,1fr)); gap: 16px; margin-bottom: 22px; }
+@media (max-width: 1200px){ #statsGrid { grid-template-columns: repeat(3, minmax(160px,1fr)); } }
+@media (max-width: 768px){ #statsGrid { grid-template-columns: repeat(2, minmax(150px,1fr)); } }
+@media (max-width: 520px){ #statsGrid { grid-template-columns: 1fr; } }
+
+.stat-card { background: radial-gradient(120% 120% at 50% 0%, rgba(220,38,38,.06) 0%, rgba(255,255,255,.02) 40%, rgba(0,0,0,.28) 100%), var(--bg-surface);
+  border: 1px solid rgba(255,255,255,.08); border-radius: var(--radius-lg); padding: 16px; box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 8px 20px rgba(0,0,0,.35);
+  display: grid; grid-template-rows: auto 1fr; align-items: center; text-align: center; }
+.stat-card .label { color: var(--text-secondary); font-size: .7rem; letter-spacing: .06em; text-transform: uppercase; }
+.stat-card .value { font-size: 2rem; font-weight: 700; color: var(--text-primary); }
+
+/* Table shell */
+.table-shell { background: linear-gradient(180deg, rgba(0,0,0,.24) 0%, rgba(0,0,0,.4) 100%), var(--bg-surface);
+  border: 1px solid rgba(255,255,255,.12); border-radius: var(--radius-lg); box-shadow: 0 8px 24px rgba(0,0,0,.35); overflow: hidden; }
+.table-shell .table thead th { background: linear-gradient(180deg, rgba(255,255,255,.04) 0%, rgba(0,0,0,.28) 100%), var(--bg-elevated); color: var(--text-secondary); }
+.table-shell .table tbody td { background: rgba(0,0,0,.25); }
+
+/* Command bar compacting */
+.command-bar .btn, .command-bar .form-control { height: 36px; min-height: 36px; padding: 6px 12px; }
+.global-search input { height: 36px; }
+
+/* Primary/ghost buttons */
+.btn-primary { background: var(--brand-primary); }
+.btn-primary:hover { background: var(--brand-secondary); }
+.btn-ghost { border: 1px solid var(--border-default); color: var(--text-secondary); }
+.btn-ghost:hover { color: var(--text-primary); }
