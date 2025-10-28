@@ -1,0 +1,345 @@
+<tr>
+  <td>Oct 28, 10:36 AM</td>
+  <td>
+    FROM <strong>ndayijecika@gmail.com</strong><br>
+    TO <strong>ndayijecika@gmail.com</strong>
+  </td>
+  <td>
+    Quarantine Flow 72065a24… Automated quarantine flow test with invoice keyword.
+  </td>
+
+  <!-- Status column -->
+  <td class="status">
+    <div class="status-stack">
+      <span class="status-badge status-HELD">Held</span>
+      <span class="status-badge status-POLLING">Polling</span>
+      <button type="button" class="status-badge status-RESTART" title="Restart">
+        <i class="bi bi-arrow-repeat"></i>
+      </button>
+    </div>
+  </td>
+
+  <!-- Actions column -->
+  <td class="actions">
+    <div class="action-stack">
+      <div class="action-row">
+        <button class="action-btn action-release" onclick="releaseEmail(1100)" title="Release">
+          <i class="bi bi-check-circle"></i>
+        </button>
+        <button class="action-btn action-discard" onclick="discardEmail(1100)" title="Discard">
+          <i class="bi bi-trash"></i>
+        </button>
+      </div>
+      <div class="action-row">
+        <button class="action-btn action-forward" onclick="forwardEmail(1100)" title="Forward">
+          <i class="bi bi-arrow-right"></i>
+        </button>
+        <button class="action-btn action-reply" onclick="replyEmail(1100)" title="Reply">
+          <i class="bi bi-reply"></i>
+        </button>
+      </div>
+      <div class="action-row">
+        <button class="action-btn action-view" onclick="viewEmail(1100)" title="View Details">
+          <i class="bi bi-eye"></i>
+        </button>
+        <button class="action-btn action-edit" onclick="editEmail(1100)" title="Edit">
+          <i class="bi bi-pencil"></i>
+        </button>
+      </div>
+    </div>
+  </td>
+</tr>
+
+/* Status stack layout */
+.status-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* Status badges (reuse your muted style) */
+.email-table .status-badge {
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  text-align: center;
+  border: 1px solid transparent;
+}
+
+/* Specific status colors */
+.email-table .status-badge.status-HELD {
+  background: rgba(251, 191, 36, 0.12);
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.25);
+}
+.email-table .status-badge.status-POLLING {
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+  border-color: rgba(59, 130, 246, 0.25);
+  animation: pulse 1.5s infinite;
+}
+.email-table .status-badge.status-RESTART {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+  border-color: rgba(34, 197, 94, 0.25);
+}
+
+/* Action stack layout */
+.action-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.action-row {
+  display: flex;
+  gap: 0.25rem;
+}
+
+/* Base action button */
+.email-table .action-btn {
+  width: 100%;
+  height: 30px;
+  padding: 0;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  gap: 8px;
+}
+
+/* Hover effect */
+.email-table .action-btn:hover {
+  filter: brightness(1.2);
+  box-shadow: 0 0 6px rgba(255,255,255,0.2);
+}
+
+/* Per-action colors */
+.email-table .action-btn.action-release {
+  border-color: rgba(190, 242, 100, 0.3);
+  background: rgba(190, 242, 100, 0.08);
+  color: #bef264;
+}
+.email-table .action-btn.action-discard {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef4444;
+}
+.email-table .action-btn.action-forward {
+  border-color: rgba(14, 165, 233, 0.3);
+  background: rgba(14, 165, 233, 0.08);
+  color: #0ea5e9;
+}
+.email-table .action-btn.action-reply {
+  border-color: rgba(139, 92, 246, 0.3);
+  background: rgba(139, 92, 246, 0.08);
+  color: #8b5cf6;
+}
+.email-table .action-btn.action-view {
+  border-color: rgba(251, 191, 36, 0.3);
+  background: rgba(251, 191, 36, 0.08);
+  color: #fbbf24;
+}
+.email-table .action-btn.action-edit {
+  border-color: rgba(236, 72, 153, 0.3);
+  background: rgba(236, 72, 153, 0.08);
+  color: #ec4899;
+}
+
+/* Pulse animation for Polling */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+
+
+=====
+
+
+Example Row Markup
+html
+<tr>
+  <td>Oct 28, 10:36 AM</td>
+  <td>
+    FROM <strong>ndayijecika@gmail.com</strong><br>
+    TO <strong>ndayijecika@gmail.com</strong>
+  </td>
+  <td>
+    Quarantine Flow … Automated quarantine flow test with invoice keyword.
+  </td>
+
+  <!-- Status column -->
+  <td class="status">
+    <div class="status-stack">
+      <span class="status-badge status-HELD">Held</span>
+      <span class="status-badge status-POLLING">Polling</span>
+      <button type="button" class="status-badge status-RESTART" title="Restart">
+        <i class="bi bi-arrow-repeat"></i>
+      </button>
+    </div>
+  </td>
+
+  <!-- Actions column -->
+  <td class="actions">
+    <div class="action-stack">
+      <div class="action-row">
+        <button class="action-btn action-release"><i class="bi bi-check-circle"></i></button>
+        <button class="action-btn action-discard"><i class="bi bi-trash"></i></button>
+      </div>
+      <div class="action-row">
+        <button class="action-btn action-forward"><i class="bi bi-arrow-right"></i></button>
+        <button class="action-btn action-reply"><i class="bi bi-reply"></i></button>
+      </div>
+      <div class="action-row">
+        <button class="action-btn action-view"><i class="bi bi-eye"></i></button>
+        <button class="action-btn action-edit"><i class="bi bi-pencil"></i></button>
+      </div>
+    </div>
+  </td>
+</tr>
+🎨 CSS (All in One)
+css
+/* Lock column widths */
+.email-table td:nth-child(4),
+.email-table td:nth-child(5) {
+  width: 150px; /* adjust as needed */
+  text-align: center;
+  vertical-align: middle;
+  padding: 0.25rem;
+}
+
+/* Stack containers */
+.status-stack,
+.action-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.action-row {
+  display: flex;
+  gap: 0.25rem;
+}
+.action-row .action-btn {
+  flex: 1;
+}
+
+/* Status badges */
+.email-table .status-badge {
+  padding: 5px 12px;              /* +1px taller */
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  text-align: center;
+  border: 1px solid transparent;
+}
+
+/* Status colors */
+.email-table .status-badge.status-HELD {
+  background: rgba(251, 191, 36, 0.12);
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.25);
+}
+.email-table .status-badge.status-POLLING {
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+  border-color: rgba(59, 130, 246, 0.25);
+  animation: pulse 1.5s infinite;
+}
+.email-table .status-badge.status-RESTART {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+  border-color: rgba(34, 197, 94, 0.25);
+}
+
+/* Action buttons */
+.email-table .action-btn {
+  width: calc(100% + 10px);       /* +10px wider */
+  height: 29px;                   /* -1px shorter */
+  padding: 0;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  gap: 8px;
+}
+.email-table .action-btn:hover {
+  filter: brightness(1.2);
+  box-shadow: 0 0 6px rgba(255,255,255,0.2);
+}
+
+/* Per-action colors */
+.email-table .action-btn.action-release {
+  border-color: rgba(190, 242, 100, 0.3);
+  background: rgba(190, 242, 100, 0.08);
+  color: #bef264;
+}
+.email-table .action-btn.action-discard {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef4444;
+}
+.email-table .action-btn.action-forward {
+  border-color: rgba(14, 165, 233, 0.3);
+  background: rgba(14, 165, 233, 0.08);
+  color: #0ea5e9;
+}
+.email-table .action-btn.action-reply {
+  border-color: rgba(139, 92, 246, 0.3);
+  background: rgba(139, 92, 246, 0.08);
+  color: #8b5cf6;
+}
+.email-table .action-btn.action-view {
+  border-color: rgba(251, 191, 36, 0.3);
+  background: rgba(251, 191, 36, 0.08);
+  color: #fbbf24;
+}
+.email-table .action-btn.action-edit {
+  border-color: rgba(236, 72, 153, 0.3);
+  background: rgba(236, 72, 153, 0.08);
+  color: #ec4899;
+}
+
+/* Pulse animation */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+✅ What This Gives You
+Status: Held, Polling, Restart stacked, muted colors, consistent sizing (+1px taller).
+
+Actions: 3 rows × 2 buttons, each styled with your existing muted palette, slightly wider and shorter for balance.
+
+Uniform columns: Status and Actions locked to the same width, headers align.
+
+Hover glow: Same subtle brightness/shadow you liked.
+
+👉 This is now a complete drop‑in: markup + CSS. You can paste the CSS once, then just use the <td class="status">…</td> and <td class="actions">…</td> in each row.
+
+Would you like me to also prep a compact density variant (tighter gaps, smaller font) so you can toggle between “comfortable” and “dense” modes depending on how many rows you’re scanning?

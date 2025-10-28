@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Style Reference Document</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#bef264",
+            "background-light": "#ffffff",
+            "background-dark": "#18181b",
+          },
+          fontFamily: {
+            display: ["Inter", "system-ui", "sans-serif"],
+          },
+          borderRadius: {
+            DEFAULT: "0px",
+          },
+        },
+      },
+    };
+  </script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<style>
+    body {
+        font-family: 'Inter', sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-200 antialiased">
+<div class="max-w-7xl mx-auto p-8 md:p-16 space-y-16">
+<header class="space-y-2">
+<h1 class="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white">Style Reference Document</h1>
+<p class="text-slate-600 dark:text-slate-400 text-lg">
+        The application of the defined color palette, typography, borders, and spacing to various UI components.
+      </p>
+</header>
+<main class="space-y-12">
+<section class="space-y-6">
+<h2 class="text-2xl font-bold border-b border-slate-200 dark:border-slate-700 pb-2 text-slate-900 dark:text-white">Typography</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+<div class="space-y-4">
+<h1 class="text-4xl font-bold text-slate-900 dark:text-white">H1 Heading</h1>
+<h2 class="text-3xl font-bold text-slate-900 dark:text-white">H2 Heading</h2>
+<h3 class="text-2xl font-bold text-slate-900 dark:text-white">H3 Heading</h3>
+<h4 class="text-xl font-semibold text-slate-900 dark:text-white">H4 Heading</h4>
+<p class="text-base text-slate-600 dark:text-slate-400">This is a standard body text. It is used for descriptive text, paragraphs, and other general content. The line height is set for optimal readability.</p>
+<a class="text-primary hover:underline" href="#">This is a hyperlink</a>
+</div>
+<div class="bg-slate-100 dark:bg-slate-800 p-4 space-y-2">
+<h5 class="font-semibold text-slate-900 dark:text-white">Notes</h5>
+<ul class="list-disc list-inside space-y-1 text-slate-600 dark:text-slate-400 text-sm">
+<li>Keep heading sizes compact.</li>
+<li>Do not use thin font weights on dark backgrounds.</li>
+<li>Ensure sufficient contrast for all text.</li>
+</ul>
+</div>
+</div>
+</section>
+<section class="space-y-6">
+<h2 class="text-2xl font-bold border-b border-slate-200 dark:border-slate-700 pb-2 text-slate-900 dark:text-white">Color Palette</h2>
+<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+<div class="flex flex-col">
+<div class="h-24 w-full bg-primary"></div>
+<div class="p-3 bg-slate-100 dark:bg-slate-800">
+<p class="font-semibold text-slate-900 dark:text-white">Primary</p>
+<p class="text-sm text-slate-500 dark:text-slate-400">#bef264</p>
+</div>
+</div>
+<div class="flex flex-col">
+<div class="h-24 w-full bg-[#18181b]"></div>
+<div class="p-3 bg-slate-100 dark:bg-slate-800">
+<p class="font-semibold text-slate-900 dark:text-white">Dark BG</p>
+<p class="text-sm text-slate-500 dark:text-slate-400">#18181b</p>
+</div>
+</div>
+<div class="flex flex-col">
+<div class="h-24 w-full bg-[#27272a]"></div>
+<div class="p-3 bg-slate-100 dark:bg-slate-800">
+<p class="font-semibold text-slate-900 dark:text-white">Dark Surface</p>
+<p class="text-sm text-slate-500 dark:text-slate-400">#27272a</p>
+</div>
+</div>
+<div class="flex flex-col">
+<div class="h-24 w-full bg-white border border-slate-200"></div>
+<div class="p-3 bg-slate-100 dark:bg-slate-800">
+<p class="font-semibold text-slate-900 dark:text-white">Light BG</p>
+<p class="text-sm text-slate-500 dark:text-slate-400">#ffffff</p>
+</div>
+</div>
+<div class="flex flex-col">
+<div class="h-24 w-full bg-slate-100 border border-slate-200"></div>
+<div class="p-3 bg-slate-100 dark:bg-slate-800">
+<p class="font-semibold text-slate-900 dark:text-white">Light Surface</p>
+<p class="text-sm text-slate-500 dark:text-slate-400">#f1f5f9</p>
+</div>
+</div>
+</div>
+</section>
+<section class="space-y-6">
+<h2 class="text-2xl font-bold border-b border-slate-200 dark:border-slate-700 pb-2 text-slate-900 dark:text-white">Buttons</h2>
+<div class="space-y-4">
+<p class="text-slate-600 dark:text-slate-400">Buttons have no border radius for a sharp, modern look.</p>
+<div class="flex flex-wrap items-center gap-4">
+<button class="px-6 py-3 bg-primary text-black font-semibold hover:opacity-90 transition-opacity">Primary Button</button>
+<button class="px-6 py-3 bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-semibold hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">Secondary Button</button>
+<button class="px-6 py-3 bg-rose-500 text-white font-semibold hover:bg-rose-600 transition-colors">Destructive</button>
+<button class="px-6 py-3 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Outline</button>
+</div>
+</div>
+</section>
+<section class="space-y-6">
+<h2 class="text-2xl font-bold border-b border-slate-200 dark:border-slate-700 pb-2 text-slate-900 dark:text-white">Forms &amp; Validation</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<div class="space-y-6">
+<div>
+<label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1" for="default">Default Input</label>
+<input class="w-full bg-white dark:bg-[#27272a] border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-primary focus:border-primary" id="default" placeholder="example@email.com" type="text"/>
+</div>
+<div>
+<label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1" for="focus">Focus State</label>
+<input class="w-full bg-white dark:bg-[#27272a] border border-primary text-slate-900 dark:text-slate-100 ring-2 ring-primary" id="focus" type="text" value="Focused input"/>
+</div>
+<div>
+<label class="block text-sm font-medium text-red-600 dark:text-red-500 mb-1" for="error">Error State</label>
+<input class="w-full bg-white dark:bg-[#27272a] border border-red-500 text-red-600 dark:text-red-500 placeholder:text-red-400 focus:ring-2 focus:ring-red-500 focus:border-red-500" id="error" placeholder="Invalid input" type="text"/>
+<p class="mt-1 text-sm text-red-600 dark:text-red-500">Please enter a valid email address.</p>
+</div>
+</div>
+<div class="space-y-6">
+<div>
+<label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1" for="textarea">Text Area</label>
+<textarea class="w-full bg-white dark:bg-[#27272a] border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-primary focus:border-primary" id="textarea" placeholder="Enter your message..." rows="4"></textarea>
+</div>
+<div class="flex items-center space-x-2 pt-2">
+<input class="h-4 w-4 bg-white dark:bg-[#27272a] border-slate-300 dark:border-slate-600 text-primary focus:ring-primary" id="checkbox" type="checkbox"/>
+<label class="text-sm font-medium text-slate-700 dark:text-slate-300" for="checkbox">I agree to the terms</label>
+</div>
+</div>
+</div>
+</section>
+<section class="space-y-6">
+<h2 class="text-2xl font-bold border-b border-slate-200 dark:border-slate-700 pb-2 text-slate-900 dark:text-white">Alerts</h2>
+<div class="space-y-4">
+<div class="p-4 bg-emerald-50 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border-l-4 border-emerald-500 flex items-start space-x-3">
+<span class="material-symbols-outlined text-emerald-500">check_circle</span>
+<div>
+<h5 class="font-semibold">Success</h5>
+<p class="text-sm">Your operation was completed successfully.</p>
+</div>
+</div>
+<div class="p-4 bg-rose-50 dark:bg-rose-900/50 text-rose-700 dark:text-rose-300 border-l-4 border-rose-500 flex items-start space-x-3">
+<span class="material-symbols-outlined text-rose-500">error</span>
+<div>
+<h5 class="font-semibold">Error</h5>
+<p class="text-sm">Something went wrong. Please try again.</p>
+</div>
+</div>
+<div class="p-4 bg-amber-50 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 border-l-4 border-amber-500 flex items-start space-x-3">
+<span class="material-symbols-outlined text-amber-500">warning</span>
+<div>
+<h5 class="font-semibold">Warning</h5>
+<p class="text-sm">This action may have unintended consequences.</p>
+</div>
+</div>
+<div class="p-4 bg-sky-50 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 border-l-4 border-sky-500 flex items-start space-x-3">
+<span class="material-symbols-outlined text-sky-500">info</span>
+<div>
+<h5 class="font-semibold">Informational</h5>
+<p class="text-sm">Here is a piece of information you might find useful.</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+</div>
+
+</body></html>

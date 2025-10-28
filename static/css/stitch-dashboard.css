@@ -512,16 +512,23 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  align-items: stretch;
+}
+
+.status-cell .status-main {
+  width: 100%;
 }
 
 .status-badge {
+  display: block;
+  width: 100%;
   padding: 4px 12px;
   border-radius: 16px;
   font-size: 0.75rem;
   font-weight: 600;
+  text-align: center;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  display: inline-block;
 }
 
 .status-badge.status-HELD {
@@ -545,8 +552,10 @@
 .status-meta {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   font-size: 0.8rem;
+  width: 100%;
 }
 
 .watcher-chip {
@@ -589,7 +598,9 @@
 
 .action-buttons {
   display: flex;
-  gap: 8px;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .action-btn {
@@ -612,10 +623,35 @@
   background: rgba(74, 222, 128, 0.1);
 }
 
+/* Color-coded action button hover states */
+.action-btn.action-view:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.action-btn.action-edit:hover {
+  border-color: #f59e0b;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
 .action-btn.action-release:hover {
   border-color: var(--stitch-accent);
   color: var(--stitch-accent);
   background: rgba(74, 222, 128, 0.1);
+}
+
+.action-btn.action-reply:hover {
+  border-color: #8b5cf6;
+  color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.action-btn.action-forward:hover {
+  border-color: #6366f1;
+  color: #6366f1;
+  background: rgba(99, 102, 241, 0.1);
 }
 
 .action-btn.action-discard:hover {

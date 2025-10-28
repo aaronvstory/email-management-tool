@@ -10,15 +10,18 @@
 
 /* Use scoped selectors for status badges - target .email-table class */
 .email-table .status-badge {
-  padding: 2px 8px;
+  padding: 4px 12px;
   border-radius: 4px;
   font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
+  width: 100%;
+  text-align: center;
 }
 
 .email-table .status-badge.status-HELD {
@@ -105,7 +108,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 .email-table .status-main {
@@ -174,6 +177,44 @@
   align-items: center;
   justify-content: center;
   font-size: 14px;
+  gap: 8px;
+}
+
+/* Default distinguishable colors for each action */
+.email-table .action-btn.action-view {
+  border-color: rgba(59, 130, 246, 0.3);
+  background: rgba(59, 130, 246, 0.08);
+  color: #93c5fd;
+}
+
+.email-table .action-btn.action-edit {
+  border-color: rgba(139, 92, 246, 0.3);
+  background: rgba(139, 92, 246, 0.08);
+  color: #c4b5fd;
+}
+
+.email-table .action-btn.action-release {
+  border-color: rgba(190, 242, 100, 0.3);
+  background: rgba(190, 242, 100, 0.08);
+  color: #bef264;
+}
+
+.email-table .action-btn.action-reply {
+  border-color: rgba(20, 184, 166, 0.3);
+  background: rgba(20, 184, 166, 0.08);
+  color: #5eead4;
+}
+
+.email-table .action-btn.action-forward {
+  border-color: rgba(245, 158, 11, 0.3);
+  background: rgba(245, 158, 11, 0.08);
+  color: #fbbf24;
+}
+
+.email-table .action-btn.action-discard {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.08);
+  color: #fca5a5;
 }
 
 .email-table .action-btn:hover {
