@@ -357,6 +357,10 @@
   color: var(--text-secondary);
 }
 
+#dashboard-page > div.account-selector > div > div.selector-field > label {
+  padding: 12px 0;
+}
+
 .selector-meta {
   padding-top: 24px; /* Align with form field */
 }
