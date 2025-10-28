@@ -86,7 +86,7 @@ body.login-page .btn-login:hover {
 
 .section-band{background:linear-gradient(180deg,rgba(255,255,255,.025) 0%,rgba(0,0,0,.25) 100%);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:14px 18px;margin-bottom:16px}
 .page-header{margin-bottom:18px}.content-scroll>.card:first-child,.content-scroll>.section-band:first-child{margin-top:6px}
-.stat-card-modern{background:radial-gradient(120% 120% at 50% 0%,rgba(220,38,38,.06) 0%,rgba(255,255,255,.02) 40%,rgba(0,0,0,.28) 100%),var(--bg-surface);border:1px solid rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 8px 20px rgba(0,0,0,.35)}
+.stat-card-modern{background:radial-gradient(120% 120% at 50% 0%,rgba(190,242,100,.06) 0%,rgba(255,255,255,.02) 40%,rgba(0,0,0,.28) 100%),var(--bg-surface);border:1px solid rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 8px 20px rgba(0,0,0,.35)}
 .stat-number{letter-spacing:.5px}
 .command-bar .btn,.command-bar .form-control{min-height:36px;height:36px;padding:6px 12px}.global-search input{height:36px}
 .health-pill{padding:5px 10px;border:1px solid var(--border-default)}
@@ -109,7 +109,7 @@ body.login-page .btn-login:hover {
 /* Stat cards: stronger depth and compact height */
 .stat-card-modern {
   background:
-    radial-gradient(120% 120% at 50% 0%, rgba(220,38,38,.06) 0%, rgba(255,255,255,.02) 40%, rgba(0,0,0,.32) 100%),
+    radial-gradient(120% 120% at 50% 0%, rgba(190,242,100,.06) 0%, rgba(255,255,255,.02) 40%, rgba(0,0,0,.32) 100%),
     var(--bg-surface);
   border: 1px solid rgba(255,255,255,.10);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 10px 26px rgba(0,0,0,.38);
