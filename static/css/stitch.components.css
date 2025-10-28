@@ -1,0 +1,152 @@
+/* ========= stitch.components.css =========
+   Scope: safe, no !important, no resets. Uses your tokens.
+   Depends on: main.css (tokens), theme-dark.css.
+*/
+
+/* Root tokens are already in main.css — we just reference them */
+.dark-app-shell {
+  /* table header: tiny caps */
+  --table-th-caps-size: 11px;
+  --table-th-caps-tracking: 0.12em;
+  --table-row-hover: rgba(255,255,255,.03);
+  --chip-bg: rgba(255,255,255,.06);
+  --chip-fg: rgba(255,255,255,.65);
+  --chip-br: rgba(255,255,255,.14);
+}
+
+/* 1) TABLES (Emails/Dashboard) */
+.dark-app-shell .email-table thead th,
+.dark-app-shell .table-modern thead th {
+  font-size: var(--table-th-caps-size);
+  text-transform: uppercase;
+  letter-spacing: var(--table-th-caps-tracking);
+  color: rgb(212 212 216);
+  border-bottom-color: rgba(255,255,255,.08);
+}
+
+.dark-app-shell .email-table tbody tr:hover,
+.dark-app-shell .table-modern tbody tr:hover {
+  background: var(--table-row-hover);
+}
+
+/* 2) STATUS BADGES (maps existing markup) */
+.dark-app-shell .status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+
+/* New modifiers (future-proof) */
+.dark-app-shell .status-badge--HELD,
+.dark-app-shell .status-HELD {
+  background: rgba(251,191,36,.12);
+  color: #fbbf24;
+  border: 1px solid rgba(251,191,36,.25);
+}
+.dark-app-shell .status-badge--RELEASED,
+.dark-app-shell .status-RELEASED {
+  background: rgba(190,242,100,.12);
+  color: #bef264;
+  border: 1px solid rgba(190,242,100,.25);
+}
+.dark-app-shell .status-badge--REJECTED,
+.dark-app-shell .status-REJECTED {
+  background: rgba(239,68,68,.12);
+  color: #f87171;
+  border: 1px solid rgba(239,68,68,.25);
+}
+.dark-app-shell .status-badge--DISCARDED,
+.dark-app-shell .status-DISCARDED {
+  background: rgba(156,163,175,.12);
+  color: #9ca3af;
+  border: 1px solid rgba(156,163,175,.25);
+}
+
+/* 3) CHIPS (watcher state; keeps old class working) */
+.dark-app-shell .chip,
+.dark-app-shell .watcher-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--chip-fg);
+  background: var(--chip-bg);
+  border: 1px solid var(--chip-br);
+}
+.dark-app-shell .chip--active,
+.dark-app-shell .watcher-chip.active {
+  color: #bef264;
+  background: rgba(190,242,100,.12);
+  border-color: rgba(190,242,100,.25);
+}
+.dark-app-shell .chip--stopped,
+.dark-app-shell .watcher-chip.stopped {
+  color: #f87171;
+  background: rgba(239,68,68,.12);
+  border-color: rgba(239,68,68,.25);
+}
+.dark-app-shell .chip--muted,
+.dark-app-shell .watcher-chip.unknown {
+  color: #9ca3af;
+  background: rgba(156,163,175,.12);
+  border-color: rgba(156,163,175,.25);
+}
+
+/* 4) ACTION BUTTONS (keeps .action-btn working; adds .icon-btn) */
+.dark-app-shell .action-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 6px 8px;
+}
+.dark-app-shell .action-btn,
+.dark-app-shell .icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  width: 30px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.04);
+  color: rgba(255,255,255,.8);
+}
+.dark-app-shell .action-btn:hover,
+.dark-app-shell .icon-btn:hover {
+  background: rgba(255,255,255,.08);
+}
+
+/* 5) KPI CARDS (Dashboard) */
+.dark-app-shell .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 16px;
+}
+.dark-app-shell .stat-card {
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 16px;
+}
+.dark-app-shell .stat-card .value {
+  font-size: 32px;
+  line-height: 1;
+  color: var(--on-surface-strong, #f4f4f5);
+}
+
+/* 6) DENSITY (opt-in wrapper) */
+.dark-app-shell .density-compact .table-modern td,
+.dark-app-shell .density-compact .table-modern th,
+.dark-app-shell .density-compact .email-table td,
+.dark-app-shell .density-compact .email-table th {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+/* (no debug overlays in production) */
