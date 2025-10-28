@@ -224,7 +224,7 @@ cache = Cache(app, config={
     'CACHE_DEFAULT_TIMEOUT': 5     # 5 seconds default TTL
 })
 # Export cache for use in blueprints
-# Use a global variable instead of attaching to app
+app.cache = cache  # Register cache on app for blueprint access via current_app.cache
 GLOBAL_CACHE = cache
 
 # CSRF configuration - time-limited tokens and allow HTTP in dev
