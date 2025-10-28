@@ -1,0 +1,45 @@
+/* dev-overrides.css - Optional tweaks while developing Stitch theme */
+
+/* Subject/preview styling refinement */
+table tbody tr td:nth-child(3) > div:first-child {
+  font-weight: 600;
+  color: rgb(244 244 245);
+}
+
+table tbody tr td:nth-child(3) > div:nth-child(2) {
+  font-size: 13px;
+  color: rgb(161 161 170);
+}
+
+/* Page header polish */
+.page-header .title,
+.page-title { 
+  margin-bottom: 2px; 
+  font-weight: 800;
+}
+
+.page-header .subtitle,
+.page-subtitle { 
+  color: rgb(161 161 170); 
+}
+
+/* Button and icon refinements */
+table tbody tr td:last-child button { 
+  border-radius: 6px; 
+}
+
+/* Dev indicator badge */
+html::after {
+  content: "stitch-dev active";
+  position: fixed;
+  right: 8px;
+  bottom: 8px;
+  z-index: 999999;
+  padding: 4px 8px;
+  font: 12px/1.2 system-ui;
+  background: rgba(190, 242, 100, .15);
+  color: #bef264;
+  border: 1px solid rgba(190, 242, 100, .35);
+  border-radius: 6px;
+  pointer-events: none;
+}
