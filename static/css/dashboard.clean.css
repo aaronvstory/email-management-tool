@@ -1,3 +1,29 @@
+/* Disable this file on login screen */
+body.login-page :where(*) { all: revert !important; }
+
+
+/* Scope dashboard-only rules to main app shell, not login */
+:root {} /* keep variables global */
+.app .section-band,
+.app #statsGrid,
+.app .stat-card,
+.app .table-shell,
+.app .command-bar .btn,
+.app .command-bar .form-control,
+.app .global-search input,
+.app .btn-primary,
+.app .btn-ghost {
+  /* This block does nothing; it's here to force scoping with .app below */
+}
+
+/* Then prefix all existing rules with .app */
+.app .section-band { /* existing styles */ }
+.app #statsGrid { /* existing grid styles */ }
+.app .stat-card { /* existing styles */ }
+.app .table-shell { /* existing styles */ }
+/* and so on for the rest in dashboard.clean.css */
+
+
 /* Dashboard specific layout + styling */
 .dashboard { max-width: 1200px; margin: 0 auto; }
 

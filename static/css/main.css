@@ -11,21 +11,21 @@
   --bg-surface: #1a1a1a;
   --bg-elevated: #242424;
   --bg-accent: #2a2a2a;
-  
+
   --text-primary: #ffffff;
   --text-secondary: #9ca3af;
   --text-muted: #6b7280;
-  
+
   --brand-primary: #dc2626;
   --brand-secondary: #991b1b;
   --success: #10b981;
   --warning: #f59e0b;
   --danger: #ef4444;
-  
+
   --border-subtle: rgba(255,255,255,0.06);
   --border-default: rgba(255,255,255,0.12);
   --border-strong: rgba(255,255,255,0.2);
-  
+
   /* Layout */
   --sidebar-width: 240px;
   --header-height: 60px;
@@ -43,6 +43,12 @@ body {
   margin: 0;
   line-height: 1.5;
 }
+
+/* Ensure login styling wins */
+body.login-page .form-control,
+body.login-page .input-group-text,
+body.login-page .btn-login { all: revert; }
+
 
 /* === Layout Foundation === */
 .dark-app-shell {
