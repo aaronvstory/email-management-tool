@@ -111,12 +111,13 @@
   align-items: center;
   justify-content: center;
   height: 30px;
-  width: 30px;
   border-radius: 6px;
   border: 1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.04);
   color: rgba(255,255,255,.8);
 }
+.dark-app-shell .action-btn { padding: 0 10px; min-width: 30px; }
+.dark-app-shell .icon-btn { width: 30px; }
 .dark-app-shell .action-btn:hover,
 .dark-app-shell .icon-btn:hover {
   background: rgba(255,255,255,.08);
@@ -140,6 +141,96 @@
   color: var(--on-surface-strong, #f4f4f5);
 }
 
+/* 5b) PANELS (unified across pages) */
+.dark-app-shell .panel,
+.dark-app-shell .panel-card {
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.dark-app-shell .panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.02);
+}
+.dark-app-shell .panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #f4f4f5;
+}
+.dark-app-shell .panel-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.dark-app-shell .panel-body {
+  padding: 16px;
+}
+.dark-app-shell .panel-note {
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.02);
+}
+
+/* 5c) Viewer specifics (lightweight, scoped) */
+.dark-app-shell .edit-mode-banner { display: none; }
+.dark-app-shell .edit-mode-banner.active { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.dark-app-shell .email-header { margin-bottom: 12px; }
+.dark-app-shell .email-subject {
+  width: 100%;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.12);
+  color: #f4f4f5;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 16px;
+}
+.dark-app-shell .email-subject.editable { border-color: rgba(190,242,100,.35); box-shadow: 0 0 0 2px rgba(190,242,100,.15); }
+.dark-app-shell .email-meta { margin-top: 8px; color: #a1a1aa; font-size: 13px; display: grid; gap: 6px; }
+.dark-app-shell .email-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 14px; }
+.dark-app-shell .email-content {
+  width: 100%;
+  min-height: 260px;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.12);
+  color: #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.dark-app-shell .email-raw-pre {
+  width: 100%;
+  overflow: auto;
+  background: rgba(0,0,0,.35);
+  border: 1px solid rgba(255,255,255,.12);
+  color: #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  max-height: 480px;
+}
+.dark-app-shell .email-html-content iframe { width: 100%; min-height: 440px; border: 0; background: #ffffff; border-radius: 6px; }
+.dark-app-shell .body-toggle { display: inline-flex; gap: 6px; margin-bottom: 10px; }
+.dark-app-shell .body-toggle .toggle-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 30px; padding: 0 12px; border-radius: 6px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.04);
+  color: rgba(255,255,255,.85);
+}
+.dark-app-shell .body-toggle .toggle-btn.active { background: rgba(190,242,100,.15); border-color: rgba(190,242,100,.35); color: #d9f99d; }
+
+/* Action button variants used on viewer */
+.dark-app-shell .action-btn.primary { border-color: rgba(59,130,246,.35); color: #93c5fd; background: rgba(59,130,246,.12); }
+.dark-app-shell .action-btn.success { border-color: rgba(190,242,100,.35); color: #bef264; background: rgba(190,242,100,.12); }
+.dark-app-shell .action-btn.danger { border-color: rgba(248,113,113,.35); color: #f87171; background: rgba(248,113,113,.12); }
+
 /* 6) DENSITY (opt-in wrapper) */
 .dark-app-shell .density-compact .table-modern td,
 .dark-app-shell .density-compact .table-modern th,
@@ -147,6 +238,21 @@
 .dark-app-shell .density-compact .email-table th {
   padding-top: 6px;
   padding-bottom: 6px;
+}
+
+/* 6b) TABLE ENHANCEMENTS (opt-in) */
+.dark-app-shell .table-striped tbody tr:nth-child(odd),
+.dark-app-shell .email-table.table-striped tbody tr:nth-child(odd) {
+  background: rgba(255,255,255,.02);
+}
+.dark-app-shell .table-sticky-header thead th,
+.dark-app-shell .email-table.table-sticky-header thead th {
+  position: sticky;
+  top: 0;
+  background: rgba(26,26,26,0.9);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  z-index: 1;
 }
 
 /* 7) HEADER ACTIONS (compat for existing small ghost buttons) */
@@ -165,5 +271,9 @@
   background: rgba(255,255,255,.08);
   border-color: rgba(255,255,255,.2);
 }
+
+/* 8) Collapsible sections (used on Add Account) */
+.dark-app-shell .collapsible .form-section-body { display: block; }
+.dark-app-shell .collapsible.collapsed .form-section-body { display: none; }
 
 /* (no debug overlays in production) */

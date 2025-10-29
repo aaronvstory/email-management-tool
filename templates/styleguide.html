@@ -15,6 +15,35 @@
   </header>
 
   <main class="tw-space-y-12">
+    <!-- Panels & Cards -->
+    <section class="tw-space-y-6">
+      <h2 class="tw-text-2xl tw-font-bold tw-border-b tw-border-slate-700 tw-pb-2 tw-text-white">Panels & Cards</h2>
+      <div class="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-6">
+        <div class="panel-card">
+          <div class="panel-header">
+            <div class="panel-title"><i class="bi bi-collection"></i> Panel Header</div>
+            <div class="panel-actions">
+              <button class="btn btn-ghost btn-sm"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+              <button class="btn btn-secondary btn-sm"><i class="bi bi-gear"></i> Manage</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <p class="tw-text-slate-300 tw-text-sm">Use <code>.panel-card</code> to wrap content. Headers use
+              <code>.panel-header</code> with <code>.panel-title</code> and <code>.panel-actions</code>.
+            </p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="tw-flex tw-items-center tw-justify-between tw-mb-2">
+            <span class="tw-text-xs tw-text-slate-400 tw-uppercase tw-tracking-wider">KPI</span>
+            <i class="bi bi-graph-up tw-text-slate-400"></i>
+          </div>
+          <div class="value">1,234</div>
+          <div class="tw-text-slate-400 tw-text-sm tw-mt-1">Processed Emails</div>
+        </div>
+      </div>
+    </section>
+
     <!-- Typography -->
     <section class="tw-space-y-6">
       <h2 class="tw-text-2xl tw-font-bold tw-border-b tw-border-slate-700 tw-pb-2 tw-text-white">Typography</h2>
@@ -85,20 +114,74 @@
     <section class="tw-space-y-6">
       <h2 class="tw-text-2xl tw-font-bold tw-border-b tw-border-slate-700 tw-pb-2 tw-text-white">Buttons</h2>
       <div class="tw-space-y-4">
-        <p class="tw-text-slate-400">Buttons have no border radius for a sharp, modern look.</p>
+        <p class="tw-text-slate-400">Use the shared palette: <code>.btn-primary</code>, <code>.btn-secondary</code>,
+          <code>.btn-ghost</code>, <code>.btn-success</code>, <code>.btn-warning</code>, <code>.btn-danger</code> and
+          size <code>.btn-sm</code>.
+        </p>
         <div class="tw-flex tw-flex-wrap tw-items-center tw-gap-4">
-          <button
-            class="tw-px-6 tw-py-3 tw-bg-[#bef264] tw-text-black tw-font-semibold hover:tw-opacity-90 tw-transition-opacity tw-rounded-none">Primary
-            Button</button>
-          <button
-            class="tw-px-6 tw-py-3 tw-bg-slate-700 tw-text-slate-100 tw-font-semibold hover:tw-bg-slate-600 tw-transition-colors tw-rounded-none">Secondary
-            Button</button>
-          <button
-            class="tw-px-6 tw-py-3 tw-bg-rose-500 tw-text-white tw-font-semibold hover:tw-bg-rose-600 tw-transition-colors tw-rounded-none">Destructive</button>
-          <button
-            class="tw-px-6 tw-py-3 tw-border tw-border-slate-600 tw-text-slate-100 tw-font-semibold hover:tw-bg-slate-800 tw-transition-colors tw-rounded-none">Outline</button>
+          <button class="btn btn-primary">Primary</button>
+          <button class="btn btn-secondary">Secondary</button>
+          <button class="btn btn-ghost">Ghost</button>
+          <button class="btn btn-success">Success</button>
+          <button class="btn btn-warning">Warning</button>
+          <button class="btn btn-danger">Danger</button>
+          <button class="btn btn-secondary btn-sm"><i class="bi bi-gear"></i> Small</button>
+        </div>
+        <div class="tw-mt-3">
+          <div class="button-bar">
+            <button class="btn btn-secondary btn-sm"><i class="bi bi-play"></i> Start</button>
+            <button class="btn btn-secondary btn-sm"><i class="bi bi-stop"></i> Stop</button>
+            <button class="btn btn-ghost btn-sm"><i class="bi bi-arrow-repeat"></i> Restart</button>
+            <button class="btn btn-danger btn-sm"><i class="bi bi-trash"></i> Delete</button>
+          </div>
+          <p class="tw-text-slate-400 tw-text-sm tw-mt-2">Use <code>.button-bar</code> to keep action clusters uniform.
+          </p>
         </div>
       </div>
+    </section>
+
+    <!-- Tooltips -->
+    <section class="tw-space-y-6">
+      <h2 class="tw-text-2xl tw-font-bold tw-border-b tw-border-slate-700 tw-pb-2 tw-text-white">Tooltips</h2>
+      <p class="tw-text-slate-400">Bootstrap tooltips are themed for dark mode. Use
+        <code>data-bs-toggle=&quot;tooltip&quot;</code> with <code>title</code>.</p>
+      <button class="btn btn-ghost btn-sm" data-bs-toggle="tooltip" title="Dark themed tooltip"><i
+          class="bi bi-info-circle"></i> Hover me</button>
+    </section>
+
+    <!-- Selector Card -->
+    <section class="tw-space-y-6">
+      <h2 class="tw-text-2xl tw-font-bold tw-border-b tw-border-slate-700 tw-pb-2 tw-text-white">Selector Card</h2>
+      <div class="panel-card">
+        <div class="panel-header">
+          <div class="panel-title"><i class="bi bi-funnel"></i> Filter</div>
+        </div>
+        <div class="panel-body">
+          <div class="tw-grid tw-grid-cols-1 md:tw-grid-cols-[1fr_auto_auto] tw-gap-4 tw-items-end">
+            <div>
+              <label class="form-label">Account</label>
+              <select class="form-select">
+                <option>All accounts</option>
+                <option>Example</option>
+              </select>
+            </div>
+            <div class="tw-text-slate-400">Showing all monitored accounts</div>
+            <div class="button-bar">
+              <button class="btn btn-secondary btn-sm"><i class="bi bi-gear"></i> Manage</button>
+              <button class="btn btn-ghost btn-sm"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Status Banner -->
+    <section class="tw-space-y-6">
+      <h2 class="tw-text-2xl tw-font-bold tw-border-b tw-border-slate-700 tw-pb-2 tw-text-white">Status Banner</h2>
+      <div class="alert alert-warning tw-mt-2"><strong>HELD</strong> — Not visible in recipient's mailbox until release
+      </div>
+      <p class="tw-text-slate-400 tw-text-sm">Use <code>.alert</code> variants for inline banners in viewers and queue.
+      </p>
     </section>
 
     <!-- Forms & Validation -->
@@ -137,6 +220,73 @@
             <label for="checkbox" class="tw-text-sm tw-font-medium tw-text-slate-300">I agree to the terms</label>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- Badges & Chips -->
+    <section class="tw-space-y-6">
+      <h2 class="tw-text-2xl tw-font-bold tw-border-b tw-border-slate-700 tw-pb-2 tw-text-white">Badges & Chips</h2>
+      <div class="tw-flex tw-flex-wrap tw-gap-3 tw-items-center">
+        <span class="status-badge status-HELD">Held</span>
+        <span class="status-badge status-RELEASED">Released</span>
+        <span class="status-badge status-REJECTED">Rejected</span>
+        <span class="status-badge status-DISCARDED">Discarded</span>
+        <span class="watcher-chip active">Active</span>
+        <span class="watcher-chip stopped">Stopped</span>
+        <span class="watcher-chip unknown">Unknown</span>
+      </div>
+    </section>
+
+    <!-- Tables -->
+    <section class="tw-space-y-6">
+      <h2 class="tw-text-2xl tw-font-bold tw-border-b tw-border-slate-700 tw-pb-2 tw-text-white">Tables</h2>
+      <div class="panel-card">
+        <div class="panel-header">
+          <div class="panel-title"><i class="bi bi-table"></i> Compact Table</div>
+          <div class="panel-actions">
+            <button class="btn btn-ghost btn-sm"><i class="bi bi-sliders"></i> Configure</button>
+          </div>
+        </div>
+        <div class="panel-body density-compact">
+          <table class="table-modern email-table" style="width:100%">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>From</th>
+                <th>Subject</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Oct 25, 11:20 AM</td>
+                <td>alice@example.com</td>
+                <td>Quarterly update</td>
+                <td><span class="status-badge status-HELD">Held</span></td>
+              </tr>
+              <tr>
+                <td>Oct 24, 2:04 PM</td>
+                <td>ops@example.com</td>
+                <td>Deployment OK</td>
+                <td><span class="status-badge status-RELEASED">Released</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Toasts -->
+    <section class="tw-space-y-6">
+      <h2 class="tw-text-2xl tw-font-bold tw-border-b tw-border-slate-700 tw-pb-2 tw-text-white">Toasts</h2>
+      <p class="tw-text-slate-400">Demo the global toast helpers wired in <code>static/js/app.js</code>.</p>
+      <div class="tw-flex tw-flex-wrap tw-gap-3">
+        <button class="btn btn-secondary btn-sm" onclick="showSuccess('Saved successfully')">Success</button>
+        <button class="btn btn-secondary btn-sm" onclick="showError('Something went wrong')">Error</button>
+        <button class="btn btn-secondary btn-sm" onclick="showWarning('Check your input')">Warning</button>
+        <button class="btn btn-secondary btn-sm" onclick="showInfo('Heads up – FYI')">Info</button>
+        <button class="btn btn-primary btn-sm"
+          onclick="confirmToast('Proceed with action?', ()=>showSuccess('Confirmed'))">Confirm</button>
       </div>
     </section>
 

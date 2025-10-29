@@ -39,6 +39,16 @@ A comprehensive email moderation system for Windows that intercepts, holds, and 
 - **[Style Guide](docs/STYLEGUIDE.md)** - UI/UX standards (mandatory for UI changes)
 - **[Test Scripts](scripts/README.md)** - Automated testing utilities and examples
 
+**UI Modernization & Design System**:
+- **[UI Docs Index](docs/ui/README.md)** — Entry point for all modernization and design-system docs
+- **[Design System](docs/ui/design-system.md)** — Tokens, components, include order, usage patterns
+- **[Modernization Overview](docs/ui/modernization-overview.md)** — Goals, scope, converted pages, verification
+- **[Emails/Unified Polish Plan](docs/ui/emails-unified-polish.md)** — Remaining visuals and acceptance criteria
+- Live showcase: run the app and visit `/styleguide` (see also `docs/ui/styleguide.md`)
+
+**Team Handoff**:
+- **[Next-Agent Handoff Guide](docs/HANDOFF_NEXT_AGENT.md)** — Setup, run, active work, branch plan, and checklists for a smooth continuation.
+
 ## 📋 Requirements
 
 - Windows 10/11 or Windows Server 2016+

@@ -581,6 +581,63 @@ body.login-page .btn-login { background: var(--brand-primary); border:1px solid 
   min-height: 32px;
 }
 
+/* Additional button variants (dark theme friendly) */
+.btn-success {
+  background: rgba(16,185,129,0.15);
+  color: var(--success);
+  border-color: rgba(16,185,129,0.35);
+}
+.btn-success:hover { background: rgba(16,185,129,0.22); }
+
+.btn-warning {
+  background: rgba(245,158,11,0.15);
+  color: #fbbf24;
+  border-color: rgba(245,158,11,0.35);
+}
+.btn-warning:hover { background: rgba(245,158,11,0.22); }
+
+.btn-danger {
+  background: rgba(239,68,68,0.15);
+  color: var(--danger);
+  border-color: rgba(239,68,68,0.35);
+}
+.btn-danger:hover { background: rgba(239,68,68,0.22); }
+
+/* Legacy support: account action buttons → map to shared palette */
+.btn-account { /* compact ghost-like by default */
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  min-height: 32px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-default);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.9);
+}
+.btn-account:hover { background: rgba(255,255,255,0.08); border-color: var(--border-strong); }
+.btn-account i { line-height: 1; }
+
+/* Variant mapping */
+.btn-account-start { border-color: rgba(16,185,129,0.35); color: var(--success); background: rgba(16,185,129,0.12); }
+.btn-account-stop, .btn-account-delete { border-color: rgba(239,68,68,0.35); color: var(--danger); background: rgba(239,68,68,0.12); }
+.btn-account-edit, .btn-account-test, .btn-account-diagnostics { border-color: var(--border-default); color: rgba(255,255,255,0.9); background: rgba(255,255,255,0.04); }
+
+/* Button bars for action clusters */
+.button-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.button-bar .btn { min-height: 32px; padding: 6px 10px; }
+
+/* Tooltip theme (Bootstrap 5) */
+.tooltip .tooltip-inner { background: #0f0f10; color: #e5e7eb; border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; }
+.bs-tooltip-auto[data-popper-placement^="top"] .tooltip-arrow::before,
+.bs-tooltip-top .tooltip-arrow::before { border-top-color: #0f0f10; }
+.bs-tooltip-auto[data-popper-placement^="bottom"] .tooltip-arrow::before,
+.bs-tooltip-bottom .tooltip-arrow::before { border-bottom-color: #0f0f10; }
+.bs-tooltip-auto[data-popper-placement^="left"] .tooltip-arrow::before,
+.bs-tooltip-start .tooltip-arrow::before { border-left-color: #0f0f10; }
+.bs-tooltip-auto[data-popper-placement^="right"] .tooltip-arrow::before,
+.bs-tooltip-end .tooltip-arrow::before { border-right-color: #0f0f10; }
+
 /* === Badges & Status === */
 .badge {
   display: inline-flex;
