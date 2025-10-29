@@ -76,41 +76,41 @@
 
 <!-- Stitch Stats Grid -->
 <div class="stats-grid tw-grid tw-grid-cols-1 md:tw-grid-cols-2 lg:tw-grid-cols-4 tw-gap-6" id="statsGrid">
-  <div class="stat-card-modern tw-bg-[#18181b] tw-p-5 tw-border tw-border-[#27272a] tw-rounded-md">
+  <div class="stat-card stat-card-modern tw-bg-[#18181b] tw-p-5 tw-border tw-border-[#27272a] tw-rounded-md">
     <div class="tw-flex tw-items-center tw-justify-between">
       <h3 class="tw-text-sm tw-font-medium tw-text-[#a1a1aa] tw-uppercase tw-tracking-wider">Emails Processed</h3>
       <span class="material-symbols-outlined tw-text-[#a1a1aa]">mail</span>
     </div>
-    <p class="stat-value tw-text-3xl tw-font-bold tw-text-[#f4f4f5] tw-mt-4" id="statTotal">{{ totals.value }}</p>
+    <p class="stat-value value tw-text-3xl tw-font-bold tw-text-[#f4f4f5] tw-mt-4" id="statTotal">{{ totals.value }}</p>
   </div>
-  <div class="stat-card-modern held tw-bg-[#18181b] tw-p-5 tw-border tw-border-[#27272a] tw-rounded-md">
+  <div class="stat-card stat-card-modern held tw-bg-[#18181b] tw-p-5 tw-border tw-border-[#27272a] tw-rounded-md">
     <div class="tw-flex tw-items-center tw-justify-between">
       <h3 class="tw-text-sm tw-font-medium tw-text-[#a1a1aa] tw-uppercase tw-tracking-wider">Emails Held</h3>
       <span class="material-symbols-outlined tw-text-[#a1a1aa]">pause_circle</span>
     </div>
-    <p class="stat-value tw-text-3xl tw-font-bold tw-text-[#f4f4f5] tw-mt-4" id="statHeld">{{ totals.held }}</p>
+    <p class="stat-value value tw-text-3xl tw-font-bold tw-text-[#f4f4f5] tw-mt-4" id="statHeld">{{ totals.held }}</p>
     <p class="tw-text-xs tw-text-yellow-400 tw-flex tw-items-center tw-gap-1 tw-mt-1">
       <span class="material-symbols-outlined tw-text-base">warning</span>
       Pending review
     </p>
   </div>
-  <div class="stat-card-modern released tw-bg-[#18181b] tw-p-5 tw-border tw-border-[#27272a] tw-rounded-md">
+  <div class="stat-card stat-card-modern released tw-bg-[#18181b] tw-p-5 tw-border tw-border-[#27272a] tw-rounded-md">
     <div class="tw-flex tw-items-center tw-justify-between">
       <h3 class="tw-text-sm tw-font-medium tw-text-[#a1a1aa] tw-uppercase tw-tracking-wider">Emails Released</h3>
       <span class="material-symbols-outlined tw-text-[#a1a1aa]">send</span>
     </div>
-    <p class="stat-value tw-text-3xl tw-font-bold tw-text-[#f4f4f5] tw-mt-4" id="statReleased">{{ totals.released }}</p>
+    <p class="stat-value value tw-text-3xl tw-font-bold tw-text-[#f4f4f5] tw-mt-4" id="statReleased">{{ totals.released }}</p>
     <p class="tw-text-xs tw-text-[#bef264] tw-flex tw-items-center tw-gap-1 tw-mt-1">
       <span class="material-symbols-outlined tw-text-base">arrow_upward</span>
       Delivered
     </p>
   </div>
-  <div class="stat-card-modern tw-bg-[#18181b] tw-p-5 tw-border tw-border-[#27272a] tw-rounded-md">
+  <div class="stat-card stat-card-modern tw-bg-[#18181b] tw-p-5 tw-border tw-border-[#27272a] tw-rounded-md">
     <div class="tw-flex tw-items-center tw-justify-between">
       <h3 class="tw-text-sm tw-font-medium tw-text-[#a1a1aa] tw-uppercase tw-tracking-wider">Watchers Active</h3>
       <span class="material-symbols-outlined tw-text-[#a1a1aa]">visibility</span>
     </div>
-    <p class="stat-value tw-text-3xl tw-font-bold tw-text-[#f4f4f5] tw-mt-4" id="statWatchers">--</p>
+    <p class="stat-value value tw-text-3xl tw-font-bold tw-text-[#f4f4f5] tw-mt-4" id="statWatchers">--</p>
     <p class="tw-text-xs tw-text-[#a1a1aa] tw-mt-1 tw-h-5"> </p>
   </div>
 </div>
@@ -197,7 +197,7 @@
   </div>
 
   <!-- Email Table -->
-  <div class="tw-overflow-x-auto">
+  <div class="density-compact tw-overflow-x-auto">
     <table class="email-table tw-w-full tw-text-sm">
       <thead class="tw-border-b tw-border-[#27272a]">
         <tr>
