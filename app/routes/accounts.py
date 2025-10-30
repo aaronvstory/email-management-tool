@@ -581,6 +581,35 @@ def email_accounts():
     return render_template('accounts.html', accounts=accounts)
 
 
+@accounts_bp.route('/accounts/stitch')
+@login_required
+def email_accounts_stitch():
+    """Preview the new Stitch theme accounts page (Tailwind-based)"""
+    if current_user.role != 'admin':
+        flash('Admin access required', 'error')
+        return redirect(url_for('dashboard.dashboard'))
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    accounts = cursor.execute(
+        """
+        SELECT id, account_name, email_address,
+               imap_host, imap_port, imap_username, imap_use_ssl,
+               smtp_host, smtp_port, smtp_username, smtp_use_ssl,
+               is_active, last_checked, last_error,
+               created_at, updated_at
+        FROM email_accounts
+        ORDER BY account_name
+        """
+    ).fetchall()
+
+    conn.close()
+
+    return render_template('stitch/accounts.html', accounts=accounts)
+
+
 @accounts_bp.route('/accounts/import', methods=['GET'])
 @login_required
 def accounts_import_page():

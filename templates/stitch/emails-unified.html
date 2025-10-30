@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Emails Unified - Email Management Tool{% endblock %}
+
+{% block content %}
+<div id="emails_unified">
+<main class="tw-flex-1 tw-p-6 tw-space-y-6">
+        <div class="tw-flex tw-flex-col tw-md:flex-row tw-md:items-center tw-md:justify-between tw-gap-4">
+          <div>
+            <h1 class="tw-text-2xl tw-font-bold tw-text-white tw-tracking-tight">Email Management</h1>
+            <p class="tw-mt-1 tw-text-zinc-400">View and manage all email messages across your accounts.</p>
+          </div>
+          <button class="tw-flex-shrink-0 tw-bg-primary tw-text-zinc-900 tw-font-semibold tw-py-2 tw-px-4 tw-hover:bg-lime-400 tw-transition-colors tw-flex tw-items-center tw-gap-2 tw-text-sm">
+            <span class="material-symbols-outlined tw-text-base">add</span>
+            Add Account
+          </button>
+        </div>
+
+        <div class="tw-bg-background tw-p-4 tw-border tw-border-border">
+          <div class="tw-grid tw-grid-cols-1 tw-md:grid-cols-2 tw-lg:grid-cols-4 tw-gap-4 tw-items-end">
+            <div class="tw-lg:col-span-2">
+              <label class="tw-block tw-text-sm tw-font-medium tw-text-zinc-400 tw-mb-1.5" for="email-account">Account</label>
+              <select class="tw-w-full tw-border-zinc-700 tw-bg-surface tw-text-zinc-300 tw-focus:ring-primary tw-focus:border-primary tw-text-sm" id="email-account">
+                <option>All Accounts</option>
+                <option>Account 1 (john.doe@example.com)</option>
+                <option>Account 2 (jane.doe@example.com)</option>
+              </select>
+            </div>
+            <div>
+              <label class="tw-block tw-text-sm tw-font-medium tw-text-zinc-400 tw-mb-1.5" for="fetch-count">Display</label>
+              <select class="tw-w-full tw-border-zinc-700 tw-bg-surface tw-text-zinc-300 tw-focus:ring-primary tw-focus:border-primary tw-text-sm" id="fetch-count">
+                <option>20 per page</option>
+                <option>50 per page</option>
+                <option>100 per page</option>
+              </select>
+            </div>
+            <div class="tw-flex tw-justify-end">
+              <button class="tw-w-full tw-bg-zinc-700 tw-text-zinc-200 tw-font-semibold tw-py-2 tw-px-4 tw-hover:bg-zinc-600 tw-transition-colors tw-flex tw-items-center tw-justify-center tw-gap-2 tw-text-sm">
+                <span class="material-symbols-outlined tw-text-base">filter_alt</span>
+                Filters
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="tw-bg-background tw-border tw-border-border">
+          <div class="tw-px-5 tw-border-b tw-border-border">
+            <nav class="tw--mb-px tw-flex tw-space-x-8 tw-overflow-x-auto">
+              <a class="tw-shrink-0 tw-border-b-2 tw-border-primary tw-text-primary tw-px-1 tw-py-3 tw-text-sm tw-font-semibold tw-flex tw-items-center tw-gap-2" href="#">All <span class="tw-bg-primary/10 tw-text-primary tw-text-xs tw-font-bold tw-px-1.5 tw-py-0.5">412</span></a>
+              <a class="tw-shrink-0 tw-border-b-2 tw-border-transparent tw-text-zinc-400 tw-hover:border-zinc-600 tw-hover:text-zinc-200 tw-px-1 tw-py-3 tw-text-sm tw-font-medium tw-flex tw-items-center tw-gap-2" href="#">Held <span class="tw-bg-surface tw-border tw-border-zinc-700 tw-text-zinc-300 tw-text-xs tw-font-bold tw-px-1.5 tw-py-0.5">337</span></a>
+              <a class="tw-shrink-0 tw-border-b-2 tw-border-transparent tw-text-zinc-400 tw-hover:border-zinc-600 tw-hover:text-zinc-200 tw-px-1 tw-py-3 tw-text-sm tw-font-medium tw-flex tw-items-center tw-gap-2" href="#">Released <span class="tw-bg-surface tw-border tw-border-zinc-700 tw-text-zinc-300 tw-text-xs tw-font-bold tw-px-1.5 tw-py-0.5">75</span></a>
+              <a class="tw-shrink-0 tw-border-b-2 tw-border-transparent tw-text-zinc-400 tw-hover:border-zinc-600 tw-hover:text-zinc-200 tw-px-1 tw-py-3 tw-text-sm tw-font-medium tw-flex tw-items-center tw-gap-2" href="#">Rejected <span class="tw-bg-surface tw-border tw-border-zinc-700 tw-text-zinc-300 tw-text-xs tw-font-bold tw-px-1.5 tw-py-0.5">0</span></a>
+            </nav>
+          </div>
+          <div class="tw-p-4 tw-flex tw-flex-col tw-sm:flex-row tw-gap-4 tw-items-center">
+            <div class="tw-relative tw-w-full">
+              <span class="material-symbols-outlined tw-absolute tw-left-3 tw-top-1/2 tw--translate-y-1/2 tw-text-zinc-500 tw-text-base">search</span>
+              <input class="tw-w-full tw-pl-10 tw-pr-4 tw-py-2 tw-border-zinc-700 tw-bg-surface tw-text-zinc-300 tw-focus:ring-primary tw-focus:border-primary tw-text-sm" placeholder="Search subject, sender or recipient..." type="text" />
+            </div>
+            <div class="tw-flex tw-items-center tw-gap-4 tw-flex-shrink-0 tw-w-full tw-sm:w-auto">
+              <div class="tw-flex tw-items-center tw-gap-2">
+                <label class="tw-text-sm tw-font-medium tw-text-zinc-400 tw-whitespace-nowrap" for="auto-refresh">Auto-Refresh</label>
+                <button aria-checked="false" class="tw-bg-zinc-700 tw-relative tw-inline-flex tw-h-6 tw-w-11 tw-flex-shrink-0 tw-cursor-pointer tw-border-2 tw-border-transparent tw-transition-colors tw-duration-200 tw-ease-in-out tw-focus:outline-none tw-focus:ring-2 tw-focus:ring-primary tw-focus:ring-offset-2 tw-focus:ring-offset-background tw-aria-checked:bg-primary" role="switch" type="button">
+                  <span class="tw-pointer-events-none tw-inline-block tw-h-5 tw-w-5 tw-transform tw-bg-zinc-400 tw-shadow tw-ring-0 tw-transition tw-duration-200 tw-ease-in-out tw-translate-x-0 tw-aria-checked:translate-x-5 tw-aria-checked:bg-zinc-900"></span>
+                </button>
+              </div>
+              <button class="tw-text-zinc-400 tw-hover:text-primary tw-font-medium tw-text-sm tw-flex tw-items-center tw-gap-1.5 tw-transition-colors">
+                <span class="material-symbols-outlined tw-text-base">refresh</span> Refresh
+              </button>
+            </div>
+          </div>
+          <div class="tw-overflow-x-auto">
+            <table class="tw-w-full tw-text-sm">
+              <thead class="tw-bg-surface/50">
+                <tr>
+                  <th class="tw-p-3 tw-w-4"><input class="tw-border-zinc-600 tw-text-primary tw-focus:ring-primary/50 tw-bg-zinc-800" type="checkbox" /></th>
+                  <th class="tw-p-3 tw-font-semibold tw-text-left tw-text-zinc-400 tw-uppercase tw-tracking-wider tw-text-xs tw-w-36">Time</th>
+                  <th class="tw-p-3 tw-font-semibold tw-text-left tw-text-zinc-400 tw-uppercase tw-tracking-wider tw-text-xs">Correspondents</th>
+                  <th class="tw-p-3 tw-font-semibold tw-text-left tw-text-zinc-400 tw-uppercase tw-tracking-wider tw-text-xs">Subject</th>
+                  <th class="tw-p-3 tw-font-semibold tw-text-left tw-text-zinc-400 tw-uppercase tw-tracking-wider tw-text-xs tw-w-28">Status</th>
+                  <th class="tw-p-3 tw-font-semibold tw-text-left tw-text-zinc-400 tw-uppercase tw-tracking-wider tw-text-xs tw-w-28">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="tw-divide-y tw-divide-border">
+                <tr class="tw-hover:bg-surface/50 tw-transition-colors">
+                  <td class="tw-p-3 tw-align-top"><input class="tw-border-zinc-600 tw-text-primary tw-focus:ring-primary/50 tw-bg-zinc-800 tw-mt-0.5" type="checkbox" /></td>
+                  <td class="tw-p-3 tw-text-zinc-400 tw-whitespace-nowrap tw-align-top">Oct 24, 07:11 AM</td>
+                  <td class="tw-p-3">
+                    <div class="tw-font-medium tw-text-zinc-300">from <span class="tw-text-zinc-400 tw-font-normal">rdeyjeska@gmail.com</span></div>
+                    <div class="tw-text-sm tw-text-zinc-400">to <span class="tw-font-normal">rdeyjeska@gmail.com</span></div>
+                  </td>
+                  <td class="tw-p-3">
+                    <div class="tw-font-medium tw-text-white">Quarantine Flow 63bd310d-f51...</div>
+                    <div class="tw-text-zinc-400 tw-truncate tw-max-w-sm tw-text-xs tw-mt-0.5">Automated quarantine flow test with invoice keyword. Invoice ID: 17f864b-2098-4a4c-9f0f-8b52f6c86e53...</div>
+                  </td>
+                  <td class="tw-p-3 tw-align-top">
+                    <span class="tw-inline-flex tw-items-center tw-text-xs tw-font-semibold tw-px-2 tw-py-0.5 tw-bg-orange-500/20 tw-text-orange-300">HELD</span>
+                  </td>
+                  <td class="tw-p-3 tw-align-top">
+                    <div class="tw-flex tw-items-center tw-gap-1">
+                      <button class="tw-p-1.5 tw-text-zinc-400 tw-hover:bg-zinc-700 tw-hover:text-primary tw-transition-colors"><span class="material-symbols-outlined tw-text-lg">forward_to_inbox</span></button>
+                      <button class="tw-p-1.5 tw-text-zinc-400 tw-hover:bg-zinc-700 tw-hover:text-red-400 tw-transition-colors"><span class="material-symbols-outlined tw-text-lg">delete</span></button>
+                    </div>
+                  </td>
+                </tr>
+                <tr class="tw-hover:bg-surface/50 tw-transition-colors">
+                  <td class="tw-p-3 tw-align-top"><input class="tw-border-zinc-600 tw-text-primary tw-focus:ring-primary/50 tw-bg-zinc-800 tw-mt-0.5" type="checkbox" /></td>
+                  <td class="tw-p-3 tw-text-zinc-400 tw-whitespace-nowrap tw-align-top">Oct 24, 07:10 AM</td>
+                  <td class="tw-p-3">
+                    <div class="tw-font-medium tw-text-zinc-300">from <span class="tw-text-zinc-400 tw-font-normal">rdeyjeska@gmail.com</span></div>
+                    <div class="tw-text-sm tw-text-zinc-400">to <span class="tw-font-normal">rdeyjeska@gmail.com</span></div>
+                  </td>
+                  <td class="tw-p-3">
+                    <div class="tw-font-medium tw-text-white">Quarantine Flow 56d678bf-b19c...</div>
+                    <div class="tw-text-zinc-400 tw-truncate tw-max-w-sm tw-text-xs tw-mt-0.5">Automated quarantine flow test. Invoice ID: c35bffd0-d1e9-4e1d-a01a-82f279416f51...</div>
+                  </td>
+                  <td class="tw-p-3 tw-align-top">
+                    <span class="tw-inline-flex tw-items-center tw-text-xs tw-font-semibold tw-px-2 tw-py-0.5 tw-bg-zinc-700 tw-text-zinc-400">FETCHED</span>
+                  </td>
+                  <td class="tw-p-3 tw-align-top">
+                    <div class="tw-flex tw-items-center tw-gap-1">
+                      <button class="tw-p-1.5 tw-text-zinc-400 tw-hover:bg-zinc-700 tw-hover:text-primary tw-transition-colors"><span class="material-symbols-outlined tw-text-lg">forward_to_inbox</span></button>
+                      <button class="tw-p-1.5 tw-text-zinc-400 tw-hover:bg-zinc-700 tw-hover:text-red-400 tw-transition-colors"><span class="material-symbols-outlined tw-text-lg">delete</span></button>
+                    </div>
+                  </td>
+                </tr>
+                <tr class="tw-hover:bg-surface/50 tw-transition-colors">
+                  <td class="tw-p-3 tw-align-top"><input class="tw-border-zinc-600 tw-text-primary tw-focus:ring-primary/50 tw-bg-zinc-800 tw-mt-0.5" type="checkbox" /></td>
+                  <td class="tw-p-3 tw-text-zinc-400 tw-whitespace-nowrap tw-align-top">Oct 24, 07:09 AM</td>
+                  <td class="tw-p-3">
+                    <div class="tw-font-medium tw-text-zinc-300">from <span class="tw-text-zinc-400 tw-font-normal">billing@service.com</span></div>
+                    <div class="tw-text-sm tw-text-zinc-400">to <span class="tw-font-normal">rdeyjeska@gmail.com</span></div>
+                  </td>
+                  <td class="tw-p-3">
+                    <div class="tw-font-medium tw-text-white">Your recent invoice #INV-2023-0...</div>
+                    <div class="tw-text-zinc-400 tw-truncate tw-max-w-sm tw-text-xs tw-mt-0.5">Thank you for your business. Please find attached your invoice for the recent services provided.</div>
+                  </td>
+                  <td class="tw-p-3 tw-align-top">
+                    <span class="tw-inline-flex tw-items-center tw-text-xs tw-font-semibold tw-px-2 tw-py-0.5 tw-bg-green-500/20 tw-text-green-300">RELEASED</span>
+                  </td>
+                  <td class="tw-p-3 tw-align-top">
+                    <div class="tw-flex tw-items-center tw-gap-1">
+                      <button class="tw-p-1.5 tw-text-zinc-400 tw-hover:bg-zinc-700 tw-hover:text-primary tw-transition-colors"><span class="material-symbols-outlined tw-text-lg">forward_to_inbox</span></button>
+                      <button class="tw-p-1.5 tw-text-zinc-400 tw-hover:bg-zinc-700 tw-hover:text-red-400 tw-transition-colors"><span class="material-symbols-outlined tw-text-lg">delete</span></button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</div>
+{% endblock %}

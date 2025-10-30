@@ -57,6 +57,13 @@ def watchers_page():
     return render_template('watchers.html')
 
 
+@watchers_bp.route('/watchers/stitch')
+@login_required
+def watchers_page_stitch():
+    """Preview the new Stitch theme watchers page (Tailwind-based)"""
+    return render_template('stitch/watchers.html')
+
+
 @watchers_bp.route('/api/watchers/overview')
 @login_required
 def api_watchers_overview():

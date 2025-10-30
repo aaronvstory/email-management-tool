@@ -73,6 +73,47 @@ def emails_unified():
     )
 
 
+@emails_bp.route('/emails-unified/stitch')
+@login_required
+def emails_unified_stitch():
+    """Preview the new Stitch theme emails page (Tailwind-based)"""
+    status_filter = request.args.get('status', 'ALL')
+    account_id = request.args.get('account_id', type=int)
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    # Get email accounts
+    accounts = cursor.execute(
+        """
+        SELECT id, account_name, email_address
+        FROM email_accounts
+        WHERE is_active = 1
+        ORDER BY account_name
+        """
+    ).fetchall()
+
+    # Get counts for all statuses (exclude outbound by default)
+    counts = fetch_counts(account_id=account_id if account_id else None, include_outbound=False)
+
+    conn.close()
+
+    return render_template(
+        'stitch/emails-unified.html',
+        accounts=accounts,
+        selected_account=account_id,
+        current_filter=status_filter,
+        total_count=counts.get('total', 0),
+        held_count=counts.get('held', 0),
+        pending_count=counts.get('pending', 0),
+        approved_count=counts.get('approved', 0),
+        rejected_count=counts.get('rejected', 0),
+        released_count=counts.get('released', 0),
+        discarded_count=counts.get('discarded', 0),
+    )
+
+
 @emails_bp.route('/api/emails/unified')
 @login_required
 def api_emails_unified():
