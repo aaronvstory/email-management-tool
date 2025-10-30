@@ -1,21 +1,26 @@
 // tools/snapshots/snap.ts
-import { chromium, devices, Page } from 'playwright';
+import { chromium, type Page } from 'playwright';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 type View = { width: number; height: number; label: string };
 
-const arg = (name: string, d?: string) => {
+const arg = (name: string, d?: string): string | undefined => {
   const i = process.argv.indexOf(`--${name}`);
   return i > -1 ? (process.argv[i + 1] ?? 'true') : d;
 };
 const flag = (name: string) => process.argv.includes(`--${name}`);
 
-const BASE_URL = arg('base-url', process.env.SNAP_BASE_URL || 'http://localhost:5000');
-const OUT_DIR = arg('out', 'snapshots');
+const BASE_URL = arg('base-url', process.env.SNAP_BASE_URL || 'http://localhost:5000')!;
+const OUT_DIR = arg('out', 'snapshots')!;
 const HEADFUL = flag('headful');
 const UPDATE_STATE = flag('update-state');
-const STATE_PATH = arg('state', path.join(__dirname, 'state.json'));
+const STATE_PATH = arg('state', path.join(__dirname, 'state.json'))!;
 
 const LOGIN_PATH = arg('login', process.env.SNAP_LOGIN_PATH || '/login');
 const USER_SEL = arg('user-sel', process.env.SNAP_USER_SEL || '#email');
