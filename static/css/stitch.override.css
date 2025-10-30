@@ -142,3 +142,29 @@ button[class*="tw-bg-primary"]:hover {
   background: #a3d154 !important;
   border-color: #a3d154 !important;
 }
+
+/* ========================================
+   STITCH TEMPLATE: LINK HOVER EFFECTS
+   Add gray overlay on hover for links
+   ======================================== */
+
+/* Textual links (not buttons) should have subtle gray bg on hover */
+a[class*="tw-"]:not([class*="tw-btn"]):not([class*="tw-bg-primary"]):hover,
+a[class*="tw-text-"]:not(.tw-bg-primary):not([class*="tw-btn"]):hover {
+  background-color: rgba(39, 39, 42, 0.4) !important;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+}
+
+/* Links with explicit hover classes should respect them */
+a[class*="hover:tw-bg-"]:hover {
+  /* Let Tailwind hover classes take precedence */
+  background-color: var(--tw-bg-opacity) !important;
+}
+
+/* Primary/lime links should have lime tint on hover */
+a[class*="tw-text-primary"]:hover,
+a[class*="tw-text-[#bef264]"]:hover {
+  background-color: rgba(190, 242, 100, 0.1) !important;
+  color: #a3d154 !important;
+}
