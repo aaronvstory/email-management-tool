@@ -202,3 +202,11 @@ AGENTS - Copy (2).md
 # Screenshot snapshots (output directory only, not source)
 /snapshots/
 tools/snapshots/state.json
+
+# Remove VS Code "superdesign" clutter forever
+.superdesign/
+.windsurfrules
+.cursor/
+
+# npm dependencies
+node_modules/
