@@ -203,8 +203,10 @@ AGENTS - Copy (2).md
 /snapshots/
 tools/snapshots/state.json
 
+# Remove VS Code "superdesign" clutter forever
+.superdesign/
 .windsurfrules
 .cursor/
-.superdesign/
 
+# npm dependencies
 node_modules/

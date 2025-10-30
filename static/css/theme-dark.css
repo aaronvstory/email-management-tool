@@ -80,7 +80,7 @@ body.login-page .login-input {
   background: #27272a !important;
   border: 1px solid #3f3f46 !important;
   border-left: 0 !important;  /* Changed from none to 0 */
-  color: var(--text-primary) !important;
+  color: #ffffff !important;
   border-radius: 0 6px 6px 0 !important;
   padding: 10px 14px !important;
   min-height: 44px !important;
