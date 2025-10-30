@@ -243,6 +243,17 @@
   white-space: nowrap;
 }
 
+/* Dashboard actions: compact and aligned */
+#dashboard-page .email-table .col-actions { white-space: nowrap; text-align: right; }
+#dashboard-page .email-table .col-actions .btn,
+#dashboard-page .email-table .col-actions button {
+  min-height: 28px;
+  padding: 4px 8px;
+  font-size: 12px;
+  line-height: 1;
+}
+#dashboard-page .email-table .col-actions .btn + .btn { margin-left: 6px; }
+
 /* Align top padding with other pages */
 .page-dashboard .page-content,
 #dashboard-page .page-content {
