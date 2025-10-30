@@ -90,7 +90,7 @@
                     <span class="tw-font-medium">Dashboard</span>
                 </a>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'emails.emails_unified' or request.endpoint == 'emails.email_queue' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'emails.emails_unified' or request.endpoint == 'emails.emails_unified_stitch' or request.endpoint == 'emails.email_queue' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
                     href="/emails-unified">
                     <span class="material-symbols-outlined tw-text-[18px]">inbox</span>
                     <span class="tw-font-medium">Emails</span>
@@ -101,7 +101,7 @@
                     {% endif %}
                 </a>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'compose.compose_email' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'compose.compose_email' or request.endpoint == 'compose.compose_stitch' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
                     href="/compose">
                     <span class="material-symbols-outlined tw-text-[18px]">edit</span>
                     <span class="tw-font-medium">Compose</span>
@@ -113,19 +113,19 @@
                 <span
                     class="tw-text-[10px] tw-font-bold tw-text-[#71717a] tw-uppercase tw-tracking-widest tw-px-3 tw-mb-1.5 tw-block">MANAGEMENT</span>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'watchers.watchers_page' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'watchers.watchers_page' or request.endpoint == 'watchers.watchers_page_stitch' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
                     href="/watchers">
                     <span class="material-symbols-outlined tw-text-[18px]">visibility</span>
                     <span class="tw-font-medium">Watchers</span>
                 </a>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'moderation.rules' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'moderation.rules' or request.endpoint == 'moderation.rules_stitch' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
                     href="/rules">
                     <span class="material-symbols-outlined tw-text-[18px]">rule</span>
                     <span class="tw-font-medium">Rules</span>
                 </a>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'accounts.email_accounts' or request.endpoint == 'accounts.add_email_account' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'accounts.email_accounts' or request.endpoint == 'accounts.email_accounts_stitch' or request.endpoint == 'accounts.add_email_account' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
                     href="/accounts">
                     <span class="material-symbols-outlined tw-text-[18px]">group</span>
                     <span class="tw-font-medium">Accounts</span>
