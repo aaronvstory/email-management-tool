@@ -9,9 +9,11 @@
     "lint:css": "stylelint \"static/**/*.css\"",
     "format": "prettier --write \"{templates,static}/**/*.{html,css,js}\"",
     "format:check": "prettier --check \"{templates,static}/**/*.{html,css,js}\"",
-    "snap:install": "npx playwright install --with-deps",
-    "snap:update-state": "node --loader ts-node/esm tools/snapshots/snap.ts --update-state",
-    "snap": "node --loader ts-node/esm tools/snapshots/snap.ts"
+    "snap:install": "npx playwright install chromium",
+    "snap:update-state": "ts-node tools/snapshots/snap.ts --update-state",
+    "snap": "ts-node tools/snapshots/snap.ts",
+    "snap:headful": "ts-node tools/snapshots/snap.ts --headful",
+    "snap:url": "ts-node tools/snapshots/snap.ts --base-url"
   },
   "devDependencies": {
     "eslint": "^9.13.0",

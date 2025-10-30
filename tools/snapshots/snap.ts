@@ -1,158 +1,130 @@
-import { chromium, BrowserContext, Page } from 'playwright';
-import fs from 'fs';
-import path from 'path';
+// tools/snapshots/snap.ts
+import { chromium, devices, Page } from 'playwright';
+import * as fs from 'fs';
+import * as path from 'path';
 
-type PageDef = { name: string; path: string; ready?: string };
+type View = { width: number; height: number; label: string };
 
-const BASE_URL = process.env.SNAP_BASE_URL || 'http://localhost:5000';
-const OUT_DIR  = process.env.SNAP_OUT_DIR  || 'snapshots';
-const VP_LIST  = (process.env.SNAP_VIEWPORTS || '1440x900,390x844')
-  .split(',')
-  .map(v => {
-    const [w, h] = v.toLowerCase().split('x').map(Number);
-    return { label: `${w}x${h}`, width: w, height: h };
-  });
+const arg = (name: string, d?: string) => {
+  const i = process.argv.indexOf(`--${name}`);
+  return i > -1 ? (process.argv[i + 1] ?? 'true') : d;
+};
+const flag = (name: string) => process.argv.includes(`--${name}`);
 
-const STATE_FILE = process.env.SNAP_STATE_FILE || 'tools/snapshots/state.json';
-const PAGES_FILE = process.env.SNAP_PAGES_FILE || 'tools/snapshots/pages.json';
+const BASE_URL = arg('base-url', process.env.SNAP_BASE_URL || 'http://localhost:5000');
+const OUT_DIR = arg('out', 'snapshots');
+const HEADFUL = flag('headful');
+const UPDATE_STATE = flag('update-state');
+const STATE_PATH = arg('state', path.join(__dirname, 'state.json'));
 
-const LOGIN_PATH = process.env.SNAP_LOGIN_PATH;            // e.g. "/login"
-const LOGIN_USER_SELECTOR = process.env.SNAP_USER_SEL;     // e.g. "#email"
-const LOGIN_PASS_SELECTOR = process.env.SNAP_PASS_SEL;     // e.g. "#password"
-const LOGIN_SUBMIT_SELECTOR = process.env.SNAP_SUBMIT_SEL; // e.g. "button[type=submit]"
-const LOGIN_USERNAME = process.env.SNAP_USERNAME;
-const LOGIN_PASSWORD = process.env.SNAP_PASSWORD;
+const LOGIN_PATH = arg('login', process.env.SNAP_LOGIN_PATH || '/login');
+const USER_SEL = arg('user-sel', process.env.SNAP_USER_SEL || '#email');
+const PASS_SEL = arg('pass-sel', process.env.SNAP_PASS_SEL || '#password');
+const SUBMIT_SEL = arg('submit-sel', process.env.SNAP_SUBMIT_SEL || 'button[type=submit]');
+const USERNAME = arg('username', process.env.SNAP_USERNAME);
+const PASSWORD = arg('password', process.env.SNAP_PASSWORD);
 
-const MAX_RETRIES = Number(process.env.SNAP_RETRIES || 2);
-const TIMEOUT = Number(process.env.SNAP_TIMEOUT_MS || 20000);
+// Optional: capture only a subset of pages by key, comma-separated
+const PAGES_FILTER = (arg('pages') || '').split(',').filter(Boolean);
 
-function nowStamp() {
+// Optional: element-only screenshots: css selector or key from pages.json
+const ELEMENTS = (arg('elements') || '').split(',').filter(Boolean);
+
+const views: View[] = [
+  { width: 1440, height: 900, label: '1440x900' },
+  { width: 390, height: 844, label: '390x844' }
+];
+
+type PageConf = { key: string; url: string; ready?: string; elements?: string[] };
+const pages: PageConf[] = JSON.parse(
+  fs.readFileSync(path.join(__dirname, 'pages.json'), 'utf8')
+);
+
+const stamp = () => {
   const d = new Date();
-  const pad = (n:number)=>String(n).padStart(2,'0');
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  const pad = (n: number) => `${n}`.padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+};
+
+async function loginIfNeeded(page: Page) {
+  if (!USERNAME || !PASSWORD) return;
+  await page.goto(`${BASE_URL}${LOGIN_PATH}`, { waitUntil: 'domcontentloaded' });
+  await page.fill(USER_SEL!, USERNAME);
+  await page.fill(PASS_SEL!, PASSWORD);
+  await page.click(SUBMIT_SEL!);
+  await page.waitForLoadState('networkidle');
 }
 
-async function ensureDir(dir: string) {
-  await fs.promises.mkdir(dir, { recursive: true });
+async function freezeAnimations(page: Page) {
+  await page.addStyleTag({
+    content: `
+      * { transition: none !important; animation: none !important; }
+      .blinking, [data-animated="true"] { animation: none !important; }
+    `
+  });
 }
 
-async function loginAndSaveState(): Promise<void> {
-  if (!LOGIN_PATH || !LOGIN_USER_SELECTOR || !LOGIN_PASS_SELECTOR || !LOGIN_SUBMIT_SELECTOR) {
-    throw new Error('Login env vars not set; provide SNAP_LOGIN_PATH, SNAP_USER_SEL, SNAP_PASS_SEL, SNAP_SUBMIT_SEL.');
-  }
-  if (!LOGIN_USERNAME || !LOGIN_PASSWORD) {
-    throw new Error('Provide SNAP_USERNAME and SNAP_PASSWORD to perform login.');
-  }
-
-  const browser = await chromium.launch();
-  const context = await browser.newContext();
+(async () => {
+  const browser = await chromium.launch({ headless: !HEADFUL });
+  const context = await browser.newContext({
+    storageState: fs.existsSync(STATE_PATH) ? STATE_PATH : undefined
+  });
   const page = await context.newPage();
-  page.setDefaultTimeout(TIMEOUT);
 
-  await page.goto(new URL(LOGIN_PATH, BASE_URL).toString(), { waitUntil: 'networkidle' });
-  await page.fill(LOGIN_USER_SELECTOR, LOGIN_USERNAME);
-  await page.fill(LOGIN_PASS_SELECTOR, LOGIN_PASSWORD);
-  await Promise.all([
-    page.click(LOGIN_SUBMIT_SELECTOR),
-    page.waitForLoadState('networkidle')
-  ]);
+  // Update/save login state
+  if (UPDATE_STATE) {
+    await loginIfNeeded(page);
+    await context.storageState({ path: STATE_PATH });
+    await browser.close();
+    console.log(`Auth state saved → ${STATE_PATH}`);
+    process.exit(0);
+  }
 
-  // Optionally verify a post-login element (set SNAP_POSTLOGIN_SEL)
-  const POSTLOGIN = process.env.SNAP_POSTLOGIN_SEL;
-  if (POSTLOGIN) await page.waitForSelector(POSTLOGIN, { timeout: TIMEOUT });
+  const batchDir = path.join(process.cwd(), OUT_DIR, stamp());
+  fs.mkdirSync(batchDir, { recursive: true });
 
-  await context.storageState({ path: STATE_FILE });
-  await browser.close();
-  console.log(`Saved storage state -> ${STATE_FILE}`);
-}
+  const targetPages = PAGES_FILTER.length
+    ? pages.filter(p => PAGES_FILTER.includes(p.key))
+    : pages;
 
-async function makeContext(): Promise<BrowserContext> {
-  const args: any = {};
-  if (fs.existsSync(STATE_FILE)) args.storageState = STATE_FILE;
-  const browser = await chromium.launch();
-  return browser.newContext(args);
-}
+  for (const view of views) {
+    await page.setViewportSize({ width: view.width, height: view.height });
+    const viewDir = path.join(batchDir, view.label);
+    fs.mkdirSync(viewDir, { recursive: true });
 
-async function snapPage(context: BrowserContext, def: PageDef, outRoot: string) {
-  for (const vp of VP_LIST) {
-    const outDir = path.join(outRoot, vp.label);
-    await ensureDir(outDir);
+    for (const conf of targetPages) {
+      const url = `${BASE_URL}${conf.url}`;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          await page.goto(url, { waitUntil: 'domcontentloaded' });
+          await freezeAnimations(page);
+          if (conf.ready) await page.waitForSelector(conf.ready, { timeout: 15000 });
 
-    const page: Page = await context.newPage();
-    await page.setViewportSize({ width: vp.width, height: vp.height });
-    page.setDefaultTimeout(TIMEOUT);
-
-    // Reduce visual noise
-    await page.addInitScript(() => {
-      // Freeze animations/transitions
-      const css = `
-        *, *::before, *::after { transition: none !important; animation: none !important; caret-color: transparent !important; }
-      `;
-      const style = document.createElement('style');
-      style.textContent = css;
-      document.head.appendChild(style);
-    });
-
-    let attempt = 0, ok = false, lastErr: any = null;
-
-    while (attempt <= MAX_RETRIES && !ok) {
-      try {
-        const url = new URL(def.path, BASE_URL).toString();
-        await page.goto(url, { waitUntil: 'networkidle' });
-        if (def.ready) await page.waitForSelector(def.ready, { timeout: TIMEOUT });
-
-        // Give any badges/counters a moment to settle
-        await page.waitForTimeout(300);
-
-        const stamp = new Date().toISOString().slice(0,19).replace(/[:T]/g,'');
-        const fname = `${stamp}_${def.name}.png`;
-        const fpath = path.join(outDir, fname);
-
-        await page.screenshot({ path: fpath, fullPage: true });
-        console.log(`✅ ${vp.label} ${def.name} -> ${fpath}`);
-        ok = true;
-      } catch (e) {
-        lastErr = e;
-        attempt += 1;
-        if (attempt <= MAX_RETRIES) {
-          console.warn(`Retry ${attempt}/${MAX_RETRIES} for ${def.name} at ${vp.label}…`);
-          await page.waitForTimeout(500);
+          // Element-only mode (if --elements is set)
+          if (ELEMENTS.length) {
+            const list = conf.elements || [];
+            for (const sel of ELEMENTS) {
+              const selector = list.find(e => e === sel) || sel; // allow ad-hoc or predeclared
+              const loc = page.locator(selector).first();
+              await loc.waitFor({ state: 'visible', timeout: 5000 });
+              const out = path.join(viewDir, `${conf.key}__element__${selector.replace(/[^\w-]+/g, '_')}.png`);
+              await loc.screenshot({ path: out });
+              console.log(`✓ element ${selector} → ${out}`);
+            }
+          } else {
+            const out = path.join(viewDir, `${conf.key}.png`);
+            await page.screenshot({ path: out, fullPage: true });
+            console.log(`✓ page ${conf.key} → ${out}`);
+          }
+          break;
+        } catch (e) {
+          if (attempt === 2) console.error(`✗ ${conf.key} failed:`, e);
+          else await page.waitForTimeout(1200);
         }
       }
     }
-
-    await page.close();
-    if (!ok) {
-      console.error(`❌ Failed to capture ${def.name} @ ${vp.label}`, lastErr);
-    }
-  }
-}
-
-async function main() {
-  const args = process.argv.slice(2);
-  const doUpdateState = args.includes('--update-state');
-
-  if (doUpdateState) {
-    await loginAndSaveState();
   }
 
-  const pages: PageDef[] = JSON.parse(await fs.promises.readFile(PAGES_FILE, 'utf8'));
-  const outRoot = path.join(OUT_DIR, nowStamp());
-  await ensureDir(outRoot);
-
-  const context = await makeContext();
-  try {
-    for (const def of pages) {
-      await snapPage(context, def, outRoot);
-    }
-  } finally {
-    await context.browser()?.close();
-  }
-
-  console.log(`All done. Folder: ${outRoot}`);
-}
-
-main().catch(err => {
-  console.error(err);
-  process.exit(1);
-});
+  console.log(`Done → ${batchDir}`);
+  await browser.close();
+})();

@@ -1,7 +1,12 @@
 param(
-  [string]$BaseUrl = "http://localhost:5000",
-  [string]$OutDir = "snapshots"
+  [string]$BaseUrl = $env:SNAP_BASE_URL,
+  [switch]$Headful,
+  [string]$Out = "snapshots",
+  [string]$Pages,
+  [string]$Elements
 )
 $env:SNAP_BASE_URL = $BaseUrl
-$env:SNAP_OUT_DIR = $OutDir
-npm run snap
+$headfulFlag = if ($Headful.IsPresent) { "--headful" } else { "" }
+$pagesArg   = if ($Pages) { "--pages $Pages" } else { "" }
+$elemArg    = if ($Elements) { "--elements $Elements" } else { "" }
+cmd /c "npm run snap -- --base-url $BaseUrl --out $Out $headfulFlag $pagesArg $elemArg"

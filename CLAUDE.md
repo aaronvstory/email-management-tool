@@ -180,6 +180,143 @@ GET  /healthz                        # Health check
 GET  /metrics                        # Prometheus metrics
 ```
 
+## 📸 Screenshot Tooling
+
+**Automated UI regression testing and PR documentation via Playwright**
+
+The project includes a comprehensive screenshot capture system for:
+- Multi-viewport responsive testing (desktop 1440x900, mobile 390x844)
+- PR visual diffs and documentation
+- Component-level element captures
+- Automated CI/CD integration
+
+### Quick Start (One Command)
+
+```bash
+# Boot app → capture screenshots → open folder
+.\manage.ps1 boot-snap-open
+
+# Or use the simplified batch file
+start.bat
+```
+
+This workflow:
+1. Starts the Flask app on port 5000
+2. Captures full-page and element screenshots for all routes
+3. Opens the `snapshots/` folder automatically
+
+### Installation
+
+```bash
+# Install Node.js dependencies and Playwright browser
+npm install
+npm run snap:install
+```
+
+**First-time setup**: Copy `.snap.env.example` to `.snap.env` and configure credentials:
+```ini
+SNAP_BASE_URL=http://localhost:5000
+SNAP_USERNAME=admin
+SNAP_PASSWORD=admin123
+```
+
+### Usage Workflows
+
+**Basic Headless Capture:**
+```powershell
+.\manage.ps1 snap
+```
+
+**Headful Mode (Watch Browser):**
+```powershell
+.\manage.ps1 snap -Headful
+```
+
+**Specific Pages Only:**
+```powershell
+.\manage.ps1 snap -Pages "dashboard,emails"
+```
+
+**Element-Only Screenshots:**
+```powershell
+# Capture specific components from dashboard
+.\manage.ps1 snap -Pages "dashboard" -Elements ".page-header,.email-table"
+```
+
+**Custom Base URL:**
+```powershell
+.\manage.ps1 snap -BaseUrl "http://localhost:5050"
+```
+
+### CLI Flags Reference
+
+| Flag | Description | Example |
+|------|-------------|---------|
+| `--base-url` | Target server URL | `--base-url http://localhost:5000` |
+| `--headful` | Show browser window | `--headful` |
+| `--pages` | Filter pages (comma-separated keys) | `--pages dashboard,emails` |
+| `--elements` | Capture specific selectors | `--elements .page-header,.email-table` |
+| `--out` | Output directory | `--out snapshots` |
+
+### Integration with PR Workflow
+
+**Recommended Practice:**
+```bash
+# 1. Make UI changes on feature branch
+git checkout feat/my-ui-changes
+
+# 2. Capture "after" screenshots
+.\manage.ps1 boot-snap-open
+
+# 3. Switch to master and capture "before" screenshots
+git stash
+git checkout master
+.\manage.ps1 boot-snap-open
+git checkout feat/my-ui-changes
+git stash pop
+
+# 4. Compare visually and include in PR description
+```
+
+**Screenshot Location:**
+- Full-page: `snapshots/{timestamp}/{viewport}/{page-key}.png`
+- Elements: `snapshots/{timestamp}/{viewport}/{page-key}__element__{selector}.png`
+
+### Advanced Configuration
+
+**Page Configuration** (`tools/snapshots/pages.json`):
+```json
+{
+  "key": "dashboard",
+  "url": "/dashboard",
+  "ready": "#dashboard-page",
+  "elements": [".page-header", ".email-table", ".stats-grid"]
+}
+```
+
+**Authentication State**: Stored in `tools/snapshots/state.json` (gitignored)
+- Automatically logs in once and reuses session
+- Regenerate: `npm run snap:update-state`
+
+### Troubleshooting
+
+**Port already in use:**
+```powershell
+# manage.ps1 automatically waits for port 5000
+# If stuck, manually kill processes:
+Get-Process python | Where-Object {$_.Path -like "*Email-Management-Tool*"} | Stop-Process -Force
+```
+
+**Authentication failing:**
+- Verify `.snap.env` credentials match your test account
+- Regenerate auth state: `npm run snap:update-state`
+
+**Screenshots missing:**
+- Check `ready` selector exists in target page
+- Run in headful mode to debug: `.\manage.ps1 snap -Headful`
+
+**Full Documentation**: `tools/snapshots/README.md` (615 lines)
+
 ## AI-Assisted Development
 
 ### Active MCP Servers
