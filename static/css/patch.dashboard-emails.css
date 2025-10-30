@@ -100,32 +100,38 @@
 .status-tab {
   transition: all 0.2s ease;
 }
-/* Table spacing - balanced approach for readability (Fix #11 final) */
+/* === Dashboard table finalization === */
+
+#dashboard-page .email-table {
+  table-layout: fixed;
+  width: 100%;
+  --dashboard-flex-available: calc(100% - 190px);
+}
+
+#dashboard-page .email-table th,
 #dashboard-page .email-table td {
   padding: 14px 18px;
+}
+
+#dashboard-page .email-table td {
   vertical-align: middle;
   line-height: 1.5;
 }
 
-#dashboard-page .email-table th {
-  padding: 14px 18px;
-}
-
-/* Ensure correspondent/subject cells have proper spacing */
 #dashboard-page .email-table .correspondent-cell,
 #dashboard-page .email-table .subject-cell {
   line-height: 1.6;
 }
-/* Status badges need breathing room */
+
 #dashboard-page .email-table .status-badge {
   margin: 2px 0;
 }
 
-/* === Dashboard table finalization === */
-
 /* 1a) Checkbox column: never ellipsis, center the box, tight padding */
-.email-table th.col-select,
-.email-table td.col-select {
+#dashboard-page .email-table th.col-select,
+#dashboard-page .email-table td.col-select {
+  width: 42px;
+  min-width: 42px;
   overflow: visible;
   text-overflow: clip;
   white-space: nowrap;
@@ -135,31 +141,43 @@
 }
 
 /* 1b) Time column: two-line stack (time + date) */
-.email-table td.col-time {
+#dashboard-page .email-table th.col-time,
+#dashboard-page .email-table td.col-time {
+  width: 148px;
+  min-width: 148px;
   white-space: normal;
   line-height: 1.2;
 }
 
-.time-cell.time-cell-structured {
+#dashboard-page .time-cell.time-cell-structured {
   display: block;
   line-height: 1.2;
 }
 
-.time-cell.time-cell-structured .time {
+#dashboard-page .time-cell.time-cell-structured .time {
   font-weight: 600;
 }
 
-.time-cell.time-cell-structured .date {
+#dashboard-page .time-cell.time-cell-structured .date {
   font-size: 12px;
   opacity: 0.8;
 }
 
-/* 1c) Subject column: two-line stack (subject + preview), clamp to 2 lines total */
-.email-table td.col-subject {
+/* 1c) Correspondents and subject columns: enforce min widths and flexible growth */
+#dashboard-page .email-table th.col-correspondents,
+#dashboard-page .email-table td.col-correspondents {
+  min-width: 220px;
+  width: max(220px, calc(var(--dashboard-flex-available) * 0.226415));
+}
+
+#dashboard-page .email-table th.col-subject,
+#dashboard-page .email-table td.col-subject {
+  min-width: 320px;
+  width: max(320px, calc(var(--dashboard-flex-available) * 0.45283));
   white-space: normal;
 }
 
-.subject-stack {
+#dashboard-page .subject-stack {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
@@ -168,28 +186,39 @@
   line-height: 1.25;
 }
 
-.subject-stack .subj {
+#dashboard-page .subject-stack .subj {
   font-weight: 600;
 }
 
-.subject-stack .preview {
+#dashboard-page .subject-stack .preview {
   font-weight: 400;
   opacity: 0.85;
 }
 
-/* 1d) Actions column: right-align, remove phantom right padding */
-.email-table th.col-actions,
-.email-table td.col-actions {
+/* 1d) Status column sizing */
+#dashboard-page .email-table th.col-status,
+#dashboard-page .email-table td.col-status {
+  min-width: 120px;
+  width: max(120px, calc(var(--dashboard-flex-available) * 0.169811));
+}
+
+/* 1e) Actions column: right-align, remove phantom right padding */
+#dashboard-page .email-table th.col-actions,
+#dashboard-page .email-table td.col-actions {
+  min-width: 148px;
+  width: max(148px, calc(var(--dashboard-flex-available) * 0.150943));
   text-align: right;
   padding-right: 6px;
 }
 
 /* Compact action buttons cluster */
-.email-table .action-buttons {
-  display: inline-flex;
+#dashboard-page .email-table .action-buttons {
+  display: flex;
+  justify-content: flex-end;
   align-items: center;
   gap: 4px;
   flex-wrap: nowrap;
+  width: 100%;
 }
 
 /* Align top padding with other pages */
