@@ -105,8 +105,24 @@
 #dashboard-page .email-table {
   table-layout: fixed;
   width: 100%;
-  --dashboard-flex-available: calc(100% - 190px);
+  --dashboard-select-width: 36px;
+  --dashboard-time-width: 148px;
+  --dashboard-status-width: 120px;
+  --dashboard-actions-width: 240px;
+  --dashboard-flex-available: calc(
+    100% - (
+      var(--dashboard-select-width) +
+      var(--dashboard-time-width) +
+      var(--dashboard-status-width) +
+      var(--dashboard-actions-width)
+    )
+  );
 }
+
+#dashboard-page .email-table col.col-select { width: var(--dashboard-select-width); }
+#dashboard-page .email-table col.col-time { width: var(--dashboard-time-width); }
+#dashboard-page .email-table col.col-status { width: var(--dashboard-status-width); }
+#dashboard-page .email-table col.col-actions { width: var(--dashboard-actions-width); }
 
 #dashboard-page .email-table th,
 #dashboard-page .email-table td {
@@ -128,23 +144,37 @@
 }
 
 /* 1a) Checkbox column: never ellipsis, center the box, tight padding */
+#dashboard-page .email-table th:first-child,
+#dashboard-page .email-table td:first-child {
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  padding-left: 10px;
+}
+
 #dashboard-page .email-table th.col-select,
 #dashboard-page .email-table td.col-select {
-  width: 42px;
-  min-width: 42px;
+  width: var(--dashboard-select-width);
+  min-width: var(--dashboard-select-width);
   overflow: visible;
   text-overflow: clip;
   white-space: nowrap;
   text-align: center;
-  padding-left: 6px;
-  padding-right: 6px;
+  padding-left: 12px;
+  padding-right: 8px;
+}
+
+#dashboard-page .email-table th.col-select input[type="checkbox"],
+#dashboard-page .email-table td.col-select input[type="checkbox"] {
+  width: auto;
+  height: auto;
 }
 
 /* 1b) Time column: two-line stack (time + date) */
 #dashboard-page .email-table th.col-time,
 #dashboard-page .email-table td.col-time {
-  width: 148px;
-  min-width: 148px;
+  width: var(--dashboard-time-width);
+  min-width: var(--dashboard-time-width);
   white-space: normal;
   line-height: 1.2;
 }
@@ -167,13 +197,13 @@
 #dashboard-page .email-table th.col-correspondents,
 #dashboard-page .email-table td.col-correspondents {
   min-width: 220px;
-  width: max(220px, calc(var(--dashboard-flex-available) * 0.226415));
+  width: max(220px, calc(var(--dashboard-flex-available) * 0.333));
 }
 
 #dashboard-page .email-table th.col-subject,
 #dashboard-page .email-table td.col-subject {
   min-width: 320px;
-  width: max(320px, calc(var(--dashboard-flex-available) * 0.45283));
+  width: max(320px, calc(var(--dashboard-flex-available) * 0.667));
   white-space: normal;
 }
 
@@ -198,49 +228,165 @@
 /* 1d) Status column sizing */
 #dashboard-page .email-table th.col-status,
 #dashboard-page .email-table td.col-status {
-  min-width: 120px;
-  width: max(120px, calc(var(--dashboard-flex-available) * 0.169811));
+  min-width: var(--dashboard-status-width);
+  width: var(--dashboard-status-width);
+  white-space: nowrap;
 }
 
 /* 1e) Actions column: right-align, remove phantom right padding */
 #dashboard-page .email-table th.col-actions,
 #dashboard-page .email-table td.col-actions {
-  min-width: 148px;
-  width: max(148px, calc(var(--dashboard-flex-available) * 0.150943));
+  min-width: var(--dashboard-actions-width);
+  width: var(--dashboard-actions-width);
   text-align: right;
-  padding-right: 6px;
-}
-
-/* Compact action buttons cluster */
-#dashboard-page .email-table .action-buttons {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 4px;
-  flex-wrap: nowrap;
-  width: 100%;
+  padding-right: 10px;
+  white-space: nowrap;
 }
 
 /* Align top padding with other pages */
 .page-dashboard .page-content,
 #dashboard-page .page-content {
-  padding-top: 16px;
+  padding-top: 0;
 }
 
 /* “View all →” alignment tweaks */
-.page-dashboard .panel-title .material-symbols-outlined,
-#dashboard-page .panel-title .material-symbols-outlined {
-  font-size: 1em;
-  line-height: 1;
-  vertical-align: middle;
-}
-
-.page-dashboard .panel-title .view-all,
 #dashboard-page .panel-title .view-all {
   display: inline-flex;
   align-items: center;
   gap: 4px;
 }
 
+#dashboard-page .panel-title .view-all .material-symbols-outlined {
+  font-size: 14px;
+  line-height: 1;
+  vertical-align: middle;
+}
 
+/* ===== Shared Dashboard + Emails Unified refinements ===== */
+#dashboard-page .page-header,
+#emails-unified-page .page-header {
+  margin-top: 0;
+  padding-top: 0;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 10px;
+}
+
+#emails-unified-page .page-header .text-muted {
+  color: #e5e7eb;
+}
+
+#emails-unified-page .page-content {
+  padding-top: 0;
+}
+
+#dashboard-page .email-table col.col-select,
+#emails-unified-page .email-table col.col-select {
+  width: 36px;
+}
+
+#dashboard-page .email-table th.col-select,
+#dashboard-page .email-table td.col-select,
+#emails-unified-page .email-table th.col-select,
+#emails-unified-page .email-table td.col-select {
+  padding-left: 8px;
+  padding-right: 6px;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+#dashboard-page .email-table thead th.col-select .truncate,
+#emails-unified-page .email-table thead th.col-select .truncate {
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: nowrap !important;
+}
+
+.action-cluster {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(112px, 1fr));
+  grid-auto-rows: 32px;
+  justify-content: end;
+  align-items: center;
+  gap: 6px 8px;
+  width: max-content;
+  margin-left: auto;
+}
+
+.btn-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--border-default);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  line-height: 1;
+  cursor: pointer;
+  width: 100%;
+}
+
+.btn-chip i {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.btn-chip.success {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.35);
+  color: #86efac;
+}
+
+.btn-chip.warning {
+  background: rgba(250, 204, 21, 0.14);
+  border-color: rgba(250, 204, 21, 0.4);
+  color: #facc15;
+}
+
+.btn-chip.danger {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+}
+
+.btn-chip.neutral {
+  background: rgba(148, 163, 184, 0.12);
+  border-color: rgba(148, 163, 184, 0.28);
+  color: #e5e7eb;
+}
+
+.btn-chip.btn-kebab {
+  padding: 0;
+  font-size: 16px;
+}
+
+#dashboard-page .time-stack,
+#emails-unified-page .time-stack {
+  line-height: 1.12;
+}
+
+#dashboard-page .subject-cell,
+#emails-unified-page .subject-cell {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  white-space: normal;
+  line-height: 1.25;
+}
+
+/* FETCHED status badge alignment */
+#dashboard-page .status-badge.status-FETCHED,
+#emails-unified-page .status-badge.status-FETCHED {
+  background: rgba(59, 130, 246, 0.18);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #93c5fd;
+}
 

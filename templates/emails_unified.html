@@ -6,160 +6,166 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <div>
-    <h1><i class="bi bi-envelope-fill"></i> Email Management</h1>
-    <p class="text-muted mb-0">View and manage all email messages across your accounts.</p>
-  </div>
-  <div class="header-actions">
-    <a href="/compose" class="btn btn-secondary btn-sm">
-      <i class="bi bi-pencil-square"></i> Compose
-    </a>
-  </div>
-</div>
-
-<!-- Account Selector with Fetch Controls -->
-<div class="account-selector selector-card">
-  <div class="selector-field flex-grow">
-    <label for="accountSelector" class="form-label">Select Email Account</label>
-    <select class="form-select" id="accountSelector" onchange="switchAccount(this.value)">
-      <option value="">All Accounts</option>
-      {% for account in accounts %}
-      <option value="{{ account.id }}" {% if selected_account==account.id %}selected{% endif %}>
-        {{ account.account_name }} ({{ account.email_address }})
-      </option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="selector-field small">
-    <label for="fetchCount" class="form-label">Fetch Count</label>
-    <select class="form-select" id="fetchCount">
-      <option value="10">10</option>
-      <option value="20" selected>20</option>
-      <option value="50">50</option>
-      <option value="100">100</option>
-    </select>
-  </div>
-  <div class="selector-actions">
-    <button type="button" class="btn btn-primary btn-sm" onclick="fetchEmails()">
-      <i class="bi bi-cloud-download"></i> Fetch
-    </button>
-    <button type="button" class="btn btn-secondary btn-sm" onclick="fetchMore()">
-      <i class="bi bi-plus-circle"></i> More
-    </button>
-  </div>
-</div>
-<div id="fetchStatus" class="status-banner hidden">
-  <span id="fetchMessage"></span>
-</div>
-
-<!-- Unified Email Panel -->
-<div class="panel">
-  <div class="panel-header">
-    <div class="panel-title"><i class="bi bi-inboxes"></i> Unified Inbox</div>
-    <div class="panel-actions">
-      <button type="button" class="btn btn-secondary btn-sm" onclick="reloadEmails()">
-        <i class="bi bi-arrow-clockwise"></i> Refresh
-      </button>
+<div id="emails-unified-page">
+  <div class="page-header">
+    <div class="page-header-main">
+      <h1><i class="bi bi-envelope-fill"></i> Email Management</h1>
+      <p class="text-muted mb-0">View and manage all email messages across your accounts.</p>
+    </div>
+    <div class="header-actions">
+      <a href="/compose" class="btn btn-secondary btn-sm">
+        <i class="bi bi-pencil-square"></i> Compose
+      </a>
     </div>
   </div>
-  <div class="panel-body">
-    <div class="status-tabs tabs-bar">
-      <button type="button" class="status-tab tab active" data-status="ALL" onclick="switchStatus('ALL')">
-        <i class="bi bi-inbox"></i> All
-        <span class="badge" id="badge-all">{{ total_count }}</span>
-      </button>
-      <button type="button" class="status-tab tab" data-status="HELD" onclick="switchStatus('HELD')">
-        <i class="bi bi-hand-stop"></i> Held
-        <span class="badge" id="badge-held">{{ held_count|default(0) }}</span>
-      </button>
-      <button type="button" class="status-tab tab" data-status="RELEASED" onclick="switchStatus('RELEASED')">
-        <i class="bi bi-send-check"></i> Released
-        <span class="badge" id="badge-released">{{ released_count|default(0) }}</span>
-      </button>
-      <button type="button" class="status-tab tab" data-status="REJECTED" onclick="switchStatus('REJECTED')">
-        <i class="bi bi-x-circle"></i> Rejected
-        <span class="badge" id="badge-rejected">{{ rejected_count }}</span>
-      </button>
-      <button type="button" class="status-tab tab" data-status="DISCARDED" onclick="switchStatus('DISCARDED')">
-        <i class="bi bi-trash"></i> Discarded
-        <span class="badge" id="badge-discarded">{{ discarded_count|default(0) }}</span>
-      </button>
+
+  <div class="page-content">
+    <!-- Account Selector with Fetch Controls -->
+    <div class="account-selector selector-card">
+      <div class="selector-field flex-grow">
+        <label for="accountSelector" class="form-label">Select Email Account</label>
+        <select class="form-select" id="accountSelector" onchange="switchAccount(this.value)">
+          <option value="">All Accounts</option>
+          {% for account in accounts %}
+          <option value="{{ account.id }}" {% if selected_account==account.id %}selected{% endif %}>
+            {{ account.account_name }} ({{ account.email_address }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="selector-field small">
+        <label for="fetchCount" class="form-label">Fetch Count</label>
+        <select class="form-select" id="fetchCount">
+          <option value="10">10</option>
+          <option value="20" selected>20</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </div>
+      <div class="selector-actions">
+        <button type="button" class="btn btn-primary btn-sm" onclick="fetchEmails()">
+          <i class="bi bi-cloud-download"></i> Fetch
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="fetchMore()">
+          <i class="bi bi-plus-circle"></i> More
+        </button>
+      </div>
+    </div>
+    <div id="fetchStatus" class="status-banner hidden">
+      <span id="fetchMessage"></span>
     </div>
 
-    <div class="filters-bar">
-      <div class="filter-control flex-grow-1">
-        <label for="searchBox">Search</label>
-        <div class="input-with-icon emails-search">
-          <i class="bi bi-search input-icon"></i>
-          <input id="searchBox" type="search" class="form-control"
-            placeholder="Search subject, sender, or recipient..." />
+    <!-- Unified Email Panel -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><i class="bi bi-inboxes"></i> Unified Inbox</div>
+        <div class="panel-actions">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="reloadEmails()">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+          </button>
         </div>
       </div>
-      <div class="filter-control compact-switch">
-        <label class="form-switch">
-          <input type="checkbox" class="form-check-input" id="autoRefresh" onchange="toggleAutoRefresh(this.checked)">
-          <span>Auto-refresh</span>
-        </label>
+      <div class="panel-body">
+        <div class="status-tabs tabs-bar">
+          <button type="button" class="status-tab tab active" data-status="ALL" onclick="switchStatus('ALL')">
+            <i class="bi bi-inbox"></i> All
+            <span class="badge" id="badge-all">{{ total_count }}</span>
+          </button>
+          <button type="button" class="status-tab tab" data-status="HELD" onclick="switchStatus('HELD')">
+            <i class="bi bi-hand-stop"></i> Held
+            <span class="badge" id="badge-held">{{ held_count|default(0) }}</span>
+          </button>
+          <button type="button" class="status-tab tab" data-status="RELEASED" onclick="switchStatus('RELEASED')">
+            <i class="bi bi-send-check"></i> Released
+            <span class="badge" id="badge-released">{{ released_count|default(0) }}</span>
+          </button>
+          <button type="button" class="status-tab tab" data-status="REJECTED" onclick="switchStatus('REJECTED')">
+            <i class="bi bi-x-circle"></i> Rejected
+            <span class="badge" id="badge-rejected">{{ rejected_count }}</span>
+          </button>
+          <button type="button" class="status-tab tab" data-status="DISCARDED" onclick="switchStatus('DISCARDED')">
+            <i class="bi bi-trash"></i> Discarded
+            <span class="badge" id="badge-discarded">{{ discarded_count|default(0) }}</span>
+          </button>
+        </div>
+
+        <div class="filters-bar">
+          <div class="filter-control flex-grow-1">
+            <label for="searchBox">Search</label>
+            <div class="input-with-icon emails-search">
+              <i class="bi bi-search input-icon"></i>
+              <input id="searchBox" type="search" class="form-control"
+                placeholder="Search subject, sender, or recipient..." />
+            </div>
+          </div>
+          <div class="filter-control compact-switch">
+            <label class="form-switch">
+              <input type="checkbox" class="form-check-input" id="autoRefresh"
+                onchange="toggleAutoRefresh(this.checked)">
+              <span>Auto-refresh</span>
+            </label>
+          </div>
+        </div>
+
+        <div id="bulkActions" class="bulk-toolbar hidden" data-count="0">
+          <div class="toolbar-actions">
+            <button type="button" class="btn btn-success btn-sm" onclick="bulkAction('RELEASE')">
+              <i class="bi bi-unlock"></i> Release
+            </button>
+            <button type="button" class="btn btn-danger btn-sm" onclick="bulkAction('DISCARD')">
+              <i class="bi bi-trash"></i> Discard
+            </button>
+            <button type="button" class="btn btn-warning btn-sm" onclick="bulkAction('DELETE')">
+              <i class="bi bi-trash3"></i> Delete Permanently
+            </button>
+          </div>
+        </div>
+
+        <div id="deleteAllDiscardedContainer" class="panel-note hidden">
+          <div class="toolbar-actions">
+            <button type="button" class="btn btn-warning btn-sm" onclick="deleteAllDiscarded()">
+              <i class="bi bi-trash3-fill"></i> Delete All Discarded Emails
+            </button>
+            <span class="text-muted small">
+              <i class="bi bi-exclamation-triangle"></i>
+              This will permanently delete all discarded emails from the database.
+            </span>
+          </div>
+        </div>
+
+        <div class="table-responsive-modern">
+          <table class="table-modern email-table">
+            <colgroup>
+              <col class="col-select">
+              <col class="col-time">
+              <col class="col-correspondents">
+              <col class="col-subject">
+              <col class="col-status">
+              <col class="col-actions">
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="col-select">
+                  <input type="checkbox" class="form-check-input" id="selectAll"
+                    onchange="toggleSelectAll(this.checked)">
+                </th>
+                <th class="col-time">Time</th>
+                <th class="col-correspondents">Correspondents</th>
+                <th class="col-subject">Subject</th>
+                <th class="col-status">Status</th>
+                <th class="col-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="emailTableBody"></tbody>
+          </table>
+        </div>
+
+        <div id="emptyState" class="empty-state hidden">
+          <i class="bi bi-inbox"></i>
+          <h4>No emails to display</h4>
+          <p class="text-muted">Adjust your filters or try refreshing the inbox.</p>
+        </div>
       </div>
-    </div>
-
-    <div id="bulkActions" class="bulk-toolbar hidden" data-count="0">
-      <div class="toolbar-actions">
-        <button type="button" class="btn btn-success btn-sm" onclick="bulkAction('RELEASE')">
-          <i class="bi bi-unlock"></i> Release
-        </button>
-        <button type="button" class="btn btn-danger btn-sm" onclick="bulkAction('DISCARD')">
-          <i class="bi bi-trash"></i> Discard
-        </button>
-        <button type="button" class="btn btn-warning btn-sm" onclick="bulkAction('DELETE')">
-          <i class="bi bi-trash3"></i> Delete Permanently
-        </button>
-      </div>
-    </div>
-
-    <div id="deleteAllDiscardedContainer" class="panel-note hidden">
-      <div class="toolbar-actions">
-        <button type="button" class="btn btn-warning btn-sm" onclick="deleteAllDiscarded()">
-          <i class="bi bi-trash3-fill"></i> Delete All Discarded Emails
-        </button>
-        <span class="text-muted small">
-          <i class="bi bi-exclamation-triangle"></i>
-          This will permanently delete all discarded emails from the database.
-        </span>
-      </div>
-    </div>
-
-    <div class="table-responsive-modern">
-      <table class="table-modern email-table">
-        <colgroup>
-          <col class="col-select">
-          <col class="col-time">
-          <col class="col-correspondents">
-          <col class="col-subject">
-          <col class="col-status">
-          <col class="col-actions">
-        </colgroup>
-        <thead>
-          <tr>
-            <th class="col-select">
-              <input type="checkbox" class="form-check-input" id="selectAll" onchange="toggleSelectAll(this.checked)">
-            </th>
-            <th class="col-time">Time</th>
-            <th class="col-correspondents">Correspondents</th>
-            <th class="col-subject">Subject</th>
-            <th class="col-status">Status</th>
-            <th class="col-actions">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="emailTableBody"></tbody>
-      </table>
-    </div>
-
-    <div id="emptyState" class="empty-state hidden">
-      <i class="bi bi-inbox"></i>
-      <h4>No emails to display</h4>
-      <p class="text-muted">Adjust your filters or try refreshing the inbox.</p>
     </div>
   </div>
 </div>
@@ -579,29 +585,26 @@
       let actions = '';
       if (status === 'HELD') {
         actions = `
-        <button class="action-btn action-view" onclick="viewEmail(${email.id})" title="View Details">
-          <i class="bi bi-eye"></i>
+        <button class="btn-chip success" onclick="releaseEmail(${email.id})" title="Release">
+          <i class="bi bi-check2-circle"></i> Release
         </button>
-        <button class="action-btn action-edit" onclick="editEmail(${email.id})" title="Edit">
-          <i class="bi bi-pencil"></i>
+        <button class="btn-chip warning" onclick="editEmail(${email.id})" title="Edit">
+          <i class="bi bi-pencil"></i> Edit
         </button>
-        <button class="action-btn action-release" onclick="releaseEmail(${email.id})" title="Release">
-          <i class="bi bi-check-circle"></i>
+        <button class="btn-chip danger" onclick="discardEmail(${email.id})" title="Reject">
+          <i class="bi bi-x-octagon"></i> Reject
         </button>
-        <button class="action-btn action-reply" onclick="replyEmail(${email.id})" title="Reply">
-          <i class="bi bi-reply"></i>
-        </button>
-        <button class="action-btn action-forward" onclick="forwardEmail(${email.id})" title="Forward">
-          <i class="bi bi-arrow-right"></i>
-        </button>
-        <button class="action-btn action-discard" onclick="discardEmail(${email.id})" title="Discard">
-          <i class="bi bi-trash"></i>
+        <button class="btn-chip btn-kebab" onclick="openEmailMore(${email.id})" title="More actions" aria-label="More actions">
+          <i class="bi bi-three-dots"></i>
         </button>
       `;
       } else {
         actions = `
-        <button class="action-btn action-view" onclick="viewEmail(${email.id})" title="View">
-          <i class="bi bi-eye"></i>
+        <button class="btn-chip neutral" onclick="viewEmail(${email.id})" title="View">
+          <i class="bi bi-eye"></i> View
+        </button>
+        <button class="btn-chip btn-kebab" onclick="openEmailMore(${email.id})" title="More actions" aria-label="More actions">
+          <i class="bi bi-three-dots"></i>
         </button>
       `;
       }
@@ -654,7 +657,7 @@
         </div>
       </td>
       <td data-label="Actions">
-        <div class="action-buttons">
+        <div class="action-cluster">
           ${actions}
         </div>
       </td>
@@ -664,6 +667,10 @@
     });
     applyTimeFormatting(tbody);
     updateBulkActionsVisibility();
+  }
+
+  function openEmailMore(emailId) {
+    console.debug('openEmailMore', { emailId });
   }
 
   async function restartWatcherFor(accountId) {

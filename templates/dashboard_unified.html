@@ -129,7 +129,7 @@
         <a href="{{ url_for('emails.emails_unified') }}"
           class="view-all tw-text-[#bef264] hover:tw-text-[#bef264]/90 tw-font-medium tw-text-sm tw-flex tw-items-center tw-gap-1">
           View All
-          <span class="material-symbols-outlined tw-text-lg">arrow_forward</span>
+          <span class="material-symbols-outlined tw-text-base">arrow_forward</span>
         </a>
       </div>
 
@@ -655,23 +655,26 @@
         let actions = '';
         if (status === 'HELD') {
           actions = `
-          <button type="button" class="btn btn-success btn-sm" onclick="event.stopPropagation(); rowAction('${email.id}','RELEASE')">
-            <i class="bi bi-unlock"></i> Release
+          <button type="button" class="btn-chip success" title="Release" onclick="event.stopPropagation(); rowAction('${email.id}','RELEASE')">
+            <i class="bi bi-check2-circle"></i> Release
           </button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); rowAction('${email.id}','EDIT')">
-            <i class="bi bi-pencil-square"></i> Edit
+          <button type="button" class="btn-chip warning" title="Edit" onclick="event.stopPropagation(); rowAction('${email.id}','EDIT')">
+            <i class="bi bi-pencil"></i> Edit
           </button>
-          <button type="button" class="btn btn-danger btn-sm" onclick="event.stopPropagation(); rowAction('${email.id}','REJECT')">
-            <i class="bi bi-x-circle"></i> Reject
+          <button type="button" class="btn-chip danger" title="Reject" onclick="event.stopPropagation(); rowAction('${email.id}','REJECT')">
+            <i class="bi bi-x-octagon"></i> Reject
           </button>
-          <button type="button" class="btn btn-ghost more-trigger" onclick="event.stopPropagation(); openMore('${email.id}')">
+          <button type="button" class="btn-chip btn-kebab more-trigger" title="More" aria-label="More actions" onclick="event.stopPropagation(); openMore('${email.id}')">
             <i class="bi bi-three-dots"></i>
           </button>
         `.trim();
         } else {
           actions = `
-          <button type="button" class="btn btn-outline-light btn-sm" onclick="event.stopPropagation(); rowAction('${email.id}','VIEW')">
+          <button type="button" class="btn-chip neutral" title="View" onclick="event.stopPropagation(); rowAction('${email.id}','VIEW')">
             <i class="bi bi-eye"></i> View
+          </button>
+          <button type="button" class="btn-chip btn-kebab more-trigger" title="More" aria-label="More actions" onclick="event.stopPropagation(); openMore('${email.id}')">
+            <i class="bi bi-three-dots"></i>
           </button>
         `.trim();
         }
@@ -707,7 +710,7 @@
           </div>
         </td>
         <td class="col-actions">
-          <div class="action-buttons">
+          <div class="action-cluster">
             ${actions}
           </div>
         </td>
