@@ -1228,7 +1228,7 @@ if __name__ == '__main__':
         print("   ⚠️ SMTP Proxy: disabled because IMAP_ONLY=1")
     else:
         print("   ⚠️ SMTP Proxy: unavailable (install aiosmtpd to enable)")
-    print(f"   🌐 Web Dashboard: http://{flask_host}:{flask_port}")
+    print(f"   🌐 Web Dashboard: http://{flask_host}:{flask_port}") \n
     print("   👤 Login: admin / admin123")
     print("\n   ✨ Features:")
     print("   • IMAP/SMTP email interception")

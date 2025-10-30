@@ -32,7 +32,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **Database**         | SQLite (`email_manager.db`) - local only                          |
 | **Encryption**       | Fernet symmetric (`key.txt`)                                      |
 | **Primary Launcher** | `EmailManager.bat` (menu) or `launch.bat` (quick)                 |
-| **Test Accounts**    | Gmail (ndayijecika@gmail.com), Hostinger (mcintyre@corrinbox.com) |
+| **Test Accounts**    | karlkoxwerks@stateauditgroup.com, Hostinger (mcintyre@corrinbox.com) |
 
 ⚠️ **Security Note**: Test accounts are for **development/testing only**. Never use in production.
 
@@ -94,10 +94,10 @@ git push origin master
 
 **CRITICAL**: These are the ONLY two accounts with confirmed working credentials.
 
-### Account 1: Gmail - NDayijecika (Primary)
-- **Email**: ndayijecika@gmail.com
-- **SMTP**: smtp.gmail.com:587 (STARTTLS)
-- **IMAP**: imap.gmail.com:993 (SSL)
+### Account 1: Gmail - karlkoxwerks (Primary)
+- **Email**: karlkoxwerks@stateauditgroup.com
+- **SMTP**: smtp.hostinger.com:465 (SSL direct)
+- **IMAP**: imap.hostinger.com:993 (SSL)
 - **Status**: ✅ Live checks OK
 
 ### Account 2: Hostinger - Corrinbox (Secondary)
@@ -106,7 +106,7 @@ git push origin master
 - **IMAP**: imap.hostinger.com:993 (SSL)
 - **Status**: ⚠️ Check credentials if failing
 
-**Smart Detection**: The app auto-detects SMTP/IMAP settings from email domain. Gmail uses port 587 STARTTLS, Hostinger uses port 465 SSL.
+**Smart Detection**: The app auto-detects SMTP/IMAP settings from email domain.
 
 ## File Organization
 
@@ -311,12 +311,35 @@ Routes are organized in `app/routes/`:
 
 ## Detailed Documentation
 
-See `docs/` directory for comprehensive guides:
-- **Getting Started**: USER_GUIDE, API_REFERENCE, FAQ, TROUBLESHOOTING
-- **Architecture**: ARCHITECTURE, DATABASE_SCHEMA, TECHNICAL_DEEP_DIVE
-- **Development**: DEVELOPMENT, TESTING, DEPLOYMENT, SECURITY, STYLEGUIDE
-- **IMAP Implementation**: HYBRID_IMAP_STRATEGY
-- **History**: GMAIL_FIXES_CONSOLIDATED, IMPLEMENTATION_HISTORY, SMOKE_TEST_GUIDE, reports/CODEBASE_ANALYSIS
+For deeper technical information, see:
+
+**Getting Started**:
+- **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)** - Complete step-by-step workflows and walkthroughs
+- **[docs/API_REFERENCE.md](docs/API_REFERENCE.md)** - REST API documentation with cURL examples
+- **[docs/FAQ.md](docs/FAQ.md)** - Frequently asked questions
+- **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common issues, gotchas, and solutions
+
+**Architecture & Design**:
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture and design
+- **[docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)** - Database design and indices
+- **[docs/TECHNICAL_DEEP_DIVE.md](docs/TECHNICAL_DEEP_DIVE.md)** - Architecture deep dive
+
+**Development & Deployment**:
+- **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** - Development workflow
+- **[docs/TESTING.md](docs/TESTING.md)** - Testing strategy
+- **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Production deployment guide
+
+**Configuration & Security**:
+- **[docs/SECURITY.md](docs/SECURITY.md)** - Security configuration and validation
+- **[docs/STYLEGUIDE.md](docs/STYLEGUIDE.md)** - UI/UX standards (MANDATORY)
+- **[docs/HYBRID_IMAP_STRATEGY.md](docs/HYBRID_IMAP_STRATEGY.md)** - IMAP implementation
+
+**Implementation & History**:
+- **[docs/GMAIL_FIXES_CONSOLIDATED.md](docs/GMAIL_FIXES_CONSOLIDATED.md)** - Complete Gmail duplicate fix documentation (v1-v4 evolution, protocol fixes, hardening)
+- **[docs/IMPLEMENTATION_HISTORY.md](docs/IMPLEMENTATION_HISTORY.md)** - Chronological feature implementation history (Oct 18-19, 2025)
+- **[docs/SMOKE_TEST_GUIDE.md](docs/SMOKE_TEST_GUIDE.md)** - End-to-end Gmail release validation guide
+- **[docs/reports/CODEBASE_ANALYSIS.md](docs/reports/CODEBASE_ANALYSIS.md)** - Comprehensive architecture and implementation review (2390 lines)
+- **[archive/2025-10-20_root_cleanup/MANIFEST.md](archive/2025-10-20_root_cleanup/MANIFEST.md)** - Root directory cleanup documentation
 
 ---
 
