@@ -4,17 +4,17 @@
 
 {% block content %}
 <div id="compose_email">
-<main class="tw-flex-1 tw-p-6 tw-lg:p-8">
-        <div class="tw-max-w-4xl tw-mx-auto">
-          <header class="tw-flex tw-justify-between tw-items-center tw-mb-6">
+<main class="tw-flex-1 tw-px-6 tw-py-4">
+        <div class="tw-max-w-none tw-mx-0">
+          <header class="tw-flex tw-justify-between tw-items-center tw-mb-4">
             <div>
               <h1 class="tw-text-2xl tw-font-bold tw-text-white">Compose Email</h1>
               <p class="tw-text-sm tw-text-on-surface tw-mt-1">Create and send new messages through your configured accounts.</p>
             </div>
-            <button class="tw-flex tw-items-center tw-gap-2 tw-px-4 tw-py-2 tw-text-sm tw-font-medium tw-bg-surface tw-border tw-border-border tw-hover:bg-zinc-700 tw-text-on-surface tw-hover:text-on-surface-strong tw-transition-colors">
-              <span class="material-symbols-outlined tw-text-base">arrow_back</span>
+            <a href="{{ url_for('emails.emails_unified_stitch') }}" class="tw-inline-flex tw-items-center tw-gap-2 tw-text-primary tw-text-sm tw-font-medium tw-px-2 tw-py-1 hover:tw-bg-primary/10 tw-transition-colors">
+              <span class="material-symbols-outlined tw-!text-base">arrow_back</span>
               Back to Emails
-            </button>
+            </a>
           </header>
 
           <form method="POST" action="{{ url_for('compose.compose_email') }}" class="tw-bg-background tw-border tw-border-border tw-p-6 tw-sm:p-8 tw-space-y-6">

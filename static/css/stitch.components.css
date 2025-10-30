@@ -369,3 +369,36 @@
 /* Sidebar count pill in your skin */
 .sidebar-modern .nav-item-link .badge,
 .sidebar .nav-item .count { position: relative; top: -1px; }
+
+/* === Icon Button Variants (Text + Icon) === */
+/* For action buttons like Edit, Delete, etc. in Stitch templates */
+button.icon-btn-text,
+a.icon-btn-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.5rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 4px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+button.icon-btn-text:hover,
+a.icon-btn-text:hover {
+  background: rgba(39,39,42,0.6);
+}
+
+button.icon-btn-text.icon-btn--danger:hover,
+a.icon-btn-text.icon-btn--danger:hover {
+  background: rgba(239,68,68,0.1);
+  color: #f87171;
+}
+
+button.icon-btn-text.icon-btn--primary:hover,
+a.icon-btn-text.icon-btn--primary:hover {
+  background: rgba(190,242,100,0.1);
+  color: #a3d154;
+}
