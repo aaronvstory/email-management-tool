@@ -1,0 +1,29 @@
+name: "Guard: No superdesign or node_modules"
+on:
+  pull_request:
+    paths:
+      - '**'
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Fail if banned paths are present
+        run: |
+          set -e
+          bad=$(git ls-files | grep -E '^node_modules/|^\.superdesign/|^\.windsurfrules$|^\.cursor/rules/design\.mdc$' || true)
+          if [ -n "$bad" ]; then
+            echo "🚫 ERROR: Banned files found in commit:"
+            echo "$bad"
+            echo ""
+            echo "These files should be gitignored and not committed:"
+            echo "  - node_modules/ (npm dependencies)"
+            echo "  - .superdesign/ (removed design sandbox)"
+            echo "  - .windsurfrules (removed agent config)"
+            echo "  - .cursor/rules/design.mdc (removed agent rules)"
+            exit 1
+          fi
+          echo "✅ OK: No banned files found."
