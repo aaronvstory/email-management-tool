@@ -1181,6 +1181,9 @@ window.extractErrorMessage = extractErrorMessage;
 window.MailOps = window.MailOps || {};
 
 (function(util) {
+    const timeStackFormatter = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    const dateStackFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
   util.escapeHtml = function(value) {
     if (value === null || value === undefined) return '';
     return String(value)
@@ -1215,9 +1218,35 @@ window.MailOps = window.MailOps || {};
     return `<span class="time-cell" data-ts="${util.escapeHtml(normalized)}">${util.escapeHtml(String(ts))}</span>`;
   };
 
+    util.getTimestampParts = function(ts) {
+        if (!ts) return null;
+        const normalized = util.normalizeTimestamp(ts);
+        const date = new Date(normalized);
+        if (Number.isNaN(date.getTime())) return null;
+        return {
+            time: timeStackFormatter.format(date),
+            date: dateStackFormatter.format(date),
+            normalized
+        };
+    };
+
+    util.renderTimeStack = function(ts, fallback = '—') {
+        const parts = util.getTimestampParts(ts);
+        if (!parts) {
+            const safeFallback = util.escapeHtml(String(fallback ?? '—'));
+            return `<div class="time-cell time-cell-structured"><div class="time">${safeFallback}</div></div>`;
+        }
+        const timeHtml = util.escapeHtml(parts.time);
+        const dateHtml = util.escapeHtml(parts.date);
+        return `<div class="time-cell time-cell-structured" data-ts="${util.escapeHtml(parts.normalized)}"><div class="time">${timeHtml}</div><div class="date">${dateHtml}</div></div>`;
+    };
+
   util.applyTimeFormatting = function(root) {
     const scope = root || document;
     scope.querySelectorAll('.time-cell').forEach(node => {
+            if (node.classList.contains('time-cell-structured')) {
+                return;
+            }
       const ts = node.dataset.ts || node.textContent;
       if (!ts) {
         node.textContent = '—';

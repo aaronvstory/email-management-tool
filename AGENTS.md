@@ -1,76 +1,22 @@
-# Frontend Styling Directives (Kombai Agent Brief)
+# Repository Guidelines
 
-## Tech Stack Snapshot
-- **Framework**: Flask + Jinja templates (`templates/*.html`).
-- **Styling**: Bootstrap 5 + custom dark theme (`static/css/theme-dark.css`, `static/css/main.css`).
-- **Icons**: Bootstrap Icons.
-- **Behaviour**: Vanilla JS modules in `static/js/app.js` and inline per-page helpers.
+## Project Structure & Module Organization
+Core Flask code lives in `app/` (`routes/` for HTTP controllers, `services/` for moderation logic, `utils/` for shared helpers, `workers/` for background jobs). Configuration stays in `config/config.ini` and should be overridden via per-host `.env`. UI assets live in `templates/` and `static/` (custom Stitch styling in `static/css/stitch.components.css`); backups, data dumps, and logs sit in `backups/`, `data/`, and `logs/`. Root batch and PowerShell launchers handle day-to-day tasks, while reusable tooling resides under `scripts/`.
 
-## Canonical Look & Feel
-Use `templates/watchers.html` as the reference. Core characteristics:
-- Charcoal background gradient (`#1a1a1a ➜ #242424`) with subtle red borders (`rgba(220,38,38,0.15)`).
-- Card shells `stat-card-modern` / `panel-header` with soft shadows, rounded corners, disciplined spacing.
-- Button system (`btn-secondary`, `btn-ghost`, `btn-modern`) with consistent height (36–40 px), uppercase-ish labels, icon+text combos.
-- Typography: white body copy, muted gray metadata (`#9ca3af`), accent greens for healthy states.
+## Build, Test, and Development Commands
+- `pip install -r requirements-dev.txt` provisions the virtualenv with linters, type checkers, and pytest extras.
+- `.\manage.ps1 start` (or `start.bat`) boots the SMTP proxy and dashboard; `.\manage.ps1 logs` tails runtime output.
+- `python -m pytest` executes backend tests; add `--cov=app --cov-report=term-missing` to review coverage.
+- `npm run lint` enforces JS/CSS quality; `npm run format:check` validates template formatting before commit.
 
-Every screen must align with those tokens; avoid the older bright-red gradients still present on several pages.
+## Coding Style & Naming Conventions
+Format Python with Black (4-space indent) and keep modules `snake_case`, classes `PascalCase`, constants `UPPER_SNAKE`. Ensure touched modules pass `pylint` and `mypy`; favour dependency injection in `services/` and keep side effects inside `workers/`. Front-end code follows ESLint + Prettier defaults (2-space indent, single quotes) and Stylelint rules; organise new assets under `static/js/<feature>/` and `static/css/<feature>/`. Template fragments belong in `templates/partials/` with feature-prefixed filenames such as `moderation_header.html`.
 
-## Targeted Cleanup Checklist
-Embed these tasks in each page refactor:
-1. **Navigation & Header**
-   - Replace legacy `.top-nav` markup with the pattern used on `/watchers`: logo/brand left, search + action buttons aligned right, consistent hover states.
-   - Ensure every nav item includes an icon (e.g., add one to “Interception Test”).
-   - Update footer (`templates/base.html`) so the logout bar uses panel styles (two-column flex, buttons matching `btn-ghost`).
+## Testing Guidelines
+Pytest with pytest-flask and pytest-asyncio powers suites in `tests/`; mirror application structure when naming files (e.g., `tests/services/test_rules.py`). Use descriptive fixtures (`moderation_queue`, `sample_message_html`) and mark async cases with `pytest.mark.asyncio`. Maintain current coverage (>=85% on moderation workflows) and refresh canonical payloads in `data/inbound_raw/` when behaviour changes. Run `scripts/test_interception_flow.sh` for end-to-end smoke checks inside WSL-enabled shells.
 
-2. **Cards / Panels**
-   - Wrap sections (Dashboard stats, Diagnostics panels, Settings cards, etc.) in `stat-card-modern` or `panel-card` containers. Avoid bare `div.card`.
-   - Standardize section headers via `panel-header` (title left, actions right, consistent font sizes).
+## Commit & Pull Request Guidelines
+Follow the conventional commit format observed in history (`feat(ui): ...`, `fix(core): ...`, `chore(docs): ...`). Keep commits focused on a single concern and add short bullet points in the body when context helps reviewers. PRs should reference issues, summarise behaviour changes, list test commands run, and attach before/after screenshots for UI tweaks. Request at least one maintainer review and wait for CI to pass before merging.
 
-3. **Forms & Inputs**
-   - Apply the watchers form aesthetic: floating labels or clearly labelled inputs, 12–16 px spacing, full-width fields on small screens.
-   - Rebuild the global search input (currently misaligned) as a rounded field with icon prefix, matching watchers.
-   - Normalize bulk action controls (e.g., `fetchCount` selectors, “Fetch/More” buttons) so labels sit above inputs and buttons align baseline without ad-hoc margins.
-
-4. **Tables & Lists**
-   - Use a single table styling system (striped dark rows, consistent padding, sticky header if needed).
-   - Add toolbars for bulk-selection actions at the top *and* bottom of long lists (e.g., Diagnostics “Pending” tab) to avoid long scrolls.
-
-5. **Buttons & Badges**
-   - Replace bespoke button classes (`btn-test`, `btn-primary`, etc.) with the shared palette: `btn-secondary`, `btn-warning`, `btn-danger`, `btn-ghost`. Keep uniform height and border radius.
-   - Account action clusters (on /accounts) should use same button size; regroup into a responsive button bar.
-
-6. **Toasts & Notifications**
-   - Clean the toast component (see `templates/styleguide.html`) so padding is even, icons align left, and remove stray caret/X characters. Ensure confirm toasts share the same shell.
-
-7. **Modals**
-   - Apply consistent modal chrome (header gradient, body padding, footer buttons). `/email/<id>` and `/emails-unified` should share the same modal partial for edit/release.
-
-8. **Style Guide**
-   - Refresh `/styleguide` using the final tokens: document cards, buttons, forms, toasts, tables, and include code snippets so future work follows the same system.
-
-## Implementation Guidelines
-- Centralise colors, spacing, and shadow values in `static/css/main.css`. Introduce CSS variables (e.g., `--surface-base`, `--accent-primary`) if needed.
-- Remove inline `style` attributes wherever possible; convert to classes that live in the shared stylesheet.
-- Ensure responsive breakpoints (≥768 px, ≥1200 px) mirror watchers page behaviour: cards wrap into grid, controls stack vertically on small screens.
-- Keep HTML semantics intact (forms, headings). Don’t rewrite back-end routes or template logic.
-- After restyling, verify key flows: dashboard metrics, Held email editing, Compose page, Settings save, Diagnostics bulk discard, and toasts.
-
-## Deliverables
-- Updated templates + CSS reflecting the instructions above.
-- Refreshed `templates/styleguide.html` demonstrating each standard component.
-- Brief change log (per page) to accompany the PR.
-
-## Out of Scope
-- JavaScript business logic changes (unless required to reposition UI elements).
-- Altering watcher functionality—it is already the design reference.
-- Touching unrelated CLI scripts or back-end Python files beyond template context tweaks.
-
-Follow this brief to produce a cohesive dark-theme dashboard that matches the quality of the `/watchers` view across the entire app.
-
----
-
-## Prep Status — October 24, 2025
-- Serena project activated and indexed for symbol search.
-- Onboarding memories refreshed (overview, style conventions, suggested commands, completion checklist).
-- Prep notes appended here so all agents share the same brief.
-- Standing by for detailed implementation tasks from the user.
+## Security & Configuration Tips
+Never commit `key.txt`, `.env`, or SQLite artifacts (`email_manager.db*`, `data/emails.db`); confirm `.gitignore` coverage before pushing. Rotate the Fernet key by removing your local `key.txt` and rerunning `setup.bat` or `manage.ps1 config` so the provisioning scripts regenerate secrets. Store SMTP credentials in Windows Credential Manager or another vault, not in tracked config files.
