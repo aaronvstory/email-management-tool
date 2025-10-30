@@ -142,12 +142,13 @@
   table-layout: fixed;
 }
 
-.col-select{width:40px;}
-.col-time{width:180px;}
-.col-correspondents{width:300px;}
-.col-subject{width:auto;}
-.col-status{width:180px;}
-.col-actions{width:220px;}
+/* REMOVED 2025-10-30 - Old fixed-width column rules (Fix #5) */
+/* .col-select{width:40px;} */
+/* .col-time{width:180px;} */
+/* .col-correspondents{width:300px;} */
+/* .col-subject{width:auto;} */
+/* .col-status{width:180px;} */
+/* .col-actions{width:220px;} */
 
 /* === Truncation Helpers === */
 .truncate-1{
@@ -222,3 +223,149 @@
   background: var(--bg-elevated);
   border-top: 1px solid var(--border-subtle);
 }
+
+/* 1) Tabs: underline, alignment, spacing */
+.status-tabs.tabs-bar {
+  margin-top: 8px;
+  gap: 8px;
+}
+.status-tabs .tab {
+  padding: 6px 10px 10px;
+  border-bottom: 2px solid transparent;
+  line-height: 1.1;
+}
+.status-tabs .tab.active,
+.status-tabs .tab[aria-current="true"] {
+  border-bottom-color: var(--brand-primary);
+}
+.status-tabs .tab .count,
+.status-tabs .tab .badge {
+  position: relative;
+  top: -1px; /* vertically center the pill with label */
+}
+
+/* 2) Emails table: fixed columns, ellipsis, vertical centering */
+.table-modern.email-table {
+  table-layout: fixed;
+}
+.email-table col.col-select      { width: 32px; }
+.email-table col.col-time        { width: 11ch; }      /* e.g., Oct 29, 02:44 AM */
+.email-table col.col-correspondents { width: 28ch; }   /* stable */
+.email-table col.col-status      { width: 10ch; }
+.email-table col.col-actions     { width: 160px; }     /* six icon buttons fit cleanly */
+.email-table col.col-subject     { width: auto; }
+
+.email-table th, .email-table td {
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  height: 36px;
+}
+
+/* Allow multi-line ONLY for correspondents; subject stays one-line for scan-ability */
+.email-table td:nth-child(3) {  /* correspondents column */
+  white-space: normal;
+  line-height: 1.25;
+  max-height: 2.5em;
+}
+
+/* 3) Status chips: contrast + centering */
+.badge.status, .badge[data-status] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+.badge[data-status="HELD"]      { background: #4b3a00; color: #ffd46a; }
+.badge[data-status="RELEASED"]  { background: #083a12; color: #7bffa9; }
+.badge[data-status="DISCARDED"] { background: #3a0b0b; color: #ff8a8a; }
+.badge[data-status="UNKNOWN"]   { background: #2a2a2a; color: #dcdcdc; }
+
+/* 4) Row actions: consistent hit targets */
+.table-modern .btn-icon,
+.table-modern .icon-btn {
+  width: 28px; height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  margin-left: 4px;
+}
+.table-modern td:last-child {  /* actions column */
+  white-space: nowrap;
+}
+
+/* 5) Bulk actions: order, spacing, size */
+.bulk-actions,
+.actions-toolbar { gap: 8px; }
+.bulk-actions .btn { height: 30px; line-height: 28px; padding: 0 10px; }
+.bulk-actions .btn-warning { order: 2; }   /* Discard */
+.bulk-actions .btn-danger  { order: 3; }   /* Delete Permanently */
+.bulk-actions .btn-success { order: 1; }   /* Release */
+
+/* 6) Search bars: breathing room */
+.search-group, .emails-search, .dashboard-search {
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+/* 7) Left nav count pill baseline */
+.sidebar .nav-item .count {
+  position: relative; top: -1px;
+}
+
+/* 8) Compose: toolbar grouping + send button clarity */
+.compose-toolbar .btn {
+  border-radius: 4px 0 0 4px;
+}
+.compose-toolbar .btn + .btn {
+  border-radius: 0;
+  margin-left: 0;
+}
+.compose-toolbar .btn:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+/* If "Send Email" is disabled style, make disabled obvious but keep contrast when enabled */
+.btn-primary[disabled] {
+  opacity: 0.5;
+}
+
+/* Tabs: cover other “active” patterns JS might set */
+.status-tabs .tab.is-active,
+.status-tabs .tab[aria-selected="true"],
+.status-tabs .tab[data-active="true"] {
+  border-bottom-color: var(--brand-primary);
+}
+
+/* Bulk actions: your markup often uses .toolbar-actions */
+.toolbar-actions { gap: 8px; }
+.toolbar-actions .btn { height: 30px; line-height: 28px; padding: 0 10px; }
+.toolbar-actions .btn-success { order: 1; }  /* Release */
+.toolbar-actions .btn-warning { order: 2; }  /* Discard */
+.toolbar-actions .btn-danger  { order: 3; }  /* Delete Permanently */
+
+/* Compose toolbar: current classes are .email-toolbar and .toolbar-btn */
+.email-toolbar .toolbar-btn {
+  border-radius: 4px 0 0 4px;
+}
+.email-toolbar .toolbar-btn + .toolbar-btn {
+  border-radius: 0;
+  margin-left: 0;
+}
+.email-toolbar .toolbar-btn:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+/* Compose CTA is .btn-primary-modern */
+.btn-primary-modern[disabled] { opacity: 0.5; }
+
+/* Sidebar count pill in your skin */
+.sidebar-modern .nav-item-link .badge,
+.sidebar .nav-item .count { position: relative; top: -1px; }

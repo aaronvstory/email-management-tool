@@ -35,3 +35,167 @@
 /* 7) Loading spinner: ensure it hides after data render when container marks ready */
 .recent-emails-panel.table-ready .loading-spinner { display: none; }
 
+/* Unify dashboard header with other pages (Fix #1) */
+.page-header {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 30px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 10px;
+}
+
+.page-header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+/* Subject truncation - 2 lines max (Fix #7) */
+.subject-cell {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: normal;
+  line-height: 1.25;
+}
+
+/* Fix header text styling (Fix #8) - Near-white for actual legibility */
+#dashboard-page .page-header .text-muted {
+  color: #e5e7eb !important; /* Near-white for maximum legibility */
+  font-size: 0.875rem;
+  margin-top: 4px;
+  font-weight: 400;
+}
+
+/* Fix refresh button styling (Fix #9) */
+.btn-modern {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--bg-accent);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius);
+  font-weight: 500;
+  font-size: 0.875rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: var(--transition);
+  min-height: 40px;
+}
+
+.btn-modern:hover {
+  background: var(--bg-elevated);
+  border-color: var(--border-strong);
+}
+
+/* Fix tab active state styling (Fix #10) */
+.status-tab.active {
+  background: rgba(190, 242, 100, 0.2);
+  border-color: rgba(190, 242, 100, 0.3);
+  color: var(--brand-primary);
+}
+
+.status-tab {
+  transition: all 0.2s ease;
+}
+/* Table spacing - balanced approach for readability (Fix #11 final) */
+#dashboard-page .email-table td {
+  padding: 14px 18px;
+  vertical-align: middle;
+  line-height: 1.5;
+}
+
+#dashboard-page .email-table th {
+  padding: 14px 18px;
+}
+
+/* Ensure correspondent/subject cells have proper spacing */
+#dashboard-page .email-table .correspondent-cell,
+#dashboard-page .email-table .subject-cell {
+  line-height: 1.6;
+}
+/* Status badges need breathing room */
+#dashboard-page .email-table .status-badge {
+  margin: 2px 0;
+}
+
+/* ===== FIX #12: Table Column Sizing System ===== */
+/* Prevent column shifting when filter tabs change */
+#dashboard-page .email-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+/* Fixed column widths to prevent shifting */
+#dashboard-page .email-table .col-select {
+  width: 50px;
+}
+
+#dashboard-page .email-table th:nth-child(2),
+#dashboard-page .email-table td:nth-child(2) { /* Time column */
+  width: 160px; /* Increased from 140px to prevent truncation */
+}
+
+#dashboard-page .email-table .col-from { /* Correspondents */
+  width: 240px;
+}
+
+#dashboard-page .email-table .col-subject { /* Subject - flexible */
+  width: auto; /* Takes remaining space */
+}
+
+#dashboard-page .email-table .col-status {
+  width: 120px;
+}
+
+#dashboard-page .email-table .col-actions {
+  width: 280px; /* Back to original - space for 6 buttons in grid */
+}
+
+#dashboard-page .email-table th.col-actions {
+  width: 280px;
+}
+
+/* Column alignment */
+#dashboard-page .email-table th:nth-child(2),
+#dashboard-page .email-table td:nth-child(2) {
+  text-align: left; /* Time - left aligned */
+}
+
+#dashboard-page .email-table .col-status,
+#dashboard-page .email-table td:nth-child(5) {
+  text-align: right; /* Status - right aligned */
+}
+
+#dashboard-page .email-table .col-actions,
+#dashboard-page .email-table td:nth-child(6) {
+  text-align: right; /* Actions - right aligned */
+}
+
+/* Correspondents - ellipsis for overflow */
+#dashboard-page .correspondent-cell {
+  overflow: hidden;
+}
+
+#dashboard-page .correspondent-value {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Subject - 2 line clamp (enhanced from Fix #7) */
+#dashboard-page .subject-cell {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+  line-height: 1.5;
+  max-height: 3em; /* 2 lines × 1.5 line-height */
+}
+
+
+

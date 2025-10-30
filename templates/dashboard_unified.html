@@ -6,24 +6,26 @@
 
 {% block extra_css %}
 <!-- Stitch dashboard uses Tailwind from base.html -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/patch.dashboard-emails.css') }}">
 {% endblock %}
 
 {% block content %}
 <div id="dashboard-page" class="tw-p-6 md:tw-p-8 tw-space-y-8 tw-bg-[#18181b] tw-min-h-screen">
-<div class="page-header tw-flex tw-flex-col md:tw-flex-row md:tw-items-start md:tw-justify-between tw-gap-4 tw-border-b tw-border-[#27272a] tw-pb-6">
+<div class="page-header">
   <div>
-    <h1 class="tw-text-3xl tw-font-bold tw-text-[#f4f4f5]">
+    <h1>
       <i class="bi bi-speedometer2"></i> Dashboard
     </h1>
-    <p class="tw-mt-2 tw-text-[#a1a1aa]">Track email activity and manage your monitored accounts.</p>
+    <p class="text-muted">Track email activity and manage your monitored accounts.</p>
   </div>
-  <div class="header-actions">
-    <button class="tw-bg-[#27272a] tw-border tw-border-zinc-700/50 tw-text-[#f4f4f5] tw-font-medium tw-py-2 tw-px-4 hover:tw-bg-zinc-700 tw-transition-colors tw-flex tw-items-center tw-gap-2 tw-rounded-md" type="button" onclick="location.reload()">
+  <div class="page-header-actions">
+    <button class="btn-modern" type="button" onclick="location.reload()">
       <i class="bi bi-arrow-clockwise"></i> Refresh
     </button>
   </div>
 </div>
 
+<!-- REMOVED 2025-10-30 - Filter by Account section (Fix #2c)
 <div class="account-selector tw-bg-[#18181b] tw-border tw-border-[#27272a] tw-rounded-md tw-p-5">
   <div class="selector-grid tw-grid tw-grid-cols-1 md:tw-grid-cols-[1fr_auto_auto] tw-gap-4 tw-items-center">
     <div class="selector-field">
@@ -66,6 +68,7 @@
     </div>
   </div>
 </div>
+-->
 
 {% set totals = namespace(value = stats.total if stats.total is not none else 0, held = 0, released = 0) %}
 {% set totals.held = stats.held|default(0) %}
@@ -163,13 +166,14 @@
     </button>
   </div>
 
-  <!-- Search and Controls -->
+<!-- REMOVED 2025-10-30 - Duplicate Search and Controls (Fix #2b)
   <div class="filters-bar tw-p-4 tw-flex tw-items-center tw-justify-between tw-gap-4 tw-bg-[#18181b] tw-border-b tw-border-[#27272a]">
     <div class="search-group tw-flex tw-items-center tw-gap-2 tw-flex-1">
       <i class="bi bi-search tw-text-[#a1a1aa]"></i>
       <input id="dashboardSearchBox" class="search-input tw-flex-1 tw-bg-transparent tw-border-0 tw-text-[#f4f4f5] focus:tw-outline-none" placeholder="Search subject, sender, or recipient..." oninput="filterDashboardEmails()" />
     </div>
     <div class="toolbar-actions tw-flex tw-items-center tw-gap-3">
+<!-- REMOVED 2025-10-30 - Duplicate Refresh button (Fix #2a)
       <label class="form-check tw-flex tw-items-center tw-gap-2 tw-text-sm tw-text-[#a1a1aa] tw-cursor-pointer">
         <input type="checkbox" class="form-check-input" id="dashboardAutoRefresh" onchange="toggleDashboardAutoRefresh(this.checked)">
         <span>Auto-refresh</span>
@@ -177,8 +181,8 @@
       <button class="tw-bg-[#27272a] tw-border tw-border-zinc-700/50 tw-text-[#f4f4f5] tw-font-medium tw-py-1.5 tw-px-3 hover:tw-bg-zinc-700 tw-transition-colors tw-flex tw-items-center tw-gap-2 tw-rounded-md tw-text-sm" type="button" onclick="loadDashboardEmails()">
         <i class="bi bi-arrow-clockwise"></i> Refresh
       </button>
-    </div>
-  </div>
+-->
+-->
 
   <!-- Bulk Actions Bar -->
   <div id="bulk-actions-bar" class="bulk-toolbar tw-hidden tw-sticky tw-top-2 tw-z-20 tw-flex tw-items-center tw-justify-between tw-gap-3 tw-rounded-xl tw-bg-sky-500/15 tw-border tw-border-sky-500/30 tw-backdrop-blur tw-p-3 tw-mx-4 tw-mt-3">
@@ -445,13 +449,26 @@ function applyDashboardBadgeCounts() {
 function switchDashboardFilter(status) {
   dashboardActiveFilter = status;
   document.querySelectorAll('.status-tab').forEach(tab => {
-    tab.classList.toggle('active', tab.dataset.status === status);
+    const isActive = tab.dataset.status === status;
+    // Remove active classes
+    tab.classList.remove('active');
+    tab.classList.remove('tw-bg-[#bef264]/20', 'tw-border-[#bef264]/30', 'tw-text-[#bef264]');
+    // Add inactive classes
+    tab.classList.add('tw-bg-[#18181b]', 'tw-text-[#a1a1aa]');
+    
+    // If this tab is active, apply active styling
+    if (isActive) {
+      tab.classList.add('active');
+      tab.classList.remove('tw-bg-[#18181b]', 'tw-text-[#a1a1aa]');
+      tab.classList.add('tw-bg-[#bef264]/20', 'tw-border-[#bef264]/30', 'tw-text-[#bef264]');
+    }
   });
   filterDashboardEmails(status);
 }
 
 function filterDashboardEmails(statusFilter = dashboardActiveFilter) {
-  const searchTerm = document.getElementById('dashboardSearchBox').value.toLowerCase();
+  const searchInput = document.getElementById('email-search-input');
+  const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
   let filtered = dashboardEmails;
 
   // Filter by status
@@ -501,7 +518,8 @@ function renderDashboardEmailsWithPagination() {
     paginationControls.style.display = 'none';
 
     // Set contextual empty state message
-    const searchTerm = document.getElementById('dashboardSearchBox').value;
+    const searchInput = document.getElementById('email-search-input');
+    const searchTerm = searchInput ? searchInput.value : '';
     if (searchTerm) {
       emptyMessage.textContent = `No emails matching "${searchTerm}"`;
       emptyHint.textContent = 'Try a different search term or clear the search filter';
@@ -613,9 +631,6 @@ function renderDashboardEmailsWithPagination() {
       <td>
         <div class="status-cell">
           <div class="status-main"><span class="status-badge status-${status}">${statusLabel}</span></div>
-          <div class="status-meta">${watcherBadge}
-            <button type="button" class="status-restart" title="Restart watcher" onclick="restartWatcherFor(${email.account_id})"><i class="bi bi-arrow-repeat"></i></button>
-          </div>
         </div>
       </td>
       <td>
@@ -998,5 +1013,29 @@ function createEllipsis() {
   return span;
 }
 
+async function updateWatchersStat() {
+  const el = document.getElementById('statWatchers');
+  if (!el) return;
+  el.textContent = '…';
+  
+  try {
+    const r = await fetch('/api/watchers/overview');
+    if (!r.ok) throw new Error('bad');
+    const j = await r.json();
+    
+    // Count active watchers
+    const active = (j.accounts || []).filter(a =>
+      (a.watcher && a.watcher.state) === 'active' || a.is_active
+    ).length;
+    
+    el.textContent = String(active);
+  } catch {
+    el.textContent = '0';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', updateWatchersStat);
+// Optional: Auto-refresh every 30 seconds
+setInterval(updateWatchersStat, 30000);
 </script>
 {% endblock %}
