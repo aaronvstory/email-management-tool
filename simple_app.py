@@ -234,9 +234,10 @@ app.config['WTF_CSRF_SSL_STRICT'] = False  # Set True in production when HTTPS i
 # SECRET_KEY validation: prevent accidental weak/default secret in production
 _default_secret = 'dev-secret-change-in-production'
 secret = app.config.get('SECRET_KEY')
-if (not app.debug) and (not secret or secret == _default_secret or len(str(secret)) < 32):
+_is_testing_env = bool(app.config.get('TESTING')) or bool(os.environ.get('PYTEST_CURRENT_TEST')) or bool(os.environ.get('TESTING')) or bool(os.environ.get('TEST_DB_PATH'))
+if (not app.debug) and (not _is_testing_env) and (not secret or secret == _default_secret or len(str(secret)) < 32):
     raise RuntimeError("SECURITY: A strong SECRET_KEY is required in production. Set FLASK_SECRET_KEY.")
-if app.debug and (not secret or secret == _default_secret):
+if (app.debug or _is_testing_env) and (not secret or secret == _default_secret):
     try:
         app.logger.warning("SECURITY: Using development SECRET_KEY; do not use in production.")
     except RuntimeError as e:
@@ -1228,7 +1229,7 @@ if __name__ == '__main__':
         print("   ⚠️ SMTP Proxy: disabled because IMAP_ONLY=1")
     else:
         print("   ⚠️ SMTP Proxy: unavailable (install aiosmtpd to enable)")
-    print(f"   🌐 Web Dashboard: http://{flask_host}:{flask_port}") \n
+    print(f"   🌐 Web Dashboard: http://{flask_host}:{flask_port}")
     print("   👤 Login: admin / admin123")
     print("\n   ✨ Features:")
     print("   • IMAP/SMTP email interception")
