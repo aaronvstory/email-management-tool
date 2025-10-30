@@ -1,0 +1,56 @@
+[
+  { 
+    "key": "dashboard", 
+    "url": "/dashboard", 
+    "ready": "#dashboard-page",
+    "elements": [".page-header", ".email-table", ".stats-grid"]
+  },
+  { 
+    "key": "emails", 
+    "url": "/emails-unified", 
+    "ready": "#emails-page",
+    "elements": [".page-header", ".email-table"]
+  },
+  { 
+    "key": "watchers", 
+    "url": "/watchers", 
+    "ready": "#watchers-page",
+    "elements": [".page-header", ".watchers-table"]
+  },
+  { 
+    "key": "rules", 
+    "url": "/rules", 
+    "ready": ".rules-page",
+    "elements": [".page-header", ".rules-table"]
+  },
+  { 
+    "key": "accounts", 
+    "url": "/accounts", 
+    "ready": ".accounts-page",
+    "elements": [".page-header", ".accounts-table"]
+  },
+  { 
+    "key": "diagnostics", 
+    "url": "/diagnostics", 
+    "ready": ".diagnostics-page",
+    "elements": [".page-header", ".diagnostic-grid"]
+  },
+  { 
+    "key": "settings", 
+    "url": "/settings", 
+    "ready": ".settings-page",
+    "elements": [".page-header", ".settings-form"]
+  },
+  { 
+    "key": "compose", 
+    "url": "/compose", 
+    "ready": "#compose-page",
+    "elements": [".page-header", ".compose-form"]
+  },
+  { 
+    "key": "styleguide", 
+    "url": "/styleguide", 
+    "ready": "#styleguide-page",
+    "elements": [".page-header", ".component-showcase"]
+  }
+]

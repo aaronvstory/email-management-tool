@@ -1181,6 +1181,9 @@ window.extractErrorMessage = extractErrorMessage;
 window.MailOps = window.MailOps || {};
 
 (function(util) {
+    const timeStackFormatter = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    const dateStackFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
   util.escapeHtml = function(value) {
     if (value === null || value === undefined) return '';
     return String(value)
@@ -1215,9 +1218,35 @@ window.MailOps = window.MailOps || {};
     return `<span class="time-cell" data-ts="${util.escapeHtml(normalized)}">${util.escapeHtml(String(ts))}</span>`;
   };
 
+    util.getTimestampParts = function(ts) {
+        if (!ts) return null;
+        const normalized = util.normalizeTimestamp(ts);
+        const date = new Date(normalized);
+        if (Number.isNaN(date.getTime())) return null;
+        return {
+            time: timeStackFormatter.format(date),
+            date: dateStackFormatter.format(date),
+            normalized
+        };
+    };
+
+    util.renderTimeStack = function(ts, fallback = '—') {
+        const parts = util.getTimestampParts(ts);
+        if (!parts) {
+            const safeFallback = util.escapeHtml(String(fallback ?? '—'));
+            return `<div class="time-cell time-cell-structured"><div class="time">${safeFallback}</div></div>`;
+        }
+        const timeHtml = util.escapeHtml(parts.time);
+        const dateHtml = util.escapeHtml(parts.date);
+        return `<div class="time-cell time-cell-structured" data-ts="${util.escapeHtml(parts.normalized)}"><div class="time">${timeHtml}</div><div class="date">${dateHtml}</div></div>`;
+    };
+
   util.applyTimeFormatting = function(root) {
     const scope = root || document;
     scope.querySelectorAll('.time-cell').forEach(node => {
+            if (node.classList.contains('time-cell-structured')) {
+                return;
+            }
       const ts = node.dataset.ts || node.textContent;
       if (!ts) {
         node.textContent = '—';
@@ -1227,5 +1256,247 @@ window.MailOps = window.MailOps || {};
       node.textContent = util.formatTimestamp(ts);
     });
   };
+
+    let activeActionMenu = null;
+
+    function cleanupActionMenu() {
+        if (!activeActionMenu) return;
+        const { node, onDocumentClick, onKeydown, onScroll, onResize } = activeActionMenu;
+        document.removeEventListener('click', onDocumentClick, true);
+        document.removeEventListener('keydown', onKeydown, true);
+        window.removeEventListener('scroll', onScroll, true);
+        window.removeEventListener('resize', onResize, true);
+        if (node) {
+            node.remove();
+        }
+        activeActionMenu = null;
+    }
+
+    function positionActionMenu(menu, trigger, options) {
+        if (!menu || !trigger) return;
+        const rect = trigger.getBoundingClientRect();
+        const offset = typeof options.offset === 'number' ? options.offset : 8;
+        const align = options.align || 'end';
+        const scrollX = window.pageXOffset || document.documentElement.scrollLeft || 0;
+        const scrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+        const viewportWidth = document.documentElement.clientWidth;
+        const viewportHeight = document.documentElement.clientHeight;
+
+        // Measure menu after it exists in the DOM to respect width constraints
+        const menuRect = menu.getBoundingClientRect();
+
+        let left = (() => {
+            if (align === 'start' || align === 'left') {
+                return rect.left;
+            }
+            if (align === 'center') {
+                return rect.left + (rect.width / 2) - (menuRect.width / 2);
+            }
+            return rect.right - menuRect.width;
+        })();
+        left += scrollX;
+
+        const minLeft = scrollX + 8;
+        const maxLeft = scrollX + viewportWidth - menuRect.width - 8;
+        if (left < minLeft) left = minLeft;
+        if (left > maxLeft) left = maxLeft;
+
+        let top = rect.bottom + offset + scrollY;
+        let dropUp = false;
+        const maxBottom = scrollY + viewportHeight - menuRect.height - 8;
+        if (top > maxBottom) {
+            top = rect.top + scrollY - menuRect.height - offset;
+            dropUp = true;
+        }
+        if (top < scrollY + 8) {
+            top = scrollY + 8;
+        }
+
+        menu.style.left = `${Math.round(left)}px`;
+        menu.style.top = `${Math.round(top)}px`;
+
+        if (dropUp) {
+            menu.classList.add('drop-up');
+        } else {
+            menu.classList.remove('drop-up');
+        }
+    }
+
+    util.closeActionMenu = function(reason) {
+        if (!activeActionMenu) return;
+        const handler = activeActionMenu.onClose;
+        cleanupActionMenu();
+        if (typeof handler === 'function') {
+            handler(reason || 'manual');
+        }
+    };
+
+    util.repositionActionMenu = function() {
+        if (!activeActionMenu) return;
+        positionActionMenu(activeActionMenu.node, activeActionMenu.trigger, activeActionMenu.options || {});
+    };
+
+    util.openActionMenu = function(trigger, items, options = {}) {
+        if (!trigger || !items || !items.length) {
+            util.closeActionMenu('empty');
+            return null;
+        }
+
+        if (activeActionMenu && activeActionMenu.trigger === trigger) {
+            util.closeActionMenu('toggle');
+            return null;
+        }
+
+        util.closeActionMenu('replace');
+
+        const normalizedItems = items.map((raw, index) => {
+            if (!raw || typeof raw !== 'object') {
+                return { id: `item-${index}`, label: String(raw || ''), onSelect: null };
+            }
+            const base = Object.assign({}, raw);
+            if (!base.id) {
+                base.id = `item-${index}`;
+            }
+            return base;
+        });
+
+        const menu = document.createElement('div');
+        menu.className = `action-popover-menu${options.className ? ` ${options.className}` : ''}`;
+        menu.setAttribute('role', 'menu');
+        if (options.label) {
+            menu.setAttribute('aria-label', options.label);
+        }
+
+        if (options.minWidth) {
+            const value = typeof options.minWidth === 'number' ? `${options.minWidth}px` : options.minWidth;
+            menu.style.minWidth = value;
+        }
+        if (options.maxWidth) {
+            const value = typeof options.maxWidth === 'number' ? `${options.maxWidth}px` : options.maxWidth;
+            menu.style.maxWidth = value;
+        }
+
+        menu.innerHTML = normalizedItems.map(item => {
+            if (item.type === 'separator') {
+                return '<div class="action-popover-divider" role="separator"></div>';
+            }
+            const classes = ['action-popover-item'];
+            if (item.danger) classes.push('is-danger');
+            if (item.subtle) classes.push('is-subtle');
+            if (item.disabled) classes.push('is-disabled');
+            const iconHtml = item.icon ? `<i class="menu-icon ${item.icon}" aria-hidden="true"></i>` : '';
+            const hintHtml = item.hint ? `<span class="menu-hint">${util.escapeHtml(String(item.hint))}</span>` : '';
+            const labelHtml = util.escapeHtml(String(item.label || ''));
+            const idAttr = util.escapeHtml(String(item.id));
+            const disabledAttr = item.disabled ? ' disabled' : '';
+            return `<button type="button" class="${classes.join(' ')}" data-action-menu-item="${idAttr}"${disabledAttr}>${iconHtml}<span class="menu-label">${labelHtml}</span>${hintHtml}</button>`;
+        }).join('');
+
+        document.body.appendChild(menu);
+
+        const handleDocumentClick = (event) => {
+            if (!menu.contains(event.target) && !trigger.contains(event.target)) {
+                util.closeActionMenu('outside');
+            }
+        };
+
+        const handleKeydown = (event) => {
+            if (event.key === 'Escape' || event.key === 'Esc') {
+                util.closeActionMenu('escape');
+            }
+        };
+
+        const handleScroll = () => {
+            if (options.stickOnScroll) {
+                positionActionMenu(menu, trigger, options);
+            } else {
+                util.closeActionMenu('scroll');
+            }
+        };
+
+        const handleResize = () => {
+            positionActionMenu(menu, trigger, options);
+        };
+
+        activeActionMenu = {
+            node: menu,
+            trigger,
+            items: normalizedItems,
+            options,
+            onClose: typeof options.onClose === 'function' ? options.onClose : null,
+            onDocumentClick: handleDocumentClick,
+            onKeydown: handleKeydown,
+            onScroll: handleScroll,
+            onResize: handleResize,
+        };
+
+        document.addEventListener('click', handleDocumentClick, true);
+        document.addEventListener('keydown', handleKeydown, true);
+        window.addEventListener('scroll', handleScroll, true);
+        window.addEventListener('resize', handleResize, true);
+
+        positionActionMenu(menu, trigger, options);
+
+        const firstItem = menu.querySelector('.action-popover-item:not([disabled])');
+        if (firstItem) {
+            firstItem.focus({ preventScroll: true });
+        }
+
+        menu.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-action-menu-item]');
+            if (!button) return;
+            const actionId = button.dataset.actionMenuItem;
+            const item = normalizedItems.find(entry => entry.id === actionId);
+            if (!item || item.disabled) return;
+            if (!item.keepOpen) {
+                util.closeActionMenu('select');
+            }
+            try {
+                if (typeof item.onSelect === 'function') {
+                    const result = item.onSelect.call(trigger, event, item);
+                    if (result && typeof result.then === 'function') {
+                        result.catch(err => console.error('Action menu handler failed:', err));
+                    }
+                }
+            } catch (err) {
+                console.error('Action menu handler threw:', err);
+            }
+        });
+
+        return menu;
+    };
+
+    util.copyToClipboard = async function(value) {
+        if (value === null || value === undefined) {
+            throw new Error('Nothing to copy');
+        }
+        const text = String(value);
+        if (typeof navigator !== 'undefined' && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+            try {
+                await navigator.clipboard.writeText(text);
+                return true;
+            } catch (err) {
+                console.warn('Clipboard API failed, falling back', err);
+            }
+        }
+
+        try {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            textarea.style.pointerEvents = 'none';
+            textarea.style.top = '-1000px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            return true;
+        } catch (err) {
+            console.warn('Fallback clipboard copy failed', err);
+            return false;
+        }
+    };
 })(window.MailOps);
 

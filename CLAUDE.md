@@ -32,7 +32,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **Database**         | SQLite (`email_manager.db`) - local only                          |
 | **Encryption**       | Fernet symmetric (`key.txt`)                                      |
 | **Primary Launcher** | `EmailManager.bat` (menu) or `launch.bat` (quick)                 |
-| **Test Accounts**    | Gmail (ndayijecika@gmail.com), Hostinger (mcintyre@corrinbox.com) |
+| **Test Accounts**    | karlkoxwerks@stateauditgroup.com, Hostinger (mcintyre@corrinbox.com) |
 
 ⚠️ **Security Note**: Test accounts are for **development/testing only**. Never use in production.
 
@@ -94,10 +94,10 @@ git push origin master
 
 **CRITICAL**: These are the ONLY two accounts with confirmed working credentials.
 
-### Account 1: Gmail - NDayijecika (Primary)
-- **Email**: ndayijecika@gmail.com
-- **SMTP**: smtp.gmail.com:587 (STARTTLS)
-- **IMAP**: imap.gmail.com:993 (SSL)
+### Account 1: Gmail - karlkoxwerks (Primary)
+- **Email**: karlkoxwerks@stateauditgroup.com
+- **SMTP**: smtp.hostinger.com:465 (SSL direct)
+- **IMAP**: imap.hostinger.com:993 (SSL)
 - **Status**: ✅ Live checks OK
 
 ### Account 2: Hostinger - Corrinbox (Secondary)
@@ -106,7 +106,7 @@ git push origin master
 - **IMAP**: imap.hostinger.com:993 (SSL)
 - **Status**: ⚠️ Check credentials if failing
 
-**Smart Detection**: The app auto-detects SMTP/IMAP settings from email domain. Gmail uses port 587 STARTTLS, Hostinger uses port 465 SSL.
+**Smart Detection**: The app auto-detects SMTP/IMAP settings from email domain.
 
 ## File Organization
 
@@ -179,6 +179,143 @@ POST /api/email/<id>/edit            # Edit email
 GET  /healthz                        # Health check
 GET  /metrics                        # Prometheus metrics
 ```
+
+## 📸 Screenshot Tooling
+
+**Automated UI regression testing and PR documentation via Playwright**
+
+The project includes a comprehensive screenshot capture system for:
+- Multi-viewport responsive testing (desktop 1440x900, mobile 390x844)
+- PR visual diffs and documentation
+- Component-level element captures
+- Automated CI/CD integration
+
+### Quick Start (One Command)
+
+```bash
+# Boot app → capture screenshots → open folder
+.\manage.ps1 boot-snap-open
+
+# Or use the simplified batch file
+start.bat
+```
+
+This workflow:
+1. Starts the Flask app on port 5000
+2. Captures full-page and element screenshots for all routes
+3. Opens the `snapshots/` folder automatically
+
+### Installation
+
+```bash
+# Install Node.js dependencies and Playwright browser
+npm install
+npm run snap:install
+```
+
+**First-time setup**: Copy `.snap.env.example` to `.snap.env` and configure credentials:
+```ini
+SNAP_BASE_URL=http://localhost:5000
+SNAP_USERNAME=admin
+SNAP_PASSWORD=admin123
+```
+
+### Usage Workflows
+
+**Basic Headless Capture:**
+```powershell
+.\manage.ps1 snap
+```
+
+**Headful Mode (Watch Browser):**
+```powershell
+.\manage.ps1 snap -Headful
+```
+
+**Specific Pages Only:**
+```powershell
+.\manage.ps1 snap -Pages "dashboard,emails"
+```
+
+**Element-Only Screenshots:**
+```powershell
+# Capture specific components from dashboard
+.\manage.ps1 snap -Pages "dashboard" -Elements ".page-header,.email-table"
+```
+
+**Custom Base URL:**
+```powershell
+.\manage.ps1 snap -BaseUrl "http://localhost:5050"
+```
+
+### CLI Flags Reference
+
+| Flag | Description | Example |
+|------|-------------|---------|
+| `--base-url` | Target server URL | `--base-url http://localhost:5000` |
+| `--headful` | Show browser window | `--headful` |
+| `--pages` | Filter pages (comma-separated keys) | `--pages dashboard,emails` |
+| `--elements` | Capture specific selectors | `--elements .page-header,.email-table` |
+| `--out` | Output directory | `--out snapshots` |
+
+### Integration with PR Workflow
+
+**Recommended Practice:**
+```bash
+# 1. Make UI changes on feature branch
+git checkout feat/my-ui-changes
+
+# 2. Capture "after" screenshots
+.\manage.ps1 boot-snap-open
+
+# 3. Switch to master and capture "before" screenshots
+git stash
+git checkout master
+.\manage.ps1 boot-snap-open
+git checkout feat/my-ui-changes
+git stash pop
+
+# 4. Compare visually and include in PR description
+```
+
+**Screenshot Location:**
+- Full-page: `snapshots/{timestamp}/{viewport}/{page-key}.png`
+- Elements: `snapshots/{timestamp}/{viewport}/{page-key}__element__{selector}.png`
+
+### Advanced Configuration
+
+**Page Configuration** (`tools/snapshots/pages.json`):
+```json
+{
+  "key": "dashboard",
+  "url": "/dashboard",
+  "ready": "#dashboard-page",
+  "elements": [".page-header", ".email-table", ".stats-grid"]
+}
+```
+
+**Authentication State**: Stored in `tools/snapshots/state.json` (gitignored)
+- Automatically logs in once and reuses session
+- Regenerate: `npm run snap:update-state`
+
+### Troubleshooting
+
+**Port already in use:**
+```powershell
+# manage.ps1 automatically waits for port 5000
+# If stuck, manually kill processes:
+Get-Process python | Where-Object {$_.Path -like "*Email-Management-Tool*"} | Stop-Process -Force
+```
+
+**Authentication failing:**
+- Verify `.snap.env` credentials match your test account
+- Regenerate auth state: `npm run snap:update-state`
+
+**Screenshots missing:**
+- Check `ready` selector exists in target page
+- Run in headful mode to debug: `.\manage.ps1 snap -Headful`
+
+**Full Documentation**: `tools/snapshots/README.md` (615 lines)
 
 ## AI-Assisted Development
 
@@ -311,12 +448,35 @@ Routes are organized in `app/routes/`:
 
 ## Detailed Documentation
 
-See `docs/` directory for comprehensive guides:
-- **Getting Started**: USER_GUIDE, API_REFERENCE, FAQ, TROUBLESHOOTING
-- **Architecture**: ARCHITECTURE, DATABASE_SCHEMA, TECHNICAL_DEEP_DIVE
-- **Development**: DEVELOPMENT, TESTING, DEPLOYMENT, SECURITY, STYLEGUIDE
-- **IMAP Implementation**: HYBRID_IMAP_STRATEGY
-- **History**: GMAIL_FIXES_CONSOLIDATED, IMPLEMENTATION_HISTORY, SMOKE_TEST_GUIDE, reports/CODEBASE_ANALYSIS
+For deeper technical information, see:
+
+**Getting Started**:
+- **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)** - Complete step-by-step workflows and walkthroughs
+- **[docs/API_REFERENCE.md](docs/API_REFERENCE.md)** - REST API documentation with cURL examples
+- **[docs/FAQ.md](docs/FAQ.md)** - Frequently asked questions
+- **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common issues, gotchas, and solutions
+
+**Architecture & Design**:
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture and design
+- **[docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)** - Database design and indices
+- **[docs/TECHNICAL_DEEP_DIVE.md](docs/TECHNICAL_DEEP_DIVE.md)** - Architecture deep dive
+
+**Development & Deployment**:
+- **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** - Development workflow
+- **[docs/TESTING.md](docs/TESTING.md)** - Testing strategy
+- **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Production deployment guide
+
+**Configuration & Security**:
+- **[docs/SECURITY.md](docs/SECURITY.md)** - Security configuration and validation
+- **[docs/STYLEGUIDE.md](docs/STYLEGUIDE.md)** - UI/UX standards (MANDATORY)
+- **[docs/HYBRID_IMAP_STRATEGY.md](docs/HYBRID_IMAP_STRATEGY.md)** - IMAP implementation
+
+**Implementation & History**:
+- **[docs/GMAIL_FIXES_CONSOLIDATED.md](docs/GMAIL_FIXES_CONSOLIDATED.md)** - Complete Gmail duplicate fix documentation (v1-v4 evolution, protocol fixes, hardening)
+- **[docs/IMPLEMENTATION_HISTORY.md](docs/IMPLEMENTATION_HISTORY.md)** - Chronological feature implementation history (Oct 18-19, 2025)
+- **[docs/SMOKE_TEST_GUIDE.md](docs/SMOKE_TEST_GUIDE.md)** - End-to-end Gmail release validation guide
+- **[docs/reports/CODEBASE_ANALYSIS.md](docs/reports/CODEBASE_ANALYSIS.md)** - Comprehensive architecture and implementation review (2390 lines)
+- **[archive/2025-10-20_root_cleanup/MANIFEST.md](archive/2025-10-20_root_cleanup/MANIFEST.md)** - Root directory cleanup documentation
 
 ---
 

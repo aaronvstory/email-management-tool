@@ -610,24 +610,8 @@ body.login-page .btn-login { background: var(--brand-primary); border:1px solid 
 }
 
 /* === Responsive Design === */
+/* Sidebar always visible - no hiding behavior */
 @media (max-width: 1024px) {
-  .sidebar-modern {
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
-  }
-
-  .sidebar-modern.open {
-    transform: translateX(0);
-  }
-
-  .main-modern {
-    margin-left: 0;
-  }
-
-  .toggle-nav {
-    display: block;
-  }
-
   .global-search input {
     width: 200px;
   }
@@ -687,3 +671,10 @@ body.login-page .btn-login { background: var(--brand-primary); border:1px solid 
 @media (max-width: 1024px) {
   .hidden-below-lg { display: none; }
 }
+
+/* Light-lime primary CTA must use near-black text for legibility */
+.btn-primary {
+  color: #0a0a0a !important; /* icons inherit */
+}
+.btn-primary .bi,
+.btn-primary svg { color: inherit; fill: currentColor; }
