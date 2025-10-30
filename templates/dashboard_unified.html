@@ -326,7 +326,14 @@
   {% block extra_js %}
   <script>
     const currentAccountId = '{{ selected_account_id or "" }}';
-    const { renderTimeCell, renderTimeStack, applyTimeFormatting } = window.MailOps;
+    const {
+      renderTimeCell,
+      renderTimeStack,
+      applyTimeFormatting,
+      openActionMenu = () => { },
+      closeActionMenu = () => { },
+      copyToClipboard = async () => false
+    } = window.MailOps;
 
     applyTimeFormatting();
 
@@ -350,8 +357,146 @@
       }
     }
 
-    function openMore(id) {
-      console.debug('openMore', { id });
+    async function copyDashboardField(value, label) {
+      const raw = value === null || value === undefined ? '' : String(value).trim();
+      if (!raw) {
+        if (window.showWarning) showWarning(`${label} unavailable to copy`);
+        return;
+      }
+      try {
+        const copied = await copyToClipboard(raw);
+        if (copied) {
+          if (window.showSuccess) showSuccess(`${label} copied to clipboard`);
+        } else if (window.showError) {
+          showError(`Could not copy ${label.toLowerCase()}`);
+        }
+      } catch (error) {
+        console.error('Copy failed', error);
+        if (window.showError) showError(`Could not copy ${label.toLowerCase()}`);
+      }
+    }
+
+    function openMore(evt, id) {
+      if (evt) {
+        evt.preventDefault();
+        evt.stopPropagation();
+      }
+
+      const trigger = evt && evt.currentTarget ? evt.currentTarget : null;
+      if (!trigger) return;
+
+      const email = dashboardEmails.find(item => String(item.id) === String(id));
+      if (!email) {
+        if (window.showWarning) showWarning('Email data unavailable for this row');
+        return;
+      }
+
+      const normalizeStatus = (value) => {
+        const base = (value || '').toUpperCase();
+        if (base === 'PENDING') return 'HELD';
+        if (base === 'APPROVED' || base === 'DELIVERED') return 'RELEASED';
+        if (base === 'DISCARDED') return 'REJECTED';
+        return base || 'UNKNOWN';
+      };
+
+      const status = normalizeStatus(email.interception_status || email.status);
+      const recipientsRaw = Array.isArray(email.recipients) ? email.recipients.join(', ') : (email.recipients || '');
+      const watcherState = watchersMap[email.account_id] || '';
+
+      const items = [
+        {
+          id: 'view-email',
+          label: 'View details',
+          icon: 'bi bi-eye',
+          onSelect: () => rowAction(id, 'VIEW')
+        }
+      ];
+
+      if (status === 'HELD') {
+        items.push(
+          { type: 'separator' },
+          {
+            id: 'release-email',
+            label: 'Release to inbox',
+            icon: 'bi bi-send-check',
+            onSelect: () => rowAction(id, 'RELEASE')
+          },
+          {
+            id: 'edit-email',
+            label: 'Edit before sending',
+            icon: 'bi bi-pencil',
+            onSelect: () => rowAction(id, 'EDIT')
+          },
+          {
+            id: 'reject-email',
+            label: 'Reject email',
+            icon: 'bi bi-x-octagon',
+            danger: true,
+            onSelect: () => rowAction(id, 'REJECT')
+          }
+        );
+      }
+
+      items.push({ type: 'separator' });
+
+      if (email.subject) {
+        items.push({
+          id: 'copy-subject',
+          label: 'Copy subject',
+          icon: 'bi bi-quote',
+          onSelect: () => copyDashboardField(email.subject, 'Subject line')
+        });
+      }
+
+      if (email.sender) {
+        items.push({
+          id: 'copy-sender',
+          label: 'Copy sender',
+          icon: 'bi bi-person',
+          onSelect: () => copyDashboardField(email.sender, 'Sender address')
+        });
+      }
+
+      if (recipientsRaw) {
+        items.push({
+          id: 'copy-recipients',
+          label: 'Copy recipients',
+          icon: 'bi bi-people',
+          onSelect: () => copyDashboardField(recipientsRaw, 'Recipient list')
+        });
+      }
+
+      items.push({
+        id: 'copy-id',
+        label: 'Copy email ID',
+        icon: 'bi bi-clipboard',
+        onSelect: () => copyDashboardField(email.id, 'Email ID')
+      });
+
+      if (watcherState) {
+        const watcherLabel = typeof watcherState === 'string' && watcherState.length
+          ? watcherState.charAt(0).toUpperCase() + watcherState.slice(1)
+          : watcherState;
+        items.push({
+          id: 'watcher-state',
+          label: `Watcher: ${watcherLabel}`,
+          icon: 'bi bi-radar',
+          disabled: true,
+          hint: 'read-only'
+        });
+      }
+
+      const menu = openActionMenu(trigger, items, {
+        align: 'end',
+        offset: 10,
+        label: 'More email actions',
+        onClose: () => trigger.setAttribute('aria-expanded', 'false')
+      });
+
+      if (menu) {
+        trigger.setAttribute('aria-expanded', 'true');
+        trigger.focus({ preventScroll: true });
+      }
     }
 
     let dashboardAggregateCounts = null;
@@ -622,6 +767,9 @@
 
       emptyState.style.display = 'none';
       paginationControls.style.display = 'block';
+      if (typeof closeActionMenu === 'function') {
+        closeActionMenu('refresh');
+      }
       tbody.innerHTML = '';
 
       // Calculate pagination
@@ -664,7 +812,7 @@
           <button type="button" class="btn-chip danger" title="Reject" onclick="event.stopPropagation(); rowAction('${email.id}','REJECT')">
             <i class="bi bi-x-octagon"></i> Reject
           </button>
-          <button type="button" class="btn-chip btn-kebab more-trigger" title="More actions" aria-label="More actions" onclick="event.stopPropagation(); openMore('${email.id}')">
+          <button type="button" class="btn-chip btn-kebab more-trigger" title="More actions" aria-label="More actions" aria-haspopup="menu" aria-expanded="false" onclick="event.stopPropagation(); openMore(event, '${email.id}')">
             <i class="bi bi-three-dots"></i>
           </button>
         `.trim();
@@ -673,7 +821,7 @@
           <button type="button" class="btn-chip neutral" title="View" onclick="event.stopPropagation(); rowAction('${email.id}','VIEW')">
             <i class="bi bi-eye"></i> View
           </button>
-          <button type="button" class="btn-chip btn-kebab more-trigger" title="More actions" aria-label="More actions" onclick="event.stopPropagation(); openMore('${email.id}')">
+          <button type="button" class="btn-chip btn-kebab more-trigger" title="More actions" aria-label="More actions" aria-haspopup="menu" aria-expanded="false" onclick="event.stopPropagation(); openMore(event, '${email.id}')">
             <i class="bi bi-three-dots"></i>
           </button>
         `.trim();

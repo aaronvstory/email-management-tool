@@ -556,7 +556,14 @@
     }
   }
 
-  const { escapeHtml, renderTimeCell, applyTimeFormatting } = window.MailOps;
+  const {
+    escapeHtml,
+    renderTimeCell,
+    applyTimeFormatting,
+    openActionMenu = () => { },
+    closeActionMenu = () => { },
+    copyToClipboard = async () => false
+  } = window.MailOps;
 
   function renderEmails(emails) {
     const tbody = document.getElementById('emailTableBody');
@@ -569,6 +576,9 @@
     }
 
     emptyState.classList.add('hidden');
+    if (typeof closeActionMenu === 'function') {
+      closeActionMenu('refresh');
+    }
     tbody.innerHTML = '';
 
     emails.forEach(email => {
@@ -594,7 +604,7 @@
         <button class="btn-chip danger" onclick="discardEmail(${email.id})" title="Reject">
           <i class="bi bi-x-octagon"></i> Reject
         </button>
-        <button class="btn-chip btn-kebab" onclick="openEmailMore(${email.id})" title="More actions" aria-label="More actions">
+        <button class="btn-chip btn-kebab" onclick="event.stopPropagation(); openEmailMore(event, ${email.id})" title="More actions" aria-label="More actions" aria-haspopup="menu" aria-expanded="false">
           <i class="bi bi-three-dots"></i>
         </button>
       `;
@@ -603,7 +613,7 @@
         <button class="btn-chip neutral" onclick="viewEmail(${email.id})" title="View">
           <i class="bi bi-eye"></i> View
         </button>
-        <button class="btn-chip btn-kebab" onclick="openEmailMore(${email.id})" title="More actions" aria-label="More actions">
+        <button class="btn-chip btn-kebab" onclick="event.stopPropagation(); openEmailMore(event, ${email.id})" title="More actions" aria-label="More actions" aria-haspopup="menu" aria-expanded="false">
           <i class="bi bi-three-dots"></i>
         </button>
       `;
@@ -669,8 +679,171 @@
     updateBulkActionsVisibility();
   }
 
-  function openEmailMore(emailId) {
-    console.debug('openEmailMore', { emailId });
+  async function copyEmailField(value, label) {
+    const raw = value === null || value === undefined ? '' : String(value).trim();
+    if (!raw) {
+      if (window.showWarning) showWarning(`${label} unavailable to copy`);
+      return;
+    }
+
+    try {
+      const copied = await copyToClipboard(raw);
+      if (copied) {
+        if (window.showSuccess) showSuccess(`${label} copied to clipboard`);
+      } else if (window.showError) {
+        showError(`Could not copy ${label.toLowerCase()}`);
+      }
+    } catch (error) {
+      console.error('Copy failed', error);
+      if (window.showError) showError(`Could not copy ${label.toLowerCase()}`);
+    }
+  }
+
+  function openEmailMore(evt, emailId) {
+    if (evt) {
+      evt.preventDefault();
+      evt.stopPropagation();
+    }
+
+    const trigger = evt && evt.currentTarget ? evt.currentTarget : null;
+    if (!trigger) return;
+
+    const email = currentEmails.find(entry => Number(entry.id) === Number(emailId));
+    if (!email) {
+      if (window.showWarning) showWarning('Email data unavailable for this row');
+      return;
+    }
+
+    const normalizeStatus = (value) => {
+      const base = (value || '').toUpperCase();
+      if (base === 'PENDING') return 'HELD';
+      if (base === 'APPROVED') return 'RELEASED';
+      if (base === 'DELIVERED') return 'RELEASED';
+      if (base === 'DISCARDED') return 'REJECTED';
+      return base || 'UNKNOWN';
+    };
+
+    const status = normalizeStatus(email.interception_status || email.status);
+    const recipientsRaw = Array.isArray(email.recipients) ? email.recipients.join(', ') : (email.recipients || '');
+    const watcherState = watchersMap[email.account_id] || '';
+
+    const items = [
+      {
+        id: 'view-email',
+        label: 'View details',
+        icon: 'bi bi-eye',
+        onSelect: () => viewEmail(emailId)
+      }
+    ];
+
+    if (status === 'HELD') {
+      items.push(
+        { type: 'separator' },
+        {
+          id: 'release-email',
+          label: 'Release to inbox',
+          icon: 'bi bi-send-check',
+          onSelect: () => releaseEmail(emailId)
+        },
+        {
+          id: 'edit-email',
+          label: 'Edit before sending',
+          icon: 'bi bi-pencil-square',
+          onSelect: () => editEmail(emailId)
+        },
+        {
+          id: 'reject-email',
+          label: 'Reject email',
+          icon: 'bi bi-x-octagon',
+          danger: true,
+          onSelect: () => discardEmail(emailId)
+        }
+      );
+    } else if (status === 'REJECTED') {
+      items.push({
+        type: 'separator'
+      });
+    } else {
+      items.push({ type: 'separator' });
+    }
+
+    if (email.subject) {
+      items.push({
+        id: 'copy-subject',
+        label: 'Copy subject',
+        icon: 'bi bi-quote',
+        onSelect: () => copyEmailField(email.subject, 'Subject line')
+      });
+    }
+
+    if (email.sender) {
+      items.push({
+        id: 'copy-sender',
+        label: 'Copy sender',
+        icon: 'bi bi-person',
+        onSelect: () => copyEmailField(email.sender, 'Sender address')
+      });
+    }
+
+    if (recipientsRaw) {
+      items.push({
+        id: 'copy-recipients',
+        label: 'Copy recipients',
+        icon: 'bi bi-people',
+        onSelect: () => copyEmailField(recipientsRaw, 'Recipient list')
+      });
+    }
+
+    const previewSnippet = email.preview_snippet || email.preview || email.snippet || '';
+    if (previewSnippet) {
+      items.push({
+        id: 'copy-preview',
+        label: 'Copy preview text',
+        icon: 'bi bi-journal-text',
+        onSelect: () => copyEmailField(previewSnippet, 'Preview text')
+      });
+    }
+
+    items.push({
+      id: 'copy-id',
+      label: 'Copy email ID',
+      icon: 'bi bi-clipboard',
+      onSelect: () => copyEmailField(email.id, 'Email ID')
+    });
+
+    if (email.account_id) {
+      items.push({
+        id: 'restart-watcher',
+        label: 'Restart watcher',
+        icon: 'bi bi-arrow-repeat',
+        onSelect: () => restartWatcherFor(email.account_id)
+      });
+    }
+
+    if (watcherState) {
+      const watcherLabel = typeof watcherState === 'string' && watcherState.length
+        ? watcherState.charAt(0).toUpperCase() + watcherState.slice(1)
+        : watcherState;
+      items.push({
+        id: 'watcher-state',
+        label: `Watcher: ${watcherLabel}`,
+        icon: 'bi bi-radar',
+        disabled: true,
+        hint: 'read-only'
+      });
+    }
+
+    const menu = openActionMenu(trigger, items, {
+      align: 'end',
+      offset: 10,
+      label: 'More email actions',
+      onClose: () => trigger.setAttribute('aria-expanded', 'false')
+    });
+
+    if (menu) {
+      trigger.setAttribute('aria-expanded', 'true');
+      trigger.focus({ preventScroll: true });
+    }
   }
 
   async function restartWatcherFor(accountId) {
