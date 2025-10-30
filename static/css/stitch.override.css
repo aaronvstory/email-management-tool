@@ -96,3 +96,49 @@ a.active,
   color: #f59e0b;
   border-color: rgba(245, 158, 11, 0.2);
 }
+
+/* ========================================
+   STITCH TEMPLATE: BUTTON FIXES
+   Fix white backgrounds on action buttons
+   ======================================== */
+
+/* Target buttons with tw- classes that don't have explicit tw-bg-* */
+/* This fixes Edit/Delete/Discard buttons across all Stitch templates */
+button[class*="tw-"][class*="tw-flex"][class*="tw-items-center"]:not([class*="tw-bg-"]),
+button[class*="tw-"][class*="tw-font-medium"]:not([class*="tw-bg-"]) {
+  background: transparent !important;
+  border: none !important;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Hover states for action buttons */
+button[class*="tw-"][class*="tw-text-primary"]:hover {
+  background: rgba(190, 242, 100, 0.1) !important;
+}
+
+button[class*="tw-"][class*="tw-text-red-"]:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
+}
+
+button[class*="tw-"][class*="tw-text-yellow-"]:hover,
+button[class*="tw-"][class*="tw-text-amber-"]:hover {
+  background: rgba(245, 158, 11, 0.1) !important;
+}
+
+button[class*="tw-"][class*="tw-text-green-"]:hover {
+  background: rgba(34, 197, 94, 0.1) !important;
+}
+
+/* Ensure primary buttons with bg-primary keep their styling */
+button.tw-bg-primary,
+button[class*="tw-bg-primary"] {
+  background: #bef264 !important;
+  color: #18181b !important;
+  border: 1px solid #bef264 !important;
+}
+
+button.tw-bg-primary:hover,
+button[class*="tw-bg-primary"]:hover {
+  background: #a3d154 !important;
+  border-color: #a3d154 !important;
+}
