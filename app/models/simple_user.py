@@ -8,7 +8,7 @@ NOTE: This is a simplified version for blueprint migration.
 """
 from flask_login import UserMixin
 import sqlite3
-from app.utils.db import DB_PATH
+from app.utils.db import get_db_path
 
 
 class SimpleUser(UserMixin):
@@ -46,15 +46,34 @@ def load_user_from_db(user_id):
         SimpleUser: User object or None if not found
     """
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = sqlite3.connect(get_db_path())
+        conn.row_factory = sqlite3.Row
         cur = conn.cursor()
-        row = cur.execute(
-            "SELECT id, username, role FROM users WHERE id=?",
-            (user_id,)
-        ).fetchone()
-        conn.close()
-        if row:
-            return SimpleUser(row[0], row[1], row[2])
+
+        try:
+            columns = {row[1] for row in cur.execute("PRAGMA table_info(users)").fetchall()}
+        except sqlite3.Error:
+            columns = set()
+
+        if 'role' in columns:
+            row = cur.execute(
+                "SELECT id, username, role FROM users WHERE id=?",
+                (user_id,)
+            ).fetchone()
+            conn.close()
+            if row:
+                return SimpleUser(row['id'], row['username'], row['role'])
+        else:
+            row = cur.execute(
+                "SELECT id, username FROM users WHERE id=?",
+                (user_id,)
+            ).fetchone()
+            conn.close()
+            if row:
+                return SimpleUser(row['id'], row['username'], 'admin')
     except Exception:
-        pass
+        try:
+            conn.close()
+        except Exception:
+            pass
     return None

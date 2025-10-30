@@ -2,6 +2,19 @@
 {% block title %}Inbox - Email Management Tool{% endblock %}
 {% block extra_css %}
 <!-- Inbox styles now in unified.css (extracted Oct 25, 2025) -->
+<style>
+/* Hotfix for horizontal scrolling */
+.dark-app-shell .main-modern .content-scroll {
+  overflow-x: auto;
+  margin-left: 0px;
+  margin-right: 0px;
+}
+
+header.command-bar {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+</style>
 {% endblock %}
 
 {% block content %}

@@ -1,0 +1,264 @@
+/* stitch-final-fixes.css
+
+   Final polish for Stitch theme dashboard
+   October 28, 2025
+*/
+
+/* ========================================
+   FIX 0: Status Column - Unified Design Language (Minimal !important)
+   ======================================== */
+
+/* Use scoped selectors for status badges - target .email-table class */
+.email-table .status-badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.email-table .status-badge.status-HELD {
+  background: rgba(251, 191, 36, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.25);
+}
+
+.email-table .status-badge.status-RELEASED {
+  background: rgba(190, 242, 100, 0.12);
+  color: #bef264;
+  border: 1px solid rgba(190, 242, 100, 0.25);
+}
+
+.email-table .status-badge.status-REJECTED {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.email-table .status-badge.status-DISCARDED {
+  background: rgba(156, 163, 175, 0.12);
+  color: #9ca3af;
+  border: 1px solid rgba(156, 163, 175, 0.25);
+}
+
+/* Watcher chips */
+.email-table .watcher-chip {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.email-table .watcher-chip.active {
+  background: rgba(190, 242, 100, 0.12);
+  color: #bef264;
+  border: 1px solid rgba(190, 242, 100, 0.25);
+}
+
+.email-table .watcher-chip.stopped {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.email-table .watcher-chip.unknown {
+  background: rgba(156, 163, 175, 0.12);
+  color: #9ca3af;
+  border: 1px solid rgba(156, 163, 175, 0.25);
+}
+
+/* Restart button */
+.email-table .status-restart {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.email-table .status-restart:hover {
+  background: rgba(190, 242, 100, 0.12);
+  border-color: rgba(190, 242, 100, 0.25);
+  color: #bef264;
+  transform: rotate(90deg);
+}
+
+.email-table .status-restart i {
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* Status layout - HELD badge on top, then POLLING + restart button horizontal */
+.email-table .status-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.email-table .status-main {
+  width: 100%;
+}
+
+.email-table .status-meta {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+/* ========================================
+   FIX 1: Status Indicators - Lime Green Theme (No !important)
+   ======================================== */
+
+.dashboard-container .health-pill.ok {
+  background: rgba(190, 242, 100, 0.1);
+  border-color: rgba(190, 242, 100, 0.25);
+  color: #bef264;
+}
+
+.dashboard-container .health-pill.ok i {
+  color: #bef264;
+}
+
+/* ========================================
+   FIX 2: Filter Buttons - Less Rounded (No !important)
+   ======================================== */
+
+.status-tabs .status-tab {
+  border-radius: 6px;
+}
+
+.status-tabs .status-tab .badge {
+  border-radius: 4px;
+}
+
+/* ========================================
+   FIX 3: Action Buttons - Clean Grid Layout (NO !important)
+   ======================================== */
+
+/* Use scoped selector for proper specificity without !important */
+.email-table .action-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  width: 100%;
+  min-width: 96px;
+  max-width: 120px;
+}
+
+.email-table .action-btn {
+  width: 100%;
+  height: 30px;
+  padding: 0;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.email-table .action-btn:hover {
+  background: rgba(255,255,255,0.12);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.email-table .action-btn.action-view:hover {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: #60a5fa;
+  color: #93c5fd;
+}
+
+.email-table .action-btn.action-edit:hover {
+  background: rgba(139, 92, 246, 0.15);
+  border-color: #a78bfa;
+  color: #c4b5fd;
+}
+
+.email-table .action-btn.action-release:hover {
+  background: rgba(190, 242, 100, 0.15);
+  border-color: #bef264;
+  color: #bef264;
+}
+
+.email-table .action-btn.action-reply:hover {
+  background: rgba(20, 184, 166, 0.15);
+  border-color: #5eead4;
+  color: #5eead4;
+}
+
+.email-table .action-btn.action-forward:hover {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: #fbbf24;
+  color: #fbbf24;
+}
+
+.email-table .action-btn.action-discard:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #f87171;
+  color: #fca5a5;
+}
+
+/* ========================================
+   FIX 4: Correspondent Labels - Styled properly
+   ======================================== */
+
+.email-table .correspondent-label {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #ffffff;
+  opacity: 0.9;
+  margin-right: 6px;
+}
+
+.email-table .correspondent-value {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.email-table .correspondent-line {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+
+/* ========================================
+   Responsive: Mobile adjustments
+   ======================================== */
+
+@media (max-width: 768px) {
+  .email-table .action-buttons {
+    grid-template-columns: repeat(2, 1fr);
+    max-width: 80px;
+  }
+
+  .email-table .action-btn {
+    height: 32px;
+  }
+}

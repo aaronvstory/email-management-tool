@@ -1,0 +1,79 @@
+/* dashboard-compact.css
+
+   Reduce excessive vertical spacing in dashboard
+   Make layout more compact and efficient
+
+   Applied: October 28, 2025
+*/
+
+/* Reduce main dashboard container padding */
+#dashboard-page {
+  padding: 16px 40px !important;
+}
+
+/* Reduce space-y-8 (32px) to something more reasonable */
+#dashboard-page.tw-space-y-8 > * + * {
+  margin-top: 16px !important;  /* Was 32px (tw-space-y-8) */
+}
+
+/* Reduce page header bottom padding */
+.page-header.tw-pb-6 {
+  padding-bottom: 12px !important;  /* Was 24px (tw-pb-6) */
+}
+
+/* Reduce account selector padding */
+.account-selector.tw-p-5 {
+  padding: 12px 16px !important;  /* Was 20px (tw-p-5) */
+}
+
+/* Make stats grid more compact */
+.stats-grid.tw-gap-6 {
+  gap: 16px !important;  /* Was 24px (tw-gap-6) */
+}
+
+/* Reduce stat card internal padding */
+.stat-card-modern.tw-p-5,
+#dashboard-page .stat-card-modern {
+  padding: 12px 16px !important;  /* Was 20px (tw-p-5) */
+}
+
+/* Reduce stat value margin */
+#dashboard-page .stat-value.tw-mt-4 {
+  margin-top: 8px !important;  /* Was 16px (tw-mt-4) */
+}
+
+/* Recent emails panel - reduce padding */
+.recent-emails-panel.tw-bg-\[\#18181b\] {
+  margin-top: 16px !important;
+}
+
+/* Search section padding */
+#dashboard-page .tw-p-4 {
+  padding: 12px 16px !important;  /* Reduce from 16px to 12px */
+}
+
+/* Status tabs padding */
+.status-tabs.tw-p-4 {
+  padding: 12px 16px !important;
+}
+
+/* Responsive: Even more compact on smaller screens */
+@media (max-width: 1440px) {
+  #dashboard-page {
+    padding: 12px 32px !important;
+  }
+
+  #dashboard-page.tw-space-y-8 > * + * {
+    margin-top: 12px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  #dashboard-page {
+    padding: 12px 16px !important;
+  }
+
+  .page-header.tw-pb-6 {
+    padding-bottom: 8px !important;
+  }
+}

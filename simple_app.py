@@ -12,6 +12,7 @@ import time
 import smtplib
 import imaplib
 import ssl
+import socket
 from typing import Tuple, Optional
 
 from flask import Response  # needed for SSE / events
@@ -194,6 +195,9 @@ app.config['SECRET_KEY'] = (
 # IMAP-only mode toggle (default OFF so SMTP proxy runs unless explicitly disabled)
 app.config['IMAP_ONLY'] = _bool_env('IMAP_ONLY', default=False)
 
+# Force template reloading in development (disable template cache)
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+
 # Attachment feature flags (Phase 1-4 implementation)
 app.config['ATTACHMENTS_UI_ENABLED'] = _bool_env('ATTACHMENTS_UI_ENABLED', default=False)
 app.config['ATTACHMENTS_EDIT_ENABLED'] = _bool_env('ATTACHMENTS_EDIT_ENABLED', default=False)
@@ -220,7 +224,8 @@ cache = Cache(app, config={
     'CACHE_DEFAULT_TIMEOUT': 5     # 5 seconds default TTL
 })
 # Export cache for use in blueprints
-app.cache = cache
+app.cache = cache  # Register cache on app for blueprint access via current_app.cache
+GLOBAL_CACHE = cache
 
 # CSRF configuration - time-limited tokens and allow HTTP in dev
 app.config['WTF_CSRF_TIME_LIMIT'] = 7200  # 2 hours; rotate token periodically
@@ -229,9 +234,10 @@ app.config['WTF_CSRF_SSL_STRICT'] = False  # Set True in production when HTTPS i
 # SECRET_KEY validation: prevent accidental weak/default secret in production
 _default_secret = 'dev-secret-change-in-production'
 secret = app.config.get('SECRET_KEY')
-if (not app.debug) and (not secret or secret == _default_secret or len(str(secret)) < 32):
+_is_testing_env = bool(app.config.get('TESTING')) or bool(os.environ.get('PYTEST_CURRENT_TEST')) or bool(os.environ.get('TESTING')) or bool(os.environ.get('TEST_DB_PATH'))
+if (not app.debug) and (not _is_testing_env) and (not secret or secret == _default_secret or len(str(secret)) < 32):
     raise RuntimeError("SECURITY: A strong SECRET_KEY is required in production. Set FLASK_SECRET_KEY.")
-if app.debug and (not secret or secret == _default_secret):
+if (app.debug or _is_testing_env) and (not secret or secret == _default_secret):
     try:
         app.logger.warning("SECURITY: Using development SECRET_KEY; do not use in production.")
     except RuntimeError as e:
@@ -701,6 +707,21 @@ app.register_blueprint(system_bp)        # System diagnostics APIs
 app.register_blueprint(watchers_bp)      # Watchers & Settings management
 
         # (Legacy inline IMAP loop removed during refactor)
+
+# Lightweight readiness endpoint that does not depend on DB/SMTP
+_PROCESS_START_TS = time.time()
+
+@app.route('/readyz')
+def readyz():
+    """Simple readiness probe returning 200 once Flask is serving.
+
+    Does not touch database or external services to avoid flapping during startup.
+    """
+    try:
+        uptime = max(0, int(time.time() - _PROCESS_START_TS))
+    except Exception:
+        uptime = None
+    return jsonify({'ok': True, 'uptime_seconds': uptime}), 200
 
 # SMTP Proxy Handler
 class EmailModerationHandler:

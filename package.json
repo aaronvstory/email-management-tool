@@ -8,16 +8,24 @@
     "lint:js": "eslint \"static/js/**/*.js\" --max-warnings=0",
     "lint:css": "stylelint \"static/**/*.css\"",
     "format": "prettier --write \"{templates,static}/**/*.{html,css,js}\"",
-    "format:check": "prettier --check \"{templates,static}/**/*.{html,css,js}\""
+    "format:check": "prettier --check \"{templates,static}/**/*.{html,css,js}\"",
+    "snap:install": "npx playwright install chromium",
+    "snap:update-state": "ts-node tools/snapshots/snap.ts --update-state",
+    "snap": "ts-node tools/snapshots/snap.ts",
+    "snap:headful": "ts-node tools/snapshots/snap.ts --headful",
+    "snap:url": "ts-node tools/snapshots/snap.ts --base-url"
   },
   "devDependencies": {
     "eslint": "^9.13.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-import": "^2.29.1",
+    "playwright": "^1.48.0",
     "prettier": "^3.3.3",
     "stylelint": "^16.9.0",
-    "stylelint-config-prettier": "^10.0.5",
-    "stylelint-config-standard": "^36.0.0"
+    "stylelint-config-prettier": "^9.0.5",
+    "stylelint-config-standard": "^36.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
   },
   "eslintConfig": {
     "env": {

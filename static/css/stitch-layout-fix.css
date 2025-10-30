@@ -1,0 +1,79 @@
+/* stitch-layout-fix.css
+
+   Fix for dashboard boundary issue - proper responsive width
+   that doesn't create huge empty space OR stretch content too wide
+
+   Issue: Multiple CSS files were setting max-width: 1200px (too narrow)
+   Solution: Use responsive max-width that adapts to screen size
+*/
+
+/* Hide toggle button on desktop (should only show on mobile) */
+@media (min-width: 769px) {
+  .toggle-nav {
+    display: none !important;
+  }
+}
+
+/* Ensure main-modern fills space properly without gaps */
+.main-modern {
+  margin-left: 240px !important;  /* Match sidebar width (tw-w-60 = 240px) */
+  min-height: 100vh !important;
+}
+
+/* Dashboard page - responsive max-width, flush with layout */
+#dashboard-page {
+  max-width: 1600px !important;  /* Larger than 1200px but not infinite */
+  width: 100% !important;
+  margin: 0 !important;  /* No auto centering - flush with main-modern */
+  padding: 24px 40px !important;
+}
+
+/* Ensure content fills container */
+#dashboard-page .table-container,
+#dashboard-page table {
+  width: 100% !important;
+}
+
+#dashboard-page .stats-grid {
+  width: 100% !important;
+}
+
+#dashboard-page .account-selector {
+  width: 100% !important;
+}
+
+#dashboard-page .recent-emails-panel {
+  width: 100% !important;
+}
+
+/* Responsive breakpoints */
+@media (min-width: 1920px) {
+  /* On large screens (1920px+), use more padding */
+  #dashboard-page {
+    max-width: 1800px !important;
+    margin: 0 !important;  /* Keep flush, no centering */
+    padding: 32px 60px !important;
+  }
+}
+
+@media (max-width: 1440px) {
+  /* Standard laptop/desktop */
+  #dashboard-page {
+    max-width: 1400px !important;
+    padding: 24px 32px !important;
+  }
+}
+
+@media (max-width: 1024px) {
+  /* Tablet landscape */
+  #dashboard-page {
+    padding: 20px 24px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Mobile/tablet portrait */
+  #dashboard-page {
+    padding: 16px 12px !important;
+  }
+}
