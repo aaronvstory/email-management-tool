@@ -158,3 +158,23 @@ def compose_email():
 
     conn.close()
     return render_template('compose.html', accounts=accounts)
+
+
+@compose_bp.route('/compose/stitch')
+@login_required
+def compose_stitch():
+    """Preview the new Stitch theme compose page (Tailwind-based)"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    # Get all active email accounts for FROM dropdown
+    accounts = cursor.execute("""
+        SELECT id, account_name, email_address
+        FROM email_accounts
+        WHERE is_active = 1
+        ORDER BY account_name
+    """).fetchall()
+
+    conn.close()
+    return render_template('stitch/compose-email.html', accounts=accounts)

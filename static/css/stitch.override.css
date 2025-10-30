@@ -1,0 +1,98 @@
+/* ========================================
+   STITCH THEME: RED COLOR NUKE
+   Replace ALL red with lime green (#bef264)
+   ======================================== */
+
+/* Override login page red (from patch.clean.css) */
+body.login-page .form-control:focus {
+  border-color: #bef264 !important;
+  box-shadow: 0 0 0 2px rgba(190, 242, 100, 0.2) !important;
+}
+
+body.login-page .btn-login {
+  background: #bef264 !important;
+  border: 1px solid #bef264 !important;
+  color: #18181b !important;
+  font-weight: 700 !important;
+}
+
+body.login-page .btn-login:hover {
+  background: #a3d154 !important;
+  border-color: #a3d154 !important;
+}
+
+/* Ensure primary color is always lime green */
+:root {
+  --brand-primary: #bef264;
+  --brand-secondary: #a3d154;
+  --brand-accent: #bef264;
+}
+
+/* Override any Bootstrap button-primary variants */
+.btn-primary,
+.btn-danger,
+button[type="submit"]:not(.btn-secondary):not(.btn-ghost) {
+  background: #bef264 !important;
+  border-color: #bef264 !important;
+  color: #18181b !important;
+  font-weight: 600;
+}
+
+.btn-primary:hover,
+.btn-danger:hover {
+  background: #a3d154 !important;
+  border-color: #a3d154 !important;
+}
+
+/* Fix any border-l-2 or similar borders that might be red */
+.border-l-2, .tw-border-l-2,
+.border-l-3, .tw-border-l-3,
+.border-l-4, .tw-border-l-4 {
+  border-left-color: #bef264 !important;
+}
+
+/* Active link states should use lime green */
+.nav-item-link.active,
+a.active,
+.active {
+  border-left-color: #bef264 !important;
+  background: rgba(190, 242, 100, 0.1) !important;
+}
+
+/* Any focus rings should be lime green */
+*:focus,
+*:focus-visible {
+  outline-color: #bef264 !important;
+  border-color: #bef264 !important;
+}
+
+/* Tailwind ring colors */
+.tw-ring-primary,
+.tw-focus\:ring-primary:focus {
+  --tw-ring-color: #bef264 !important;
+}
+
+/* Badges and status indicators */
+.badge-danger,
+.badge-error,
+.bg-danger,
+.text-danger {
+  background-color: rgba(190, 242, 100, 0.1) !important;
+  color: #bef264 !important;
+  border-color: rgba(190, 242, 100, 0.2) !important;
+}
+
+/* Remove any red from tables, panels, cards */
+.table tbody tr:hover,
+.panel:hover,
+.card:hover {
+  border-color: #bef264 !important;
+}
+
+/* Status indicators should use yellow/orange for warnings, not red */
+.status-indicator.error,
+.status-indicator.danger {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.2);
+}

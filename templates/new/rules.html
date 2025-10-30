@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Moderation Rules</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      vertical-align: middle;
+      font-size: 1.25em;
+    }
+  </style>
+<script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#bef264",
+            "background-light": "#F1F5F9",
+            "background-dark": "#18181b",
+            "surface-dark": "#27272a",
+          },
+          fontFamily: {
+            sans: ["Inter", "sans-serif"],
+          },
+          borderRadius: {
+            DEFAULT: "0px",
+            none: '0',
+            sm: '0',
+            md: '0',
+            lg: '0',
+            xl: '0',
+            '2xl': '0',
+            '3xl': '0',
+            full: '0',
+          },
+        },
+      },
+    };
+  </script>
+</head>
+<body class="bg-background-dark font-sans antialiased">
+<div class="p-4 sm:p-6 lg:p-8">
+<div class="max-w-7xl mx-auto">
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+<div>
+<h1 class="text-2xl font-bold text-gray-50">Moderation Rules</h1>
+<p class="mt-1 text-sm text-gray-400">
+            Define filtering rules to automatically hold, approve, or reject incoming messages based on keywords, senders, domains, or regex patterns.
+          </p>
+</div>
+<button class="flex items-center gap-2 bg-primary text-gray-900 font-semibold px-4 py-2 hover:bg-lime-400 transition-colors duration-200 whitespace-nowrap">
+<span class="material-symbols-outlined !text-xl">add_circle</span>
+          Add Rule
+        </button>
+</div>
+<div class="bg-surface-dark border border-zinc-700 overflow-hidden">
+<div class="flex justify-between items-center p-4 bg-zinc-900/50 border-b border-zinc-700">
+<div class="flex items-center gap-3">
+<h2 class="font-semibold text-gray-100">
+              Active Rules
+            </h2>
+<span class="bg-primary text-zinc-900 text-xs font-bold px-2 py-0.5">7 active</span>
+</div>
+<span class="text-xs font-medium text-gray-400">Priority: High → Low</span>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-sm text-left">
+<thead class="text-xs text-gray-400 uppercase bg-zinc-900/50">
+<tr>
+<th class="px-4 py-3" scope="col">Priority</th>
+<th class="px-6 py-3" scope="col">Name</th>
+<th class="px-6 py-3" scope="col">Type</th>
+<th class="px-6 py-3" scope="col">Condition</th>
+<th class="px-6 py-3" scope="col">Keywords</th>
+<th class="px-6 py-3" scope="col">Action</th>
+<th class="px-6 py-3" scope="col">Status</th>
+<th class="px-6 py-3 text-right" scope="col">Actions</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-b border-zinc-700">
+<td class="px-4 py-4">
+<span class="bg-zinc-700 text-gray-200 font-bold w-8 h-8 flex items-center justify-center">90</span>
+</td>
+<td class="px-6 py-4 font-medium text-white whitespace-nowrap">Block Invoice Keywords</td>
+<td class="px-6 py-4 text-gray-400">KEYWORD</td>
+<td class="px-6 py-4 text-gray-400">Body contains</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="bg-primary/20 text-primary text-xs font-medium px-2.5 py-1">invoice</span>
+<span class="bg-primary/20 text-primary text-xs font-medium px-2.5 py-1">payment</span>
+<span class="bg-primary/20 text-primary text-xs font-medium px-2.5 py-1">urgent</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-amber-400/20 text-amber-300 text-xs font-bold px-2.5 py-1">HOLD</span>
+</td>
+<td class="px-6 py-4">
+<span class="flex items-center gap-1.5 text-primary font-medium text-xs">
+<span class="h-2 w-2 bg-primary"></span> Active
+                  </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-4">
+<button class="flex items-center gap-1 font-medium text-primary hover:text-lime-400">
+<span class="material-symbols-outlined !text-base">edit</span> Edit
+                    </button>
+<button class="flex items-center gap-1 font-medium text-red-500 hover:text-red-400">
+<span class="material-symbols-outlined !text-base">delete</span> Delete
+                    </button>
+</div>
+</td>
+</tr>
+<tr class="border-b border-zinc-700">
+<td class="px-4 py-4">
+<span class="bg-zinc-700 text-gray-200 font-bold w-8 h-8 flex items-center justify-center">75</span>
+</td>
+<td class="px-6 py-4 font-medium text-white whitespace-nowrap">Check Attachments</td>
+<td class="px-6 py-4 text-gray-400">KEYWORD</td>
+<td class="px-6 py-4 text-gray-400">Body contains</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="bg-primary/20 text-primary text-xs font-medium px-2.5 py-1">.pdf</span>
+<span class="bg-primary/20 text-primary text-xs font-medium px-2.5 py-1">.doc</span>
+<span class="bg-primary/20 text-primary text-xs font-medium px-2.5 py-1">.xls</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-amber-400/20 text-amber-300 text-xs font-bold px-2.5 py-1">HOLD</span>
+</td>
+<td class="px-6 py-4">
+<span class="flex items-center gap-1.5 text-primary font-medium text-xs">
+<span class="h-2 w-2 bg-primary"></span> Active
+                  </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-4">
+<button class="flex items-center gap-1 font-medium text-primary hover:text-lime-400">
+<span class="material-symbols-outlined !text-base">edit</span> Edit
+                    </button>
+<button class="flex items-center gap-1 font-medium text-red-500 hover:text-red-400">
+<span class="material-symbols-outlined !text-base">delete</span> Delete
+                    </button>
+</div>
+</td>
+</tr>
+<tr class="border-b border-zinc-700">
+<td class="px-4 py-4">
+<span class="bg-zinc-700 text-gray-200 font-bold w-8 h-8 flex items-center justify-center">60</span>
+</td>
+<td class="px-6 py-4 font-medium text-white whitespace-nowrap">External Recipients</td>
+<td class="px-6 py-4 text-gray-400">KEYWORD</td>
+<td class="px-6 py-4 text-gray-400">Body contains</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="bg-primary/20 text-primary text-xs font-medium px-2.5 py-1">@external.com</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-amber-400/20 text-amber-300 text-xs font-bold px-2.5 py-1">HOLD</span>
+</td>
+<td class="px-6 py-4">
+<span class="flex items-center gap-1.5 text-primary font-medium text-xs">
+<span class="h-2 w-2 bg-primary"></span> Active
+                  </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-4">
+<button class="flex items-center gap-1 font-medium text-primary hover:text-lime-400">
+<span class="material-symbols-outlined !text-base">edit</span> Edit
+                    </button>
+<button class="flex items-center gap-1 font-medium text-red-500 hover:text-red-400">
+<span class="material-symbols-outlined !text-base">delete</span> Delete
+                    </button>
+</div>
+</td>
+</tr>
+<tr class="border-b border-zinc-700">
+<td class="px-4 py-4">
+<span class="bg-zinc-700 text-gray-200 font-bold w-8 h-8 flex items-center justify-center">50</span>
+</td>
+<td class="px-6 py-4 font-medium text-white whitespace-nowrap">hi</td>
+<td class="px-6 py-4 text-gray-400">KEYWORD</td>
+<td class="px-6 py-4 text-gray-400">Body contains</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="bg-primary/20 text-primary text-xs font-medium px-2.5 py-1">hi</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-amber-400/20 text-amber-300 text-xs font-bold px-2.5 py-1">HOLD</span>
+</td>
+<td class="px-6 py-4">
+<span class="flex items-center gap-1.5 text-primary font-medium text-xs">
+<span class="h-2 w-2 bg-primary"></span> Active
+                  </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-4">
+<button class="flex items-center gap-1 font-medium text-primary hover:text-lime-400">
+<span class="material-symbols-outlined !text-base">edit</span> Edit
+                    </button>
+<button class="flex items-center gap-1 font-medium text-red-500 hover:text-red-400">
+<span class="material-symbols-outlined !text-base">delete</span> Delete
+                    </button>
+</div>
+</td>
+</tr>
+<tr class="border-b border-zinc-700 last:border-b-0">
+<td class="px-4 py-4">
+<span class="bg-zinc-700 text-gray-200 font-bold w-8 h-8 flex items-center justify-center">50</span>
+</td>
+<td class="px-6 py-4 font-medium text-white whitespace-nowrap">bro</td>
+<td class="px-6 py-4 text-gray-400">KEYWORD</td>
+<td class="px-6 py-4 text-gray-400">Body contains</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="bg-primary/20 text-primary text-xs font-medium px-2.5 py-1">bro</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-amber-400/20 text-amber-300 text-xs font-bold px-2.5 py-1">HOLD</span>
+</td>
+<td class="px-6 py-4">
+<span class="flex items-center gap-1.5 text-primary font-medium text-xs">
+<span class="h-2 w-2 bg-primary"></span> Active
+                  </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-4">
+<button class="flex items-center gap-1 font-medium text-primary hover:text-lime-400">
+<span class="material-symbols-outlined !text-base">edit</span> Edit
+                    </button>
+<button class="flex items-center gap-1 font-medium text-red-500 hover:text-red-400">
+<span class="material-symbols-outlined !text-base">delete</span> Delete
+                    </button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+
+</body></html>

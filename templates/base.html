@@ -63,6 +63,7 @@
     <link rel="stylesheet" href="/static/css/dashboard-compact.css">
     <link rel="stylesheet" href="/static/css/stitch-final-fixes.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/stitch.components.css') }}">
+    <link rel="stylesheet" href="/static/css/stitch.override.css">
     {% block extra_css %}{% endblock %}
 </head>
 
@@ -83,13 +84,13 @@
                 <span
                     class="tw-text-[10px] tw-font-bold tw-text-[#71717a] tw-uppercase tw-tracking-widest tw-px-3 tw-mb-1.5 tw-block">CORE</span>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'dashboard.dashboard' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'dashboard.dashboard' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
                     href="/dashboard">
                     <span class="material-symbols-outlined tw-text-[18px]">dashboard</span>
                     <span class="tw-font-medium">Dashboard</span>
                 </a>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'emails.emails_unified' or request.endpoint == 'emails.email_queue' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'emails.emails_unified' or request.endpoint == 'emails.email_queue' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
                     href="/emails-unified">
                     <span class="material-symbols-outlined tw-text-[18px]">inbox</span>
                     <span class="tw-font-medium">Emails</span>
@@ -100,7 +101,7 @@
                     {% endif %}
                 </a>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'compose.compose_email' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'compose.compose_email' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
                     href="/compose">
                     <span class="material-symbols-outlined tw-text-[18px]">edit</span>
                     <span class="tw-font-medium">Compose</span>
@@ -112,37 +113,37 @@
                 <span
                     class="tw-text-[10px] tw-font-bold tw-text-[#71717a] tw-uppercase tw-tracking-widest tw-px-3 tw-mb-1.5 tw-block">MANAGEMENT</span>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'watchers.watchers_page' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'watchers.watchers_page' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
                     href="/watchers">
                     <span class="material-symbols-outlined tw-text-[18px]">visibility</span>
                     <span class="tw-font-medium">Watchers</span>
                 </a>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'moderation.rules' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'moderation.rules' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
                     href="/rules">
                     <span class="material-symbols-outlined tw-text-[18px]">rule</span>
                     <span class="tw-font-medium">Rules</span>
                 </a>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'accounts.email_accounts' or request.endpoint == 'accounts.add_email_account' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'accounts.email_accounts' or request.endpoint == 'accounts.add_email_account' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
                     href="/accounts">
                     <span class="material-symbols-outlined tw-text-[18px]">group</span>
                     <span class="tw-font-medium">Accounts</span>
                 </a>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'accounts.accounts_import_page' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'accounts.accounts_import_page' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
                     href="/accounts/import">
                     <span class="material-symbols-outlined tw-text-[18px]">upload</span>
                     <span class="tw-font-medium">Import Accounts</span>
                 </a>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'diagnostics' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'diagnostics' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
                     href="/diagnostics">
                     <span class="material-symbols-outlined tw-text-[18px]">monitoring</span>
                     <span class="tw-font-medium">Diagnostics</span>
                 </a>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'watchers.settings_page' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'watchers.settings_page' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
                     href="/settings">
                     <span class="material-symbols-outlined tw-text-[18px]">settings</span>
                     <span class="tw-font-medium">Settings</span>
@@ -154,13 +155,13 @@
                 <span
                     class="tw-text-[10px] tw-font-bold tw-text-[#71717a] tw-uppercase tw-tracking-widest tw-px-3 tw-mb-1.5 tw-block">TOOLS</span>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'styleguide.styleguide' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'styleguide.styleguide' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
                     href="/styleguide">
                     <span class="material-symbols-outlined tw-text-[18px]">palette</span>
                     <span class="tw-font-medium">Style Guide</span>
                 </a>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'diagnostics.interception_test_dashboard' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'diagnostics.interception_test_dashboard' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
                     href="/interception-test">
                     <span class="material-symbols-outlined tw-text-[18px]">science</span>
                     <span class="tw-font-medium">Interception Test</span>
