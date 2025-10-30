@@ -197,3 +197,7 @@ launch_vscode_*.vbs
 .claude-flow/metrics/system-metrics.json
 AGENTS - Copy.md
 AGENTS - Copy (2).md
+
+# Screenshot snapshots (output directory only, not source)
+/snapshots/
+tools/snapshots/state.json

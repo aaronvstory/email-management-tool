@@ -1,0 +1,11 @@
+[
+  { "name": "dashboard", "path": "/dashboard", "ready": "#dashboard-page" },
+  { "name": "emails", "path": "/emails-unified", "ready": "#emails-page" },
+  { "name": "watchers", "path": "/watchers", "ready": "#watchers-page" },
+  { "name": "rules", "path": "/rules", "ready": ".rules-page" },
+  { "name": "accounts", "path": "/accounts", "ready": ".accounts-page" },
+  { "name": "diagnostics", "path": "/diagnostics", "ready": ".diagnostics-page" },
+  { "name": "settings", "path": "/settings", "ready": ".settings-page" },
+  { "name": "compose", "path": "/compose", "ready": "#compose-page" },
+  { "name": "styleguide", "path": "/styleguide", "ready": "#styleguide-page" }
+]
