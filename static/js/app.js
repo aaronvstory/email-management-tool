@@ -1285,7 +1285,7 @@ window.MailOps = window.MailOps || {};
         // Measure menu after it exists in the DOM to respect width constraints
         const menuRect = menu.getBoundingClientRect();
 
-        const left = (() => {
+        let left = (() => {
             if (align === 'start' || align === 'left') {
                 return rect.left;
             }
