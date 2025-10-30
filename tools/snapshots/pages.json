@@ -5,10 +5,10 @@
     "ready": "#dashboard-page",
     "elements": [".page-header", ".email-table", ".stats-grid"]
   },
-  { 
-    "key": "emails", 
-    "url": "/emails-unified", 
-    "ready": "#emails-page",
+  {
+    "key": "emails",
+    "url": "/emails-unified",
+    "ready": "#emails-unified-page",
     "elements": [".page-header", ".email-table"]
   },
   { 
@@ -17,40 +17,40 @@
     "ready": "#watchers-page",
     "elements": [".page-header", ".watchers-table"]
   },
-  { 
-    "key": "rules", 
-    "url": "/rules", 
-    "ready": ".rules-page",
-    "elements": [".page-header", ".rules-table"]
+  {
+    "key": "rules",
+    "url": "/rules",
+    "ready": ".page-header",
+    "elements": [".panel", ".rules-table"]
   },
-  { 
-    "key": "accounts", 
-    "url": "/accounts", 
-    "ready": ".accounts-page",
-    "elements": [".page-header", ".accounts-table"]
+  {
+    "key": "accounts",
+    "url": "/accounts",
+    "ready": ".page-header",
+    "elements": [".header-actions", ".view-toggle"]
   },
-  { 
-    "key": "diagnostics", 
-    "url": "/diagnostics", 
-    "ready": ".diagnostics-page",
-    "elements": [".page-header", ".diagnostic-grid"]
+  {
+    "key": "diagnostics",
+    "url": "/diagnostics",
+    "ready": ".page-header",
+    "elements": [".diagnostics-grid", ".stat-card-modern"]
   },
-  { 
-    "key": "settings", 
-    "url": "/settings", 
-    "ready": ".settings-page",
-    "elements": [".page-header", ".settings-form"]
+  {
+    "key": "settings",
+    "url": "/settings",
+    "ready": ".page-header",
+    "elements": [".panel", ".settings-table"]
   },
-  { 
-    "key": "compose", 
-    "url": "/compose", 
-    "ready": "#compose-page",
-    "elements": [".page-header", ".compose-form"]
+  {
+    "key": "compose",
+    "url": "/compose",
+    "ready": ".page-header",
+    "elements": [".header-actions", "form"]
   },
-  { 
-    "key": "styleguide", 
-    "url": "/styleguide", 
-    "ready": "#styleguide-page",
-    "elements": [".page-header", ".component-showcase"]
+  {
+    "key": "styleguide",
+    "url": "/styleguide",
+    "ready": "#styleguide",
+    "elements": [".page-header", ".panel"]
   }
 ]

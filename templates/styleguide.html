@@ -121,8 +121,8 @@
       <!-- Buttons Section -->
       <section class="space-y-6">
         <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Buttons</h2>
-        <p class="text-slate-400">Buttons have no border radius for a sharp, modern look. The `.btn-primary-modern`
-          class is used for primary actions.</p>
+        <p class="text-slate-400">Buttons use dark red accents with subtle hover effects. All hover effects use <code>translateY(-2px)</code> for consistent lift.</p>
+
         <div class="space-y-6 mt-4">
           <h3 class="text-xl font-semibold text-white">Primary Modern Buttons</h3>
           <div class="p-6 bg-surface d-flex flex-wrap gap-4 align-items-center">
@@ -143,26 +143,53 @@
               <p class="text-xs font-medium text-slate-400 uppercase mt-2">Disabled</p>
             </div>
           </div>
+          <div class="p-4 bg-surface">
+            <h4 class="text-sm font-semibold text-white mb-2">Copy-Paste Snippet:</h4>
+            <pre class="text-xs text-slate-300" style="background: #0a0a0a; padding: 10px; border-radius: 6px; overflow-x: auto;"><code>&lt;button class="btn btn-primary-modern"&gt;
+  &lt;i class="bi bi-check-circle"&gt;&lt;/i&gt; Primary Action
+&lt;/button&gt;</code></pre>
+          </div>
         </div>
+
         <div class="space-y-6 mt-4">
           <h3 class="text-xl font-semibold text-white">Secondary &amp; Ghost Buttons</h3>
           <div class="p-6 bg-surface d-flex flex-wrap gap-4 align-items-center">
             <div class="text-center">
               <button class="btn btn-secondary">Secondary Action</button>
-              <p class="text-xs font-medium text-slate-400 uppercase mt-2">Default</p>
+              <p class="text-xs font-medium text-slate-400 uppercase mt-2">Secondary</p>
             </div>
             <div class="text-center">
-              <button class="btn btn-secondary hover-state">Hover State</button>
-              <p class="text-xs font-medium text-slate-400 uppercase mt-2">Hover</p>
-            </div>
-            <div class="text-center">
-              <button class="btn btn-secondary active-state">Active State</button>
-              <p class="text-xs font-medium text-slate-400 uppercase mt-2">Active</p>
+              <button class="btn btn-ghost">Ghost Action</button>
+              <p class="text-xs font-medium text-slate-400 uppercase mt-2">Ghost</p>
             </div>
             <div class="text-center">
               <button class="btn btn-secondary" disabled>Disabled</button>
               <p class="text-xs font-medium text-slate-400 uppercase mt-2">Disabled</p>
             </div>
+          </div>
+        </div>
+
+        <div class="space-y-6 mt-4">
+          <h3 class="text-xl font-semibold text-white">Button Sizes</h3>
+          <div class="p-6 bg-surface d-flex flex-wrap gap-4 align-items-center">
+            <div class="text-center">
+              <button class="btn btn-secondary btn-sm"><i class="bi bi-pencil"></i> Small</button>
+              <p class="text-xs font-medium text-slate-400 uppercase mt-2">btn-sm (34px)</p>
+            </div>
+            <div class="text-center">
+              <button class="btn btn-secondary"><i class="bi bi-save"></i> Default</button>
+              <p class="text-xs font-medium text-slate-400 uppercase mt-2">Default (42px)</p>
+            </div>
+            <div class="text-center">
+              <button class="btn btn-secondary btn-lg"><i class="bi bi-cloud-download"></i> Large</button>
+              <p class="text-xs font-medium text-slate-400 uppercase mt-2">btn-lg (50px)</p>
+            </div>
+          </div>
+          <div class="p-4 bg-surface">
+            <h4 class="text-sm font-semibold text-white mb-2">Copy-Paste Snippet:</h4>
+            <pre class="text-xs text-slate-300" style="background: #0a0a0a; padding: 10px; border-radius: 6px; overflow-x: auto;"><code>&lt;button class="btn btn-secondary btn-sm"&gt;Small Button&lt;/button&gt;
+&lt;button class="btn btn-secondary"&gt;Default Button&lt;/button&gt;
+&lt;button class="btn btn-secondary btn-lg"&gt;Large Button&lt;/button&gt;</code></pre>
           </div>
         </div>
       </section>
@@ -191,10 +218,94 @@
             </div>
           </div>
           <div class="mt-4">
-            <h3 class="text-lg font-semibold text-white">Textarea Example</h3>
+            <h3 class="text-lg font-semibold text-white">Textarea</h3>
             <label class="form-label mt-2" for="textarea-example">Message</label>
             <textarea class="input-modern w-100" id="textarea-example" placeholder="Enter your message here..."
               rows="4"></textarea>
+          </div>
+
+          <div class="row g-5 mt-4">
+            <div class="col-md-4">
+              <h3 class="text-lg font-semibold text-white">Select Dropdown</h3>
+              <label class="form-label mt-2" for="select-example">Choose Option</label>
+              <select class="form-select input-modern w-100" id="select-example">
+                <option value="">Select an option...</option>
+                <option value="1">Option 1</option>
+                <option value="2">Option 2</option>
+                <option value="3">Option 3</option>
+              </select>
+            </div>
+
+            <div class="col-md-4">
+              <h3 class="text-lg font-semibold text-white">Checkboxes</h3>
+              <div class="mt-2">
+                <div class="form-check mb-2">
+                  <input class="form-check-input" type="checkbox" value="" id="check1" checked>
+                  <label class="form-check-label text-white" for="check1">
+                    Option 1 (checked)
+                  </label>
+                </div>
+                <div class="form-check mb-2">
+                  <input class="form-check-input" type="checkbox" value="" id="check2">
+                  <label class="form-check-label text-white" for="check2">
+                    Option 2
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" value="" id="check3" disabled>
+                  <label class="form-check-label text-slate-400" for="check3">
+                    Option 3 (disabled)
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <h3 class="text-lg font-semibold text-white">Radio Buttons</h3>
+              <div class="mt-2">
+                <div class="form-check mb-2">
+                  <input class="form-check-input" type="radio" name="radioGroup" id="radio1" value="option1" checked>
+                  <label class="form-check-label text-white" for="radio1">
+                    Option 1 (selected)
+                  </label>
+                </div>
+                <div class="form-check mb-2">
+                  <input class="form-check-input" type="radio" name="radioGroup" id="radio2" value="option2">
+                  <label class="form-check-label text-white" for="radio2">
+                    Option 2
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="radioGroup" id="radio3" value="option3" disabled>
+                  <label class="form-check-label text-slate-400" for="radio3">
+                    Option 3 (disabled)
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-4 bg-surface mt-4">
+            <h4 class="text-sm font-semibold text-white mb-2">Copy-Paste Snippet:</h4>
+            <pre class="text-xs text-slate-300" style="background: #0a0a0a; padding: 10px; border-radius: 6px; overflow-x: auto;"><code>&lt;!-- Input --&gt;
+&lt;input class="input-modern w-100" type="text" placeholder="Placeholder" /&gt;
+
+&lt;!-- Select --&gt;
+&lt;select class="form-select input-modern w-100"&gt;
+  &lt;option value=""&gt;Select...&lt;/option&gt;
+&lt;/select&gt;
+
+&lt;!-- Checkbox --&gt;
+&lt;div class="form-check"&gt;
+  &lt;input class="form-check-input" type="checkbox" id="myCheck"&gt;
+  &lt;label class="form-check-label" for="myCheck"&gt;Label&lt;/label&gt;
+&lt;/div&gt;
+
+&lt;!-- Radio --&gt;
+&lt;div class="form-check"&gt;
+  &lt;input class="form-check-input" type="radio" name="group" id="radio1"&gt;
+  &lt;label class="form-check-label" for="radio1"&gt;Option 1&lt;/label&gt;
+&lt;/div&gt;</code></pre>
           </div>
         </div>
       </section>
@@ -236,6 +347,155 @@
         </div>
       </section>
 
+      <!-- Panels Section -->
+      <section class="space-y-6">
+        <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Panels</h2>
+        <p class="text-slate-400">Panels are the primary container component used throughout the application for grouping related content.</p>
+
+        <div class="space-y-6 mt-4">
+          <h3 class="text-xl font-semibold text-white">Panel with Header & Actions</h3>
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <i class="bi bi-list-check"></i> Panel Title
+                <span class="badge badge-soft-info ms-2">5 items</span>
+              </div>
+              <div class="panel-actions">
+                <button class="btn btn-secondary btn-sm">
+                  <i class="bi bi-plus-circle"></i> Add Item
+                </button>
+              </div>
+            </div>
+            <div class="panel-body">
+              <p class="text-slate-300">This is the panel body content. It can contain any HTML elements, tables, forms, or other components.</p>
+            </div>
+          </div>
+          <div class="p-4 bg-surface">
+            <h4 class="text-sm font-semibold text-white mb-2">Copy-Paste Snippet:</h4>
+            <pre class="text-xs text-slate-300" style="background: #0a0a0a; padding: 10px; border-radius: 6px; overflow-x: auto;"><code>&lt;div class="panel"&gt;
+  &lt;div class="panel-header"&gt;
+    &lt;div class="panel-title"&gt;
+      &lt;i class="bi bi-list-check"&gt;&lt;/i&gt; Panel Title
+    &lt;/div&gt;
+    &lt;div class="panel-actions"&gt;
+      &lt;button class="btn btn-secondary btn-sm"&gt;Action&lt;/button&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class="panel-body"&gt;
+    &lt;!-- Content here --&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tables Section -->
+      <section class="space-y-6">
+        <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Tables</h2>
+        <p class="text-slate-400">Tables use the <code>.table-modern</code> class with subtle hover effects. Row hover uses <code>rgba(255,255,255,0.03)</code> background with a dark red outline.</p>
+
+        <div class="space-y-6 mt-4">
+          <h3 class="text-xl font-semibold text-white">Modern Table Example</h3>
+          <div class="p-6 bg-surface">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th style="width: 80px;">Priority</th>
+                  <th>Name</th>
+                  <th style="width: 120px;">Status</th>
+                  <th style="width: 120px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="tag-chip info">80</span></td>
+                  <td><div class="fw-semibold">Rule Name 1</div></td>
+                  <td><span class="status-indicator success">Active</span></td>
+                  <td>
+                    <button class="btn btn-secondary btn-sm">
+                      <i class="bi bi-pencil"></i> Edit
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td><span class="tag-chip warning">50</span></td>
+                  <td><div class="fw-semibold">Rule Name 2</div></td>
+                  <td><span class="status-indicator warning">Warning</span></td>
+                  <td>
+                    <button class="btn btn-secondary btn-sm">
+                      <i class="bi bi-pencil"></i> Edit
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td><span class="tag-chip muted">10</span></td>
+                  <td><div class="fw-semibold">Rule Name 3</div></td>
+                  <td><span class="status-indicator danger">Inactive</span></td>
+                  <td>
+                    <button class="btn btn-secondary btn-sm">
+                      <i class="bi bi-pencil"></i> Edit
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="p-4 bg-surface">
+            <h4 class="text-sm font-semibold text-white mb-2">Copy-Paste Snippet:</h4>
+            <pre class="text-xs text-slate-300" style="background: #0a0a0a; padding: 10px; border-radius: 6px; overflow-x: auto;"><code>&lt;table class="table table-hover"&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;&lt;th&gt;Column 1&lt;/th&gt;&lt;th&gt;Column 2&lt;/th&gt;&lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;&lt;td&gt;Data 1&lt;/td&gt;&lt;td&gt;Data 2&lt;/td&gt;&lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Badges & Tags Section -->
+      <section class="space-y-6">
+        <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Badges &amp; Tags</h2>
+        <p class="text-slate-400">Tag chips and status indicators use <code>var(--radius-md)</code> (12px) border radius, NOT 30px or 999px pill shapes.</p>
+
+        <div class="space-y-6 mt-4">
+          <h3 class="text-xl font-semibold text-white">Tag Chips</h3>
+          <div class="p-6 bg-surface d-flex flex-wrap gap-3 align-items-center">
+            <span class="tag-chip success"><i class="bi bi-check-circle"></i> Success</span>
+            <span class="tag-chip accent"><i class="bi bi-x-circle"></i> Accent</span>
+            <span class="tag-chip warning"><i class="bi bi-exclamation-triangle"></i> Warning</span>
+            <span class="tag-chip info"><i class="bi bi-info-circle"></i> Info</span>
+            <span class="tag-chip muted"><i class="bi bi-clock"></i> Muted</span>
+          </div>
+
+          <h3 class="text-xl font-semibold text-white">Status Indicators</h3>
+          <div class="p-6 bg-surface d-flex flex-wrap gap-3 align-items-center">
+            <span class="status-indicator success">Active</span>
+            <span class="status-indicator warning">Pending</span>
+            <span class="status-indicator danger">Error</span>
+            <span class="status-indicator info">Info</span>
+          </div>
+
+          <h3 class="text-xl font-semibold text-white">Soft Badges</h3>
+          <div class="p-6 bg-surface d-flex flex-wrap gap-3 align-items-center">
+            <span class="badge badge-soft-success">3 Active</span>
+            <span class="badge badge-soft-danger">2 Failed</span>
+            <span class="badge badge-soft-info">5 Pending</span>
+            <span class="badge badge-soft-muted">12 Total</span>
+          </div>
+
+          <div class="p-4 bg-surface">
+            <h4 class="text-sm font-semibold text-white mb-2">Copy-Paste Snippet:</h4>
+            <pre class="text-xs text-slate-300" style="background: #0a0a0a; padding: 10px; border-radius: 6px; overflow-x: auto;"><code>&lt;span class="tag-chip success"&gt;
+  &lt;i class="bi bi-check-circle"&gt;&lt;/i&gt; Success
+&lt;/span&gt;
+&lt;span class="status-indicator success"&gt;Active&lt;/span&gt;
+&lt;span class="badge badge-soft-success"&gt;3 Active&lt;/span&gt;</code></pre>
+          </div>
+        </div>
+      </section>
+
       <!-- Do's and Don'ts Section -->
       <section class="space-y-6">
         <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Best Practices</h2>
@@ -244,10 +504,14 @@
             <li><strong>Do</strong> use `.btn-primary-modern` for the primary action on a page.</li>
             <li><strong>Do</strong> use `.input-modern` for all new form fields to maintain consistency.</li>
             <li><strong>Do</strong> use `confirmToast()` for destructive actions like deleting or discarding.</li>
+            <li><strong>Do</strong> use <code>var(--radius-md)</code> for all chips and badges.</li>
+            <li><strong>Do</strong> use <code>translateY(-2px)</code> for button hover effects, NOT -1px.</li>
             <li><strong>Don't</strong> mix arbitrary inline colors; use the Tailwind color utility classes
               (`bg-primary`, `text-danger`, etc.).</li>
             <li><strong>Don't</strong> use `.table-striped` on dark backgrounds; wrap tables with `.table-modern`
               instead.</li>
+            <li><strong>Don't</strong> use bright red (#dc2626); always use dark red (#7f1d1d).</li>
+            <li><strong>Don't</strong> use border-radius: 30px or 999px for chips/badges.</li>
           </ul>
         </div>
       </section>
