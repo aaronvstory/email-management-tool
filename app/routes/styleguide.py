@@ -17,6 +17,5 @@ def styleguide_standalone():
 
 @styleguide_bp.route('/styleguide/stitch')
 @login_required
-def styleguide_stitch():
-    """Preview the new Stitch theme styleguide (Tailwind-based)"""
-    return render_template('stitch/styleguide.html')
+def stitch_styleguide():
+    return render_template('styleguide/stitch.html')
