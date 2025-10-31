@@ -1,0 +1,891 @@
+{% extends "base.html" %}
+
+{% block title %}Interception Test Suite - Email Management Tool{% endblock %}
+
+{% block content %}
+<div id="test-page">
+<main class="tw-flex-1 tw-p-6 tw-space-y-6">
+    <div class="tw-flex tw-items-center tw-justify-between">
+        <div>
+            <h1 class="tw-text-2xl tw-font-bold tw-text-white">Interception Test Suite</h1>
+            <p class="tw-text-zinc-400 tw-text-sm tw-mt-1">Complete end-to-end testing of email interception, editing, and delivery flow</p>
+        </div>
+        <div class="tw-flex tw-gap-2">
+            <button onclick="clearAllResults()" class="tw-bg-zinc-700 tw-text-zinc-200 tw-font-semibold tw-py-2 tw-px-4 hover:tw-bg-zinc-600 tw-transition-colors tw-flex tw-items-center tw-gap-2">
+                <span class="material-symbols-outlined tw-text-base">delete</span>
+                Clear Results
+            </button>
+            <button onclick="location.reload()" class="tw-bg-zinc-700 tw-text-zinc-200 tw-font-semibold tw-py-2 tw-px-4 hover:tw-bg-zinc-600 tw-transition-colors tw-flex tw-items-center tw-gap-2">
+                <span class="material-symbols-outlined tw-text-base">refresh</span>
+                Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- Quick Bi-Directional Tests -->
+    <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+        <h3 class="tw-text-zinc-200 tw-font-semibold tw-mb-3">Quick Bi-Directional Tests (Polling Mode)</h3>
+        <p class="tw-text-zinc-400 tw-text-sm tw-mb-4">Automated tests using permanent accounts with polling watcher interception</p>
+
+        <div class="tw-grid tw-grid-cols-1 tw-md:grid-cols-2 tw-gap-4">
+            <button id="testHostingerToGmail" onclick="runBiDirectionalTest('hostinger-to-gmail')" class="tw-bg-primary tw-text-zinc-900 tw-font-semibold tw-py-3 tw-px-4 hover:tw-bg-lime-400 tw-transition-colors tw-flex tw-items-center tw-justify-center tw-gap-2">
+                <span class="material-symbols-outlined">arrow_forward</span>
+                Test Hostinger → Gmail
+            </button>
+            <button id="testGmailToHostinger" onclick="runBiDirectionalTest('gmail-to-hostinger')" class="tw-bg-primary tw-text-zinc-900 tw-font-semibold tw-py-3 tw-px-4 hover:tw-bg-lime-400 tw-transition-colors tw-flex tw-items-center tw-justify-center tw-gap-2">
+                <span class="material-symbols-outlined">arrow_back</span>
+                Test Gmail → Hostinger
+            </button>
+        </div>
+
+        <!-- Watcher Status Display -->
+        <div id="watcherStatus" style="display: none;" class="tw-mt-4 tw-bg-zinc-900 tw-border tw-border-zinc-700 tw-p-4">
+            <div class="tw-flex tw-justify-between tw-items-center tw-mb-3">
+                <strong class="tw-text-white tw-text-sm">IMAP Watcher Status</strong>
+                <button onclick="refreshWatcherStatus()" class="tw-bg-zinc-700 tw-text-zinc-200 tw-text-xs tw-font-semibold tw-py-1 tw-px-2 hover:tw-bg-zinc-600 tw-transition-colors tw-flex tw-items-center tw-gap-1">
+                    <span class="material-symbols-outlined !tw-text-xs">sync</span> Refresh
+                </button>
+            </div>
+            <div id="watcherStatusContent" class="tw-text-zinc-400 tw-text-sm">Loading...</div>
+        </div>
+
+        <!-- Test Progress -->
+        <div id="biDirectionalProgress" style="display: none;" class="tw-mt-4 tw-bg-blue-500/10 tw-border tw-border-blue-500/25 tw-p-4">
+            <div class="tw-flex tw-items-center tw-gap-3 tw-mb-2">
+                <div class="tw-w-4 tw-h-4 tw-border-2 tw-border-primary tw-border-t-transparent tw-rounded-full tw-animate-spin"></div>
+                <strong class="tw-text-blue-400" id="progressTitle">Running Test...</strong>
+            </div>
+            <div id="progressDetails" class="tw-text-zinc-400 tw-text-sm">Initializing...</div>
+        </div>
+    </div>
+
+    <!-- Flow Visualization -->
+    <div class="tw-bg-background tw-border tw-border-border tw-p-6">
+        <h2 class="tw-text-white tw-font-semibold tw-text-lg tw-mb-6">
+            <span class="material-symbols-outlined tw-align-middle tw-mr-2">account_tree</span>
+            Test Flow Visualization
+        </h2>
+
+        <div class="tw-relative tw-flex tw-items-center tw-justify-between tw-gap-4">
+            <!-- Flow line background -->
+            <div class="tw-absolute tw-top-8 tw-left-0 tw-right-0 tw-h-0.5 tw-bg-zinc-700 tw-z-0"></div>
+            <div id="flowProgress" class="tw-absolute tw-top-8 tw-left-0 tw-h-0.5 tw-bg-primary tw-z-0 tw-transition-all tw-duration-500" style="width: 0%;"></div>
+
+            <!-- Flow steps -->
+            <div class="tw-flex tw-flex-1 tw-justify-between tw-relative tw-z-10">
+                <div id="step-send" class="tw-flex tw-flex-col tw-items-center tw-gap-2 flow-step">
+                    <div class="tw-w-16 tw-h-16 tw-bg-zinc-800 tw-border-2 tw-border-zinc-700 tw-flex tw-items-center tw-justify-center">
+                        <span class="material-symbols-outlined tw-text-zinc-400 tw-text-2xl">send</span>
+                    </div>
+                    <div class="tw-text-white tw-text-xs tw-font-medium">Send Email</div>
+                    <div class="tw-text-zinc-500 tw-text-xs step-status">Ready</div>
+                </div>
+
+                <div id="step-intercept" class="tw-flex tw-flex-col tw-items-center tw-gap-2 flow-step">
+                    <div class="tw-w-16 tw-h-16 tw-bg-zinc-800 tw-border-2 tw-border-zinc-700 tw-flex tw-items-center tw-justify-center">
+                        <span class="material-symbols-outlined tw-text-zinc-400 tw-text-2xl">back_hand</span>
+                    </div>
+                    <div class="tw-text-white tw-text-xs tw-font-medium">Intercept</div>
+                    <div class="tw-text-zinc-500 tw-text-xs step-status">Waiting</div>
+                </div>
+
+                <div id="step-edit" class="tw-flex tw-flex-col tw-items-center tw-gap-2 flow-step">
+                    <div class="tw-w-16 tw-h-16 tw-bg-zinc-800 tw-border-2 tw-border-zinc-700 tw-flex tw-items-center tw-justify-center">
+                        <span class="material-symbols-outlined tw-text-zinc-400 tw-text-2xl">edit</span>
+                    </div>
+                    <div class="tw-text-white tw-text-xs tw-font-medium">Edit Content</div>
+                    <div class="tw-text-zinc-500 tw-text-xs step-status">Waiting</div>
+                </div>
+
+                <div id="step-approve" class="tw-flex tw-flex-col tw-items-center tw-gap-2 flow-step">
+                    <div class="tw-w-16 tw-h-16 tw-bg-zinc-800 tw-border-2 tw-border-zinc-700 tw-flex tw-items-center tw-justify-center">
+                        <span class="material-symbols-outlined tw-text-zinc-400 tw-text-2xl">check_circle</span>
+                    </div>
+                    <div class="tw-text-white tw-text-xs tw-font-medium">Approve</div>
+                    <div class="tw-text-zinc-500 tw-text-xs step-status">Waiting</div>
+                </div>
+
+                <div id="step-deliver" class="tw-flex tw-flex-col tw-items-center tw-gap-2 flow-step">
+                    <div class="tw-w-16 tw-h-16 tw-bg-zinc-800 tw-border-2 tw-border-zinc-700 tw-flex tw-items-center tw-justify-center">
+                        <span class="material-symbols-outlined tw-text-zinc-400 tw-text-2xl">inbox</span>
+                    </div>
+                    <div class="tw-text-white tw-text-xs tw-font-medium">Deliver</div>
+                    <div class="tw-text-zinc-500 tw-text-xs step-status">Waiting</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Controls Grid -->
+    <div class="tw-grid tw-grid-cols-1 tw-md:grid-cols-2 tw-gap-6">
+        <!-- Email Configuration -->
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+            <h3 class="tw-text-zinc-200 tw-font-semibold tw-mb-4">
+                <span class="material-symbols-outlined tw-align-middle tw-mr-2 tw-text-base">settings</span>
+                Email Configuration
+            </h3>
+
+            <div class="tw-space-y-4">
+                <div>
+                    <label class="tw-block tw-text-zinc-300 tw-text-sm tw-font-medium tw-mb-2">From Account</label>
+                    <select id="fromAccount" class="tw-w-full tw-bg-zinc-900 tw-border tw-border-zinc-700 tw-text-zinc-100 tw-px-3 tw-py-2 tw-text-sm focus:tw-ring-primary focus:tw-border-primary">
+                        <option value="">Select sender account...</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="tw-block tw-text-zinc-300 tw-text-sm tw-font-medium tw-mb-2">To Account</label>
+                    <select id="toAccount" class="tw-w-full tw-bg-zinc-900 tw-border tw-border-zinc-700 tw-text-zinc-100 tw-px-3 tw-py-2 tw-text-sm focus:tw-ring-primary focus:tw-border-primary">
+                        <option value="">Select recipient account...</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="tw-block tw-text-zinc-300 tw-text-sm tw-font-medium tw-mb-2">Original Subject</label>
+                    <input type="text" id="originalSubject" value="Test Email {{ timestamp }}" placeholder="Test Email Subject" class="tw-w-full tw-bg-zinc-900 tw-border tw-border-zinc-700 tw-text-zinc-100 tw-px-3 tw-py-2 tw-text-sm focus:tw-ring-primary focus:tw-border-primary" />
+                </div>
+
+                <div>
+                    <label class="tw-block tw-text-zinc-300 tw-text-sm tw-font-medium tw-mb-2">Original Body</label>
+                    <textarea id="originalBody" rows="4" placeholder="Email body content..." class="tw-w-full tw-bg-zinc-900 tw-border tw-border-zinc-700 tw-text-zinc-100 tw-px-3 tw-py-2 tw-text-sm tw-font-mono focus:tw-ring-primary focus:tw-border-primary">This is a test email sent at {{ timestamp }} to verify the interception and editing functionality.</textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Configuration -->
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+            <h3 class="tw-text-zinc-200 tw-font-semibold tw-mb-4">
+                <span class="material-symbols-outlined tw-align-middle tw-mr-2 tw-text-base">edit</span>
+                Edit Configuration
+            </h3>
+
+            <div class="tw-space-y-4">
+                <div>
+                    <label class="tw-block tw-text-zinc-300 tw-text-sm tw-font-medium tw-mb-2">Edited Subject</label>
+                    <input type="text" id="editedSubject" value="[EDITED] Test Email {{ timestamp }}" placeholder="[EDITED] Test Email" class="tw-w-full tw-bg-zinc-900 tw-border tw-border-zinc-700 tw-text-zinc-100 tw-px-3 tw-py-2 tw-text-sm focus:tw-ring-primary focus:tw-border-primary" />
+                </div>
+
+                <div>
+                    <label class="tw-block tw-text-zinc-300 tw-text-sm tw-font-medium tw-mb-2">Edited Body</label>
+                    <textarea id="editedBody" rows="4" placeholder="Edited email body..." class="tw-w-full tw-bg-zinc-900 tw-border tw-border-zinc-700 tw-text-zinc-100 tw-px-3 tw-py-2 tw-text-sm tw-font-mono focus:tw-ring-primary focus:tw-border-primary">This email was intercepted and edited by the test suite at {{ timestamp }}.
+
+Original content has been modified to verify the editing functionality works correctly.</textarea>
+                </div>
+
+                <div>
+                    <label class="tw-block tw-text-zinc-300 tw-text-sm tw-font-medium tw-mb-2">Auto-Edit Delay (seconds)</label>
+                    <input type="number" id="editDelay" value="2" min="0" max="10" class="tw-w-full tw-bg-zinc-900 tw-border tw-border-zinc-700 tw-text-zinc-100 tw-px-3 tw-py-2 tw-text-sm focus:tw-ring-primary focus:tw-border-primary" />
+                </div>
+
+                <button id="startTest" onclick="startTest()" class="tw-w-full tw-bg-primary tw-text-zinc-900 tw-font-semibold tw-py-3 tw-px-4 hover:tw-bg-lime-400 tw-transition-colors tw-flex tw-items-center tw-justify-center tw-gap-2">
+                    <span class="material-symbols-outlined">play_arrow</span>
+                    Start Test
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Email Preview -->
+    <div id="emailPreview" style="display: none;" class="tw-bg-background tw-border tw-border-border tw-p-4">
+        <h3 class="tw-text-zinc-200 tw-font-semibold tw-mb-4">
+            <span class="material-symbols-outlined tw-align-middle tw-mr-2 tw-text-base">mail_outline</span>
+            Email Preview
+        </h3>
+
+        <div class="tw-bg-zinc-900 tw-border tw-border-zinc-800 tw-p-4">
+            <div class="tw-grid tw-grid-cols-[100px_1fr] tw-gap-x-4 tw-gap-y-3 tw-mb-4">
+                <div class="tw-text-zinc-400 tw-text-sm">From:</div>
+                <div id="previewFrom" class="tw-text-zinc-200 tw-text-sm">-</div>
+
+                <div class="tw-text-zinc-400 tw-text-sm">To:</div>
+                <div id="previewTo" class="tw-text-zinc-200 tw-text-sm">-</div>
+
+                <div class="tw-text-zinc-400 tw-text-sm">Subject:</div>
+                <div id="previewSubject" class="tw-text-zinc-200 tw-text-sm">-</div>
+
+                <div class="tw-text-zinc-400 tw-text-sm">Status:</div>
+                <div id="previewStatus" class="tw-text-zinc-200 tw-text-sm">-</div>
+            </div>
+            <div class="tw-border-t tw-border-zinc-800 tw-pt-4">
+                <div id="previewBody" class="tw-text-zinc-300 tw-text-sm tw-font-mono tw-whitespace-pre-wrap">-</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Results Timeline -->
+    <div class="tw-bg-background tw-border tw-border-border">
+        <div class="tw-px-4 tw-py-3 tw-border-b tw-border-border tw-flex tw-justify-between tw-items-center">
+            <h2 class="tw-text-zinc-200 tw-font-semibold">
+                <span class="material-symbols-outlined tw-align-middle tw-mr-2 tw-text-base">timeline</span>
+                Live Test Results
+            </h2>
+            <div class="tw-flex tw-items-center tw-gap-3">
+                <span id="testStatus" class="tw-text-xs tw-font-bold tw-px-2 tw-py-0.5 tw-bg-zinc-700 tw-text-zinc-300">READY</span>
+                <button onclick="clearResults()" class="tw-bg-zinc-700 tw-text-zinc-200 tw-text-xs tw-font-semibold tw-py-1 tw-px-2 hover:tw-bg-zinc-600 tw-transition-colors tw-flex tw-items-center tw-gap-1">
+                    <span class="material-symbols-outlined !tw-text-xs">delete</span> Clear
+                </button>
+            </div>
+        </div>
+        <div class="tw-p-4">
+            <div id="resultsTimeline" class="tw-space-y-3">
+                <!-- Timeline items will be added dynamically -->
+            </div>
+        </div>
+    </div>
+</main>
+</div>
+
+<script>
+// Global variables
+let testInProgress = false;
+let currentEmailId = null;
+let accounts = [];
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadAccounts();
+    setupEventListeners();
+    updateTimestamp();
+});
+
+// Load active accounts from API
+async function loadAccounts() {
+    try {
+        const response = await fetch('/api/accounts');
+        const data = await response.json();
+
+        accounts = data.accounts.filter(acc => acc.is_active);
+
+        const fromSelect = document.getElementById('fromAccount');
+        const toSelect = document.getElementById('toAccount');
+
+        // Clear existing options
+        fromSelect.innerHTML = '<option value="">Select sender account...</option>';
+        toSelect.innerHTML = '<option value="">Select recipient account...</option>';
+
+        // Add account options
+        accounts.forEach(account => {
+            const option1 = new Option(
+                `${account.account_name} (${account.email_address})`,
+                account.id
+            );
+            const option2 = new Option(
+                `${account.account_name} (${account.email_address})`,
+                account.id
+            );
+            fromSelect.add(option1);
+            toSelect.add(option2);
+        });
+
+        // Auto-select if only 2 accounts
+        if (accounts.length === 2) {
+            fromSelect.value = accounts[0].id;
+            toSelect.value = accounts[1].id;
+        }
+
+        addTimelineItem('info', 'System Ready', `Loaded ${accounts.length} active email accounts`);
+    } catch (error) {
+        addTimelineItem('error', 'Failed to load accounts', error.message);
+    }
+}
+
+// Setup event listeners
+function setupEventListeners() {
+    // Update timestamp placeholders on input change
+    ['originalSubject', 'originalBody', 'editedSubject', 'editedBody'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updateTimestamp);
+    });
+}
+
+// Update timestamp placeholders
+function updateTimestamp() {
+    const timestamp = new Date().toLocaleString();
+    const elements = ['originalSubject', 'originalBody', 'editedSubject', 'editedBody'];
+
+    elements.forEach(id => {
+        const element = document.getElementById(id);
+        if (element.value.includes('{{ timestamp }}')) {
+            element.value = element.value.replace(/{{ timestamp }}/g, timestamp);
+        }
+    });
+}
+
+// Start the complete test
+async function startTest() {
+    if (testInProgress) {
+        alert('Test already in progress!');
+        return;
+    }
+
+    // Validate inputs
+    const fromAccount = document.getElementById('fromAccount').value;
+    const toAccount = document.getElementById('toAccount').value;
+
+    if (!fromAccount || !toAccount) {
+        alert('Please select both sender and recipient accounts');
+        return;
+    }
+
+    if (fromAccount === toAccount) {
+        alert('Please select different accounts for sender and recipient');
+        return;
+    }
+
+    testInProgress = true;
+    document.getElementById('startTest').disabled = true;
+    updateTestStatus('active', 'RUNNING');
+
+    // Reset flow visualization
+    resetFlowVisualization();
+
+    // Get test parameters
+    const testData = {
+        from_account_id: fromAccount,
+        to_account_id: toAccount,
+        original_subject: document.getElementById('originalSubject').value,
+        original_body: document.getElementById('originalBody').value,
+        edited_subject: document.getElementById('editedSubject').value,
+        edited_body: document.getElementById('editedBody').value,
+        edit_delay: parseInt(document.getElementById('editDelay').value) || 2
+    };
+
+    // Execute test steps
+    try {
+        // Step 1: Send Email
+        await executeStep('send', testData);
+
+        // Step 2: Check Interception
+        await executeStep('intercept', testData);
+
+        // Step 3: Edit Email
+        await executeStep('edit', testData);
+
+        // Step 4: Approve Email
+        await executeStep('approve', testData);
+
+        // Step 5: Verify Delivery
+        await executeStep('deliver', testData);
+
+        // Test completed
+        updateTestStatus('success', 'COMPLETED');
+        addTimelineItem('success', 'Test Completed', 'All steps executed successfully');
+
+    } catch (error) {
+        updateTestStatus('error', 'FAILED');
+        addTimelineItem('error', 'Test Failed', error.message);
+    } finally {
+        testInProgress = false;
+        document.getElementById('startTest').disabled = false;
+    }
+}
+
+// Execute a test step
+async function executeStep(step, testData) {
+    updateFlowStep(step, 'active', 'Processing...');
+
+    try {
+        let result;
+
+        switch(step) {
+            case 'send':
+                result = await sendTestEmail(testData);
+                break;
+            case 'intercept':
+                result = await checkInterception(testData);
+                break;
+            case 'edit':
+                result = await editEmail(testData);
+                break;
+            case 'approve':
+                result = await approveEmail(testData);
+                break;
+            case 'deliver':
+                result = await verifyDelivery(testData);
+                break;
+        }
+
+        updateFlowStep(step, 'completed', 'Done');
+        updateFlowProgress(step);
+
+        return result;
+
+    } catch (error) {
+        updateFlowStep(step, 'error', 'Failed');
+        throw error;
+    }
+}
+
+// Send test email through SMTP proxy
+async function sendTestEmail(testData) {
+    addTimelineItem('info', 'Sending Email', `From: ${getAccountName(testData.from_account_id)} to ${getAccountName(testData.to_account_id)}`);
+
+    const response = await fetch('/api/test/send-email', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            from_account_id: testData.from_account_id,
+            to_account_id: testData.to_account_id,
+            subject: testData.original_subject,
+            body: testData.original_body
+        })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+        addTimelineItem('success', 'Email Sent', `Subject: ${testData.original_subject}`);
+        showEmailPreview(testData, 'original');
+    } else {
+        throw new Error(result.error || 'Failed to send email');
+    }
+
+    return result;
+}
+
+// Check if email was intercepted
+async function checkInterception(testData) {
+    addTimelineItem('info', 'Checking Interception', 'Waiting for email to appear in queue...');
+
+    // Poll for intercepted email
+    for (let i = 0; i < 10; i++) {
+        const response = await fetch(`/api/test/check-interception?subject=${encodeURIComponent(testData.original_subject)}`);
+        const result = await response.json();
+
+        if (result.success && result.email_id) {
+            currentEmailId = result.email_id;
+            addTimelineItem('success', 'Email Intercepted', `Email ID: ${currentEmailId}`);
+            return result;
+        }
+
+        await sleep(1000);
+    }
+
+    throw new Error('Email was not intercepted within timeout');
+}
+
+// Edit the intercepted email
+async function editEmail(testData) {
+    if (!currentEmailId) {
+        throw new Error('No email ID available for editing');
+    }
+
+    addTimelineItem('info', 'Editing Email', `Applying edited content after ${testData.edit_delay}s delay...`);
+
+    // Wait for configured delay
+    await sleep(testData.edit_delay * 1000);
+
+    const response = await fetch(`/api/email/${currentEmailId}/edit`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            subject: testData.edited_subject,
+            body_text: testData.edited_body
+        })
+    });
+
+    const result = await response.json();
+
+    if (result.ok || result.success) {
+        addTimelineItem('success', 'Email Edited', `New subject: ${testData.edited_subject}`);
+        showEmailPreview(testData, 'edited');
+    } else {
+        throw new Error(result.error || 'Failed to edit email');
+    }
+
+    return result;
+}
+
+// Approve the email for sending
+async function approveEmail(testData) {
+    if (!currentEmailId) {
+        throw new Error('No email ID available for approval');
+    }
+
+    addTimelineItem('info', 'Approving Email', 'Marking email as approved for delivery...');
+
+    const response = await fetch(`/api/interception/release/${currentEmailId}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            edited_subject: testData.edited_subject,
+            edited_body: testData.edited_body
+        })
+    });
+    const result = await response.json();
+    if (result.ok) {
+        addTimelineItem('success', 'Email Approved', 'Email queued for delivery');
+    } else {
+        throw new Error(result.error || result.reason || 'Failed to approve email');
+    }
+
+    return result;
+}
+
+// Verify email delivery
+async function verifyDelivery(testData) {
+    addTimelineItem('info', 'Verifying Delivery', 'Checking destination inbox...');
+
+    // Wait for email to be sent
+    await sleep(5000);
+
+    const response = await fetch('/api/test/verify-delivery', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            account_id: testData.to_account_id,
+            subject: testData.edited_subject
+        })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+        addTimelineItem('success', 'Email Delivered', `Edited email received at ${getAccountName(testData.to_account_id)}`);
+    } else {
+        throw new Error(result.error || 'Failed to verify delivery');
+    }
+
+    return result;
+}
+
+// Bi-Directional Testing Functions
+async function runBiDirectionalTest(direction) {
+    const progressDiv = document.getElementById('biDirectionalProgress');
+    const watcherDiv = document.getElementById('watcherStatus');
+    const progressTitle = document.getElementById('progressTitle');
+    const progressDetails = document.getElementById('progressDetails');
+
+    // Disable buttons during test
+    const buttons = ['testHostingerToGmail', 'testGmailToHostinger'];
+    buttons.forEach(id => {
+        document.getElementById(id).disabled = true;
+    });
+
+    // Show progress and watcher status
+    progressDiv.style.display = 'block';
+    watcherDiv.style.display = 'block';
+
+    try {
+        if (direction === 'hostinger-to-gmail') {
+            progressTitle.textContent = 'Testing Hostinger → Gmail';
+            progressDetails.textContent = 'Step 1/4: Checking watcher status...';
+
+            // Show watcher status
+            await refreshWatcherStatus();
+
+            // Send email
+            progressDetails.textContent = 'Step 2/4: Sending email from Hostinger to Gmail...';
+            addTimelineItem('info', 'Hostinger → Gmail Test', 'Sending test email...');
+
+            const sendResponse = await fetch('/api/test/send-bi-directional', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    direction: 'hostinger-to-gmail',
+                    subject: `INVOICE - Test Hostinger→Gmail ${new Date().toLocaleTimeString()}`
+                })
+            });
+            const sendResult = await sendResponse.json();
+
+            if (!sendResult.success) {
+                throw new Error(sendResult.error || 'Failed to send email');
+            }
+
+            addTimelineItem('success', 'Email Sent', `Subject: ${sendResult.subject}`);
+            progressDetails.textContent = 'Step 3/4: Waiting for interception (polling mode, ~15s)...';
+
+            // Poll for interception
+            let intercepted = false;
+            for (let i = 0; i < 30; i++) {
+                await sleep(1000);
+                progressDetails.textContent = `Step 3/4: Waiting for interception (${i + 1}s elapsed)...`;
+
+                const checkResponse = await fetch(`/api/test/check-interception?subject=${encodeURIComponent(sendResult.subject)}`);
+                const checkResult = await checkResponse.json();
+
+                if (checkResult.success && checkResult.email_id) {
+                    intercepted = true;
+                    progressDetails.textContent = `Step 4/4: Email intercepted! ID: ${checkResult.email_id}`;
+                    addTimelineItem('success', 'Email Intercepted', `Email ID: ${checkResult.email_id}, Status: ${checkResult.status}`);
+                    await sleep(2000);
+                    break;
+                }
+            }
+
+            if (!intercepted) {
+                throw new Error('Email not intercepted within 30 seconds');
+            }
+
+            progressTitle.textContent = '✓ Hostinger → Gmail Test Complete';
+            progressDetails.textContent = 'Email successfully sent and intercepted by polling watcher';
+            progressDiv.style.background = 'rgba(16, 185, 129, 0.1)';
+            progressDiv.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+
+        } else if (direction === 'gmail-to-hostinger') {
+            progressTitle.textContent = 'Testing Gmail → Hostinger';
+            progressDetails.textContent = 'Step 1/4: Checking watcher status...';
+
+            // Show watcher status
+            await refreshWatcherStatus();
+
+            // Send email
+            progressDetails.textContent = 'Step 2/4: Sending email from Gmail to Hostinger...';
+            addTimelineItem('info', 'Gmail → Hostinger Test', 'Sending test email...');
+
+            const sendResponse = await fetch('/api/test/send-bi-directional', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    direction: 'gmail-to-hostinger',
+                    subject: `INVOICE - Test Gmail→Hostinger ${new Date().toLocaleTimeString()}`
+                })
+            });
+            const sendResult = await sendResponse.json();
+
+            if (!sendResult.success) {
+                throw new Error(sendResult.error || 'Failed to send email');
+            }
+
+            addTimelineItem('success', 'Email Sent', `Subject: ${sendResult.subject}`);
+            progressDetails.textContent = 'Step 3/4: Waiting for interception (polling mode, ~15s)...';
+
+            // Poll for interception
+            let intercepted = false;
+            for (let i = 0; i < 30; i++) {
+                await sleep(1000);
+                progressDetails.textContent = `Step 3/4: Waiting for interception (${i + 1}s elapsed)...`;
+
+                const checkResponse = await fetch(`/api/test/check-interception?subject=${encodeURIComponent(sendResult.subject)}`);
+                const checkResult = await checkResponse.json();
+
+                if (checkResult.success && checkResult.email_id) {
+                    intercepted = true;
+                    progressDetails.textContent = `Step 4/4: Email intercepted! ID: ${checkResult.email_id}`;
+                    addTimelineItem('success', 'Email Intercepted', `Email ID: ${checkResult.email_id}, Status: ${checkResult.status}`);
+                    await sleep(2000);
+                    break;
+                }
+            }
+
+            if (!intercepted) {
+                throw new Error('Email not intercepted within 30 seconds');
+            }
+
+            progressTitle.textContent = '✓ Gmail → Hostinger Test Complete';
+            progressDetails.textContent = 'Email successfully sent and intercepted by polling watcher';
+            progressDiv.style.background = 'rgba(16, 185, 129, 0.1)';
+            progressDiv.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+        }
+
+    } catch (error) {
+        progressTitle.textContent = '✗ Test Failed';
+        progressDetails.textContent = error.message;
+        progressDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+        progressDiv.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+        addTimelineItem('error', 'Test Failed', error.message);
+    } finally {
+        // Re-enable buttons
+        buttons.forEach(id => {
+            document.getElementById(id).disabled = false;
+        });
+    }
+}
+
+async function refreshWatcherStatus() {
+    const statusContent = document.getElementById('watcherStatusContent');
+
+    try {
+        const response = await fetch('/api/watchers/overview');
+        const data = await response.json();
+
+        if (!data.accounts || data.accounts.length === 0) {
+            statusContent.innerHTML = '<span class="tw-text-red-400">⚠ No active watchers found</span>';
+            return;
+        }
+
+        let html = '<div class="tw-space-y-2">';
+
+        data.accounts.forEach(acc => {
+            const watcher = acc.watcher || {};
+            const state = watcher.state || 'stopped';
+            const lastHb = watcher.last_heartbeat || 'Never';
+
+            let stateColor = 'tw-text-red-400';
+            let stateBg = 'tw-bg-red-500/15';
+            let stateText = 'STOPPED';
+
+            if (state === 'polling') {
+                stateColor = 'tw-text-green-400';
+                stateBg = 'tw-bg-green-500/15';
+                stateText = 'POLLING';
+            } else if (state === 'idle') {
+                stateColor = 'tw-text-yellow-400';
+                stateBg = 'tw-bg-yellow-500/15';
+                stateText = 'IDLE';
+            } else if (state === 'active') {
+                stateColor = 'tw-text-green-400';
+                stateBg = 'tw-bg-green-500/15';
+                stateText = 'ACTIVE';
+            }
+
+            html += `
+                <div class="tw-flex tw-justify-between tw-items-center tw-p-2 tw-bg-zinc-950 tw-border tw-border-zinc-800">
+                    <div>
+                        <strong class="tw-text-white tw-text-sm">${acc.email_address || acc.account_name}</strong>
+                        <div class="tw-text-xs tw-text-zinc-500 tw-mt-1">Account ID: ${acc.id}</div>
+                    </div>
+                    <div class="tw-text-right">
+                        <span class="tw-text-xs tw-font-bold tw-px-2 tw-py-0.5 ${stateBg} ${stateColor}">
+                            ${stateText}
+                        </span>
+                        <div class="tw-text-xs tw-text-zinc-500 tw-mt-1">Last: ${lastHb}</div>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += '</div>';
+        statusContent.innerHTML = html;
+
+    } catch (error) {
+        statusContent.innerHTML = `<span class="tw-text-red-400">Error loading status: ${error.message}</span>`;
+    }
+}
+
+// Helper functions
+function getAccountName(accountId) {
+    const account = accounts.find(a => a.id == accountId);
+    return account ? account.email_address : 'Unknown';
+}
+
+function updateFlowStep(stepId, status, statusText) {
+    const step = document.getElementById(`step-${stepId}`);
+    if (!step) return;
+
+    // Update icon container colors
+    const iconContainer = step.querySelector('.tw-w-16');
+    const icon = iconContainer.querySelector('.material-symbols-outlined');
+    const statusEl = step.querySelector('.step-status');
+
+    // Remove all status classes
+    iconContainer.className = 'tw-w-16 tw-h-16 tw-flex tw-items-center tw-justify-center';
+    icon.className = 'material-symbols-outlined tw-text-2xl';
+
+    // Add new status class
+    if (status === 'active') {
+        iconContainer.className += ' tw-bg-primary/20 tw-border-2 tw-border-primary';
+        icon.className += ' tw-text-primary';
+        statusEl.className = 'tw-text-primary tw-text-xs';
+    } else if (status === 'completed') {
+        iconContainer.className += ' tw-bg-green-500/15 tw-border-2 tw-border-green-500';
+        icon.className += ' tw-text-green-400';
+        statusEl.className = 'tw-text-green-400 tw-text-xs';
+    } else if (status === 'error') {
+        iconContainer.className += ' tw-bg-red-500/15 tw-border-2 tw-border-red-500';
+        icon.className += ' tw-text-red-400';
+        statusEl.className = 'tw-text-red-400 tw-text-xs';
+    } else {
+        iconContainer.className += ' tw-bg-zinc-800 tw-border-2 tw-border-zinc-700';
+        icon.className += ' tw-text-zinc-400';
+        statusEl.className = 'tw-text-zinc-500 tw-text-xs';
+    }
+
+    // Update status text
+    if (statusEl) {
+        statusEl.textContent = statusText;
+    }
+}
+
+function updateFlowProgress(step) {
+    const steps = ['send', 'intercept', 'edit', 'approve', 'deliver'];
+    const index = steps.indexOf(step);
+    const progress = ((index + 1) / steps.length) * 100;
+
+    document.getElementById('flowProgress').style.width = `${progress}%`;
+}
+
+function resetFlowVisualization() {
+    ['send', 'intercept', 'edit', 'approve', 'deliver'].forEach(step => {
+        updateFlowStep(step, '', 'Waiting');
+    });
+    document.getElementById('flowProgress').style.width = '0%';
+}
+
+function updateTestStatus(status, text) {
+    const statusEl = document.getElementById('testStatus');
+
+    if (status === 'active') {
+        statusEl.className = 'tw-text-xs tw-font-bold tw-px-2 tw-py-0.5 tw-bg-blue-500/15 tw-text-blue-400';
+    } else if (status === 'success') {
+        statusEl.className = 'tw-text-xs tw-font-bold tw-px-2 tw-py-0.5 tw-bg-green-500/15 tw-text-green-400';
+    } else if (status === 'error') {
+        statusEl.className = 'tw-text-xs tw-font-bold tw-px-2 tw-py-0.5 tw-bg-red-500/15 tw-text-red-400';
+    } else {
+        statusEl.className = 'tw-text-xs tw-font-bold tw-px-2 tw-py-0.5 tw-bg-zinc-700 tw-text-zinc-300';
+    }
+
+    statusEl.textContent = text;
+}
+
+function addTimelineItem(type, title, details) {
+    const timeline = document.getElementById('resultsTimeline');
+
+    const item = document.createElement('div');
+    item.className = 'tw-flex tw-gap-3 tw-p-3 tw-bg-zinc-900 tw-border tw-border-zinc-800';
+
+    const iconColor = type === 'success' ? 'tw-text-green-400' : type === 'error' ? 'tw-text-red-400' : type === 'warning' ? 'tw-text-yellow-400' : 'tw-text-zinc-400';
+    const icon = type === 'success' ? 'check_circle' : type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'info';
+
+    item.innerHTML = `
+        <span class="material-symbols-outlined ${iconColor} tw-text-lg">${icon}</span>
+        <div class="tw-flex-1">
+            <div class="tw-text-white tw-font-medium tw-text-sm">${title}</div>
+            <div class="tw-text-zinc-400 tw-text-xs tw-mt-1">${details || ''}</div>
+            <div class="tw-text-zinc-500 tw-text-xs tw-mt-1">${new Date().toLocaleTimeString()}</div>
+        </div>
+    `;
+
+    timeline.insertBefore(item, timeline.firstChild);
+
+    // Limit to 20 items
+    while (timeline.children.length > 20) {
+        timeline.removeChild(timeline.lastChild);
+    }
+}
+
+function showEmailPreview(testData, type) {
+    const preview = document.getElementById('emailPreview');
+    preview.style.display = 'block';
+
+    if (type === 'original') {
+        document.getElementById('previewFrom').textContent = getAccountName(testData.from_account_id);
+        document.getElementById('previewTo').textContent = getAccountName(testData.to_account_id);
+        document.getElementById('previewSubject').textContent = testData.original_subject;
+        document.getElementById('previewBody').textContent = testData.original_body;
+        document.getElementById('previewStatus').innerHTML = '<span class="tw-text-xs tw-font-bold tw-px-2 tw-py-0.5 tw-bg-zinc-700 tw-text-zinc-300">ORIGINAL</span>';
+    } else {
+        document.getElementById('previewSubject').textContent = testData.edited_subject;
+        document.getElementById('previewBody').textContent = testData.edited_body;
+        document.getElementById('previewStatus').innerHTML = '<span class="tw-text-xs tw-font-bold tw-px-2 tw-py-0.5 tw-bg-green-500/15 tw-text-green-400">EDITED</span>';
+    }
+}
+
+function clearResults() {
+    document.getElementById('resultsTimeline').innerHTML = '';
+    document.getElementById('emailPreview').style.display = 'none';
+    document.getElementById('biDirectionalProgress').style.display = 'none';
+    document.getElementById('watcherStatus').style.display = 'none';
+    resetFlowVisualization();
+    updateTestStatus('pending', 'READY');
+    addTimelineItem('info', 'Results Cleared', 'Ready for new test');
+}
+
+function clearAllResults() {
+    clearResults();
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+</script>
+{% endblock %}

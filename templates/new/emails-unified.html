@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Email Management - Unified Inbox</title>
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#bef264",
+            background: "#18181b",
+            surface: "#27272a",
+            "on-surface": "#a1a1aa",
+            "on-surface-strong": "#f4f4f5",
+            border: "#3f3f46"
+          },
+          fontFamily: {
+            sans: ["Inter", "sans-serif"],
+          },
+          borderRadius: {
+            DEFAULT: "0px",
+          },
+          ringColor: {
+            DEFAULT: '#bef264',
+          },
+          borderColor: {
+            DEFAULT: '#3f3f46'
+          }
+        },
+      },
+    };
+  </script>
+  <style type="text/tailwindcss">
+    @layer base {
+      body {
+        @apply font-sans bg-background text-on-surface antialiased;
+      }
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-background text-slate-300 antialiased">
+  <div class="flex h-screen overflow-hidden">
+    <!-- Sidebar -->
+    <aside class="w-64 flex-shrink-0 bg-background border-r border-border flex flex-col">
+      <div class="h-16 flex items-center px-6 border-b border-border flex-shrink-0">
+        <h1 class="text-xl font-bold text-white tracking-tight">MailIntercept</h1>
+      </div>
+      <nav class="flex-1 overflow-y-auto py-4">
+        <div class="px-4">
+          <h2 class="px-2 mb-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Core</h2>
+          <ul class="space-y-1">
+            <li>
+              <a class="flex items-center gap-3 px-2 py-2 text-sm font-medium text-zinc-400 hover:bg-surface hover:text-white transition-colors" href="#">
+                <span class="material-symbols-outlined text-lg">dashboard</span> Dashboard
+              </a>
+            </li>
+            <li class="relative">
+              <span class="absolute left-0 top-0 bottom-0 w-0.5 bg-primary"></span>
+              <a class="flex items-center justify-between gap-3 pl-3 pr-2 py-2 text-sm font-medium bg-primary/10 text-primary" href="#">
+                <span class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-lg">mail</span> Emails
+                </span>
+                <span class="text-xs font-semibold bg-primary text-zinc-900 px-1.5 py-0.5">337</span>
+              </a>
+            </li>
+            <li>
+              <a class="flex items-center gap-3 px-2 py-2 text-sm font-medium text-zinc-400 hover:bg-surface hover:text-white transition-colors" href="#">
+                <span class="material-symbols-outlined text-lg">edit_square</span> Compose
+              </a>
+            </li>
+          </ul>
+        </div>
+        <div class="mt-6 px-4">
+          <h2 class="px-2 mb-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Management</h2>
+          <ul class="space-y-1">
+            <li><a class="flex items-center gap-3 px-2 py-2 text-sm font-medium text-zinc-400 hover:bg-surface hover:text-white transition-colors" href="#"><span class="material-symbols-outlined text-lg">visibility</span> Watchers</a></li>
+            <li><a class="flex items-center gap-3 px-2 py-2 text-sm font-medium text-zinc-400 hover:bg-surface hover:text-white transition-colors" href="#"><span class="material-symbols-outlined text-lg">rule</span> Rules</a></li>
+            <li><a class="flex items-center gap-3 px-2 py-2 text-sm font-medium text-zinc-400 hover:bg-surface hover:text-white transition-colors" href="#"><span class="material-symbols-outlined text-lg">group</span> Accounts</a></li>
+            <li><a class="flex items-center gap-3 px-2 py-2 text-sm font-medium text-zinc-400 hover:bg-surface hover:text-white transition-colors" href="#"><span class="material-symbols-outlined text-lg">upload_file</span> Import</a></li>
+            <li><a class="flex items-center gap-3 px-2 py-2 text-sm font-medium text-zinc-400 hover:bg-surface hover:text-white transition-colors" href="#"><span class="material-symbols-outlined text-lg">diagnosis</span> Diagnostics</a></li>
+          </ul>
+        </div>
+        <div class="mt-6 px-4">
+          <h2 class="px-2 mb-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Tools</h2>
+          <ul class="space-y-1">
+            <li><a class="flex items-center gap-3 px-2 py-2 text-sm font-medium text-zinc-400 hover:bg-surface hover:text-white transition-colors" href="#"><span class="material-symbols-outlined text-lg">palette</span> Style Guide</a></li>
+            <li><a class="flex items-center gap-3 px-2 py-2 text-sm font-medium text-zinc-400 hover:bg-surface hover:text-white transition-colors" href="#"><span class="material-symbols-outlined text-lg">build</span> Interception Tool</a></li>
+          </ul>
+        </div>
+      </nav>
+      <div class="p-4 border-t border-border flex-shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 bg-surface border border-zinc-700 flex items-center justify-center">
+            <span class="font-semibold text-primary">A</span>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-white">Admin</p>
+            <p class="text-xs text-zinc-400">admin@example.com</p>
+          </div>
+          <button class="ml-auto p-2 text-zinc-400 hover:text-primary transition-colors"><span class="material-symbols-outlined text-lg">logout</span></button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col overflow-y-auto bg-surface">
+      <main class="flex-1 p-6 space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">Email Management</h1>
+            <p class="mt-1 text-zinc-400">View and manage all email messages across your accounts.</p>
+          </div>
+          <button class="flex-shrink-0 bg-primary text-zinc-900 font-semibold py-2 px-4 hover:bg-lime-400 transition-colors flex items-center gap-2 text-sm">
+            <span class="material-symbols-outlined text-base">add</span>
+            Add Account
+          </button>
+        </div>
+
+        <div class="bg-background p-4 border border-border">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+            <div class="lg:col-span-2">
+              <label class="block text-sm font-medium text-zinc-400 mb-1.5" for="email-account">Account</label>
+              <select class="w-full border-zinc-700 bg-surface text-zinc-300 focus:ring-primary focus:border-primary text-sm" id="email-account">
+                <option>All Accounts</option>
+                <option>Account 1 (john.doe@example.com)</option>
+                <option>Account 2 (jane.doe@example.com)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-zinc-400 mb-1.5" for="fetch-count">Display</label>
+              <select class="w-full border-zinc-700 bg-surface text-zinc-300 focus:ring-primary focus:border-primary text-sm" id="fetch-count">
+                <option>20 per page</option>
+                <option>50 per page</option>
+                <option>100 per page</option>
+              </select>
+            </div>
+            <div class="flex justify-end">
+              <button class="w-full bg-zinc-700 text-zinc-200 font-semibold py-2 px-4 hover:bg-zinc-600 transition-colors flex items-center justify-center gap-2 text-sm">
+                <span class="material-symbols-outlined text-base">filter_alt</span>
+                Filters
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-background border border-border">
+          <div class="px-5 border-b border-border">
+            <nav class="-mb-px flex space-x-8 overflow-x-auto">
+              <a class="shrink-0 border-b-2 border-primary text-primary px-1 py-3 text-sm font-semibold flex items-center gap-2" href="#">All <span class="bg-primary/10 text-primary text-xs font-bold px-1.5 py-0.5">412</span></a>
+              <a class="shrink-0 border-b-2 border-transparent text-zinc-400 hover:border-zinc-600 hover:text-zinc-200 px-1 py-3 text-sm font-medium flex items-center gap-2" href="#">Held <span class="bg-surface border border-zinc-700 text-zinc-300 text-xs font-bold px-1.5 py-0.5">337</span></a>
+              <a class="shrink-0 border-b-2 border-transparent text-zinc-400 hover:border-zinc-600 hover:text-zinc-200 px-1 py-3 text-sm font-medium flex items-center gap-2" href="#">Released <span class="bg-surface border border-zinc-700 text-zinc-300 text-xs font-bold px-1.5 py-0.5">75</span></a>
+              <a class="shrink-0 border-b-2 border-transparent text-zinc-400 hover:border-zinc-600 hover:text-zinc-200 px-1 py-3 text-sm font-medium flex items-center gap-2" href="#">Rejected <span class="bg-surface border border-zinc-700 text-zinc-300 text-xs font-bold px-1.5 py-0.5">0</span></a>
+            </nav>
+          </div>
+          <div class="p-4 flex flex-col sm:flex-row gap-4 items-center">
+            <div class="relative w-full">
+              <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-base">search</span>
+              <input class="w-full pl-10 pr-4 py-2 border-zinc-700 bg-surface text-zinc-300 focus:ring-primary focus:border-primary text-sm" placeholder="Search subject, sender or recipient..." type="text" />
+            </div>
+            <div class="flex items-center gap-4 flex-shrink-0 w-full sm:w-auto">
+              <div class="flex items-center gap-2">
+                <label class="text-sm font-medium text-zinc-400 whitespace-nowrap" for="auto-refresh">Auto-Refresh</label>
+                <button aria-checked="false" class="bg-zinc-700 relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background aria-checked:bg-primary" role="switch" type="button">
+                  <span class="pointer-events-none inline-block h-5 w-5 transform bg-zinc-400 shadow ring-0 transition duration-200 ease-in-out translate-x-0 aria-checked:translate-x-5 aria-checked:bg-zinc-900"></span>
+                </button>
+              </div>
+              <button class="text-zinc-400 hover:text-primary font-medium text-sm flex items-center gap-1.5 transition-colors">
+                <span class="material-symbols-outlined text-base">refresh</span> Refresh
+              </button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-surface/50">
+                <tr>
+                  <th class="p-3 w-4"><input class="border-zinc-600 text-primary focus:ring-primary/50 bg-zinc-800" type="checkbox" /></th>
+                  <th class="p-3 font-semibold text-left text-zinc-400 uppercase tracking-wider text-xs w-36">Time</th>
+                  <th class="p-3 font-semibold text-left text-zinc-400 uppercase tracking-wider text-xs">Correspondents</th>
+                  <th class="p-3 font-semibold text-left text-zinc-400 uppercase tracking-wider text-xs">Subject</th>
+                  <th class="p-3 font-semibold text-left text-zinc-400 uppercase tracking-wider text-xs w-28">Status</th>
+                  <th class="p-3 font-semibold text-left text-zinc-400 uppercase tracking-wider text-xs w-28">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border">
+                <tr class="hover:bg-surface/50 transition-colors">
+                  <td class="p-3 align-top"><input class="border-zinc-600 text-primary focus:ring-primary/50 bg-zinc-800 mt-0.5" type="checkbox" /></td>
+                  <td class="p-3 text-zinc-400 whitespace-nowrap align-top">Oct 24, 07:11 AM</td>
+                  <td class="p-3">
+                    <div class="font-medium text-zinc-300">from <span class="text-zinc-400 font-normal">rdeyjeska@gmail.com</span></div>
+                    <div class="text-sm text-zinc-400">to <span class="font-normal">rdeyjeska@gmail.com</span></div>
+                  </td>
+                  <td class="p-3">
+                    <div class="font-medium text-white">Quarantine Flow 63bd310d-f51...</div>
+                    <div class="text-zinc-400 truncate max-w-sm text-xs mt-0.5">Automated quarantine flow test with invoice keyword. Invoice ID: 17f864b-2098-4a4c-9f0f-8b52f6c86e53...</div>
+                  </td>
+                  <td class="p-3 align-top">
+                    <span class="inline-flex items-center text-xs font-semibold px-2 py-0.5 bg-orange-500/20 text-orange-300">HELD</span>
+                  </td>
+                  <td class="p-3 align-top">
+                    <div class="flex items-center gap-1">
+                      <button class="p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-primary transition-colors"><span class="material-symbols-outlined text-lg">forward_to_inbox</span></button>
+                      <button class="p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-red-400 transition-colors"><span class="material-symbols-outlined text-lg">delete</span></button>
+                    </div>
+                  </td>
+                </tr>
+                <tr class="hover:bg-surface/50 transition-colors">
+                  <td class="p-3 align-top"><input class="border-zinc-600 text-primary focus:ring-primary/50 bg-zinc-800 mt-0.5" type="checkbox" /></td>
+                  <td class="p-3 text-zinc-400 whitespace-nowrap align-top">Oct 24, 07:10 AM</td>
+                  <td class="p-3">
+                    <div class="font-medium text-zinc-300">from <span class="text-zinc-400 font-normal">rdeyjeska@gmail.com</span></div>
+                    <div class="text-sm text-zinc-400">to <span class="font-normal">rdeyjeska@gmail.com</span></div>
+                  </td>
+                  <td class="p-3">
+                    <div class="font-medium text-white">Quarantine Flow 56d678bf-b19c...</div>
+                    <div class="text-zinc-400 truncate max-w-sm text-xs mt-0.5">Automated quarantine flow test. Invoice ID: c35bffd0-d1e9-4e1d-a01a-82f279416f51...</div>
+                  </td>
+                  <td class="p-3 align-top">
+                    <span class="inline-flex items-center text-xs font-semibold px-2 py-0.5 bg-zinc-700 text-zinc-400">FETCHED</span>
+                  </td>
+                  <td class="p-3 align-top">
+                    <div class="flex items-center gap-1">
+                      <button class="p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-primary transition-colors"><span class="material-symbols-outlined text-lg">forward_to_inbox</span></button>
+                      <button class="p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-red-400 transition-colors"><span class="material-symbols-outlined text-lg">delete</span></button>
+                    </div>
+                  </td>
+                </tr>
+                <tr class="hover:bg-surface/50 transition-colors">
+                  <td class="p-3 align-top"><input class="border-zinc-600 text-primary focus:ring-primary/50 bg-zinc-800 mt-0.5" type="checkbox" /></td>
+                  <td class="p-3 text-zinc-400 whitespace-nowrap align-top">Oct 24, 07:09 AM</td>
+                  <td class="p-3">
+                    <div class="font-medium text-zinc-300">from <span class="text-zinc-400 font-normal">billing@service.com</span></div>
+                    <div class="text-sm text-zinc-400">to <span class="font-normal">rdeyjeska@gmail.com</span></div>
+                  </td>
+                  <td class="p-3">
+                    <div class="font-medium text-white">Your recent invoice #INV-2023-0...</div>
+                    <div class="text-zinc-400 truncate max-w-sm text-xs mt-0.5">Thank you for your business. Please find attached your invoice for the recent services provided.</div>
+                  </td>
+                  <td class="p-3 align-top">
+                    <span class="inline-flex items-center text-xs font-semibold px-2 py-0.5 bg-green-500/20 text-green-300">RELEASED</span>
+                  </td>
+                  <td class="p-3 align-top">
+                    <div class="flex items-center gap-1">
+                      <button class="p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-primary transition-colors"><span class="material-symbols-outlined text-lg">forward_to_inbox</span></button>
+                      <button class="p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-red-400 transition-colors"><span class="material-symbols-outlined text-lg">delete</span></button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</body>
+
+</html>

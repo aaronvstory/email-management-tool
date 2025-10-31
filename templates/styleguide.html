@@ -1,258 +1,292 @@
-{% extends 'base.html' %}
-{% block title %}Style Guide{% endblock %}
+{% extends "base.html" %}
+{% block title %}Stitch Styleguide{% endblock %}
 
-{% block extra_css %}
-<!-- Styleguide styles now in unified.css (extracted Oct 25, 2025) -->
-<style>
-  /* Hotfix for horizontal scrolling */
-  .dark-app-shell .main-modern .content-scroll {
-    overflow-x: auto;
-    margin-left: 0px;
-    margin-right: 0px;
-  }
-
-  header.command-bar {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-  }
-
-  .toolbar-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-</style>
-{% endblock %}
+{% from 'stitch/_macros.html' import badge, icon_btn, table, toolbar %}
 
 {% block content %}
-<div class="page-header">
-  <div>
-    <h1><i class="bi bi-palette"></i> Stitch UI Style Guide</h1>
-    <p class="text-muted mb-0">The application of the defined color palette, typography, borders, and spacing for the
-      modern "Stitch" theme.</p>
-  </div>
-  <div class="header-actions">
-    <button class="btn btn-secondary btn-sm" onclick="showSuccess('Toast: success')">
-      <i class="bi bi-check-circle"></i> Success Toast
-    </button>
-    <button class="btn btn-secondary btn-sm" onclick="showError('Toast: error')">
-      <i class="bi bi-x-circle"></i> Error Toast
-    </button>
-    <button class="btn btn-secondary btn-sm" onclick="confirmToast('Confirm action?', ()=>showSuccess('Confirmed'))">
-      <i class="bi bi-question-circle"></i> Confirm
-    </button>
-  </div>
-</div>
+<div id="stitch_styleguide">
+  <main class="tw-flex-1 tw-px-6 tw-py-4">
 
-<div id="styleguide">
-  <div class="panel">
-    <div class="panel-body space-y-12">
+    <!-- Header -->
+    <header class="tw-flex tw-items-center tw-justify-between tw-mb-4">
+      <div>
+        <h1 class="tw-text-2xl tw-font-bold tw-text-white">Stitch Styleguide</h1>
+        <p class="tw-text-sm tw-text-zinc-400 tw-mt-1">Tokens, components, and app patterns we reuse.</p>
+      </div>
+      <div class="tw-flex tw-gap-2">
+        <a href="{{ url_for('emails.emails_unified_stitch') }}"
+          class="tw-inline-flex tw-items-center tw-gap-2 tw-text-primary tw-text-sm tw-font-medium tw-px-2 tw-py-1 hover:tw-bg-primary/10">
+          <span class="material-symbols-outlined tw-!text-base">arrow_back</span> Back to Emails
+        </a>
+        <a href="{{ url_for('accounts.add_email_account') }}"
+          class="tw-inline-flex tw-items-center tw-gap-2 tw-font-bold tw-text-zinc-900 tw-bg-primary tw-border tw-border-[#bef264] tw-px-4 tw-py-2 tw-text-sm hover:tw-bg-[#a3d154]">
+          <span class="material-symbols-outlined tw-!text-base">add</span> Add Account
+        </a>
+      </div>
+    </header>
 
-      <!-- Typography Section -->
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Typography</h2>
-        <div class="row">
-          <div class="col-md-7">
-            <h1 class="text-4xl font-bold text-white">H1 Heading</h1>
-            <h2 class="text-3xl font-bold text-white mt-3">H2 Heading</h2>
-            <h3 class="text-2xl font-bold text-white mt-3">H3 Heading</h3>
-            <h4 class="text-xl font-semibold text-white mt-3">H4 Heading</h4>
-            <p class="text-base text-slate-400 mt-4">This is a standard body text. It is used for descriptive text,
-              paragraphs, and other general content. The line height is set for optimal readability.</p>
-            <a class="text-primary hover:underline mt-2 d-block" href="#">This is a hyperlink</a>
+    <!-- Local nav -->
+    <nav class="tw-flex tw-flex-wrap tw-gap-3 tw-mb-4">
+      {% set sections = [
+      ('tokens','Tokens'), ('type','Typography'), ('buttons','Buttons'),
+      ('links','Links & Hovers'), ('tabs','Tabs'), ('badges','Badges'),
+      ('forms','Forms'), ('table','Table'), ('cards','Cards & Toolbars'),
+      ('sidebar','Sidebar Active'), ('patterns','Real Patterns')
+      ] %}
+      {% for id,label in sections %}
+      <a href="#{{id}}"
+        class="tw-text-sm tw-font-semibold tw-text-zinc-300 tw-px-2 tw-py-1 hover:tw-bg-zinc-800/60">{{label}}</a>
+      {% endfor %}
+    </nav>
+
+    <!-- Tokens -->
+    <section id="tokens" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Tokens</h2>
+      <div class="tw-grid tw-grid-cols-2 md:tw-grid-cols-4 tw-gap-3">
+        <div class="tw-bg-[#18181b] tw-border tw-border-border tw-p-3">
+          <div class="tw-text-xs tw-text-zinc-400">bg</div>
+          <div class="tw-h-8"></div>
+        </div>
+        <div class="tw-bg-[#27272a] tw-border tw-border-border tw-p-3">
+          <div class="tw-text-xs tw-text-zinc-400">surface</div>
+          <div class="tw-h-8"></div>
+        </div>
+        <div class="tw-bg-[#18181b] tw-border tw-border-border tw-p-3">
+          <div class="tw-text-xs tw-text-zinc-400">border</div>
+          <div class="tw-h-8 tw-bg-[rgba(255,255,255,.12)]"></div>
+        </div>
+        <div class="tw-bg-[#bef264] tw-p-3">
+          <div class="tw-text-xs tw-text-zinc-900">primary</div>
+          <div class="tw-h-8"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Typography -->
+    <section id="type" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Typography</h2>
+      <div class="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-4">
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+          <h1 class="tw-text-2xl tw-font-bold tw-text-white tw-mb-1">Page Title</h1>
+          <p class="tw-text-sm tw-text-zinc-400">Secondary line</p>
+        </div>
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+          <h3 class="tw-text-base tw-font-semibold tw-text-zinc-200 tw-mb-1">Section Header</h3>
+          <p class="tw-text-sm tw-text-zinc-400">Body text</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Buttons -->
+    <section id="buttons" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Buttons</h2>
+      <div class="tw-flex tw-flex-wrap tw-gap-3 tw-bg-background tw-border tw-border-border tw-p-4">
+        <button
+          class="tw-inline-flex tw-items-center tw-gap-2 tw-font-bold tw-text-zinc-900 tw-bg-primary tw-border tw-border-[#bef264] tw-px-4 tw-py-2 tw-text-sm hover:tw-bg-[#a3d154]">
+          <span class="material-symbols-outlined tw-!text-base">add</span> Primary
+        </button>
+        {{ icon_btn('Edit','edit','primary') }}
+        {{ icon_btn('Delete','delete','danger') }}
+        {{ icon_btn('More','more_horiz','neutral') }}
+      </div>
+      <p class="tw-text-xs tw-text-zinc-500 tw-mt-2">No white backgrounds. Lime for primary only. Use icon+text for
+        actions.</p>
+    </section>
+
+    <!-- Links & hovers -->
+    <section id="links" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Links & Hovers</h2>
+      <div class="tw-bg-background tw-border tw-border-border tw-p-4 tw-flex tw-gap-3 tw-flex-wrap">
+        <a class="tw-text-sm tw-text-zinc-300 tw-px-2 tw-py-1 hover:tw-bg-zinc-800/60">Neutral link</a>
+        <a class="tw-text-sm tw-text-primary tw-px-2 tw-py-1 hover:tw-bg-primary/10">Primary link</a>
+        <a
+          class="tw-text-sm tw-text-zinc-300 tw-inline-flex tw-items-center tw-gap-2 tw-px-2 tw-py-1 hover:tw-bg-zinc-800/60">
+          <span class="material-symbols-outlined tw-!text-base">open_in_new</span> With icon
+        </a>
+      </div>
+    </section>
+
+    <!-- Tabs -->
+    <section id="tabs" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Tabs (filters)</h2>
+      <nav class="tw-flex tw-items-center tw-gap-3 tw-bg-background tw-border tw-border-border tw-p-3">
+        <a class="tw-text-sm tw-font-semibold tw-text-zinc-300 tw-px-2 tw-py-1 hover:tw-bg-zinc-800/60">All <span
+            class="tw-text-zinc-500 tw-ml-1">412</span></a>
+        <a class="tw-text-sm tw-font-semibold tw-text-primary tw-px-2 tw-py-1 tw-border-b-[2px] tw-border-primary">Held
+          <span class="tw-text-zinc-500 tw-ml-1">337</span></a>
+        <a class="tw-text-sm tw-font-semibold tw-text-zinc-300 tw-px-2 tw-py-1 hover:tw-bg-zinc-800/60">Released <span
+            class="tw-text-zinc-500 tw-ml-1">75</span></a>
+        <a class="tw-text-sm tw-font-semibold tw-text-zinc-300 tw-px-2 tw-py-1 hover:tw-bg-zinc-800/60">Rejected <span
+            class="tw-text-zinc-500 tw-ml-1">0</span></a>
+      </nav>
+    </section>
+
+    <!-- Badges -->
+    <section id="badges" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Badges</h2>
+      <div class="tw-bg-background tw-border tw-border-border tw-p-4 tw-flex tw-gap-3 tw-flex-wrap">
+        {{ badge('HELD') }} {{ badge('FETCHED') }} {{ badge('RELEASED') }} {{ badge('REJECTED') }} {{ badge('PENDING')
+        }} {{ badge('ERROR') }}
+      </div>
+    </section>
+
+    <!-- Forms -->
+    <section id="forms" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Forms</h2>
+      <div class="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-4">
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+          <label class="tw-text-sm tw-text-zinc-300 tw-font-medium">Input</label>
+          <input type="text" placeholder="recipient@example.com"
+            class="tw-mt-2 tw-w-full tw-bg-[#1f1f23] tw-text-zinc-200 tw-text-sm tw-border tw-border-border tw-px-3 tw-py-2 focus:tw-outline-none focus:tw-border-[#bef264]" />
+          <div class="tw-flex tw-gap-3 tw-mt-3">
+            <select
+              class="tw-bg-[#1f1f23] tw-text-zinc-200 tw-text-sm tw-border tw-border-border tw-px-3 tw-py-2 focus:tw-outline-none focus:tw-border-[#bef264]">
+              <option>Select account…</option>
+              <option>Gmail</option>
+              <option>Hostinger</option>
+            </select>
+            <button
+              class="tw-inline-flex tw-items-center tw-gap-2 tw-font-bold tw-text-zinc-900 tw-bg-primary tw-border tw-border-[#bef264] tw-px-4 tw-py-2 hover:tw-bg-[#a3d154]">
+              <span class="material-symbols-outlined tw-!text-base">send</span> Submit
+            </button>
           </div>
-          <div class="col-md-5">
-            <div class="bg-surface p-4 space-y-2 h-100">
-              <h5 class="font-semibold text-white">Notes</h5>
-              <ul class="list-disc list-inside space-y-1 text-slate-400 text-sm">
-                <li><strong>Font:</strong> Inter / system-ui, consistent with `base.html`.</li>
-                <li>Keep heading sizes compact per `base.html` overrides.</li>
-                <li>Do not use thin font weights on dark backgrounds.</li>
-                <li>Ensure sufficient contrast. Use `on-surface-strong` for key text.</li>
-              </ul>
+        </div>
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+          <label class="tw-text-sm tw-text-zinc-300 tw-font-medium">Textarea</label>
+          <textarea rows="4"
+            class="tw-mt-2 tw-w-full tw-bg-[#1f1f23] tw-text-zinc-200 tw-text-sm tw-border tw-border-border tw-px-3 tw-py-2 focus:tw-outline-none focus:tw-border-[#bef264]"
+            placeholder="Type your message…"></textarea>
+          <div class="tw-flex tw-items-center tw-gap-2 tw-mt-3">
+            <input id="chk1" type="checkbox" class="tw-accent-[#bef264]" />
+            <label for="chk1" class="tw-text-sm tw-text-zinc-300">Enable auto-save</label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Table -->
+    <section id="table" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Table</h2>
+      {% set headings = ['Time', 'Correspondents', 'Subject', 'Status', 'Actions'] %}
+      {% set rows = '
+      <tr class="hover:tw-bg-zinc-800/40">
+        <td class="tw-px-4 tw-py-3 tw-text-zinc-400">Oct 24, 07:11</td>
+        <td class="tw-px-4 tw-py-3">
+          <div class="tw-text-zinc-200">from billing@service.com</div>
+          <div class="tw-text-zinc-500">to you@example.com</div>
+        </td>
+        <td class="tw-px-4 tw-py-3 tw-text-zinc-200">Your recent invoice <span class="tw-text-zinc-500">…</span></td>
+        <td class="tw-px-4 tw-py-3">{{ badge("HELD") }}</td>
+        <td class="tw-px-4 tw-py-3">
+          <div class="tw-flex tw-justify-end tw-gap-2">{{ icon_btn("View","visibility","primary","#") }}{{
+            icon_btn("Attachments","download","neutral","#") }}{{ icon_btn("Discard","delete","danger","#") }}</div>
+        </td>
+      </tr>
+      ' %}
+      {{ table(headings, rows) }}
+      <p class="tw-text-xs tw-text-zinc-500 tw-mt-2">Tight rows, subtle dividers, square chips, consistent actions.</p>
+    </section>
+
+    <!-- Cards & toolbars -->
+    <section id="cards" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Cards & Toolbars</h2>
+      <div class="tw-grid tw-grid-cols-1 lg:tw-grid-cols-2 tw-gap-4">
+        <div class="tw-bg-background tw-border tw-border-border tw-flex tw-flex-col">
+          {{ toolbar('Gmail — Primary', [
+          {'label':'Start','icon':'play_arrow','variant':'neutral','#':'#'},
+          {'label':'Diagnostics','icon':'bug_report','variant':'primary','#':'#'}
+          ]) }}
+          <div class="tw-p-4 tw-flex tw-gap-2">
+            {{ icon_btn('Test','mail','neutral','#') }}
+            {{ icon_btn('Edit','edit','primary','#') }}
+            {{ icon_btn('Delete','delete','danger','#') }}
+          </div>
+        </div>
+        <div class="tw-bg-background tw-border tw-border-border">
+          {{ toolbar('Toolbar Panel', [
+          {'label':'Refresh','icon':'refresh','variant':'neutral','#':'#'},
+          {'label':'Add Item','icon':'add','variant':'primary','#':'#'}
+          ]) }}
+          <div class="tw-p-4 tw-text-sm tw-text-zinc-400">Use for list headers with right‑aligned actions.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sidebar active note -->
+    <section id="sidebar" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Sidebar Active</h2>
+      <div class="tw-bg-background tw-border tw-border-border tw-p-4 tw-flex tw-items-center tw-gap-3">
+        <div class="tw-w-1 tw-h-5 tw-bg-primary"></div>
+        <div class="tw-text-primary tw-font-semibold tw-text-sm">Active example (lime text + 10% lime bg + 3px left
+          border)</div>
+      </div>
+      <p class="tw-text-xs tw-text-zinc-500 tw-mt-2">Active endpoint checks live in <code>templates/base.html</code>.
+      </p>
+    </section>
+
+    <!-- Real patterns -->
+    <section id="patterns" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Real Patterns</h2>
+      <div class="tw-grid tw-grid-cols-1 lg:tw-grid-cols-2 tw-gap-4">
+        <!-- Emails row -->
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+          <h3 class="tw-text-zinc-200 tw-font-semibold tw-mb-3">Emails row</h3>
+          <div class="tw-flex tw-items-start tw-justify-between tw-gap-4 hover:tw-bg-zinc-800/40 tw-p-3">
+            <div class="tw-flex-1">
+              <div class="tw-text-zinc-400 tw-text-xs tw-mb-1">Oct 24, 07:11</div>
+              <div class="tw-text-zinc-200">Automated quarantine flow test <span class="tw-text-zinc-500">…</span></div>
+              <div class="tw-text-zinc-500 tw-text-xs">from billing@service.com • to you@example.com</div>
+            </div>
+            <div class="tw-flex tw-items-center tw-gap-3">
+              {{ badge('HELD') }}
+              {{ icon_btn('Attachments','download','neutral','#') }}
+              {{ icon_btn('Release','check_circle','primary','#') }}
+              {{ icon_btn('Discard','delete','danger','#') }}
             </div>
           </div>
         </div>
-      </section>
 
-      <!-- Color Palette Section -->
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Color Palette</h2>
-        <div class="row g-4">
-          <div class="col-md-3 col-6">
-            <div class="flex flex-col">
-              <div class="h-24 w-full bg-primary"></div>
-              <div class="p-3 bg-surface">
-                <p class="font-semibold text-white">Primary</p>
-                <p class="text-sm text-slate-400">#bef264</p>
+        <!-- Accounts card -->
+        <div class="tw-bg-background tw-border tw-border-border tw-flex tw-flex-col">
+          <div class="tw-p-4 tw-border-b tw-border-border tw-flex tw-justify-between tw-items-center">
+            <h3 class="tw-text-zinc-200 tw-font-semibold">Email Accounts</h3>
+            <a href="{{ url_for('accounts.add_email_account') }}"
+              class="tw-inline-flex tw-items-center tw-gap-2 tw-font-bold tw-text-zinc-900 tw-bg-primary tw-border tw-border-[#bef264] tw-px-4 tw-py-2 hover:tw-bg-[#a3d154]">
+              <span class="material-symbols-outlined tw-!text-base">add_circle</span> Add Account
+            </a>
+          </div>
+          <div class="tw-p-4 tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-3">
+            <div class="tw-border tw-border-border tw-p-3">
+              <div class="tw-flex tw-items-center tw-justify-between">
+                <div>
+                  <div class="tw-text-zinc-200 tw-font-semibold">Gmail</div>
+                  <div class="tw-text-xs tw-text-zinc-500">ndayjecha@gmail.com</div>
+                </div>
+                <div class="tw-flex tw-gap-2">
+                  {{ icon_btn('Edit','edit','primary','#') }}
+                  {{ icon_btn('Delete','delete','danger','#') }}
+                </div>
               </div>
+              <div class="tw-text-xs tw-text-zinc-500 tw-mt-2">imap.gmail.com:993 • smtp.gmail.com:587</div>
             </div>
-          </div>
-          <div class="col-md-3 col-6">
-            <div class="flex flex-col">
-              <div class="h-24 w-full bg-background border border-slate-700"></div>
-              <div class="p-3 bg-surface">
-                <p class="font-semibold text-white">Background</p>
-                <p class="text-sm text-slate-400">#18181b</p>
+            <div class="tw-border tw-border-border tw-p-3">
+              <div class="tw-flex tw-items-center tw-justify-between">
+                <div>
+                  <div class="tw-text-zinc-200 tw-font-semibold">Hostinger</div>
+                  <div class="tw-text-xs tw-text-zinc-500">mchtye@oorinbox.com</div>
+                </div>
+                <div class="tw-flex tw-gap-2">
+                  {{ icon_btn('Start','play_arrow','neutral','#') }}
+                  {{ icon_btn('Diagnostics','bug_report','primary','#') }}
+                </div>
               </div>
-            </div>
-          </div>
-          <div class="col-md-3 col-6">
-            <div class="flex flex-col">
-              <div class="h-24 w-full bg-surface border border-slate-700"></div>
-              <div class="p-3 bg-surface">
-                <p class="font-semibold text-white">Surface</p>
-                <p class="text-sm text-slate-400">#27272a</p>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-3 col-6">
-            <div class="flex flex-col">
-              <div class="h-24 w-full bg-on-surface-strong"></div>
-              <div class="p-3 bg-surface">
-                <p class="font-semibold text-white">High-Contrast Text</p>
-                <p class="text-sm text-slate-400">#f4f4f5 (on-surface-strong)</p>
-              </div>
+              <div class="tw-text-xs tw-text-zinc-500 tw-mt-2">imap.hostinger.com:993 • smtp.hostinger.com:465</div>
             </div>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <!-- Buttons Section -->
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Buttons</h2>
-        <p class="text-slate-400">Buttons have no border radius for a sharp, modern look. The `.btn-primary-modern`
-          class is used for primary actions.</p>
-        <div class="space-y-6 mt-4">
-          <h3 class="text-xl font-semibold text-white">Primary Modern Buttons</h3>
-          <div class="p-6 bg-surface d-flex flex-wrap gap-4 align-items-center">
-            <div class="text-center">
-              <button class="btn btn-primary-modern">Primary Action</button>
-              <p class="text-xs font-medium text-slate-400 uppercase mt-2">Default</p>
-            </div>
-            <div class="text-center">
-              <button class="btn btn-primary-modern hover-state">Hover State</button>
-              <p class="text-xs font-medium text-slate-400 uppercase mt-2">Hover</p>
-            </div>
-            <div class="text-center">
-              <button class="btn btn-primary-modern active-state">Active State</button>
-              <p class="text-xs font-medium text-slate-400 uppercase mt-2">Active</p>
-            </div>
-            <div class="text-center">
-              <button class="btn btn-primary-modern" disabled>Disabled</button>
-              <p class="text-xs font-medium text-slate-400 uppercase mt-2">Disabled</p>
-            </div>
-          </div>
-        </div>
-        <div class="space-y-6 mt-4">
-          <h3 class="text-xl font-semibold text-white">Secondary &amp; Ghost Buttons</h3>
-          <div class="p-6 bg-surface d-flex flex-wrap gap-4 align-items-center">
-            <div class="text-center">
-              <button class="btn btn-secondary">Secondary Action</button>
-              <p class="text-xs font-medium text-slate-400 uppercase mt-2">Default</p>
-            </div>
-            <div class="text-center">
-              <button class="btn btn-secondary hover-state">Hover State</button>
-              <p class="text-xs font-medium text-slate-400 uppercase mt-2">Hover</p>
-            </div>
-            <div class="text-center">
-              <button class="btn btn-secondary active-state">Active State</button>
-              <p class="text-xs font-medium text-slate-400 uppercase mt-2">Active</p>
-            </div>
-            <div class="text-center">
-              <button class="btn btn-secondary" disabled>Disabled</button>
-              <p class="text-xs font-medium text-slate-400 uppercase mt-2">Disabled</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Forms & Validation Section -->
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Forms &amp; Validation</h2>
-        <div class="p-6 bg-surface space-y-8">
-          <div class="row g-5">
-            <div class="col-md-4">
-              <label class="form-label" for="default-input">Default State</label>
-              <input class="input-modern w-100" id="default-input" placeholder="Placeholder text" type="text" />
-              <p class="text-xs text-slate-500 mt-2">Use class `.input-modern`.</p>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label text-primary" for="focus-input">Focus State</label>
-              <input class="input-modern w-100 is-focused" id="focus-input" placeholder="Placeholder text" type="text"
-                value="User is typing..." />
-              <p class="text-xs text-slate-500 mt-2">The border and ring highlight the active field.</p>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label text-danger" for="error-input">Error State</label>
-              <input class="input-modern is-invalid w-100" id="error-input" placeholder="Invalid input" type="text"
-                value="email@" />
-              <p class="text-xs text-danger mt-2">Shows invalid state via `.is-invalid`.</p>
-            </div>
-          </div>
-          <div class="mt-4">
-            <h3 class="text-lg font-semibold text-white">Textarea Example</h3>
-            <label class="form-label mt-2" for="textarea-example">Message</label>
-            <textarea class="input-modern w-100" id="textarea-example" placeholder="Enter your message here..."
-              rows="4"></textarea>
-          </div>
-        </div>
-      </section>
-
-      <!-- Icons Section -->
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Icons</h2>
-        <div class="p-6 bg-surface">
-          <div class="mb-4">
-            <h3 class="font-semibold text-white">Material Symbols (Stitch Theme)</h3>
-            <div class="d-flex align-items-center gap-4 mt-2" style="font-size: 1.5rem; color: #a1a1aa;">
-              <span class="material-symbols-outlined">dashboard</span>
-              <span class="material-symbols-outlined">inbox</span>
-              <span class="material-symbols-outlined text-primary">edit</span>
-              <span class="material-symbols-outlined">visibility</span>
-              <span class="material-symbols-outlined">science</span>
-            </div>
-            <div class="code mt-2 small">&lt;span class="material-symbols-outlined"&gt;dashboard&lt;/span&gt;</div>
-          </div>
-          <div class="mb-4">
-            <h3 class="font-semibold text-white">Bootstrap Icons (Legacy)</h3>
-            <div class="d-flex align-items-center gap-4 mt-2" style="font-size: 1.5rem; color: #a1a1aa;">
-              <i class="bi bi-inbox"></i>
-              <i class="bi bi-shield-check"></i>
-              <i class="bi bi-sliders"></i>
-              <i class="bi bi-palette"></i>
-              <i class="bi bi-cloud-download"></i>
-            </div>
-            <div class="code mt-2 small">&lt;i class="bi bi-inbox"&gt;&lt;/i&gt;</div>
-          </div>
-          <div>
-            <h3 class="font-semibold text-white">Font Awesome (Legacy)</h3>
-            <div class="d-flex align-items-center gap-4 mt-2" style="font-size: 1.5rem; color: #a1a1aa;">
-              <i class="fa-solid fa-triangle-exclamation"></i>
-              <i class="fa-regular fa-circle-check"></i>
-            </div>
-            <div class="code mt-2 small">&lt;i class="fa-solid fa-triangle-exclamation"&gt;&lt;/i&gt;</div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Do's and Don'ts Section -->
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Best Practices</h2>
-        <div class="p-6 bg-surface">
-          <ul class="list-disc list-inside space-y-2 text-slate-300">
-            <li><strong>Do</strong> use `.btn-primary-modern` for the primary action on a page.</li>
-            <li><strong>Do</strong> use `.input-modern` for all new form fields to maintain consistency.</li>
-            <li><strong>Do</strong> use `confirmToast()` for destructive actions like deleting or discarding.</li>
-            <li><strong>Don't</strong> mix arbitrary inline colors; use the Tailwind color utility classes
-              (`bg-primary`, `text-danger`, etc.).</li>
-            <li><strong>Don't</strong> use `.table-striped` on dark backgrounds; wrap tables with `.table-modern`
-              instead.</li>
-          </ul>
-        </div>
-      </section>
-
-    </div>
-  </div>
+  </main>
 </div>
 {% endblock %}

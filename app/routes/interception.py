@@ -17,7 +17,7 @@ from pathlib import Path
 import json
 
 from typing import Dict, Any, Optional, Union, cast, Iterable
-from flask import Blueprint, jsonify, render_template, request, current_app, send_file, abort
+from flask import Blueprint, jsonify, render_template, request, current_app, send_file, send_from_directory, abort, flash, redirect, url_for
 from flask_login import login_required, current_user
 from email.parser import BytesParser
 from email.policy import default as default_policy
@@ -45,6 +45,8 @@ from contextlib import contextmanager
 
 
 import mimetypes
+import zipfile
+from io import BytesIO
 
 # Avoid importing python-magic at module import time on Windows, as ctypes can
 # crash the interpreter if the bundled DLLs are missing or incompatible. We
@@ -1081,6 +1083,131 @@ def api_attachment_download(attachment_id: int):
         download_name = row['filename'] or f'attachment-{attachment_id}'
         mimetype = row['mime_type'] or 'application/octet-stream'
         return send_file(storage_path, mimetype=mimetype, as_attachment=True, download_name=download_name)
+    finally:
+        conn.close()
+
+
+@bp_interception.route('/email/<int:email_id>/attachments/<path:name>')
+@login_required
+def attachment_download(email_id: int, name: str):
+    """Defensive attachment download by email ID and filename."""
+    # Look up attachment by email + filename
+    with get_db() as conn:
+        row = conn.execute(
+            """
+            SELECT storage_path, mime_type, filename
+            FROM email_attachments
+            WHERE email_id = ? AND (filename = ? OR storage_path LIKE '%' || ?)
+            """,
+            (email_id, name, os.path.basename(name)),
+        ).fetchone()
+
+    if not row:
+        current_app.logger.warning("attachment row not found: email=%s name=%s", email_id, name)
+        abort(404)
+
+    # Enforce safe paths
+    storage_path = row["storage_path"]
+    directory = os.path.dirname(storage_path)
+    filename = os.path.basename(storage_path)
+
+    file_on_disk = os.path.join(directory, filename)
+    if not os.path.isfile(file_on_disk):
+        current_app.logger.warning("attachment file missing: %s", file_on_disk)
+        abort(404)
+
+    # Send with safe headers
+    return send_from_directory(
+        directory,
+        filename,
+        mimetype=row["mime_type"] or "application/octet-stream",
+        as_attachment=True,
+        download_name=row["filename"] or filename,
+        conditional=True,  # enable 304s
+        max_age=0,
+    )
+
+
+@bp_interception.route('/api/email/<int:email_id>/attachments/download-all', methods=['GET'])
+@login_required
+def api_email_attachments_download_all(email_id: int):
+    """Download all attachments for an email as a ZIP file."""
+    if not _attachments_feature_enabled('ATTACHMENTS_UI_ENABLED'):
+        return jsonify({'ok': False, 'error': 'disabled'}), 403
+    
+    conn = _db()
+    try:
+        # Verify email exists
+        email_row = conn.execute(
+            "SELECT id, subject FROM email_messages WHERE id=?",
+            (email_id,),
+        ).fetchone()
+        if not email_row:
+            return jsonify({'ok': False, 'error': 'email-not-found'}), 404
+        
+        # Get all attachments for this email
+        attachments = conn.execute(
+            """
+            SELECT id, filename, storage_path, mime_type
+            FROM email_attachments
+            WHERE email_id = ?
+            ORDER BY id
+            """,
+            (email_id,),
+        ).fetchall()
+        
+        if not attachments:
+            return jsonify({'ok': False, 'error': 'no-attachments'}), 404
+        
+        # Get storage roots for security validation
+        attachments_root, staged_root = _get_storage_roots()
+        
+        # Create ZIP file in memory
+        zip_buffer = BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for att in attachments:
+                storage_path = Path(att['storage_path']).resolve()
+                
+                # Security check: ensure path is within allowed roots
+                if not (_is_under(storage_path, attachments_root) or _is_under(storage_path, staged_root)):
+                    log.warning(
+                        "[attachments] Skipping file outside storage roots during ZIP",
+                        extra={'email_id': email_id, 'path': str(storage_path)}
+                    )
+                    continue
+                
+                # Check file exists
+                if not storage_path.exists() or not storage_path.is_file():
+                    log.warning(
+                        "[attachments] Skipping missing file during ZIP",
+                        extra={'email_id': email_id, 'path': str(storage_path)}
+                    )
+                    continue
+                
+                # Add file to ZIP with safe filename
+                safe_filename = att['filename'] or f"attachment-{att['id']}"
+                try:
+                    zip_file.write(storage_path, arcname=safe_filename)
+                except (OSError, IOError) as exc:
+                    log.warning(
+                        "[attachments] Failed to add file to ZIP",
+                        extra={'email_id': email_id, 'file': safe_filename, 'error': str(exc)}
+                    )
+                    continue
+        
+        # Prepare response
+        zip_buffer.seek(0)
+        email_subject = email_row['subject'] or 'email'
+        # Sanitize subject for filename
+        safe_subject = re.sub(r'[^\w\s-]', '', email_subject)[:50]
+        zip_filename = f"attachments-{email_id}-{safe_subject}.zip"
+        
+        return send_file(
+            zip_buffer,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name=zip_filename
+        )
     finally:
         conn.close()
 
@@ -2572,13 +2699,51 @@ def api_batch_delete():
         placeholders = ','.join('?' * len(email_ids))
 
         try:
+            # STEP 1: Get storage roots for path validation
+            attachments_root, staged_root = _get_storage_roots()
+
+            # STEP 2: Query all attachments for these emails BEFORE deleting
+            cur.execute(
+                f"SELECT id, storage_path FROM email_attachments WHERE email_id IN ({placeholders})",
+                email_ids
+            )
+            attachments = cur.fetchall()
+
+            # STEP 3: Delete from database FIRST (within transaction)
+            # CASCADE will remove attachment records automatically
             cur.execute(
                 f"DELETE FROM email_messages WHERE id IN ({placeholders})",
                 email_ids
             )
             deleted = cur.rowcount
             conn.commit()
+
+            # STEP 4: Delete attachment files from disk AFTER successful DB commit
+            # If file deletion fails, log warning but don't fail the request
+            # Orphaned files can be cleaned up later via maintenance script
+            files_deleted = 0
+            files_failed = 0
+            for att in attachments:
+                try:
+                    storage_path = Path(att['storage_path']).resolve()
+                    if storage_path.exists() and storage_path.is_file() and (_is_under(storage_path, attachments_root) or _is_under(storage_path, staged_root)):
+                        storage_path.unlink()
+                        files_deleted += 1
+                        log.debug(f"[batch-delete] Deleted attachment file: {storage_path}")
+                    elif not storage_path.exists():
+                        log.debug(f"[batch-delete] Attachment file already missing: {storage_path}")
+                except Exception as exc:
+                    files_failed += 1
+                    log.warning(
+                        "[batch-delete] Failed to remove attachment file",
+                        extra={'attachment_id': att['id'], 'path': att.get('storage_path'), 'error': str(exc)}
+                    )
+
+            # Log file cleanup results
+            if files_deleted > 0:
+                log.info(f"[batch-delete] Cleaned up {files_deleted} attachment files ({files_failed} failures)")
         except Exception as e:
+            conn.rollback()  # Explicit rollback on error
             failed = len(email_ids)
             log.error(f"[batch-delete] Failed to delete emails: {e}")
             return jsonify({'success': False, 'error': str(e)}), 500
@@ -2597,7 +2762,9 @@ def api_batch_delete():
             'success': True,
             'deleted': deleted,
             'failed': failed,
-            'total': len(email_ids)
+            'total': len(email_ids),
+            'files_deleted': files_deleted,
+            'files_failed': files_failed
         })
 
     except Exception as e:
@@ -2783,3 +2950,89 @@ def bulk_discard_emails():
     except Exception as e:
         log.error(f"Bulk discard error: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
+
+
+# Stitch Design System Routes
+@bp_interception.route('/interception/release/<int:email_id>/stitch', methods=['GET', 'POST'])
+@login_required
+def release_stitch(email_id):
+    """Stitch UI wrapper for releasing an email to inbox"""
+    try:
+        # Call the API endpoint internally
+        with get_db() as conn:
+            cursor = conn.cursor()
+
+            # Verify email exists and is held
+            row = cursor.execute(
+                "SELECT interception_status FROM email_messages WHERE id=?",
+                (email_id,)
+            ).fetchone()
+
+            if not row:
+                flash('Email not found', 'error')
+                return redirect(url_for('emails.emails_unified_stitch'))
+
+            if row['interception_status'] != 'HELD':
+                flash('Email is not in HELD status', 'warning')
+                return redirect(url_for('emails.email_detail_stitch', id=email_id))
+
+            # Update status to RELEASED
+            cursor.execute(
+                """UPDATE email_messages
+                   SET interception_status='RELEASED', status='APPROVED'
+                   WHERE id=?""",
+                (email_id,)
+            )
+            conn.commit()
+
+        flash('Email released successfully', 'success')
+        return redirect(url_for('emails.email_detail_stitch', id=email_id))
+
+    except Exception as e:
+        log.error(f"Release error: {e}", exc_info=True)
+        flash(f'Error releasing email: {str(e)}', 'error')
+        return redirect(url_for('emails.emails_unified_stitch'))
+
+
+@bp_interception.route('/interception/discard/<int:email_id>/stitch', methods=['GET', 'POST'])
+@login_required
+def discard_stitch(email_id):
+    """Stitch UI wrapper for discarding an email"""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+
+            # Verify email exists
+            row = cursor.execute(
+                "SELECT interception_status FROM email_messages WHERE id=?",
+                (email_id,)
+            ).fetchone()
+
+            if not row:
+                flash('Email not found', 'error')
+                return redirect(url_for('emails.emails_unified_stitch'))
+
+            # Update status to DISCARDED
+            cursor.execute(
+                """UPDATE email_messages
+                   SET interception_status='DISCARDED', status='REJECTED'
+                   WHERE id=?""",
+                (email_id,)
+            )
+            conn.commit()
+
+        flash('Email discarded', 'success')
+        return redirect(url_for('emails.emails_unified_stitch'))
+
+    except Exception as e:
+        log.error(f"Discard error: {e}", exc_info=True)
+        flash(f'Error discarding email: {str(e)}', 'error')
+        return redirect(url_for('emails.emails_unified_stitch'))
+
+
+@bp_interception.route('/interception/test/stitch')
+@login_required
+def test_page_stitch():
+    """Stitch design system variant of interception test dashboard"""
+    from datetime import datetime
+    return render_template('stitch/interception-test.html', timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))

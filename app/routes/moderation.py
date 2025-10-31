@@ -54,6 +54,48 @@ def rules():
     return render_template('rules.html', rules=normalized)
 
 
+@moderation_bp.route('/rules/stitch')
+@login_required
+def rules_stitch():
+    """Preview the new Stitch theme rules page (Tailwind-based)"""
+    if current_user.role != 'admin':
+        flash('Admin access required', 'error')
+        return redirect(url_for('dashboard.dashboard'))
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    rows = cursor.execute("SELECT * FROM moderation_rules ORDER BY priority DESC").fetchall()
+    # Normalize schema -> template expects: rule_name, rule_type, condition_value, action, priority, is_active
+    cols = [r[1] for r in cursor.execute("PRAGMA table_info(moderation_rules)").fetchall()]
+    normalized = []
+    for r in rows:
+        d = dict(r)
+        if 'rule_type' in cols and 'condition_value' in cols:
+            normalized.append({
+                'id': d.get('id'),
+                'rule_name': d.get('rule_name'),
+                'rule_type': d.get('rule_type') or 'KEYWORD',
+                'condition_value': d.get('condition_value') or d.get('keyword') or '',
+                'action': d.get('action') or 'HOLD',
+                'priority': d.get('priority') or 50,
+                'is_active': d.get('is_active', 1),
+            })
+        else:
+            # Legacy schema: keyword-only
+            normalized.append({
+                'id': d.get('id'),
+                'rule_name': d.get('rule_name'),
+                'rule_type': 'KEYWORD',
+                'condition_value': d.get('keyword') or '',
+                'action': d.get('action') or 'HOLD',
+                'priority': d.get('priority') or 50,
+                'is_active': d.get('is_active', 1),
+            })
+    conn.close()
+    return render_template('stitch/rules.html', rules=normalized)
+
+
 @moderation_bp.route('/api/rules', methods=['POST'])
 @csrf.exempt  # JSON posts from JS; CSRF token wiring varies across pages
 @login_required

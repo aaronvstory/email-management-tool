@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Version**: 2.9.1
 **Status**: 🟢 Fully functional — SMTP proxy running; IMAP watchers using hybrid IDLE+polling strategy; core UI accessible with responsive design.
-**Last Updated**: October 25, 2025
+**Last Updated**: October 30, 2025
 
 ### Recent Major Updates
 - ✅ **Responsive Design & CSS Consolidation** - Unified.css (145KB) with A/B toggle, sticky header fix, sidebar collapse, responsive guardrails; merged to master Oct 25 (See: [MASTER_MERGE_COMPLETE.md](MASTER_MERGE_COMPLETE.md))
@@ -76,7 +76,7 @@ python simple_app.py
 
 **GitHub Repository**: https://github.com/aaronvstory/email-management-tool
 **Username**: aaronvstory
-**PAT Location**: Stored in `~/.git-credentials` (local only, not committed)
+**PAT Location**: Stored in `~/.git-credentials` (local only, not committed) or GITHUB_PAT env
 
 **Setup for automated git push in WSL:**
 ```bash
@@ -133,6 +133,7 @@ Email-Management-Tool/
 ├── scripts/                         # Utility scripts
 ├── archive/                         # Historical files
 └── static/ & templates/             # Frontend assets
+newly added /stich
 ```
 
 ## Quick Reference
@@ -245,7 +246,7 @@ SNAP_PASSWORD=admin123
 
 **Custom Base URL:**
 ```powershell
-.\manage.ps1 snap -BaseUrl "http://localhost:5050"
+.\manage.ps1 snap -BaseUrl "http://localhost:5000"
 ```
 
 ### CLI Flags Reference
@@ -318,6 +319,110 @@ Get-Process python | Where-Object {$_.Path -like "*Email-Management-Tool*"} | St
 **Full Documentation**: `tools/snapshots/README.md` (615 lines)
 
 ## AI-Assisted Development
+Macros you can use everywhere
+
+### `templates/stitch/_macros.html`
+
+```jinja
+{# Reusable components for Stitch pages #}
+{% macro badge(kind) -%}
+  {%- set map = {
+    'HELD':       'tw-bg-amber-500/15 tw-text-amber-400',
+    'FETCHED':    'tw-bg-zinc-700 tw-text-zinc-400',
+    'RELEASED':   'tw-bg-green-500/15 tw-text-green-400',
+    'REJECTED':   'tw-bg-red-500/15 tw-text-red-400',
+    'PENDING':    'tw-bg-zinc-700 tw-text-zinc-300',
+    'ERROR':      'tw-bg-red-500/15 tw-text-red-400'
+  } -%}
+  <span class="tw-inline-flex tw-items-center tw-text-[11px] tw-font-semibold tw-px-2 tw-py-[2px] {{ map.get(kind|upper, 'tw-bg-zinc-700 tw-text-zinc-300') }}">{{ kind|upper }}</span>
+{%- endmacro %}
+
+{% macro icon_btn(label='', icon='more_horiz', variant='neutral', href=None) -%}
+  {%- set v = {
+    'neutral': '',
+    'primary': 'icon-btn--primary',
+    'danger':  'icon-btn--danger'
+  }[variant] -%}
+  {%- if href -%}
+    <a href="{{ href }}" class="icon-btn-text {{ v }}">
+      <span class="material-symbols-outlined tw-!text-base">{{ icon }}</span> {{ label }}
+    </a>
+  {%- else -%}
+    <button class="icon-btn-text {{ v }}">
+      <span class="material-symbols-outlined tw-!text-base">{{ icon }}</span> {{ label }}
+    </button>
+  {%- endif -%}
+{%- endmacro %}
+
+{# Simple table shell; pass safe HTML rows or render per-row outside #}
+{% macro table(headings=[], rows_html='') -%}
+  <div class="tw-bg-background tw-border tw-border-border">
+    <div class="tw-overflow-x-auto">
+      <table class="tw-w-full tw-text-sm tw-text-left">
+        <thead class="tw-text-zinc-400 tw-border-b tw-border-border">
+          <tr>
+            {%- for h in headings %}
+              <th class="tw-px-4 tw-py-2">{{ h }}</th>
+            {%- endfor %}
+          </tr>
+        </thead>
+        <tbody class="tw-divide-y tw-divide-[rgba(255,255,255,.06)]">
+          {{ rows_html|safe }}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{%- endmacro %}
+
+{# Toolbar with right-aligned actions #}
+{% macro toolbar(title='', actions=[]) -%}
+  <div class="tw-p-4 tw-border-b tw-border-border tw-flex tw-justify-between tw-items-center">
+    <h3 class="tw-text-zinc-200 tw-font-semibold">{{ title }}</h3>
+    <div class="tw-flex tw-gap-2">
+      {%- for a in actions %}
+        {{ icon_btn(a.label, a.icon, a.variant, a.href) }}
+      {%- endfor %}
+    </div>
+  </div>
+{%- endmacro %}
+```
+
+```jinja
+{% from 'stitch/_macros.html' import badge, icon_btn, table, toolbar %}
+```
+
+ Wire the macros into pages
+
+### Emails (list rows) — `templates/stitch/emails-unified.html`
+
+At the top:
+
+
+Use in a row:
+
+```jinja
+<td class="tw-px-4 tw-py-3">{{ badge(email.status) }}</td>
+<td class="tw-px-4 tw-py-3">
+  <div class="tw-flex tw-justify-end tw-gap-2">
+    {{ icon_btn('Attachments', 'download', 'neutral', url_for('emails.attachments', id=email.id)) }}
+    {{ icon_btn('Release', 'check_circle', 'primary', url_for('interception.release', id=email.id)) }}
+    {{ icon_btn('Discard', 'delete', 'danger', url_for('interception.discard', id=email.id)) }}
+  </div>
+</td>
+```
+### Rules — `templates/stitch/rules.html`
+
+```jinja
+{% from 'stitch/_macros.html' import badge, icon_btn, table, toolbar %}
+
+{{ toolbar('Rules',
+  actions=[
+    {'label': 'New Rule', 'icon': 'add', 'variant': 'primary', 'href': url_for('moderation.new_rule')},
+    {'label': 'Refresh',  'icon': 'refresh', 'variant': 'neutral', 'href': url_for('moderation.rules_stitch')}
+  ]
+)}}
+```
+
 
 ### Active MCP Servers
 This project uses Model Context Protocol (MCP) servers for enhanced development capabilities:
@@ -332,14 +437,9 @@ This project uses Model Context Protocol (MCP) servers for enhanced development 
   - File operations, directory traversal, search capabilities
   - Process management and system commands
   - Use for: File I/O, bulk operations, system diagnostics
-- **Memory** - Knowledge graph for persistent project context
 - **Sequential Thinking** - Complex multi-step analysis and planning
-- **Context7** - Library documentation lookup
-- **Exa/Perplexity** - Web research and current information
 
-**Disabled Servers** (to save 46k tokens context):
-- ❌ chrome-devtools (browser automation - enable manually when needed)
-- ❌ shadcn-ui (React components - not applicable to Flask project)
+- chrome-devtools (browser automation)
 
 ### `/sp` Command (SuperPower Orchestration)
 Primary command for intelligent task orchestration across all MCP servers.
@@ -377,18 +477,237 @@ Primary command for intelligent task orchestration across all MCP servers.
 - **Thread Safety**: SQLite WAL mode + busy_timeout handles concurrent access from multiple threads
 - **Caching**: Stats endpoints use TTL-based caching (2-5 seconds) to reduce database load
 
-### UI Development
-**⚠️ ALWAYS consult `docs/STYLEGUIDE.md` before making ANY UI changes!**
 
-Key principles:
-- Dark theme by default (consistent backgrounds, no white flashes)
-- Use `.input-modern` class for all inputs
-- Bootstrap 5.3 toasts (not browser alerts)
-- Confirmation prompts only for destructive actions
-- Background: `background-attachment: fixed` to prevent white screen on scroll
+# CLAUDE.md
 
+## Project
+Email Management Tool — Flask + Jinja + SQLite. Runs locally. Dark UI with lime accents (#bef264), square corners, Tailwind (prefix `tw-`, preflight disabled), plus a few custom CSS files.
+
+## Absolute UI rules
+- Primary accent = lime #bef264. No blues. No bootstrap theme colors.
+- Square corners (no rounding unless explicitly set in a component).
+- Dark surfaces: base #18181b, surface #27272a, borders rgba(255,255,255,.12).
+- Avoid introducing Bootstrap’s default colors/variables into new code.
+- Prefer utility classes with `tw-` prefix + small scoped component helpers in `static/css/stitch.*.css`.
+
+## Tools (MCP) to favor
+- ✅ **Serena** (semantic code nav): use it for finding symbols, related templates, shared helpers, and safe edits.
+- ➕ (optional later) **Taskmaster**: run bounded checklists with clear artifacts.
+
+## Working style
+- Make small, reversible changes. Commit in logical slices with clear messages.
+- When adding CSS, prefer `static/css/stitch.override.css` or `static/css/stitch.components.css`.
+- When touching navigation active states, update `templates/base.html` endpoint checks.
+- Reuse existing patterns from `/stitch` templates. If missing, add a tiny utility and use it everywhere.
+
+## What “good” looks like
+- Links: subtle gray hover overlay; lime on “primary” links.
+- Buttons: no white backgrounds; themed hover tints; icon + label aligned.
+- Badges: compact, uppercase, square, dark chip background.
+- Tables: tight spacing, zebra optional, borders subtle.
+- Sidebar: lime active state with 3px left border, 10% lime tint background.
+
+## Serena usage templates
+- “Find where the EMAIL VIEW page renders attachments and the API it hits. Show file + function names, then open them.”
+- “List all templates under templates/stitch/* and the routes that render them.”
+- “Show me all CSS classes that set lime color; point out duplicates.”
+
+## Don’ts
+- Don’t add bootstrap “primary/secondary/etc.” utility classes.
+- Don’t re-center full pages; prefer left-aligned content and conservative spacing.
+- Don’t invent new colors or radii unless we add tokens first.
+
+
+#  The “Ultimate Stitch Styleguide” (spec + skeleton)
+
+Use this as the single source of truth. It names tokens, utilities, and components we already rely on in your screenshots + templates, and it’s small enough for Claude to keep in context.
+
+## Design tokens (reference)
+
+* Colors
+
+  * `--bg: #18181b`, `--surface: #27272a`, `--border: rgba(255,255,255,.12)`
+  * `--text: #e5e7eb`, `--muted: #9ca3af`
+  * `--primary: #bef264` (lime), hover `#a3d154`
+  * semantic (use sparingly): `--success: #22c55e`, `--warning: #f59e0b`, `--danger: #ef4444`
+* Radii: `0px` default. Use `4px` only on small chips if needed.
+* Shadows: very light or none (we’re in dark UI).
+* Spacing: prefer `tw-p-4`, `tw-gap-4` over 6/8 unless it truly breathes better.
+
+## Global utilities (CSS you already started)
+
+* `.icon-btn-text` (+ `--primary`, `--danger`) for small action buttons
+* link hover overlay (gray) and lime hover for “primary links”
+* tables and chips use dark surfaces, square edges
+
+## Components to standardize
+
+1. **Primary button**
+
+```html
+<button class="tw-inline-flex tw-items-center tw-gap-2 tw-font-bold tw-text-zinc-900 tw-bg-primary tw-border tw-border-[#bef264] tw-px-4 tw-py-2 hover:tw-bg-[#a3d154]">
+  <span class="material-symbols-outlined tw-!text-base">add</span> Add Account
+</button>
+```
+
+2. **Ghost action (icon + text)**
+
+```html
+<button class="icon-btn-text icon-btn--primary">
+  <span class="material-symbols-outlined tw-!text-base">edit</span> Edit
+</button>
+<button class="icon-btn-text icon-btn--danger">
+  <span class="material-symbols-outlined tw-!text-base">delete</span> Delete
+</button>
+```
+
+3. **Nav tabs (All / Held / Released / Rejected)**
+
+```html
+<nav class="tw-flex tw-items-center tw-gap-3">
+  <a class="tw-text-sm tw-font-semibold tw-text-zinc-300 tw-px-2 tw-py-1 hover:tw-bg-zinc-800/60 tw-rounded-[0] tw-transition">All <span class="tw-text-zinc-500 tw-ml-1">412</span></a>
+  <a class="tw-text-sm tw-font-semibold tw-text-primary tw-px-2 tw-py-1 tw-border-b-[2px] tw-border-primary">Held <span class="tw-text-zinc-500 tw-ml-1">337</span></a>
+  <a class="tw-text-sm tw-font-semibold tw-text-zinc-300 tw-px-2 tw-py-1 hover:tw-bg-zinc-800/60">Released <span class="tw-text-zinc-500 tw-ml-1">75</span></a>
+  <a class="tw-text-sm tw-font-semibold tw-text-zinc-300 tw-px-2 tw-py-1 hover:tw-bg-zinc-800/60">Rejected <span class="tw-text-zinc-500 tw-ml-1">0</span></a>
+</nav>
+```
+
+4. **Status badges (HELD / FETCHED / RELEASED)**
+
+```html
+<span class="tw-inline-flex tw-items-center tw-text-[11px] tw-font-semibold tw-px-2 tw-py-[2px] tw-bg-zinc-700 tw-text-zinc-400">FETCHED</span>
+<span class="tw-inline-flex tw-items-center tw-text-[11px] tw-font-semibold tw-px-2 tw-py-[2px] tw-bg-amber-500/15 tw-text-amber-400">HELD</span>
+<span class="tw-inline-flex tw-items-center tw-text-[11px] tw-font-semibold tw-px-2 tw-py-[2px] tw-bg-green-500/15 tw-text-green-400">RELEASED</span>
+```
+
+5. **Sidebar active state** (already implemented)
+
+* lime text, 10% lime background, 3px lime left border, tighter left padding on the active item
+
+6. **Cards & grids**
+
+* reduce padding from `tw-p-6` → `tw-p-4` unless content needs more room
+* gaps `tw-gap-4` default
+
+> the watchers skeleton you uploaded is a good structure reference for the blocks and headers
+
+### File to create/update for the styleguide
+
+* `templates/styleguide/stitch.html` with sections:
+
+  1. Colors & tokens (chips showing each token)
+  2. Typography (sizes actually used)
+  3. Buttons (primary, ghost/icon, destructive)
+  4. Nav tabs (All/Held/Released/Rejected)
+  5. Badges (HELD/FETCHED/RELEASED)
+  6. Forms (inputs, selects, switches)
+  7. Tables (header, row, actions)
+  8. Cards/panels (header, toolbar)
+  9. Sidebar active example (inline demo)
+  10. Examples: “Emails row” and “Accounts card” patterns
+
+---
+
+“AI-Assisted Development”)
+
+```md
+## AI Assistant Configuration (Frontend focus)
+
+**Primary MCP:** Serena (semantic code intelligence for Python + Jinja)
+- Use Serena for: symbol lookups, finding template usages, safe refactors, and locating routes/endpoints.
+- Prefer Serena over generic regex search.
+
+
+**Design guardrails (MANDATORY):**
+- Dark theme only, square corners.
+- Accent lime: `#bef264`, hover: `#a3d154`.
+- Tailwind with `prefix: 'tw-'`, `preflight: false`.
+- No Bootstrap blues, no rounded badges, no glowing shadows.
+- Reuse macros: `templates/stitch/_macros.html` (`badge`, `icon_btn`, `table`, `toolbar`).
+- Reuse helpers: `static/css/stitch.components.css`, `static/css/stitch.override.css`.
+
+**Canonical reference for visuals:** `templates/styleguide/stitch.html`
+- If in doubt, mirror that page exactly.
+- Do not invent new colors or sizes.
+
+**Execution checklist for any UI change:**
+1. Check `base.html` for sidebar active state.
+2. Import macros at top of template and replace ad-hoc buttons/badges.
+3. Verify link hover overlays and no white backgrounds.
+4. Validate page at runtime, then add tests if endpoint changed.
+
+**Performance & context hygiene:**
+- Keep MCP count minimal; prefer Serena.
+- Summarize diffs in commit messages; avoid long chat dumps.
+CSS helpers (if not already present)
+
+Append to `static/css/stitch.components.css` (you already started this file; these are safe additions):
+Styleguide route
+
+If you need it:
+
+```python
+# app/routes/styleguide.py
+from flask import Blueprint, render_template
+from flask_login import login_required
+
+styleguide_bp = Blueprint('styleguide', __name__)
+
+@styleguide_bp.route('/styleguide/stitch')
+@login_required
+def stitch_styleguide():
+    return render_template('styleguide/stitch.html')
+```
+
+Register in your app factory / main app init:
+
+```python
+from app.routes.styleguide import styleguide_bp
+app.register_blueprint(styleguide_bp)
+```
+```css
+/* === Icon Button Variants (Text + Icon) === */
+button.icon-btn-text,
+a.icon-btn-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.5rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 4px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+button.icon-btn-text:hover,
+a.icon-btn-text:hover { background: rgba(39,39,42,0.6); }
+
+button.icon-btn-text.icon-btn--danger:hover,
+a.icon-btn-text.icon-btn--danger:hover {
+  background: rgba(239,68,68,0.1);
+  color: #f87171;
+}
+
+button.icon-btn-text.icon-btn--primary:hover,
+a.icon-btn-text.icon-btn--primary:hover {
+  background: rgba(190,242,100,0.1);
+  color: #a3d154;
+}
+```
 ### Database Operations
 Always use `row_factory` for dict-like access:
+
+
+
+
+
+
+
+
+
+
+
 
 ```python
 from app.utils.db import get_db
@@ -440,45 +759,7 @@ Routes are organized in `app/routes/`:
 **Port Already in Use**
 → `python cleanup_and_start.py` or manually kill python.exe processes
 
-**Database Schema Mismatch**
-→ Check docs/DATABASE_SCHEMA.md for migration scripts
 
-**UI Styling Issues**
-→ Consult docs/STYLEGUIDE.md for proper patterns
-
-## Detailed Documentation
-
-For deeper technical information, see:
-
-**Getting Started**:
-- **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)** - Complete step-by-step workflows and walkthroughs
-- **[docs/API_REFERENCE.md](docs/API_REFERENCE.md)** - REST API documentation with cURL examples
-- **[docs/FAQ.md](docs/FAQ.md)** - Frequently asked questions
-- **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common issues, gotchas, and solutions
-
-**Architecture & Design**:
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture and design
-- **[docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)** - Database design and indices
-- **[docs/TECHNICAL_DEEP_DIVE.md](docs/TECHNICAL_DEEP_DIVE.md)** - Architecture deep dive
-
-**Development & Deployment**:
-- **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** - Development workflow
-- **[docs/TESTING.md](docs/TESTING.md)** - Testing strategy
-- **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Production deployment guide
-
-**Configuration & Security**:
-- **[docs/SECURITY.md](docs/SECURITY.md)** - Security configuration and validation
-- **[docs/STYLEGUIDE.md](docs/STYLEGUIDE.md)** - UI/UX standards (MANDATORY)
-- **[docs/HYBRID_IMAP_STRATEGY.md](docs/HYBRID_IMAP_STRATEGY.md)** - IMAP implementation
-
-**Implementation & History**:
-- **[docs/GMAIL_FIXES_CONSOLIDATED.md](docs/GMAIL_FIXES_CONSOLIDATED.md)** - Complete Gmail duplicate fix documentation (v1-v4 evolution, protocol fixes, hardening)
-- **[docs/IMPLEMENTATION_HISTORY.md](docs/IMPLEMENTATION_HISTORY.md)** - Chronological feature implementation history (Oct 18-19, 2025)
-- **[docs/SMOKE_TEST_GUIDE.md](docs/SMOKE_TEST_GUIDE.md)** - End-to-end Gmail release validation guide
-- **[docs/reports/CODEBASE_ANALYSIS.md](docs/reports/CODEBASE_ANALYSIS.md)** - Comprehensive architecture and implementation review (2390 lines)
-- **[archive/2025-10-20_root_cleanup/MANIFEST.md](archive/2025-10-20_root_cleanup/MANIFEST.md)** - Root directory cleanup documentation
-
----
 
 **Remember**: This application IS working. If it's not:
 1. Check `python simple_app.py` is running
@@ -486,3 +767,45 @@ For deeper technical information, see:
 3. Verify accounts configured with `python scripts/verify_accounts.py`
 4. Check `logs/app.log` for errors
 5. Test connections with `python scripts/test_permanent_accounts.py`
+# CLAUDE.md
+
+## Project
+Email Management Tool — Flask + Jinja + SQLite. Runs locally. Dark UI with lime accents (#bef264), square corners, Tailwind (prefix `tw-`, preflight disabled), plus a few custom CSS files.
+
+## Absolute UI rules
+- Primary accent = lime #bef264. No blues. No bootstrap theme colors.
+- Square corners (no rounding unless explicitly set in a component).
+- Dark surfaces: base #18181b, surface #27272a, borders rgba(255,255,255,.12).
+- Avoid introducing Bootstrap’s default colors/variables into new code.
+- Prefer utility classes with `tw-` prefix + small scoped component helpers in `static/css/stitch.*.css`.
+
+## Tools (MCP) to favor
+- ✅ **Serena** (semantic code nav): use it for finding symbols, related templates, shared helpers, and safe edits.
+- ➕**Taskmaster**: run bounded checklists with clear artifacts.
+
+## Working style
+- Make small, reversible changes. Commit in logical slices with clear messages.
+- When adding CSS, prefer `static/css/stitch.override.css` or `static/css/stitch.components.css`.
+- When touching navigation active states, update `templates/base.html` endpoint checks.
+- Reuse existing patterns from `/stitch` templates. If missing, add a tiny utility and use it everywhere.
+
+## What “good” looks like
+- Links: subtle gray hover overlay; lime on “primary” links.
+- Buttons: no white backgrounds; themed hover tints; icon + label aligned.
+- Badges: compact, uppercase, square, dark chip background.
+- Tables: tight spacing, zebra optional, borders subtle.
+- Sidebar: lime active state with 3px left border, 10% lime tint background.
+
+## Serena usage templates
+- “Find where the EMAIL VIEW page renders attachments and the API it hits. Show file + function names, then open them.”
+- “List all templates under templates/stitch/* and the routes that render them.”
+- “Show me all CSS classes that set lime color; point out duplicates.”
+
+## Don’ts
+- Don’t add bootstrap “primary/secondary/etc.” utility classes.
+- Don’t re-center full pages; prefer left-aligned content and conservative spacing.
+- Don’t invent new colors or radii unless we add tokens first.
+
+## Task Master AI Instructions
+**Import Task Master's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**
+@./.taskmaster/CLAUDE.md

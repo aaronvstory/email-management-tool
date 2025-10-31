@@ -109,6 +109,89 @@ def dashboard(tab='overview'):
                          user=current_user)
 
 
+@dashboard_bp.route('/dashboard/stitch')
+@dashboard_bp.route('/dashboard/stitch/<tab>')
+@login_required
+def dashboard_stitch(tab='overview'):
+    """Stitch design system variant of dashboard"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    # Get email accounts
+    accounts = cursor.execute("""
+        SELECT id, account_name, email_address, imap_host, imap_port, smtp_host, smtp_port,
+               is_active, last_checked, last_error
+        FROM email_accounts
+        ORDER BY account_name
+    """).fetchall()
+
+    selected_account_id = request.args.get('account_id', None)
+
+    # Get statistics
+    if selected_account_id:
+        stats = fetch_counts(account_id=int(selected_account_id), include_outbound=False)
+        recent_emails = cursor.execute("""
+            SELECT id, sender, recipients, subject, status, interception_status, created_at, body_text
+            FROM email_messages
+            WHERE account_id = ? AND (direction IS NULL OR direction!='outbound')
+            ORDER BY created_at DESC
+            LIMIT 20
+        """, (selected_account_id,)).fetchall()
+    else:
+        stats = fetch_counts(include_outbound=False)
+        recent_emails = cursor.execute("""
+            SELECT id, sender, recipients, subject, status, interception_status, created_at, body_text
+            FROM email_messages
+            WHERE (direction IS NULL OR direction!='outbound')
+            ORDER BY created_at DESC
+            LIMIT 20
+        """).fetchall()
+
+    active_rules = cursor.execute("SELECT COUNT(*) FROM moderation_rules WHERE is_active = 1").fetchone()[0]
+    
+    rules = cursor.execute("""
+        SELECT id, rule_name, rule_type, condition_field, condition_operator,
+               condition_value, action, priority, is_active, created_at
+        FROM moderation_rules
+        ORDER BY priority DESC, rule_name
+    """).fetchall()
+
+    # Normalize email data
+    email_payload = []
+    for row in recent_emails:
+        record = dict(row)
+        recipients = record.get('recipients')
+        if recipients:
+            try:
+                if isinstance(recipients, str):
+                    parsed = json.loads(recipients)
+                    record['recipients'] = parsed if isinstance(parsed, list) else [recipients]
+                else:
+                    record['recipients'] = list(recipients)
+            except json.JSONDecodeError:
+                record['recipients'] = [addr.strip() for addr in recipients.split(',') if addr.strip()]
+        else:
+            record['recipients'] = []
+        
+        body = record.get('body_text') or ''
+        record['preview_snippet'] = ' '.join(body.split())[:160]
+        email_payload.append(record)
+
+    conn.close()
+
+    return render_template('stitch/dashboard.html',
+                         stats=stats,
+                         recent_emails=email_payload,
+                         active_rules=active_rules,
+                         rules=rules,
+                         accounts=accounts,
+                         selected_account_id=selected_account_id,
+                         active_tab=tab,
+                         pending_count=stats['pending'],
+                         user=current_user)
+
+
 @dashboard_bp.route('/test-dashboard')
 @login_required
 def test_dashboard():

@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% from 'stitch/_macros.html' import badge, icon_btn, table, toolbar %}
+{% block title %}Stitch Styleguide{% endblock %}
+
+{% block content %}
+<div id="stitch_styleguide" class="tw-space-y-8 tw-px-6 tw-py-6">
+  <!-- Page header -->
+  <header class="tw-flex tw-items-center tw-justify-between">
+    <div>
+      <h1 class="tw-text-2xl tw-font-bold tw-text-white">Stitch Styleguide</h1>
+      <p class="tw-text-sm tw-text-zinc-400 tw-mt-1">Single source of truth for tokens, components, and patterns.</p>
+    </div>
+    <a href="{{ url_for('emails.emails_unified_stitch') }}" class="tw-inline-flex tw-items-center tw-gap-2 tw-text-primary tw-text-sm tw-font-medium tw-px-2 tw-py-1 hover:tw-bg-primary/10"><span class="material-symbols-outlined tw-!text-base">arrow_back</span>Back to Emails</a>
+  </header>
+
+  <!-- Quick nav -->
+  <nav class="tw-flex tw-flex-wrap tw-gap-2 tw-text-sm">
+    {% for id,label in [('tokens','Tokens'),('spacing','Spacing'),('type','Typography'),('buttons','Buttons'),('inputs','Inputs'),('feedback','Feedback'),('nav','Navigation'),('tables','Tables'),('layout','Layouts'),('patterns','Patterns'),('a11y','Accessibility')] %}
+    <a href="#{{id}}" class="tw-text-zinc-300 tw-px-2 tw-py-1 hover:tw-bg-zinc-800/60">{{label}}</a>
+    {% endfor %}
+  </nav>
+
+  <!-- Tokens -->
+  <section id="tokens" class="tw-space-y-3">
+    <h2 class="tw-text-lg tw-font-bold tw-text-white">Tokens</h2>
+    <div class="tw-grid tw-grid-cols-2 md:tw-grid-cols-3 lg:tw-grid-cols-5 tw-gap-3">
+      {% set chips = [
+        ('bg','#18181b'),('surface','#27272a'),('elevated','#2f2f33'),('border-subtle','rgba(255,255,255,.12)'),('border-strong','rgba(255,255,255,.24)'),
+        ('text-primary','#e5e7eb'),('text-secondary','#c4c4c7'),('text-muted','#9ca3af'),('brand','#bef264'),('brand-hover','#a3d154'),
+        ('success','#22c55e'),('warning','#f59e0b'),('danger','#ef4444')
+      ] %}
+      {% for name,val in chips %}
+      <div class="tw-border tw-border-border tw-p-3 tw-bg-background">
+        <div class="tw-text-[12px] tw-text-zinc-400">{{name}}</div>
+        <div class="tw-text-zinc-200">{{val}}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- Spacing & radii -->
+  <section id="spacing" class="tw-space-y-3">
+    <h2 class="tw-text-lg tw-font-bold tw-text-white">Spacing & Radii</h2>
+    <div class="tw-grid md:tw-grid-cols-2 tw-gap-3">
+      <div class="tw-border tw-border-border tw-bg-background tw-p-3">
+        <div class="tw-text-sm tw-text-zinc-400 tw-mb-2">Spacing scale</div>
+        <div class="tw-flex tw-items-center tw-gap-3">
+          {% for s in [2,4,6,8,12,16,20,24] %}
+          <div class="tw-bg-zinc-800 tw-border tw-border-border" style="width:{{s*6}}px;height:20px"></div>
+          {% endfor %}
+        </div>
+        <p class="tw-text-xs tw-text-zinc-500 tw-mt-2">Default padding: tw-p-4. Use tw-gap-4 for grids.</p>
+      </div>
+      <div class="tw-border tw-border-border tw-bg-background tw-p-3">
+        <div class="tw-text-sm tw-text-zinc-400 tw-mb-2">Radii</div>
+        <div class="tw-flex tw-gap-3">
+          <div class="tw-w-20 tw-h-10 tw-border tw-border-border" style="border-radius:0">0</div>
+          <div class="tw-w-20 tw-h-10 tw-border tw-border-border" style="border-radius:4px">4px</div>
+        </div>
+        <p class="tw-text-xs tw-text-zinc-500 tw-mt-2">Square by default. 4px only for chips/small elements.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Typography -->
+  <section id="type" class="tw-space-y-3">
+    <h2 class="tw-text-lg tw-font-bold tw-text-white">Typography</h2>
+    <div class="tw-grid md:tw-grid-cols-2 tw-gap-3">
+      <div class="tw-border tw-border-border tw-bg-background tw-p-4">
+        <h1 class="tw-text-2xl tw-font-bold tw-text-white tw-mb-1">Page Title</h1>
+        <p class="tw-text-sm tw-text-zinc-400">Secondary line / description</p>
+      </div>
+      <div class="tw-border tw-border-border tw-bg-background tw-p-4">
+        <h3 class="tw-text-base tw-font-semibold tw-text-zinc-200 tw-mb-1">Section Header</h3>
+        <p class="tw-text-sm tw-text-zinc-400">Body copy</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Buttons -->
+  <section id="buttons" class="tw-space-y-3">
+    <h2 class="tw-text-lg tw-font-bold tw-text-white">Buttons</h2>
+    <div class="tw-flex tw-flex-wrap tw-gap-3 tw-border tw-border-border tw-bg-background tw-p-4">
+      <button type="button" class="tw-inline-flex tw-items-center tw-gap-2 tw-font-bold tw-text-zinc-900 tw-bg-primary tw-border tw-border-[#bef264] tw-px-4 tw-py-2 hover:tw-bg-[#a3d154]"><span class="material-symbols-outlined tw-!text-base">add</span>Primary</button>
+      {{ icon_btn('Ghost / Primary','edit','primary') }}
+      {{ icon_btn('Ghost / Neutral','more_horiz','neutral') }}
+      {{ icon_btn('Danger','delete','danger') }}
+      <button type="button" class="tw-inline-flex tw-items-center tw-gap-2 tw-font-semibold tw-text-zinc-200 tw-bg-transparent tw-border tw-border-zinc-600 tw-px-3 tw-py-2 hover:tw-bg-zinc-800/60"><span class="material-symbols-outlined tw-!text-base">play_arrow</span>Outline</button>
+      <button type="button" class="tw-inline-flex tw-items-center tw-gap-2 tw-font-semibold tw-text-zinc-200 tw-bg-transparent tw-border tw-border-zinc-600 tw-px-2 tw-py-1">Sm</button>
+    </div>
+    <p class="tw-text-xs tw-text-zinc-500">Solid = lime; Ghost = transparent with clear tint; Outline = neutral border.</p>
+  </section>
+
+  <!-- Inputs -->
+  <section id="inputs" class="tw-space-y-3">
+    <h2 class="tw-text-lg tw-font-bold tw-text-white">Inputs</h2>
+    <div class="tw-grid md:tw-grid-cols-2 tw-gap-3">
+      <div class="tw-border tw-border-border tw-bg-background tw-p-4">
+        <label class="tw-text-sm tw-text-zinc-300 tw-font-medium">Text</label>
+        <input class="tw-mt-2 tw-w-full tw-bg-[#1f1f23] tw-text-zinc-200 tw-text-sm tw-border tw-border-border tw-px-3 tw-py-2 focus:tw-outline-none focus:tw-border-[#bef264]" placeholder="recipient@example.com"/>
+        <p class="tw-text-xs tw-text-zinc-500 tw-mt-2">Help text</p>
+      </div>
+      <div class="tw-border tw-border-border tw-bg-background tw-p-4">
+        <label class="tw-text-sm tw-text-zinc-300 tw-font-medium">Select</label>
+        <div class="tw-flex tw-gap-2 tw-mt-2">
+          <select class="tw-bg-[#1f1f23] tw-text-zinc-200 tw-text-sm tw-border tw-border-border tw-px-3 tw-py-2 focus:tw-outline-none focus:tw-border-[#bef264]"><option>Choose…</option></select>
+          <label class="tw-inline-flex tw-items-center tw-gap-2 tw-text-sm tw-text-zinc-300"><input type="checkbox" class="tw-accent-[#bef264]"/> Option</label>
+          <label class="tw-inline-flex tw-items-center tw-gap-2 tw-text-sm tw-text-zinc-300"><input type="radio" name="r1" class="tw-accent-[#bef264]"/> Choice</label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Feedback -->
+  <section id="feedback" class="tw-space-y-3">
+    <h2 class="tw-text-lg tw-font-bold tw-text-white">Feedback</h2>
+    <div class="tw-grid md:tw-grid-cols-2 tw-gap-3">
+      <div class="tw-border tw-border-border tw-bg-background tw-p-4">
+        <div class="tw-border tw-border-emerald-500/40 tw-bg-emerald-500/10 tw-text-emerald-300 tw-p-3">Success: Everything worked.</div>
+        <div class="tw-border tw-border-amber-500/40 tw-bg-amber-500/10 tw-text-amber-300 tw-p-3 tw-mt-2">Warning: Check settings.</div>
+        <div class="tw-border tw-border-red-500/40 tw-bg-red-500/10 tw-text-red-300 tw-p-3 tw-mt-2">Error: Something failed.</div>
+      </div>
+      <div class="tw-border tw-border-border tw-bg-background tw-p-4">
+        <div class="tw-flex tw-items-center tw-gap-3">
+          <div class="tw-animate-pulse tw-h-4 tw-w-24 tw-bg-zinc-700"></div>
+          <div class="tw-animate-pulse tw-h-4 tw-w-16 tw-bg-zinc-700"></div>
+          <div class="tw-animate-spin tw-h-5 tw-w-5 tw-rounded-full tw-border-2 tw-border-zinc-500 tw-border-t-transparent"></div>
+        </div>
+        <p class="tw-text-xs tw-text-zinc-500 tw-mt-2">Skeletons and spinner for loading states.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Navigation -->
+  <section id="nav" class="tw-space-y-3">
+    <h2 class="tw-text-lg tw-font-bold tw-text-white">Navigation</h2>
+    <div class="tw-border tw-border-border tw-bg-background tw-p-4 tw-space-y-3">
+      <nav class="tw-flex tw-items-center tw-gap-3">
+        <a class="tw-text-sm tw-font-semibold tw-text-zinc-300 tw-px-2 tw-py-1 hover:tw-bg-zinc-800/60">All</a>
+        <a class="tw-text-sm tw-font-semibold tw-text-primary tw-px-2 tw-py-1 tw-border-b-[2px] tw-border-primary">Held</a>
+        <a class="tw-text-sm tw-font-semibold tw-text-zinc-300 tw-px-2 tw-py-1 hover:tw-bg-zinc-800/60">Released</a>
+      </nav>
+      <div class="tw-flex tw-items-center tw-gap-2 tw-text-sm tw-text-zinc-400">
+        <span class="material-symbols-outlined tw-!text-base">home</span>
+        <span>Home</span>
+        <span class="tw-text-zinc-600">/</span>
+        <span>Emails</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tables -->
+  <section id="tables" class="tw-space-y-3">
+    <h2 class="tw-text-lg tw-font-bold tw-text-white">Tables</h2>
+    <div class="tw-border tw-border-border tw-bg-background tw-p-0">
+      <div class="tw-overflow-x-auto">
+        <table class="tw-w-full tw-text-sm tw-text-left">
+          <thead class="tw-text-zinc-400 tw-border-b tw-border-border">
+            <tr>
+              <th class="tw-px-4 tw-py-2"><input type="checkbox" class="tw-accent-[#bef264]"/></th>
+              <th class="tw-px-4 tw-py-2">Time</th>
+              <th class="tw-px-4 tw-py-2">Subject</th>
+              <th class="tw-px-4 tw-py-2">Status</th>
+              <th class="tw-px-4 tw-py-2 tw-text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="tw-divide-y tw-divide-[rgba(255,255,255,.06)]">
+            <tr class="hover:tw-bg-zinc-800/40">
+              <td class="tw-px-4 tw-py-3"><input type="checkbox" class="tw-accent-[#bef264]"/></td>
+              <td class="tw-px-4 tw-py-3 tw-text-zinc-400">Oct 24, 07:11</td>
+              <td class="tw-px-4 tw-py-3 tw-text-zinc-200">Your recent invoice…</td>
+              <td class="tw-px-4 tw-py-3">{{ badge('HELD') }}</td>
+              <td class="tw-px-4 tw-py-3"><div class="tw-flex tw-justify-end tw-gap-2">{{ icon_btn('View','visibility','primary') }}{{ icon_btn('Attachments','download','neutral') }}{{ icon_btn('Discard','delete','danger') }}</div></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tw-flex tw-items-center tw-justify-between tw-px-4 tw-py-2 tw-border-t tw-border-border">
+        <div class="tw-text-xs tw-text-zinc-500">Rows per page: 50</div>
+        <div class="tw-flex tw-items-center tw-gap-2">
+          {{ icon_btn('Prev','chevron_left','neutral') }}
+          <span class="tw-text-sm tw-text-zinc-400">1 / 8</span>
+          {{ icon_btn('Next','chevron_right','neutral') }}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Layouts -->
+  <section id="layout" class="tw-space-y-3">
+    <h2 class="tw-text-lg tw-font-bold tw-text-white">Layouts</h2>
+    <div class="tw-grid md:tw-grid-cols-2 tw-gap-3">
+      <div class="tw-border tw-border-border tw-bg-background tw-flex tw-flex-col">
+        {{ toolbar('Page Header', [{'label':'Add','icon':'add','variant':'primary'}]) }}
+        <div class="tw-p-4 tw-text-sm tw-text-zinc-400">Use toolbar for header actions.</div>
+      </div>
+      <div class="tw-border tw-border-border tw-bg-background tw-p-4">
+        <div class="tw-grid md:tw-grid-cols-2 tw-gap-3">
+          <div>
+            <label class="tw-text-sm tw-text-zinc-300 tw-font-medium">Name</label>
+            <input class="tw-mt-2 tw-w-full tw-bg-[#1f1f23] tw-text-zinc-200 tw-text-sm tw-border tw-border-border tw-px-3 tw-py-2" placeholder="Account name"/>
+          </div>
+          <div>
+            <label class="tw-text-sm tw-text-zinc-300 tw-font-medium">Server</label>
+            <input class="tw-mt-2 tw-w-full tw-bg-[#1f1f23] tw-text-zinc-200 tw-text-sm tw-border tw-border-border tw-px-3 tw-py-2" placeholder="imap.example.com:993"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Patterns -->
+  <section id="patterns" class="tw-space-y-3">
+    <h2 class="tw-text-lg tw-font-bold tw-text-white">Patterns</h2>
+    <div class="tw-grid md:tw-grid-cols-2 tw-gap-3">
+      <div class="tw-border tw-border-border tw-bg-background tw-p-4">
+        <h3 class="tw-text-zinc-200 tw-font-semibold tw-mb-3">Email Row</h3>
+        <div class="tw-flex tw-justify-between tw-items-start tw-gap-4 hover:tw-bg-zinc-800/40 tw-p-3">
+          <div class="tw-flex-1">
+            <div class="tw-text-zinc-400 tw-text-xs tw-mb-1">Oct 24, 07:11</div>
+            <div class="tw-text-zinc-200">Automated quarantine flow test…</div>
+            <div class="tw-text-zinc-500 tw-text-xs">from billing@service.com • to you@example.com</div>
+          </div>
+          <div class="tw-flex tw-items-center tw-gap-2">{{ badge('HELD') }}{{ icon_btn('Release','check_circle','primary') }}{{ icon_btn('Discard','delete','danger') }}</div>
+        </div>
+      </div>
+      <div class="tw-border tw-border-border tw-bg-background tw-flex tw-flex-col">
+        {{ toolbar('Email Accounts', [{'label':'Add Account','icon':'add_circle','variant':'primary','href':'/accounts/add'}]) }}
+        <div class="tw-p-4 tw-grid md:tw-grid-cols-2 tw-gap-3">
+          <div class="tw-border tw-border-border tw-p-3">
+            <div class="tw-flex tw-justify-between tw-items-center"><div><div class="tw-text-zinc-200 tw-font-semibold">Gmail</div><div class="tw-text-xs tw-text-zinc-500">ndayisjecka@gmail.com</div></div><div class="tw-flex tw-gap-2">{{ icon_btn('Edit','edit','primary') }}{{ icon_btn('Delete','delete','danger') }}</div></div>
+            <div class="tw-text-xs tw-text-zinc-500 tw-mt-2">imap.gmail.com:993 • smtp.gmail.com:587</div>
+          </div>
+          <div class="tw-border tw-border-border tw-p-3">
+            <div class="tw-flex tw-justify-between tw-items-center"><div><div class="tw-text-zinc-200 tw-font-semibold">Hostinger</div><div class="tw-text-xs tw-text-zinc-500">mcintyre@corrinbox.com</div></div><div class="tw-flex tw-gap-2">{{ icon_btn('Start','play_arrow','neutral') }}{{ icon_btn('Diagnostics','bug_report','neutral') }}</div></div>
+            <div class="tw-text-xs tw-text-zinc-500 tw-mt-2">imap.hostinger.com:993 • smtp.hostinger.com:465</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Accessibility -->
+  <section id="a11y" class="tw-space-y-2">
+    <h2 class="tw-text-lg tw-font-bold tw-text-white">Accessibility</h2>
+    <ul class="tw-list-disc tw-list-inside tw-text-sm tw-text-zinc-400 tw-space-y-1">
+      <li>All interactive elements have focus outlines and 44x44px hit targets.</li>
+      <li>Minimum text contrast 4.5:1 on dark backgrounds. Primary ghost uses lime text.</li>
+      <li>Keyboard: Tab order follows DOM; menus and dialogs trap focus.</li>
+    </ul>
+  </section>
+</div>
+{% endblock %}

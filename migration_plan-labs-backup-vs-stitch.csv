@@ -1,0 +1,11 @@
+Component,Action,Priority,Risk_Level,Notes,Estimated_Effort
+CSS Architecture,USE BACKUP,CRITICAL,LOW,"Backup has unified.css (136KB, 0 !important). Current has 15+ fragmented files with 38+ !important",1 day
+Base Template,USE BACKUP,HIGH,MEDIUM,Backup base.html is 13.5KB vs current 19.4KB bloated version,2 hours
+Email Processing Routes,CHERRY-PICK CURRENT,HIGH,HIGH,Current has enhanced attachment APIs and batch operations,1-2 days
+Test Framework,USE BACKUP,CRITICAL,LOW,Backup has interception_test_dashboard.html with bi-directional tests,4 hours
+Attachment Features,CHERRY-PICK CURRENT,MEDIUM,HIGH,"Current has Phase 1 attachment foundation, but may need debugging",2-3 days
+Stitch Templates,SKIP CURRENT,LOW,NONE,Current stitch templates are experimental and CSS-polluted,N/A
+Theme System,USE BACKUP,HIGH,LOW,Backup has proper theme system without override hell,4 hours
+JavaScript Libraries,MERGE BOTH,MEDIUM,MEDIUM,Merge attachment JS from current with stable JS from backup,1 day
+Configuration Files,MERGE BOTH,LOW,LOW,"Both have similar config structure, minor differences",2 hours
+Database Schema,ANALYZE & MERGE,HIGH,MEDIUM,"Both have similar schema, current has attachment tables",4 hours

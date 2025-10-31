@@ -14,3 +14,8 @@ def styleguide():
 def styleguide_standalone():
     static_dir = os.path.join(current_app.root_path, 'static')
     return send_from_directory(static_dir, 'styleguide-showcase.html')
+
+@styleguide_bp.route('/styleguide/stitch')
+@login_required
+def stitch_styleguide():
+    return render_template('stitch/styleguide.html')

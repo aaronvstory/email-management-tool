@@ -1,0 +1,109 @@
+{
+	"meta": {
+		"generatedAt": "2025-10-31T02:49:41.036Z",
+		"tasksAnalyzed": 12,
+		"totalTasks": 12,
+		"analysisCount": 12,
+		"thresholdScore": 5,
+		"projectName": "Taskmaster",
+		"usedResearch": true
+	},
+	"complexityAnalysis": [
+		{
+			"taskId": 11,
+			"taskTitle": "Audit All Links and Forms for Stitch Migration",
+			"complexityScore": 5,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Break down the audit process into: (1) automated search for href/action attributes, (2) categorization by feature area, (3) documentation of legacy/broken links, (4) mapping required /stitch route variants.",
+			"reasoning": "This task is moderately complex due to the need for comprehensive coverage and accuracy, but it is primarily a systematic search and documentation effort. The main technical challenge is ensuring no links are missed and that categorization is thorough. Testing is straightforward but requires diligence. Expansion into subtasks is recommended to ensure completeness and parallelization."
+		},
+		{
+			"taskId": 12,
+			"taskTitle": "Create Missing Stitch Route Variants in Flask Blueprints",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Decompose into: (1) review audit output and define required routes, (2) implement routes in each blueprint, (3) add authentication and parameter validation, (4) ensure correct template rendering and safe file serving, (5) register routes and write tests.",
+			"reasoning": "This task involves multi-module backend changes, careful adherence to security (authentication, safe file serving), and coordination with template logic. It requires understanding of Flask blueprints, route registration, and parameter validation. Testing each route for correctness and security adds to the complexity. Dependencies on the audit increase coordination needs."
+		},
+		{
+			"taskId": 13,
+			"taskTitle": "Update All Templates to Use url_for and Stitch Macros",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Expand into: (1) identify all hardcoded routes, (2) batch replace with url_for, (3) integrate Stitch macros (alert, form_field, modal, etc.), (4) remove legacy styles, (5) enforce dark theme and lime accent, (6) manual review and accessibility checks.",
+			"reasoning": "Template refactoring across the codebase is high in complexity due to the risk of regressions, the need for both automated and manual changes, and the requirement for visual and accessibility consistency. Integrating macros and removing legacy code increases the risk of subtle UI bugs. Testing must be both automated and manual, covering edge cases and visual inspection."
+		},
+		{
+			"taskId": 15,
+			"taskTitle": "Build Diagnostics Page with Live Log Viewer",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Divide into: (1) implement diagnostics route and template, (2) integrate Flask-SocketIO for real-time log streaming, (3) add AJAX polling fallback, (4) build log filtering/search/scroll controls, (5) display system health badges, (6) handle large log files and test responsiveness.",
+			"reasoning": "This task is technically challenging due to real-time log streaming, fallback mechanisms, and UI controls for large data. It requires expertise in Flask-SocketIO, frontend event handling, and performance optimization. Ensuring cross-browser compatibility and robust error handling further increases complexity."
+		},
+		{
+			"taskId": 17,
+			"taskTitle": "Fix Attachments 500 Error and Core Backend Issues",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down into: (1) trace and reproduce 500 error, (2) audit and fix file path handling, (3) validate and update DB schema, (4) improve MIME type detection, (5) add error handling and logging.",
+			"reasoning": "This is a focused but technically deep debugging and remediation task. It involves root cause analysis, secure file handling, schema validation, and robust error handling. The need to address security (path traversal) and ensure no regressions adds to the complexity."
+		},
+		{
+			"taskId": 18,
+			"taskTitle": "Build Complete Attachments Interface (Upload, Download, Preview, Bulk)",
+			"complexityScore": 9,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Expand into: (1) design listing/upload UI, (2) implement secure file upload with validation, (3) develop download and preview endpoints, (4) add bulk download (zip), (5) enforce security and size/type checks, (6) integrate with Stitch templates, (7) comprehensive testing (edge cases, security).",
+			"reasoning": "This is a full-stack feature with significant security, performance, and usability requirements. Handling file uploads, previews, and bulk downloads securely is non-trivial. The need for robust validation, error handling, and integration with the UI makes this one of the most complex tasks."
+		},
+		{
+			"taskId": 19,
+			"taskTitle": "Integrate Attachments with Email UI (Indicators, Compose, Detail View)",
+			"complexityScore": 6,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Divide into: (1) add attachment indicators to email lists, (2) enhance compose form with upload widget, (3) implement attachment panel in detail view, (4) test modals and responsiveness.",
+			"reasoning": "This task is moderately complex, involving UI enhancements and integration with existing backend logic. The main challenges are ensuring UI consistency, responsive design, and seamless user experience. Testing for edge cases and mobile compatibility is required."
+		},
+		{
+			"taskId": 20,
+			"taskTitle": "Implement Attachment Storage Cleanup and Metadata",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down into: (1) implement file deletion on email removal, (2) extend DB schema for metadata, (3) update upload logic to populate metadata, (4) integrate malware scanning (optional), (5) add atomicity and logging.",
+			"reasoning": "This task involves backend changes with data integrity and security implications. Schema migrations, atomic file operations, and optional malware scanning add technical depth. Ensuring no orphaned files and correct metadata handling is critical."
+		},
+		{
+			"taskId": 21,
+			"taskTitle": "Test All Core Flows and UI Consistency",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Expand into: (1) manual E2E testing of each core flow, (2) automated E2E tests (pytest/Selenium), (3) accessibility audits, (4) responsiveness checks, (5) documentation of results, (6) proof of delivery capture.",
+			"reasoning": "Comprehensive testing across multiple features and devices is highly complex, requiring coordination, coverage planning, and both manual and automated approaches. Ensuring 100% workflow coverage and documenting results adds to the effort."
+		},
+		{
+			"taskId": 22,
+			"taskTitle": "Final Polish and Production Readiness",
+			"complexityScore": 6,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Divide into: (1) code review and best practices check, (2) performance benchmarking, (3) documentation and changelog preparation, (4) security review (debug endpoints).",
+			"reasoning": "This is a broad but well-defined task focused on quality assurance and documentation. While not technically deep, it requires thoroughness and attention to detail across code, performance, and security. The main challenge is ensuring nothing is missed before release."
+		},
+		{
+			"taskId": 14,
+			"taskTitle": "Implement End-to-End Interception Test Page",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on implement end-to-end interception test page.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 16,
+			"taskTitle": "Develop Accounts Import Page with CSV and Bulk Entry",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on develop accounts import page with csv and bulk entry.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		}
+	]
+}

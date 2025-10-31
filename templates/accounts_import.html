@@ -1,14 +1,142 @@
 {% extends 'base.html' %}
 
 {% block extra_css %}
-<!-- Accounts Import styles now in unified.css (extracted Oct 25, 2025) -->
+<style>
+.preview-table {
+  margin-top: 1rem;
+  overflow-x: auto;
+}
+
+.preview-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.preview-table th {
+  background: var(--surface, #27272a);
+  color: var(--on-surface-strong, #f4f4f5);
+  padding: 0.75rem 0.5rem;
+  text-align: left;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+
+.preview-table td {
+  padding: 0.75rem 0.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.preview-row-valid {
+  background: rgba(34, 197, 94, 0.05);
+}
+
+.preview-row-warning {
+  background: rgba(251, 191, 36, 0.05);
+}
+
+.preview-row-error {
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge-valid {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.status-badge-warning {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+}
+
+.status-badge-error {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.action-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  background: rgba(190, 242, 100, 0.15);
+  color: #bef264;
+}
+
+.action-badge-update {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+}
+
+.message-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.25rem 0 0 0;
+  font-size: 0.75rem;
+}
+
+.message-list li {
+  padding: 0.125rem 0;
+}
+
+.message-error {
+  color: #ef4444;
+}
+
+.message-warning {
+  color: #fbbf24;
+}
+
+#previewPanel {
+  margin-top: 1.5rem;
+}
+
+.summary-box {
+  background: var(--surface, #27272a);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+}
+
+.summary-item {
+  text-align: center;
+}
+
+.summary-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary, #bef264);
+}
+
+.summary-label {
+  font-size: 0.75rem;
+  color: var(--on-surface, #a1a1aa);
+  text-transform: uppercase;
+  margin-top: 0.25rem;
+}
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="page-header mb-4">
   <div>
     <h2><i class="bi bi-cloud-upload"></i> Import Accounts</h2>
-    <p class="text-muted mb-0">Bulk import email accounts from a CSV file.</p>
+    <p class="text-muted mb-0">Bulk import email accounts from a CSV file with preview and validation.</p>
   </div>
   <div class="header-actions">
     <button class="btn btn-secondary btn-sm" type="button" id="downloadTemplate">
@@ -22,7 +150,7 @@
 
 <div class="panel">
   <div class="panel-header">
-    <div class="panel-title">CSV Import</div>
+    <div class="panel-title">Step 1: Upload CSV File</div>
   </div>
   <div class="panel-body">
     <div class="info-box">
@@ -39,10 +167,10 @@
       </p>
     </div>
 
-    <form id="importForm" action="{{ url_for('accounts.api_import_accounts') }}" method="post" enctype="multipart/form-data" class="mt-2">
+    <form id="uploadForm" class="mt-2">
       <div class="mb-3">
         <label class="form-label">CSV File</label>
-        <input class="form-control" type="file" name="file" accept=".csv" required />
+        <input class="form-control" type="file" name="file" id="fileInput" accept=".csv" required />
       </div>
 
       <div class="form-check mb-3">
@@ -53,74 +181,265 @@
       </div>
 
       <div class="d-flex gap-2">
-        <button class="btn btn-secondary" type="submit">
-          <i class="bi bi-upload"></i> Import Accounts
+        <button class="btn btn-secondary" type="submit" id="previewBtn">
+          <i class="bi bi-eye"></i> Preview Import
         </button>
       </div>
     </form>
+  </div>
+</div>
 
-    <div id="resultPanel" class="mt-3" style="display:none;">
-      <div class="alert alert-info" id="resultText"></div>
+<div id="previewPanel" style="display:none;">
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">Step 2: Review & Confirm</div>
+    </div>
+    <div class="panel-body">
+      <div class="summary-box" id="summaryBox"></div>
+
+      <div class="preview-table" id="previewTableContainer"></div>
+
+      <div class="d-flex gap-2 mt-3">
+        <button class="btn btn-secondary" type="button" id="confirmImportBtn">
+          <i class="bi bi-check-circle"></i> Confirm & Import
+        </button>
+        <button class="btn btn-ghost" type="button" id="cancelBtn">
+          <i class="bi bi-x-circle"></i> Cancel
+        </button>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
-  // Download sample CSV template (client-side generated)
-  document.getElementById('downloadTemplate')?.addEventListener('click', function () {
-    const csv = 'email_address,imap_password,smtp_password,account_name,imap_host,imap_port,imap_use_ssl,smtp_host,smtp_port,smtp_use_ssl,imap_username,smtp_username,is_active\nuser@example.com,app-password-here,app-password-here,Example Account,,,1,,,1,,,1\n';
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'accounts_template.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    if (window.showSuccess) {
-      showSuccess('Template downloaded successfully');
-    }
-  });
+let previewData = null;
 
-  // AJAX import with toasts
-  const form = document.getElementById('importForm');
-  form?.addEventListener('submit', async function (e) {
-    e.preventDefault();
-    const fd = new FormData(form);
+// Download sample CSV template
+document.getElementById('downloadTemplate')?.addEventListener('click', function () {
+  const csv = 'email_address,imap_password,smtp_password,account_name,imap_host,imap_port,imap_use_ssl,smtp_host,smtp_port,smtp_use_ssl,imap_username,smtp_username,is_active\\nuser@example.com,app-password-here,app-password-here,Example Account,,,1,,,1,,,1\\n';
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'accounts_template.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  if (window.showSuccess) {
+    showSuccess('Template downloaded successfully');
+  }
+});
 
-    // Show loading toast
-    if (window.showInfo) {
-      showInfo('Importing accounts...');
-    }
+// Preview upload
+document.getElementById('uploadForm')?.addEventListener('submit', async function (e) {
+  e.preventDefault();
+  const fd = new FormData();
+  const fileInput = document.getElementById('fileInput');
+  const autoDetect = document.getElementById('auto_detect');
 
-    try {
-      const resp = await fetch(form.action, { method: 'POST', body: fd });
-      const data = await resp.json();
+  if (!fileInput.files[0]) {
+    if (window.showError) showError('Please select a CSV file');
+    return;
+  }
 
-      if (!resp.ok || data.success === false) {
-        const msg = (data && (data.error || data.message)) || ('Import failed (' + resp.status + ')');
-        if (window.showError) showError(msg);
-        document.getElementById('resultText').textContent = msg;
-        document.getElementById('resultPanel').style.display = '';
-        return;
-      }
+  fd.append('file', fileInput.files[0]);
+  if (autoDetect.checked) {
+    fd.append('auto_detect', 'on');
+  }
 
-      const summary = `Inserted: ${data.inserted || 0} • Updated: ${data.updated || 0} • Errors: ${data.errors || 0}`;
-      if (window.showSuccess) showSuccess('Import complete — ' + summary);
-      document.getElementById('resultText').textContent = summary;
-      document.getElementById('resultPanel').style.display = '';
+  if (window.showInfo) {
+    showInfo('Validating CSV...');
+  }
 
-      // Reset form on success
-      if (data.inserted > 0 || data.updated > 0) {
-        form.reset();
-      }
-    } catch (err) {
-      const msg = 'Import error: ' + (err && err.message ? err.message : String(err));
+  try {
+    const resp = await fetch('{{ url_for("accounts.api_import_accounts_preview") }}', {
+      method: 'POST',
+      body: fd
+    });
+    const data = await resp.json();
+
+    if (!resp.ok || data.success === false) {
+      const msg = data.error || 'Preview failed';
       if (window.showError) showError(msg);
-      document.getElementById('resultText').textContent = msg;
-      document.getElementById('resultPanel').style.display = '';
+      return;
     }
-  });
+
+    previewData = data;
+    renderPreview(data);
+    document.getElementById('previewPanel').style.display = '';
+    document.getElementById('previewPanel').scrollIntoView({ behavior: 'smooth' });
+
+  } catch (err) {
+    const msg = 'Preview error: ' + (err && err.message ? err.message : String(err));
+    if (window.showError) showError(msg);
+  }
+});
+
+function renderPreview(data) {
+  // Render summary
+  const summary = data.summary;
+  const summaryBox = document.getElementById('summaryBox');
+  summaryBox.innerHTML = `
+    <div class="summary-item">
+      <div class="summary-value">${summary.total}</div>
+      <div class="summary-label">Total Rows</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-value" style="color: #22c55e;">${summary.valid}</div>
+      <div class="summary-label">Valid</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-value" style="color: #fbbf24;">${summary.warnings}</div>
+      <div class="summary-label">Warnings</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-value" style="color: #ef4444;">${summary.errors}</div>
+      <div class="summary-label">Errors</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-value" style="color: #bef264;">${summary.will_insert}</div>
+      <div class="summary-label">Will Insert</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-value" style="color: #3b82f6;">${summary.will_update}</div>
+      <div class="summary-label">Will Update</div>
+    </div>
+  `;
+
+  // Render preview table
+  const tableContainer = document.getElementById('previewTableContainer');
+  const rows = data.preview.map(p => {
+    const rowClass = `preview-row-${p.status}`;
+    const statusBadge = `<span class="status-badge status-badge-${p.status}">${p.status}</span>`;
+    const actionBadge = p.action === 'update'
+      ? `<span class="action-badge action-badge-update">${p.action}</span>`
+      : `<span class="action-badge">${p.action}</span>`;
+
+    let messages = '';
+    if (p.errors && p.errors.length > 0) {
+      messages += '<ul class="message-list">';
+      p.errors.forEach(err => {
+        messages += `<li class="message-error"><i class="bi bi-x-circle"></i> ${escapeHtml(err)}</li>`;
+      });
+      messages += '</ul>';
+    }
+    if (p.warnings && p.warnings.length > 0) {
+      messages += '<ul class="message-list">';
+      p.warnings.forEach(warn => {
+        messages += `<li class="message-warning"><i class="bi bi-exclamation-triangle"></i> ${escapeHtml(warn)}</li>`;
+      });
+      messages += '</ul>';
+    }
+
+    return `
+      <tr class="${rowClass}">
+        <td>${p.row}</td>
+        <td>${statusBadge}</td>
+        <td>${actionBadge}</td>
+        <td><strong>${escapeHtml(p.email)}</strong></td>
+        <td>${escapeHtml(p.account_name || '')}</td>
+        <td>${escapeHtml(p.imap_host || '')}</td>
+        <td>${p.imap_port || ''}</td>
+        <td>${escapeHtml(p.smtp_host || '')}</td>
+        <td>${p.smtp_port || ''}</td>
+        <td>${messages}</td>
+      </tr>
+    `;
+  }).join('');
+
+  tableContainer.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Row</th>
+          <th>Status</th>
+          <th>Action</th>
+          <th>Email</th>
+          <th>Name</th>
+          <th>IMAP Host</th>
+          <th>Port</th>
+          <th>SMTP Host</th>
+          <th>Port</th>
+          <th>Messages</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+
+  // Enable/disable confirm button based on errors
+  const confirmBtn = document.getElementById('confirmImportBtn');
+  if (summary.errors > 0) {
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<i class="bi bi-exclamation-circle"></i> Cannot Import (Errors Present)';
+  } else {
+    confirmBtn.disabled = false;
+    confirmBtn.innerHTML = '<i class="bi bi-check-circle"></i> Confirm & Import';
+  }
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text || '';
+  return div.innerHTML;
+}
+
+// Confirm import
+document.getElementById('confirmImportBtn')?.addEventListener('click', async function () {
+  if (!previewData || previewData.summary.errors > 0) {
+    if (window.showError) showError('Cannot import with validation errors');
+    return;
+  }
+
+  const fileInput = document.getElementById('fileInput');
+  const autoDetect = document.getElementById('auto_detect');
+  const fd = new FormData();
+  fd.append('file', fileInput.files[0]);
+  if (autoDetect.checked) {
+    fd.append('auto_detect', 'on');
+  }
+
+  if (window.showInfo) {
+    showInfo('Importing accounts...');
+  }
+
+  try {
+    const resp = await fetch('{{ url_for("accounts.api_import_accounts") }}', {
+      method: 'POST',
+      body: fd
+    });
+    const data = await resp.json();
+
+    if (!resp.ok || data.success === false) {
+      const msg = data.error || 'Import failed';
+      if (window.showError) showError(msg);
+      return;
+    }
+
+    const summary = `✓ Inserted: ${data.inserted || 0} | Updated: ${data.updated || 0} | Errors: ${data.errors || 0}`;
+    if (window.showSuccess) showSuccess('Import complete! ' + summary);
+
+    // Reset and hide preview
+    document.getElementById('uploadForm').reset();
+    document.getElementById('previewPanel').style.display = 'none';
+    previewData = null;
+
+    // Redirect after 2 seconds
+    setTimeout(() => {
+      window.location.href = '{{ url_for("accounts.email_accounts") }}';
+    }, 2000);
+
+  } catch (err) {
+    const msg = 'Import error: ' + (err && err.message ? err.message : String(err));
+    if (window.showError) showError(msg);
+  }
+});
+
+// Cancel button
+document.getElementById('cancelBtn')?.addEventListener('click', function () {
+  document.getElementById('previewPanel').style.display = 'none';
+  previewData = null;
+});
 </script>
 {% endblock %}

@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% from 'stitch/_macros.html' import badge, icon_btn %}
+
+{% block title %}Rules - Email Management Tool{% endblock %}
+
+{% block content %}
+<div id="rules">
+<div class="tw-max-w-7xl tw-mx-auto">
+<div class="tw-flex tw-flex-col tw-sm:flex-row tw-justify-between tw-items-start tw-sm:items-center tw-gap-4 tw-mb-6">
+<div>
+<h1 class="tw-text-2xl tw-font-bold tw-text-gray-50">Moderation Rules</h1>
+<p class="tw-mt-1 tw-text-sm tw-text-gray-400">
+            Define filtering rules to automatically hold, approve, or reject incoming messages based on keywords, senders, domains, or regex patterns.
+          </p>
+</div>
+<button class="tw-flex tw-items-center tw-gap-2 tw-bg-primary tw-text-gray-900 tw-font-semibold tw-px-4 tw-py-2 tw-hover:bg-lime-400 tw-transition-colors tw-duration-200 tw-whitespace-nowrap">
+<span class="material-symbols-outlined tw-!text-xl">add_circle</span>
+          Add Rule
+        </button>
+</div>
+<div class="tw-bg-surface-dark tw-border tw-border-zinc-700 tw-overflow-hidden">
+<div class="tw-flex tw-justify-between tw-items-center tw-p-4 tw-bg-zinc-900/50 tw-border-b tw-border-zinc-700">
+<div class="tw-flex tw-items-center tw-gap-3">
+<h2 class="tw-font-semibold tw-text-gray-100">
+              Active Rules
+            </h2>
+<span class="tw-bg-primary tw-text-zinc-900 tw-text-xs tw-font-bold tw-px-2 tw-py-0.5">7 active</span>
+</div>
+<span class="tw-text-xs tw-font-medium tw-text-gray-400">Priority: High → Low</span>
+</div>
+<div class="tw-overflow-x-auto">
+<table class="tw-w-full tw-text-sm tw-text-left">
+<thead class="tw-text-xs tw-text-gray-400 tw-uppercase tw-bg-zinc-900/50">
+<tr>
+<th class="tw-px-4 tw-py-3" scope="col">Priority</th>
+<th class="tw-px-6 tw-py-3" scope="col">Name</th>
+<th class="tw-px-6 tw-py-3" scope="col">Type</th>
+<th class="tw-px-6 tw-py-3" scope="col">Condition</th>
+<th class="tw-px-6 tw-py-3" scope="col">Keywords</th>
+<th class="tw-px-6 tw-py-3" scope="col">Action</th>
+<th class="tw-px-6 tw-py-3" scope="col">Status</th>
+<th class="tw-px-6 tw-py-3 tw-text-right" scope="col">Actions</th>
+</tr>
+</thead>
+<tbody>
+<tr class="tw-border-b tw-border-zinc-700">
+<td class="tw-px-4 tw-py-4">
+<span class="tw-bg-zinc-700 tw-text-gray-200 tw-font-bold tw-w-8 tw-h-8 tw-flex tw-items-center tw-justify-center">90</span>
+</td>
+<td class="tw-px-6 tw-py-4 tw-font-medium tw-text-white tw-whitespace-nowrap">Block Invoice Keywords</td>
+<td class="tw-px-6 tw-py-4 tw-text-gray-400">KEYWORD</td>
+<td class="tw-px-6 tw-py-4 tw-text-gray-400">Body contains</td>
+<td class="tw-px-6 tw-py-4">
+<div class="tw-flex tw-items-center tw-gap-2">
+<span class="tw-bg-primary/20 tw-text-primary tw-text-xs tw-font-medium tw-px-2.5 tw-py-1">invoice</span>
+<span class="tw-bg-primary/20 tw-text-primary tw-text-xs tw-font-medium tw-px-2.5 tw-py-1">payment</span>
+<span class="tw-bg-primary/20 tw-text-primary tw-text-xs tw-font-medium tw-px-2.5 tw-py-1">urgent</span>
+</div>
+</td>
+<td class="tw-px-6 tw-py-4">
+{{ badge('HOLD') }}
+</td>
+<td class="tw-px-6 tw-py-4">
+<span class="tw-flex tw-items-center tw-gap-1.5 tw-text-primary tw-font-medium tw-text-xs">
+<span class="tw-h-2 tw-w-2 tw-bg-primary"></span> Active
+                  </span>
+</td>
+<td class="tw-px-6 tw-py-4 tw-text-right">
+<div class="tw-flex tw-items-center tw-justify-end tw-gap-4">
+{{ icon_btn('Edit', 'edit', 'primary') }}
+{{ icon_btn('Delete', 'delete', 'danger') }}
+</div>
+</td>
+</tr>
+<tr class="tw-border-b tw-border-zinc-700">
+<td class="tw-px-4 tw-py-4">
+<span class="tw-bg-zinc-700 tw-text-gray-200 tw-font-bold tw-w-8 tw-h-8 tw-flex tw-items-center tw-justify-center">75</span>
+</td>
+<td class="tw-px-6 tw-py-4 tw-font-medium tw-text-white tw-whitespace-nowrap">Check Attachments</td>
+<td class="tw-px-6 tw-py-4 tw-text-gray-400">KEYWORD</td>
+<td class="tw-px-6 tw-py-4 tw-text-gray-400">Body contains</td>
+<td class="tw-px-6 tw-py-4">
+<div class="tw-flex tw-items-center tw-gap-2">
+<span class="tw-bg-primary/20 tw-text-primary tw-text-xs tw-font-medium tw-px-2.5 tw-py-1">.pdf</span>
+<span class="tw-bg-primary/20 tw-text-primary tw-text-xs tw-font-medium tw-px-2.5 tw-py-1">.doc</span>
+<span class="tw-bg-primary/20 tw-text-primary tw-text-xs tw-font-medium tw-px-2.5 tw-py-1">.xls</span>
+</div>
+</td>
+<td class="tw-px-6 tw-py-4">
+{{ badge('HOLD') }}
+</td>
+<td class="tw-px-6 tw-py-4">
+<span class="tw-flex tw-items-center tw-gap-1.5 tw-text-primary tw-font-medium tw-text-xs">
+<span class="tw-h-2 tw-w-2 tw-bg-primary"></span> Active
+                  </span>
+</td>
+<td class="tw-px-6 tw-py-4 tw-text-right">
+<div class="tw-flex tw-items-center tw-justify-end tw-gap-4">
+{{ icon_btn('Edit', 'edit', 'primary') }}
+{{ icon_btn('Delete', 'delete', 'danger') }}
+</div>
+</td>
+</tr>
+<tr class="tw-border-b tw-border-zinc-700">
+<td class="tw-px-4 tw-py-4">
+<span class="tw-bg-zinc-700 tw-text-gray-200 tw-font-bold tw-w-8 tw-h-8 tw-flex tw-items-center tw-justify-center">60</span>
+</td>
+<td class="tw-px-6 tw-py-4 tw-font-medium tw-text-white tw-whitespace-nowrap">External Recipients</td>
+<td class="tw-px-6 tw-py-4 tw-text-gray-400">KEYWORD</td>
+<td class="tw-px-6 tw-py-4 tw-text-gray-400">Body contains</td>
+<td class="tw-px-6 tw-py-4">
+<div class="tw-flex tw-items-center tw-gap-2">
+<span class="tw-bg-primary/20 tw-text-primary tw-text-xs tw-font-medium tw-px-2.5 tw-py-1">@external.com</span>
+</div>
+</td>
+<td class="tw-px-6 tw-py-4">
+{{ badge('HOLD') }}
+</td>
+<td class="tw-px-6 tw-py-4">
+<span class="tw-flex tw-items-center tw-gap-1.5 tw-text-primary tw-font-medium tw-text-xs">
+<span class="tw-h-2 tw-w-2 tw-bg-primary"></span> Active
+                  </span>
+</td>
+<td class="tw-px-6 tw-py-4 tw-text-right">
+<div class="tw-flex tw-items-center tw-justify-end tw-gap-4">
+{{ icon_btn('Edit', 'edit', 'primary') }}
+{{ icon_btn('Delete', 'delete', 'danger') }}
+</div>
+</td>
+</tr>
+<tr class="tw-border-b tw-border-zinc-700">
+<td class="tw-px-4 tw-py-4">
+<span class="tw-bg-zinc-700 tw-text-gray-200 tw-font-bold tw-w-8 tw-h-8 tw-flex tw-items-center tw-justify-center">50</span>
+</td>
+<td class="tw-px-6 tw-py-4 tw-font-medium tw-text-white tw-whitespace-nowrap">hi</td>
+<td class="tw-px-6 tw-py-4 tw-text-gray-400">KEYWORD</td>
+<td class="tw-px-6 tw-py-4 tw-text-gray-400">Body contains</td>
+<td class="tw-px-6 tw-py-4">
+<div class="tw-flex tw-items-center tw-gap-2">
+<span class="tw-bg-primary/20 tw-text-primary tw-text-xs tw-font-medium tw-px-2.5 tw-py-1">hi</span>
+</div>
+</td>
+<td class="tw-px-6 tw-py-4">
+{{ badge('HOLD') }}
+</td>
+<td class="tw-px-6 tw-py-4">
+<span class="tw-flex tw-items-center tw-gap-1.5 tw-text-primary tw-font-medium tw-text-xs">
+<span class="tw-h-2 tw-w-2 tw-bg-primary"></span> Active
+                  </span>
+</td>
+<td class="tw-px-6 tw-py-4 tw-text-right">
+<div class="tw-flex tw-items-center tw-justify-end tw-gap-4">
+{{ icon_btn('Edit', 'edit', 'primary') }}
+{{ icon_btn('Delete', 'delete', 'danger') }}
+</div>
+</td>
+</tr>
+<tr class="tw-border-b tw-border-zinc-700 tw-last:border-b-0">
+<td class="tw-px-4 tw-py-4">
+<span class="tw-bg-zinc-700 tw-text-gray-200 tw-font-bold tw-w-8 tw-h-8 tw-flex tw-items-center tw-justify-center">50</span>
+</td>
+<td class="tw-px-6 tw-py-4 tw-font-medium tw-text-white tw-whitespace-nowrap">bro</td>
+<td class="tw-px-6 tw-py-4 tw-text-gray-400">KEYWORD</td>
+<td class="tw-px-6 tw-py-4 tw-text-gray-400">Body contains</td>
+<td class="tw-px-6 tw-py-4">
+<div class="tw-flex tw-items-center tw-gap-2">
+<span class="tw-bg-primary/20 tw-text-primary tw-text-xs tw-font-medium tw-px-2.5 tw-py-1">bro</span>
+</div>
+</td>
+<td class="tw-px-6 tw-py-4">
+{{ badge('HOLD') }}
+</td>
+<td class="tw-px-6 tw-py-4">
+<span class="tw-flex tw-items-center tw-gap-1.5 tw-text-primary tw-font-medium tw-text-xs">
+<span class="tw-h-2 tw-w-2 tw-bg-primary"></span> Active
+                  </span>
+</td>
+<td class="tw-px-6 tw-py-4 tw-text-right">
+<div class="tw-flex tw-items-center tw-justify-end tw-gap-4">
+{{ icon_btn('Edit', 'edit', 'primary') }}
+{{ icon_btn('Delete', 'delete', 'danger') }}
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+{% endblock %}

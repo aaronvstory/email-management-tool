@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Compose Email - Email Management Tool{% endblock %}
+
+{% block content %}
+<div id="compose_email">
+<main class="tw-flex-1 tw-px-6 tw-py-4">
+        <div class="tw-max-w-none tw-mx-0">
+          <header class="tw-flex tw-justify-between tw-items-center tw-mb-4">
+            <div>
+              <h1 class="tw-text-2xl tw-font-bold tw-text-white">Compose Email</h1>
+              <p class="tw-text-sm tw-text-on-surface tw-mt-1">Create and send new messages through your configured accounts.</p>
+            </div>
+            <a href="{{ url_for('emails.emails_unified_stitch') }}" class="tw-inline-flex tw-items-center tw-gap-2 tw-text-primary tw-text-sm tw-font-medium tw-px-2 tw-py-1 hover:tw-bg-primary/10 tw-transition-colors">
+              <span class="material-symbols-outlined tw-!text-base">arrow_back</span>
+              Back to Emails
+            </a>
+          </header>
+
+          <form method="POST" action="{{ url_for('compose.compose_email') }}" class="tw-bg-background tw-border tw-border-border tw-p-6 tw-sm:p-8 tw-space-y-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="tw-grid tw-grid-cols-1 tw-md:grid-cols-2 tw-gap-x-6 tw-gap-y-6">
+              <div>
+                <label class="tw-block tw-text-sm tw-font-medium tw-text-on-surface" for="from-account">From Account</label>
+                <select class="tw-mt-1 tw-block tw-w-full tw-border-border tw-bg-surface tw-text-on-surface-strong tw-shadow-sm tw-focus:border-primary tw-focus:ring-0 tw-sm:text-sm" id="from-account" name="from_account" required>
+                  <option value="">Select sending account...</option>
+                  {% for account in accounts %}
+                  <option value="{{ account['id'] }}">{{ account['account_name'] }} ({{ account['email_address'] }})</option>
+                  {% endfor %}
+                </select>
+                <p class="tw-mt-1.5 tw-text-xs tw-text-on-surface">Select which email account to send from</p>
+              </div>
+              <div>
+                <label class="tw-block tw-text-sm tw-font-medium tw-text-on-surface" for="to">To</label>
+                <input class="tw-mt-1 tw-block tw-w-full tw-border-border tw-bg-surface tw-text-on-surface-strong tw-shadow-sm tw-focus:border-primary tw-focus:ring-0 tw-sm:text-sm" id="to" name="to" placeholder="recipient@example.com" type="email" required />
+                <p class="tw-mt-1.5 tw-text-xs tw-text-on-surface">Enter recipient's email address</p>
+              </div>
+            </div>
+            <div>
+              <label class="tw-block tw-text-sm tw-font-medium tw-text-on-surface" for="cc">CC</label>
+              <input class="tw-mt-1 tw-block tw-w-full tw-border-border tw-bg-surface tw-text-on-surface-strong tw-shadow-sm tw-focus:border-primary tw-focus:ring-0 tw-sm:text-sm" id="cc" name="cc" placeholder="cc1@example.com, cc2@example.com" type="email" />
+              <p class="tw-mt-1.5 tw-text-xs tw-text-on-surface">Optional. Enter CC recipients (comma-separated for multiple)</p>
+            </div>
+            <div>
+              <div class="tw-flex tw-justify-between tw-items-baseline">
+                <label class="tw-block tw-text-sm tw-font-medium tw-text-on-surface" for="subject">Subject</label>
+                <span class="tw-text-xs tw-text-on-surface">0/200 characters</span>
+              </div>
+              <input class="tw-mt-1 tw-block tw-w-full tw-border-border tw-bg-surface tw-text-on-surface-strong tw-shadow-sm tw-focus:border-primary tw-focus:ring-0 tw-sm:text-sm" id="subject" name="subject" placeholder="Enter email subject" type="text" required />
+            </div>
+            <div>
+              <label class="tw-block tw-text-sm tw-font-medium tw-text-on-surface tw-mb-2">Message</label>
+              <div class="tw-flex tw-items-center tw-gap-2 tw-mb-3 tw-flex-wrap">
+                <button type="button" class="tw-px-3 tw-py-1 tw-text-xs tw-font-semibold tw-bg-zinc-800 tw-text-on-surface tw-hover:bg-zinc-700 tw-hover:text-on-surface-strong tw-transition-colors">FORMAL</button>
+                <button type="button" class="tw-px-3 tw-py-1 tw-text-xs tw-font-semibold tw-bg-zinc-800 tw-text-on-surface tw-hover:bg-zinc-700 tw-hover:text-on-surface-strong tw-transition-colors">CASUAL</button>
+                <button type="button" class="tw-px-3 tw-py-1 tw-text-xs tw-font-semibold tw-bg-zinc-800 tw-text-on-surface tw-hover:bg-zinc-700 tw-hover:text-on-surface-strong tw-transition-colors">SIGNATURE</button>
+                <button type="button" class="tw-px-3 tw-py-1 tw-text-xs tw-font-semibold tw-text-on-surface tw-hover:bg-zinc-700 tw-hover:text-on-surface-strong tw-transition-colors">CLEAR</button>
+              </div>
+              <textarea class="tw-block tw-w-full tw-border-border tw-bg-surface tw-text-on-surface-strong tw-shadow-sm tw-focus:border-primary tw-focus:ring-0 tw-sm:text-sm" id="body" name="body" placeholder="Type your message here..." rows="12" required></textarea>
+            </div>
+            <div class="tw-mt-6 tw-flex tw-justify-end tw-items-center tw-gap-3">
+              <button type="button" class="tw-px-4 tw-py-2 tw-text-sm tw-font-medium tw-text-on-surface tw-hover:bg-surface tw-transition-colors">Discard</button>
+              <button type="button" class="tw-px-4 tw-py-2 tw-text-sm tw-font-medium tw-bg-surface tw-border tw-border-border tw-hover:bg-zinc-700 tw-text-on-surface-strong tw-transition-colors">Save Draft</button>
+              <button type="submit" class="tw-flex tw-items-center tw-gap-2 tw-px-5 tw-py-2 tw-text-sm tw-font-bold tw-bg-primary tw-text-zinc-900 tw-hover:bg-opacity-90 tw-transition-colors">
+                Send Email
+                <span class="material-symbols-outlined tw-!text-base">send</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </main>
+    </div>
+  </div>
+</div>
+{% endblock %}

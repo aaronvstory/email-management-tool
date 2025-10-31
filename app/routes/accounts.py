@@ -581,6 +581,35 @@ def email_accounts():
     return render_template('accounts.html', accounts=accounts)
 
 
+@accounts_bp.route('/accounts/stitch')
+@login_required
+def email_accounts_stitch():
+    """Preview the new Stitch theme accounts page (Tailwind-based)"""
+    if current_user.role != 'admin':
+        flash('Admin access required', 'error')
+        return redirect(url_for('dashboard.dashboard'))
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    accounts = cursor.execute(
+        """
+        SELECT id, account_name, email_address,
+               imap_host, imap_port, imap_username, imap_use_ssl,
+               smtp_host, smtp_port, smtp_username, smtp_use_ssl,
+               is_active, last_checked, last_error,
+               created_at, updated_at
+        FROM email_accounts
+        ORDER BY account_name
+        """
+    ).fetchall()
+
+    conn.close()
+
+    return render_template('stitch/accounts.html', accounts=accounts)
+
+
 @accounts_bp.route('/accounts/import', methods=['GET'])
 @login_required
 def accounts_import_page():
@@ -721,6 +750,132 @@ def add_email_account():
     return render_template('add_account.html')
 
 
+@accounts_bp.route('/accounts/add/stitch', methods=['GET', 'POST'])
+@login_required
+def add_email_account_stitch():
+    """Stitch design system variant of add_email_account"""
+    if current_user.role != 'admin':
+        flash('Admin access required', 'error')
+        return redirect(url_for('dashboard.dashboard_stitch'))
+
+    if request.method == 'POST':
+        account_name = request.form.get('account_name')
+        email_address = request.form.get('email_address')
+        start_watcher = request.form.get('start_watcher') == 'on'
+
+        use_auto_detect = request.form.get('use_auto_detect') == 'on'
+        if use_auto_detect and email_address:
+            auto = _detect_email_settings(email_address)
+            imap_host = auto['imap_host']; imap_port = auto['imap_port']; imap_use_ssl = auto['imap_use_ssl']
+            smtp_host = auto.get('smtp_host')
+            smtp_port = auto.get('smtp_port', 465)
+            smtp_use_ssl = auto.get('smtp_use_ssl', True)
+            imap_username = email_address
+            smtp_username = email_address
+            imap_password = request.form.get('imap_password')
+            smtp_password = request.form.get('smtp_password')
+            # Probe to self-heal if credentials provided
+            if imap_password:
+                try:
+                    imap_choice = _negotiate_imap(imap_host, imap_username, imap_password, imap_port, imap_use_ssl)
+                    imap_host = imap_choice['imap_host']; imap_port = imap_choice['imap_port']; imap_use_ssl = imap_choice['imap_use_ssl']
+                except Exception:
+                    pass
+            if smtp_password and smtp_host:
+                try:
+                    smtp_choice = _negotiate_smtp(smtp_host, smtp_username, smtp_password, smtp_port, smtp_use_ssl)
+                    smtp_host = smtp_choice['smtp_host']; smtp_port = smtp_choice['smtp_port']; smtp_use_ssl = smtp_choice['smtp_use_ssl']
+                except Exception:
+                    pass
+        else:
+            imap_host = request.form.get('imap_host')
+            imap_port = _to_int(request.form.get('imap_port'), 993)
+            imap_username = request.form.get('imap_username')
+            imap_password = request.form.get('imap_password')
+            imap_use_ssl = request.form.get('imap_use_ssl') == 'on'
+
+            smtp_host = request.form.get('smtp_host') or None
+            smtp_port = _to_int(request.form.get('smtp_port'), 465) if smtp_host else None
+            smtp_username = request.form.get('smtp_username') or None
+            smtp_password = request.form.get('smtp_password') or None
+            smtp_use_ssl = request.form.get('smtp_use_ssl') == 'on' if smtp_host else False
+
+            if smtp_host and smtp_port:
+                smtp_use_ssl, imap_use_ssl = _normalize_modes(int(smtp_port), bool(smtp_use_ssl), int(imap_port or 0), bool(imap_use_ssl))
+            if imap_password and imap_username and imap_host:
+                try:
+                    ch = _negotiate_imap(imap_host, imap_username, imap_password, imap_port, imap_use_ssl)
+                    imap_host = ch['imap_host']; imap_port = ch['imap_port']; imap_use_ssl = ch['imap_use_ssl']
+                except Exception:
+                    pass
+            if smtp_password and smtp_username and smtp_host:
+                try:
+                    ch = _negotiate_smtp(smtp_host, smtp_username, smtp_password, smtp_port, smtp_use_ssl)
+                    smtp_host = ch['smtp_host']; smtp_port = ch['smtp_port']; smtp_use_ssl = ch['smtp_use_ssl']
+                except Exception:
+                    pass
+
+        # IMAP is REQUIRED
+        imap_ok, imap_msg = _test_email_connection('imap', str(imap_host or ''), _to_int(imap_port, 993), str(imap_username or ''), imap_password or '', bool(imap_use_ssl))
+        if not imap_ok:
+            flash(f'IMAP connection failed: {imap_msg}', 'error')
+            return render_template('stitch/account-add.html')
+
+        # SMTP is OPTIONAL - only test if provided
+        if smtp_host and smtp_username and smtp_password:
+            smtp_ok, smtp_msg = _test_email_connection('smtp', str(smtp_host), _to_int(smtp_port, 465), str(smtp_username), smtp_password, bool(smtp_use_ssl))
+            if not smtp_ok:
+                flash(f'SMTP connection failed: {smtp_msg}', 'error')
+                return render_template('stitch/account-add.html')
+
+        encrypted_imap_password = encrypt_credential(imap_password)
+        encrypted_smtp_password = encrypt_credential(smtp_password) if smtp_password else None
+
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO email_accounts
+            (account_name, email_address, imap_host, imap_port, imap_username, imap_password, imap_use_ssl,
+             smtp_host, smtp_port, smtp_username, smtp_password, smtp_use_ssl, is_active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+            """,
+            (
+                account_name, email_address, imap_host, imap_port, imap_username, encrypted_imap_password, imap_use_ssl,
+                smtp_host, smtp_port, smtp_username, encrypted_smtp_password, smtp_use_ssl,
+            ),
+        )
+        account_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        if account_id is None:
+            flash('Failed to create account: database error', 'error')
+            return redirect(url_for('accounts.email_accounts_stitch'))
+
+        # Start IMAP watcher ONLY if user requested it
+        if start_watcher:
+            try:
+                from simple_app import monitor_imap_account, imap_threads
+                import threading
+                thread = threading.Thread(target=monitor_imap_account, args=(account_id,), daemon=True)
+                imap_threads[account_id] = thread
+                thread.start()
+                flash('Account added and monitoring started successfully', 'success')
+            except Exception as e:
+                try:
+                    current_app.logger.warning(f"Failed to start IMAP monitor thread for account {account_id}: {e}")
+                except Exception:
+                    pass
+                flash('Account added successfully (monitoring not started - you can start it manually from the accounts page)', 'warning')
+        else:
+            flash('Account added successfully (monitoring not started)', 'success')
+
+        return redirect(url_for('accounts.email_accounts_stitch'))
+
+    return render_template('stitch/account-add.html')
+
+
 @accounts_bp.route('/api/accounts/import', methods=['POST'])
 @csrf.exempt
 @login_required
@@ -822,6 +977,169 @@ def api_import_accounts():
     finally:
         conn.close()
     return jsonify({'success': True, 'inserted': inserted, 'updated': updated, 'errors': errors})
+
+
+@accounts_bp.route('/api/accounts/import/preview', methods=['POST'])
+@csrf.exempt
+@login_required
+def api_import_accounts_preview():
+    """Parse CSV and return validation preview before import"""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+    
+    file = request.files.get('file')
+    auto_detect = (request.form.get('auto_detect') == 'on') or (request.args.get('auto_detect') == '1')
+    
+    if not file:
+        return jsonify({'success': False, 'error': 'CSV file is required'}), 400
+    
+    try:
+        content = file.read().decode('utf-8', errors='ignore')
+        reader = csv.DictReader(StringIO(content))
+        rows = list(reader)
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Invalid CSV format: {e}'}), 400
+    
+    if not rows:
+        return jsonify({'success': False, 'error': 'CSV file is empty'}), 400
+    
+    preview = []
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    try:
+        cur = conn.cursor()
+        for idx, row in enumerate(rows, start=1):
+            errors = []
+            warnings = []
+            
+            try:
+                # Normalize column names
+                r = {k.strip().lower(): (v.strip() if isinstance(v, str) else v) for k, v in row.items()}
+                
+                # Validate required fields
+                email = r.get('email_address') or r.get('email')
+                if not email:
+                    errors.append('Missing email_address')
+                
+                imap_pwd = r.get('imap_password')
+                smtp_pwd = r.get('smtp_password')
+                if not imap_pwd:
+                    errors.append('Missing imap_password')
+                if not smtp_pwd:
+                    errors.append('Missing smtp_password')
+                
+                # Helper functions
+                def _to_int(v, d=None):
+                    try:
+                        return int(v)
+                    except Exception:
+                        return d
+                
+                def _to_bool(v, d=None):
+                    if v is None:
+                        return d
+                    s = str(v).strip().lower()
+                    if s in ('1', 'true', 'yes', 'y'):
+                        return True
+                    if s in ('0', 'false', 'no', 'n'):
+                        return False
+                    return d
+                
+                # Parse fields
+                account_name = r.get('account_name') or email
+                imap_user = r.get('imap_username') or email
+                smtp_user = r.get('smtp_username') or email
+                imap_host = r.get('imap_host')
+                smtp_host = r.get('smtp_host')
+                imap_port = _to_int(r.get('imap_port'), 993)
+                smtp_port = _to_int(r.get('smtp_port'), 465)
+                imap_ssl = _to_bool(r.get('imap_use_ssl'), True)
+                smtp_ssl = _to_bool(r.get('smtp_use_ssl'), True)
+                is_active = _to_bool(r.get('is_active'), True)
+                
+                # Auto-detect if enabled and hosts missing
+                if auto_detect and email and (not imap_host or not smtp_host):
+                    try:
+                        auto = _detect_email_settings(email)
+                        if not imap_host:
+                            imap_host = auto['imap_host']
+                            warnings.append(f'Auto-detected IMAP: {imap_host}:{imap_port}')
+                        if not smtp_host:
+                            smtp_host = auto['smtp_host']
+                            warnings.append(f'Auto-detected SMTP: {smtp_host}:{smtp_port}')
+                    except Exception as e:
+                        errors.append(f'Auto-detect failed: {e}')
+                
+                # Check if account exists
+                action = 'insert'
+                if email:
+                    existing = cur.execute(
+                        "SELECT id FROM email_accounts WHERE email_address=?",
+                        (email,)
+                    ).fetchone()
+                    if existing:
+                        action = 'update'
+                        warnings.append('Will update existing account')
+                
+                # Validate hosts are present
+                if not imap_host:
+                    errors.append('Missing imap_host (auto-detect failed)')
+                if not smtp_host:
+                    errors.append('Missing smtp_host (auto-detect failed)')
+                
+                preview.append({
+                    'row': idx,
+                    'email': email or '(missing)',
+                    'account_name': account_name,
+                    'imap_host': imap_host,
+                    'imap_port': imap_port,
+                    'smtp_host': smtp_host,
+                    'smtp_port': smtp_port,
+                    'is_active': is_active,
+                    'action': action,
+                    'status': 'error' if errors else ('warning' if warnings else 'valid'),
+                    'errors': errors,
+                    'warnings': warnings
+                })
+                
+            except Exception as e:
+                preview.append({
+                    'row': idx,
+                    'email': row.get('email_address', '(error parsing)'),
+                    'account_name': '',
+                    'imap_host': '',
+                    'imap_port': '',
+                    'smtp_host': '',
+                    'smtp_port': '',
+                    'is_active': '',
+                    'action': 'error',
+                    'status': 'error',
+                    'errors': [f'Parse error: {str(e)}'],
+                    'warnings': []
+                })
+    finally:
+        conn.close()
+    
+    # Summary stats
+    total = len(preview)
+    valid = len([p for p in preview if p['status'] == 'valid'])
+    warnings_count = len([p for p in preview if p['status'] == 'warning'])
+    errors_count = len([p for p in preview if p['status'] == 'error'])
+    inserts = len([p for p in preview if p['action'] == 'insert' and p['status'] != 'error'])
+    updates = len([p for p in preview if p['action'] == 'update' and p['status'] != 'error'])
+    
+    return jsonify({
+        'success': True,
+        'preview': preview,
+        'summary': {
+            'total': total,
+            'valid': valid,
+            'warnings': warnings_count,
+            'errors': errors_count,
+            'will_insert': inserts,
+            'will_update': updates
+        }
+    })
 
 @accounts_bp.route('/api/accounts/<int:account_id>/monitor/start', methods=['POST'])
 @csrf.exempt

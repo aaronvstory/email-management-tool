@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}Diagnostics & Logs - Email Management Tool{% endblock %}
+
+{% block content %}
+<div id="diagnostics-page">
+<main class="tw-flex-1 tw-p-6 tw-space-y-6">
+    <div class="tw-flex tw-items-center tw-justify-between">
+        <div>
+            <h1 class="tw-text-2xl tw-font-bold tw-text-white">Diagnostics & Live Logs</h1>
+            <p class="tw-text-zinc-400 tw-text-sm tw-mt-1">Monitor application logs in real-time</p>
+        </div>
+        <div class="tw-flex tw-gap-2">
+            <button id="toggleAutoRefresh" onclick="toggleAutoRefresh()" class="tw-bg-zinc-700 tw-text-zinc-200 tw-font-semibold tw-py-2 tw-px-4 hover:tw-bg-zinc-600 tw-transition-colors tw-flex tw-items-center tw-gap-2">
+                <span class="material-symbols-outlined tw-text-base">play_arrow</span>
+                <span id="autoRefreshText">Start Auto-Refresh</span>
+            </button>
+            <button onclick="refreshLogs()" class="tw-bg-zinc-700 tw-text-zinc-200 tw-font-semibold tw-py-2 tw-px-4 hover:tw-bg-zinc-600 tw-transition-colors tw-flex tw-items-center tw-gap-2">
+                <span class="material-symbols-outlined tw-text-base">refresh</span>
+                Refresh Now
+            </button>
+            <button onclick="clearLogs()" class="tw-bg-zinc-700 tw-text-zinc-200 tw-font-semibold tw-py-2 tw-px-4 hover:tw-bg-zinc-600 tw-transition-colors tw-flex tw-items-center tw-gap-2">
+                <span class="material-symbols-outlined tw-text-base">delete</span>
+                Clear
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+        <h3 class="tw-text-zinc-200 tw-font-semibold tw-mb-3">Filters</h3>
+        <div class="tw-grid tw-grid-cols-1 tw-md:grid-cols-4 tw-gap-4">
+            <div>
+                <label for="severityFilter" class="tw-block tw-text-sm tw-font-medium tw-text-zinc-300 tw-mb-2">Severity</label>
+                <select id="severityFilter" onchange="refreshLogs()" class="tw-w-full tw-bg-zinc-900 tw-border tw-border-zinc-700 tw-text-zinc-100 tw-px-3 tw-py-2 tw-text-sm focus:tw-ring-primary focus:tw-border-primary">
+                    <option value="">All Levels</option>
+                    <option value="ERROR">ERROR</option>
+                    <option value="WARNING">WARNING</option>
+                    <option value="INFO">INFO</option>
+                    <option value="DEBUG">DEBUG</option>
+                </select>
+            </div>
+            <div>
+                <label for="componentFilter" class="tw-block tw-text-sm tw-font-medium tw-text-zinc-300 tw-mb-2">Component</label>
+                <input
+                    type="text"
+                    id="componentFilter"
+                    onchange="refreshLogs()"
+                    placeholder="e.g., imap_watcher, smtp"
+                    class="tw-w-full tw-bg-zinc-900 tw-border tw-border-zinc-700 tw-text-zinc-100 tw-px-3 tw-py-2 tw-text-sm focus:tw-ring-primary focus:tw-border-primary"
+                />
+            </div>
+            <div>
+                <label for="limitFilter" class="tw-block tw-text-sm tw-font-medium tw-text-zinc-300 tw-mb-2">Limit</label>
+                <select id="limitFilter" onchange="refreshLogs()" class="tw-w-full tw-bg-zinc-900 tw-border tw-border-zinc-700 tw-text-zinc-100 tw-px-3 tw-py-2 tw-text-sm focus:tw-ring-primary focus:tw-border-primary">
+                    <option value="50">50 entries</option>
+                    <option value="100" selected>100 entries</option>
+                    <option value="200">200 entries</option>
+                    <option value="500">500 entries</option>
+                </select>
+            </div>
+            <div class="tw-flex tw-items-end">
+                <button onclick="clearFilters()" class="tw-w-full tw-bg-zinc-700 tw-text-zinc-200 tw-font-semibold tw-py-2 tw-px-4 hover:tw-bg-zinc-600 tw-transition-colors">
+                    Clear Filters
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Log Stats -->
+    <div class="tw-grid tw-grid-cols-1 tw-md:grid-cols-4 tw-gap-4">
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+            <div class="tw-text-zinc-400 tw-text-sm tw-font-medium">Total Logs</div>
+            <div id="totalCount" class="tw-text-white tw-text-2xl tw-font-bold tw-mt-1">-</div>
+        </div>
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+            <div class="tw-text-zinc-400 tw-text-sm tw-font-medium">Errors</div>
+            <div id="errorCount" class="tw-text-red-400 tw-text-2xl tw-font-bold tw-mt-1">-</div>
+        </div>
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+            <div class="tw-text-zinc-400 tw-text-sm tw-font-medium">Warnings</div>
+            <div id="warningCount" class="tw-text-amber-400 tw-text-2xl tw-font-bold tw-mt-1">-</div>
+        </div>
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+            <div class="tw-text-zinc-400 tw-text-sm tw-font-medium">Auto-Refresh</div>
+            <div id="refreshStatus" class="tw-text-zinc-400 tw-text-2xl tw-font-bold tw-mt-1">OFF</div>
+        </div>
+    </div>
+
+    <!-- Live Logs -->
+    <div class="tw-bg-background tw-border tw-border-border">
+        <div class="tw-px-4 tw-py-3 tw-border-b tw-border-border">
+            <h3 class="tw-text-zinc-200 tw-font-semibold">Live Logs</h3>
+        </div>
+        <div class="tw-p-4">
+            <div id="logContainer" class="tw-space-y-2 tw-max-h-[600px] tw-overflow-y-auto">
+                <div class="tw-text-zinc-500 tw-text-sm tw-text-center tw-py-8">Loading logs...</div>
+            </div>
+        </div>
+    </div>
+</main>
+</div>
+
+<script>
+let autoRefreshInterval = null;
+let autoRefreshActive = false;
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    refreshLogs();
+});
+
+// Refresh logs from API
+async function refreshLogs() {
+    const severity = document.getElementById('severityFilter').value;
+    const component = document.getElementById('componentFilter').value;
+    const limit = document.getElementById('limitFilter').value;
+
+    try {
+        const params = new URLSearchParams();
+        if (severity) params.append('severity', severity);
+        if (component) params.append('component', component);
+        if (limit) params.append('limit', limit);
+
+        const response = await fetch(`/api/logs?${params.toString()}`);
+        const data = await response.json();
+
+        renderLogs(data.logs || []);
+        updateStats(data.logs || []);
+
+    } catch (error) {
+        console.error('Failed to fetch logs:', error);
+        document.getElementById('logContainer').innerHTML = `
+            <div class="tw-text-red-400 tw-text-sm tw-text-center tw-py-8">
+                Failed to load logs: ${error.message}
+            </div>
+        `;
+    }
+}
+
+// Render logs to the UI
+function renderLogs(logs) {
+    const container = document.getElementById('logContainer');
+
+    if (logs.length === 0) {
+        container.innerHTML = `
+            <div class="tw-text-zinc-500 tw-text-sm tw-text-center tw-py-8">
+                No logs found matching filters
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = logs.map(log => {
+        const level = (log.level || 'INFO').toUpperCase();
+        const levelColor = level === 'ERROR' ? 'tw-text-red-400' :
+                          level === 'WARNING' ? 'tw-text-amber-400' :
+                          level === 'INFO' ? 'tw-text-blue-400' :
+                          'tw-text-zinc-400';
+
+        const levelBg = level === 'ERROR' ? 'tw-bg-red-500/15' :
+                       level === 'WARNING' ? 'tw-bg-amber-500/15' :
+                       level === 'INFO' ? 'tw-bg-blue-500/15' :
+                       'tw-bg-zinc-700';
+
+        return `
+            <div class="tw-bg-zinc-900 tw-border tw-border-zinc-800 tw-p-3">
+                <div class="tw-flex tw-items-start tw-gap-3">
+                    <span class="tw-text-xs tw-font-bold tw-px-2 tw-py-0.5 ${levelBg} ${levelColor}">${level}</span>
+                    <div class="tw-flex-1">
+                        <div class="tw-text-white tw-text-sm tw-font-mono">${escapeHtml(log.message || '')}</div>
+                        ${log.name ? `<div class="tw-text-zinc-500 tw-text-xs tw-mt-1">Component: ${escapeHtml(log.name)}</div>` : ''}
+                        <div class="tw-text-zinc-500 tw-text-xs tw-mt-1">${formatTimestamp(log.timestamp || log.time)}</div>
+                        ${log.exception ? `<details class="tw-mt-2"><summary class="tw-text-red-400 tw-text-xs tw-cursor-pointer">Stack Trace</summary><pre class="tw-text-red-300 tw-text-xs tw-mt-2 tw-p-2 tw-bg-zinc-950 tw-overflow-x-auto">${escapeHtml(log.exception)}</pre></details>` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Update stats counters
+function updateStats(logs) {
+    const errorCount = logs.filter(log => (log.level || '').toUpperCase() === 'ERROR').length;
+    const warningCount = logs.filter(log => (log.level || '').toUpperCase() === 'WARNING').length;
+
+    document.getElementById('totalCount').textContent = logs.length;
+    document.getElementById('errorCount').textContent = errorCount;
+    document.getElementById('warningCount').textContent = warningCount;
+}
+
+// Toggle auto-refresh
+function toggleAutoRefresh() {
+    if (autoRefreshActive) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+        autoRefreshActive = false;
+        document.getElementById('autoRefreshText').textContent = 'Start Auto-Refresh';
+        document.getElementById('refreshStatus').textContent = 'OFF';
+        document.getElementById('refreshStatus').className = 'tw-text-zinc-400 tw-text-2xl tw-font-bold tw-mt-1';
+        document.getElementById('toggleAutoRefresh').querySelector('.material-symbols-outlined').textContent = 'play_arrow';
+    } else {
+        autoRefreshInterval = setInterval(refreshLogs, 5000);  // Refresh every 5 seconds
+        autoRefreshActive = true;
+        document.getElementById('autoRefreshText').textContent = 'Stop Auto-Refresh';
+        document.getElementById('refreshStatus').textContent = 'ON';
+        document.getElementById('refreshStatus').className = 'tw-text-green-400 tw-text-2xl tw-font-bold tw-mt-1';
+        document.getElementById('toggleAutoRefresh').querySelector('.material-symbols-outlined').textContent = 'stop';
+        refreshLogs();  // Immediate refresh
+    }
+}
+
+// Clear logs display
+function clearLogs() {
+    document.getElementById('logContainer').innerHTML = `
+        <div class="tw-text-zinc-500 tw-text-sm tw-text-center tw-py-8">
+            Logs cleared. Click "Refresh Now" to reload.
+        </div>
+    `;
+    document.getElementById('totalCount').textContent = '0';
+    document.getElementById('errorCount').textContent = '0';
+    document.getElementById('warningCount').textContent = '0';
+}
+
+// Clear filters
+function clearFilters() {
+    document.getElementById('severityFilter').value = '';
+    document.getElementById('componentFilter').value = '';
+    document.getElementById('limitFilter').value = '100';
+    refreshLogs();
+}
+
+// Helper: Escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Helper: Format timestamp
+function formatTimestamp(timestamp) {
+    if (!timestamp) return 'Unknown';
+    try {
+        return new Date(timestamp).toLocaleString();
+    } catch (e) {
+        return timestamp;
+    }
+}
+</script>
+{% endblock %}

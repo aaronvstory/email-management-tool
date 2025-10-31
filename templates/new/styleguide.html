@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Stitch UI Style Guide</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#bef264",
+            background: "#18181b",
+            surface: "#27272a",
+            "surface-hover": "#323238",
+            "on-surface": "#a1a1aa",
+            "on-surface-strong": "#f4f4f5",
+          },
+          fontFamily: {
+            display: ["Inter", "system-ui", "sans-serif"],
+          },
+          borderRadius: {
+            DEFAULT: "0px", // Sharp, modern corners are default
+          },
+        },
+      },
+    };
+  </script>
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+    }
+  </style>
+</head>
+
+<body class="bg-background text-slate-200 antialiased">
+  <div class="max-w-7xl mx-auto p-8 md:p-16 space-y-16">
+    <header class="space-y-2">
+      <h1 class="text-4xl md:text-5xl font-bold text-white">Stitch UI Style Guide</h1>
+      <p class="text-slate-400 text-lg">
+        The application of the defined color palette, typography, borders, and spacing for the modern "Stitch" theme.
+      </p>
+    </header>
+    <main class="space-y-12">
+      <section class="space-y-6">
+        <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Typography</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+          <div class="space-y-4">
+            <h1 class="text-4xl font-bold text-white">H1 Heading</h1>
+            <h2 class="text-3xl font-bold text-white">H2 Heading</h2>
+            <h3 class="text-2xl font-bold text-white">H3 Heading
+            </h3>
+            <h4 class="text-xl font-semibold text-white">H4 Heading</h4>
+            <p class="text-base text-slate-400">This is a standard body text. It is used for descriptive text,
+              paragraphs, and other general content. The line height is set for optimal readability.</p>
+            <a class="text-primary hover:underline" href="#">This is a hyperlink</a>
+          </div>
+          <div class="bg-surface p-4 space-y-2">
+            <h5 class="font-semibold text-white">Notes</h5>
+            <ul class="list-disc list-inside space-y-1 text-slate-400 text-sm">
+              <li><strong>Font:</strong> Inter / system-ui, consistent with the existing style guide.</li>
+              <li>Keep heading sizes compact (as overridden in `base.html`).</li>
+              <li>Do not use thin font weights on dark backgrounds.</li>
+              <li>Ensure sufficient contrast for all text. Use `on-surface-strong` for key text.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      <section class="space-y-6">
+        <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Color Palette</h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div class="flex flex-col">
+            <div class="h-24 w-full bg-primary"></div>
+            <div class="p-3 bg-surface">
+              <p class="font-semibold text-white">Primary</p>
+              <p class="text-sm text-slate-400">#bef264</p>
+            </div>
+          </div>
+          <div class="flex flex-col">
+            <div class="h-24 w-full bg-background border border-slate-700"></div>
+            <div class="p-3 bg-surface">
+              <p class="font-semibold text-white">Background</p>
+              <p class="text-sm text-slate-400">#18181b</p>
+            </div>
+          </div>
+          <div class="flex flex-col">
+            <div class="h-24 w-full bg-surface border border-slate-700"></div>
+            <div class="p-3 bg-surface">
+              <p class="font-semibold text-white">Surface</p>
+              <p class="text-sm text-slate-400">#27272a</p>
+            </div>
+          </div>
+          <div class="flex flex-col">
+            <div class="h-24 w-full bg-on-surface-strong"></div>
+            <div class="p-3 bg-surface">
+              <p class="font-semibold text-white">High-Contrast Text</p>
+              <p class="text-sm text-slate-400">#f4f4f5 (on-surface-strong)</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="space-y-6">
+        <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Buttons</h2>
+        <div class="space-y-12">
+          <p class="text-slate-400">Buttons have no border radius for a sharp, modern look. The `.btn` class is the
+            base, with modifiers like `.btn-primary-modern` for primary actions.</p>
+          <div class="space-y-6">
+            <h3 class="text-xl font-semibold text-white">Primary Modern Buttons</h3>
+            <div class="p-6 bg-surface grid grid-cols-2 md:grid-cols-4 gap-6 items-center justify-start">
+              <div class="flex flex-col items-start gap-2">
+                <button
+                  class="btn btn-primary-modern px-5 py-2 bg-primary text-black font-semibold text-sm transition-colors duration-200 hover:bg-primary/90 active:bg-primary/80">Primary
+                  Action</button>
+                <p class="text-xs font-medium text-slate-400 uppercase">Default</p>
+              </div>
+              <div class="flex flex-col items-start gap-2">
+                <button class="btn btn-primary-modern px-5 py-2 bg-primary/90 text-black font-semibold text-sm">Hover
+                  State</button>
+                <p class="text-xs font-medium text-slate-400 uppercase">Hover</p>
+              </div>
+              <div class="flex flex-col items-start gap-2">
+                <button class="btn btn-primary-modern px-5 py-2 bg-primary/80 text-black font-semibold text-sm">Active
+                  State</button>
+                <p class="text-xs font-medium text-slate-400 uppercase">Active</p>
+              </div>
+              <div class="flex flex-col items-start gap-2">
+                <button
+                  class="btn btn-primary-modern px-5 py-2 bg-primary/40 text-black/40 font-semibold text-sm cursor-not-allowed"
+                  disabled="">Disabled</button>
+                <p class="text-xs font-medium text-slate-400 uppercase">Disabled</p>
+              </div>
+            </div>
+          </div>
+          <div class="space-y-6">
+            <h3 class="text-xl font-semibold text-white">Secondary &amp; Ghost Buttons</h3>
+            <div class="p-6 bg-surface grid grid-cols-2 md:grid-cols-4 gap-6 items-center justify-start">
+              <div class="flex flex-col items-start gap-2">
+                <button
+                  class="btn btn-secondary px-5 py-2 bg-transparent text-slate-200 font-semibold text-sm border border-slate-600 transition-colors duration-200 hover:bg-surface-hover active:bg-slate-600">Secondary
+                  Action</button>
+                <p class="text-xs font-medium text-slate-400 uppercase">Default</p>
+              </div>
+              <div class="flex flex-col items-start gap-2">
+                <button
+                  class="btn btn-secondary px-5 py-2 bg-surface-hover text-slate-200 font-semibold text-sm border border-slate-600">Hover
+                  State</button>
+                <p class="text-xs font-medium text-slate-400 uppercase">Hover</p>
+              </div>
+              <div class="flex flex-col items-start gap-2">
+                <button
+                  class="btn btn-secondary px-5 py-2 bg-slate-600 text-slate-200 font-semibold text-sm border border-slate-600">Active
+                  State</button>
+                <p class="text-xs font-medium text-slate-400 uppercase">Active</p>
+              </div>
+              <div class="flex flex-col items-start gap-2">
+                <button
+                  class="btn btn-secondary px-5 py-2 bg-transparent text-slate-200/40 font-semibold text-sm border border-slate-600/40 cursor-not-allowed"
+                  disabled="">Disabled</button>
+                <p class="text-xs font-medium text-slate-400 uppercase">Disabled</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="space-y-6">
+        <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Panels, Cards, &amp; Modals</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+          <div class="space-y-6">
+            <h3 class="text-xl font-semibold text-white">Modals</h3>
+            <p class="text-slate-400 text-sm">Styled with `.modal-modern` and `.modal-unified` classes.</p>
+            <div class="relative bg-surface border border-slate-700 p-6 space-y-4 modal-modern">
+              <h4 class="font-semibold text-lg text-white">Confirm Action</h4>
+              <p class="text-slate-400 text-sm">Are you sure you want to approve this item? This action cannot be
+                undone.</p>
+              <div class="flex justify-end gap-3 pt-2">
+                <button
+                  class="btn btn-secondary px-5 py-2 bg-transparent text-slate-200 font-semibold text-sm border border-slate-600 hover:bg-surface-hover">Cancel</button>
+                <button
+                  class="btn btn-primary-modern px-5 py-2 bg-primary text-black font-semibold text-sm hover:bg-primary/90">Approve</button>
+              </div>
+            </div>
+            <div class="relative bg-surface border border-rose-500/50 p-6 space-y-4 modal-modern">
+              <h4 class="font-semibold text-lg text-rose-400">Reject Action</h4>
+              <p class="text-slate-400 text-sm">Are you sure you want to reject this item? This action is permanent.</p>
+              <div class="flex justify-end gap-3 pt-2">
+                <button
+                  class="btn btn-secondary px-5 py-2 bg-transparent text-slate-200 font-semibold text-sm border border-slate-600 hover:bg-surface-hover">Cancel</button>
+                <button
+                  class="btn btn-danger px-5 py-2 bg-rose-500 text-white font-semibold text-sm hover:bg-rose-600">Reject</button>
+              </div>
+            </div>
+          </div>
+          <div class="space-y-6">
+            <h3 class="text-xl font-semibold text-white">Panels &amp; Cards</h3>
+            <p class="text-slate-400 text-sm">Base container elements like `.panel` or `.card` are styled for the new
+              theme.</p>
+            <div class="panel panel-modern bg-surface border border-slate-700">
+              <div class="panel-header p-4 border-b border-slate-700">
+                <h4 class="font-semibold text-white">Panel Title</h4>
+              </div>
+              <div class="panel-body p-4 space-y-2 text-sm text-slate-400">
+                <p>This is the content area for a detail panel. It uses the `surface` color as a background.</p>
+              </div>
+              <div class="panel-footer p-4 border-t border-slate-700 flex justify-end">
+                <button
+                  class="btn btn-secondary px-5 py-2 bg-slate-600 text-white font-semibold text-sm hover:bg-slate-500">Close</button>
+              </div>
+            </div>
+            <div
+              class="stat-card-modern bg-surface border border-slate-700 p-4 space-y-2 hover:border-primary transition-colors">
+              <h5 class="font-semibold text-white">Stat Card (e.g., stat-card-modern)</h5>
+              <p class="text-sm text-slate-400">Used on the dashboard to display key metrics. The border color changes
+                on hover to indicate interactivity.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="space-y-6">
+        <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Forms &amp; Validation</h2>
+        <div class="p-6 bg-surface space-y-8">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+            <div class="space-y-2">
+              <label class="font-medium text-slate-300 text-sm" for="default-input">Default State</label>
+              <input
+                class="input-modern w-full bg-background border border-slate-600 text-slate-100 placeholder:text-slate-500 focus:ring-1 focus:ring-primary focus:border-primary"
+                id="default-input" placeholder="Placeholder text" type="text" />
+              <p class="text-xs text-slate-500">Use class `.input-modern`.</p>
+            </div>
+            <div class="space-y-2">
+              <label class="font-medium text-primary text-sm" for="focus-input">Focus State</p>
+                <input
+                  class="input-modern w-full bg-background border border-primary ring-1 ring-primary text-slate-100 placeholder:text-slate-500"
+                  id="focus-input" placeholder="Placeholder text" type="text" value="User is typing..." />
+                <p class="text-xs text-slate-500">The border and ring highlight the active field.</p>
+            </div>
+            <div class="space-y-2">
+              <label class="font-medium text-rose-400 text-sm" for="error-input">Error State</label>
+              <input
+                class="input-modern is-invalid w-full bg-background border border-rose-500 text-rose-400 placeholder:text-rose-400/60 focus:ring-1 focus:ring-rose-500 focus:border-rose-500"
+                id="error-input" placeholder="Invalid input" type="text" value="email@" />
+              <p class="text-xs text-rose-400">Shows invalid state via `.is-invalid` class.</p>
+            </div>
+          </div>
+          <div class="space-y-4">
+            <h3 class="text-lg font-semibold text-white">Textarea Example</h3>
+            <div class="space-y-2">
+              <label class="font-medium text-slate-300 text-sm" for="textarea-example">Message</label>
+              <textarea
+                class="input-modern w-full bg-background border border-slate-600 text-slate-100 placeholder:text-slate-500 focus:ring-1 focus:ring-primary focus:border-primary"
+                id="textarea-example" placeholder="Enter your message here..." rows="4"></textarea>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="space-y-6">
+        <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Sidebar Navigation</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div class="space-y-6">
+            <h3 class="text-xl font-semibold text-white">Menu Links (Simple)</h3>
+            <div class="p-6 bg-surface space-y-4">
+              <a class="block text-slate-300 hover:text-primary transition-colors" href="#">Default Link</a>
+              <a class="block text-primary" href="#">Hover State</a>
+              <a class="block font-semibold text-primary" href="#">Active Link</a>
+            </div>
+          </div>
+          <div class="space-y-6">
+            <h3 class="text-xl font-semibold text-white">Menu Items (from `base.html`)</h3>
+            <div class="p-6 bg-surface space-y-2">
+              <a class="nav-item-link flex items-center gap-3 p-3 text-on-surface hover:bg-surface-hover transition-colors"
+                href="#">
+                <span class="material-symbols-outlined text-slate-400">dashboard</span>
+                <span>Default Item</span>
+              </a>
+              <a class="nav-item-link flex items-center gap-3 p-3 text-on-surface-strong bg-surface-hover transition-colors"
+                href="#">
+                <span class="material-symbols-outlined text-primary">inbox</span>
+                <span>Hover State</span>
+              </a>
+              <a class="nav-item-link active flex items-center gap-3 p-3 text-on-surface-strong font-semibold bg-primary/10 border-l-2 border-primary"
+                href="#">
+                <span class="material-symbols-outlined text-primary">edit</span>
+                <span>Active Item</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+
+</html>

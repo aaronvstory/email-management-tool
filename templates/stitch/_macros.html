@@ -1,0 +1,66 @@
+{# Reusable components for Stitch pages #}
+{% macro badge(kind) -%}
+  {%- set map = {
+    'HELD':       'tw-bg-amber-500/15 tw-text-amber-400',
+    'FETCHED':    'tw-bg-zinc-700 tw-text-zinc-400',
+    'RELEASED':   'tw-bg-green-500/15 tw-text-green-400',
+    'REJECTED':   'tw-bg-red-500/15 tw-text-red-400',
+    'DISCARDED':  'tw-bg-zinc-700 tw-text-zinc-400',
+    'PENDING':    'tw-bg-zinc-700 tw-text-zinc-300',
+    'APPROVED':   'tw-bg-green-500/15 tw-text-green-400',
+    'ERROR':      'tw-bg-red-500/15 tw-text-red-400'
+  } -%}
+  {%- set alias = {'HOLD': 'HELD'} -%}
+  {%- set raw = (kind or '')|upper -%}
+  {%- set key = alias.get(raw, raw) -%}
+  <span class="tw-inline-flex tw-items-center tw-text-[11px] tw-font-semibold tw-px-2 tw-py-[2px] {{ map.get(key, 'tw-bg-zinc-700 tw-text-zinc-300') }}">{{ key }}</span>
+{%- endmacro %}
+
+{% macro icon_btn(label='', icon='more_horiz', variant='neutral', href=None) -%}
+  {%- set v = {
+    'neutral': '',
+    'primary': 'icon-btn--primary',
+    'danger':  'icon-btn--danger'
+  }[variant] -%}
+  {%- if href -%}
+    <a href="{{ href }}" class="icon-btn-text {{ v }}">
+      <span class="material-symbols-outlined tw-!text-base">{{ icon }}</span> {{ label }}
+    </a>
+  {%- else -%}
+    <button type="button" class="icon-btn-text {{ v }}">
+      <span class="material-symbols-outlined tw-!text-base">{{ icon }}</span> {{ label }}
+    </button>
+  {%- endif -%}
+{%- endmacro %}
+
+{# Simple table shell; pass safe HTML rows or render per-row outside #}
+{% macro table(headings=[], rows_html='') -%}
+  <div class="tw-bg-background tw-border tw-border-border">
+    <div class="tw-overflow-x-auto">
+      <table class="tw-w-full tw-text-sm tw-text-left">
+        <thead class="tw-text-zinc-400 tw-border-b tw-border-border">
+          <tr>
+            {%- for h in headings %}
+              <th class="tw-px-4 tw-py-2">{{ h }}</th>
+            {%- endfor %}
+          </tr>
+        </thead>
+        <tbody class="tw-divide-y tw-divide-[rgba(255,255,255,.06)]">
+          {{ rows_html|safe }}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{%- endmacro %}
+
+{# Toolbar with right-aligned actions #}
+{% macro toolbar(title='', actions=[]) -%}
+  <div class="tw-p-4 tw-border-b tw-border-border tw-flex tw-justify-between tw-items-center">
+    <h3 class="tw-text-zinc-200 tw-font-semibold">{{ title }}</h3>
+    <div class="tw-flex tw-gap-2">
+      {%- for a in actions %}
+        {{ icon_btn(a.get('label', ''), a.get('icon', 'more_horiz'), a.get('variant', 'neutral'), a.get('href')) }}
+      {%- endfor %}
+    </div>
+  </div>
+{%- endmacro %}

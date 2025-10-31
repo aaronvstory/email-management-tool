@@ -57,7 +57,11 @@ async function loginIfNeeded(page: Page) {
   await page.fill(USER_SEL!, USERNAME);
   await page.fill(PASS_SEL!, PASSWORD);
   await page.click(SUBMIT_SEL!);
-  await page.waitForLoadState('networkidle');
+  // Wait for navigation after login (dashboard redirect)
+  await page.waitForURL(url => !url.pathname.includes('/login'), { timeout: 10000 }).catch((err) => {
+    console.warn(`[snap] Login redirect timeout after 10s: ${err.message || 'unknown'}`);
+  });
+  await page.waitForLoadState('load');
 }
 
 async function freezeAnimations(page: Page) {

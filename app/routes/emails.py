@@ -73,6 +73,160 @@ def emails_unified():
     )
 
 
+@emails_bp.route('/emails-unified/stitch')
+@login_required
+def emails_unified_stitch():
+    """Preview the new Stitch theme emails page (Tailwind-based)"""
+    status_filter = request.args.get('status', 'ALL')
+    account_id = request.args.get('account_id', type=int)
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    # Get email accounts
+    accounts = cursor.execute(
+        """
+        SELECT id, account_name, email_address
+        FROM email_accounts
+        WHERE is_active = 1
+        ORDER BY account_name
+        """
+    ).fetchall()
+
+    # Get counts for all statuses (exclude outbound by default)
+    counts = fetch_counts(account_id=account_id if account_id else None, include_outbound=False)
+
+    conn.close()
+
+    return render_template(
+        'stitch/emails-unified.html',
+        accounts=accounts,
+        selected_account=account_id,
+        current_filter=status_filter,
+        total_count=counts.get('total', 0),
+        held_count=counts.get('held', 0),
+        pending_count=counts.get('pending', 0),
+        approved_count=counts.get('approved', 0),
+        rejected_count=counts.get('rejected', 0),
+        released_count=counts.get('released', 0),
+        discarded_count=counts.get('discarded', 0),
+    )
+
+
+@emails_bp.route('/email/<int:id>/stitch')
+@login_required
+def email_detail_stitch(id):
+    """Stitch design system variant of email detail view"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    email_row = cursor.execute(
+        """
+        SELECT em.*, ea.account_name, ea.email_address
+        FROM email_messages em
+        LEFT JOIN email_accounts ea ON em.account_id = ea.id
+        WHERE em.id = ?
+        """,
+        (id,)
+    ).fetchone()
+
+    if not email_row:
+        conn.close()
+        flash('Email not found', 'error')
+        return redirect(url_for('emails.emails_unified_stitch'))
+
+    # Get attachments
+    attachments = cursor.execute(
+        """
+        SELECT id, filename, size, mime_type
+        FROM email_attachments
+        WHERE email_id = ?
+        ORDER BY id
+        """,
+        (id,)
+    ).fetchall()
+
+    conn.close()
+
+    email_data = dict(email_row)
+    try:
+        email_data['recipients'] = json.loads(email_data['recipients']) if email_data['recipients'] else []
+    except (json.JSONDecodeError, TypeError):
+        if isinstance(email_data['recipients'], str):
+            email_data['recipients'] = [r.strip() for r in email_data['recipients'].split(',') if r.strip()]
+        else:
+            email_data['recipients'] = []
+
+    try:
+        email_data['keywords_matched'] = json.loads(email_data['keywords_matched']) if email_data['keywords_matched'] else []
+    except (json.JSONDecodeError, TypeError):
+        if isinstance(email_data['keywords_matched'], str):
+            email_data['keywords_matched'] = [k.strip() for k in email_data['keywords_matched'].split(',') if k.strip()]
+        else:
+            email_data['keywords_matched'] = []
+
+    return render_template('stitch/email-detail.html', 
+                         email=email_data, 
+                         attachments=attachments)
+
+
+@emails_bp.route('/email/<int:id>/edit/stitch', methods=['GET', 'POST'])
+@login_required
+def email_edit_stitch(id):
+    """Stitch design system variant of email edit"""
+    if request.method == 'POST':
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Update email fields
+        cursor.execute("""
+            UPDATE email_messages 
+            SET subject = ?, body_text = ?, body_html = ?
+            WHERE id = ?
+        """, (
+            request.form.get('subject'),
+            request.form.get('body_text'),
+            request.form.get('body_html', ''),
+            id
+        ))
+        
+        conn.commit()
+        conn.close()
+        
+        flash('Email updated successfully', 'success')
+        return redirect(url_for('emails.email_detail_stitch', id=id))
+    
+    # GET request - show edit form
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    email_row = cursor.execute(
+        "SELECT * FROM email_messages WHERE id = ?",
+        (id,)
+    ).fetchone()
+    
+    if not email_row:
+        conn.close()
+        flash('Email not found', 'error')
+        return redirect(url_for('emails.emails_unified_stitch'))
+    
+    conn.close()
+    
+    email_data = dict(email_row)
+    try:
+        email_data['recipients'] = json.loads(email_data['recipients']) if email_data['recipients'] else []
+    except (json.JSONDecodeError, TypeError):
+        if isinstance(email_data['recipients'], str):
+            email_data['recipients'] = [r.strip() for r in email_data['recipients'].split(',') if r.strip()]
+        else:
+            email_data['recipients'] = []
+    
+    return render_template('stitch/email-edit.html', email=email_data)
+
+
 @emails_bp.route('/api/emails/unified')
 @login_required
 def api_emails_unified():
@@ -85,34 +239,37 @@ def api_emails_unified():
     cursor = conn.cursor()
 
     # Build query based on filters (exclude outbound by default)
+    # Include attachment count via LEFT JOIN
     query = """
-        SELECT id, account_id, sender, recipients, subject, body_text,
-               interception_status, status, created_at,
-               latency_ms, risk_score, keywords_matched
-        FROM email_messages
-        WHERE (direction IS NULL OR direction!='outbound')
+        SELECT e.id, e.account_id, e.sender, e.recipients, e.subject, e.body_text,
+               e.interception_status, e.status, e.created_at,
+               e.latency_ms, e.risk_score, e.keywords_matched,
+               COALESCE(COUNT(a.id), 0) as attachment_count
+        FROM email_messages e
+        LEFT JOIN email_attachments a ON e.id = a.email_id
+        WHERE (e.direction IS NULL OR e.direction!='outbound')
     """
     params = []
 
     if account_id:
-        query += " AND account_id = ?"
+        query += " AND e.account_id = ?"
         params.append(account_id)
 
     if status_filter and status_filter != 'ALL':
         if status_filter == 'RELEASED':
             # Treat released as interception_status=RELEASED or legacy delivered/approved (exclude SENT/outbound)
-            query += " AND (interception_status='RELEASED' OR status IN ('APPROVED','DELIVERED'))"
+            query += " AND (e.interception_status='RELEASED' OR e.status IN ('APPROVED','DELIVERED'))"
         elif status_filter == 'HELD':
             # HELD now includes both PENDING and HELD statuses
-            query += " AND (interception_status IN ('HELD', 'PENDING') OR status IN ('HELD', 'PENDING'))"
+            query += " AND (e.interception_status IN ('HELD', 'PENDING') OR e.status IN ('HELD', 'PENDING'))"
         else:
-            query += " AND (interception_status = ? OR status = ?)"
+            query += " AND (e.interception_status = ? OR e.status = ?)"
             params.extend([status_filter, status_filter])
     else:
         # Default ALL view hides DISCARDED items
-        query += " AND (interception_status IS NULL OR interception_status != 'DISCARDED')"
+        query += " AND (e.interception_status IS NULL OR e.interception_status != 'DISCARDED')"
 
-    query += " ORDER BY created_at DESC LIMIT 200"
+    query += " GROUP BY e.id ORDER BY e.created_at DESC LIMIT 200"
 
     emails = cursor.execute(query, params).fetchall()
 

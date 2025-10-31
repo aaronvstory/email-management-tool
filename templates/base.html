@@ -8,8 +8,8 @@
     <title>{% block title %}Email Management Tool{% endblock %}</title>
 
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-    <link rel="alternate icon" href="/static/favicon.svg">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="alternate icon" href="{{ url_for('static', filename='favicon.svg') }}">
 
     <!-- Fonts: Inter (consistent modern font) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -56,13 +56,14 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
 
     <!-- Our clean, unified CSS -->
-    <link rel="stylesheet" href="/static/css/main.css">
-    <link rel="stylesheet" href="/static/css/patch.clean.css">
-    <link rel="stylesheet" href="/static/css/stitch.theme.css">
-    <link rel="stylesheet" href="/static/css/stitch-layout-fix.css">
-    <link rel="stylesheet" href="/static/css/dashboard-compact.css">
-    <link rel="stylesheet" href="/static/css/stitch-final-fixes.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/patch.clean.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/stitch.theme.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/stitch-layout-fix.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-compact.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/stitch-final-fixes.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/stitch.components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/stitch.override.css') }}">
     {% block extra_css %}{% endblock %}
 </head>
 
@@ -83,14 +84,14 @@
                 <span
                     class="tw-text-[10px] tw-font-bold tw-text-[#71717a] tw-uppercase tw-tracking-widest tw-px-3 tw-mb-1.5 tw-block">CORE</span>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'dashboard.dashboard' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
-                    href="/dashboard">
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'dashboard.dashboard' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                    href="{{ url_for('dashboard.dashboard') }}">
                     <span class="material-symbols-outlined tw-text-[18px]">dashboard</span>
                     <span class="tw-font-medium">Dashboard</span>
                 </a>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'emails.emails_unified' or request.endpoint == 'emails.email_queue' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
-                    href="/emails-unified">
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'emails.emails_unified' or request.endpoint == 'emails.emails_unified_stitch' or request.endpoint == 'emails.email_queue' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                    href="{{ url_for('emails.emails_unified') }}">
                     <span class="material-symbols-outlined tw-text-[18px]">inbox</span>
                     <span class="tw-font-medium">Emails</span>
                     {% if pending_count > 0 %}
@@ -100,8 +101,8 @@
                     {% endif %}
                 </a>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'compose.compose_email' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
-                    href="/compose">
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'compose.compose_email' or request.endpoint == 'compose.compose_stitch' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                    href="{{ url_for('compose.compose_email') }}">
                     <span class="material-symbols-outlined tw-text-[18px]">edit</span>
                     <span class="tw-font-medium">Compose</span>
                 </a>
@@ -112,38 +113,38 @@
                 <span
                     class="tw-text-[10px] tw-font-bold tw-text-[#71717a] tw-uppercase tw-tracking-widest tw-px-3 tw-mb-1.5 tw-block">MANAGEMENT</span>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'watchers.watchers_page' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
-                    href="/watchers">
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'watchers.watchers_page' or request.endpoint == 'watchers.watchers_page_stitch' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                    href="{{ url_for('watchers.watchers_page') }}">
                     <span class="material-symbols-outlined tw-text-[18px]">visibility</span>
                     <span class="tw-font-medium">Watchers</span>
                 </a>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'moderation.rules' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
-                    href="/rules">
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'moderation.rules' or request.endpoint == 'moderation.rules_stitch' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                    href="{{ url_for('moderation.rules') }}">
                     <span class="material-symbols-outlined tw-text-[18px]">rule</span>
                     <span class="tw-font-medium">Rules</span>
                 </a>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'accounts.email_accounts' or request.endpoint == 'accounts.add_email_account' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
-                    href="/accounts">
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'accounts.email_accounts' or request.endpoint == 'accounts.email_accounts_stitch' or request.endpoint == 'accounts.add_email_account' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                    href="{{ url_for('accounts.email_accounts') }}">
                     <span class="material-symbols-outlined tw-text-[18px]">group</span>
                     <span class="tw-font-medium">Accounts</span>
                 </a>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'accounts.accounts_import_page' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
-                    href="/accounts/import">
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'accounts.accounts_import_page' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                    href="{{ url_for('accounts.accounts_import_page') }}">
                     <span class="material-symbols-outlined tw-text-[18px]">upload</span>
                     <span class="tw-font-medium">Import Accounts</span>
                 </a>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'diagnostics' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
-                    href="/diagnostics">
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'diagnostics' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                    href="{{ url_for('diagnostics.diagnostics_view_stitch') }}">
                     <span class="material-symbols-outlined tw-text-[18px]">monitoring</span>
                     <span class="tw-font-medium">Diagnostics</span>
                 </a>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'watchers.settings_page' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
-                    href="/settings">
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'watchers.settings_page' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                    href="{{ url_for('watchers.settings_page') }}">
                     <span class="material-symbols-outlined tw-text-[18px]">settings</span>
                     <span class="tw-font-medium">Settings</span>
                 </a>
@@ -154,14 +155,14 @@
                 <span
                     class="tw-text-[10px] tw-font-bold tw-text-[#71717a] tw-uppercase tw-tracking-widest tw-px-3 tw-mb-1.5 tw-block">TOOLS</span>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'styleguide.styleguide' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
-                    href="/styleguide">
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'styleguide.styleguide' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                    href="{{ url_for('styleguide.stitch_styleguide') }}">
                     <span class="material-symbols-outlined tw-text-[18px]">palette</span>
                     <span class="tw-font-medium">Style Guide</span>
                 </a>
 
-                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-rounded-md tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#3f3f46] hover:tw-text-white {% if request.endpoint == 'diagnostics.interception_test_dashboard' %}tw-bg-[#3f3f46]/70 tw-text-white tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
-                    href="/interception-test">
+                <a class="tw-flex tw-items-center tw-gap-2.5 tw-px-3 tw-py-2 tw-text-[#a1a1aa] tw-text-[13px] tw-transition-all tw-group hover:tw-bg-[#27272a] hover:tw-text-[#f4f4f5] {% if request.endpoint == 'diagnostics.interception_test_dashboard' %}tw-bg-[#bef264]/10 tw-text-[#bef264] tw-border-l-[3px] tw-border-[#bef264] tw-pl-[9px]{% endif %}"
+                    href="{{ url_for('interception_bp.test_page_stitch') }}">
                     <span class="material-symbols-outlined tw-text-[18px]">science</span>
                     <span class="tw-font-medium">Interception Test</span>
                 </a>
@@ -176,17 +177,17 @@
                     current_user.username }}{% else %}admin{% endif %}</div>
             </div>
             <div class="tw-flex tw-gap-2">
-                <a href="/settings"
+                <a href="{{ url_for('watchers.settings_page') }}"
                     class="tw-flex-1 tw-text-center tw-py-1.5 tw-px-2 tw-rounded tw-text-[12px] tw-text-[#a1a1aa] tw-bg-[#3f3f46] hover:tw-bg-[#52525b] tw-transition-all">
                     <span class="material-symbols-outlined tw-text-[14px] tw-align-middle">settings</span>
                 </a>
                 {% if current_user.is_authenticated %}
-                <a href="/logout"
+                <a href="{{ url_for('auth.logout') }}"
                     class="tw-flex-1 tw-text-center tw-py-1.5 tw-px-2 tw-rounded tw-text-[12px] tw-text-[#a1a1aa] tw-bg-[#3f3f46] hover:tw-bg-[#52525b] tw-transition-all">
                     <span class="material-symbols-outlined tw-text-[14px] tw-align-middle">logout</span>
                 </a>
                 {% else %}
-                <a href="/login"
+                <a href="{{ url_for('auth.login') }}"
                     class="tw-flex-1 tw-text-center tw-py-1.5 tw-px-2 tw-rounded tw-text-[12px] tw-text-white tw-bg-[#bef264] hover:tw-bg-[#a3e635] tw-transition-all">
                     <span class="material-symbols-outlined tw-text-[14px] tw-align-middle">login</span>
                 </a>
@@ -270,7 +271,7 @@
     <script>
         window.ATTACHMENTS_FLAGS = {{ (attachments_flags | default ({ 'ui': false, 'edit': false })) | tojson }};
     </script>
-    <script src="/static/js/app.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 
     {% block extra_js %}{% endblock %}
 
@@ -357,3 +358,4 @@
 </body>
 
 </html>
+
