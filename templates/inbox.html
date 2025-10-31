@@ -24,10 +24,10 @@ header.command-bar {
     <p class="text-muted mb-0">View and manage received email messages from monitored accounts.</p>
   </div>
   <div class="header-actions">
-    <a href="/compose" class="btn btn-secondary btn-sm">
+    <a href="{{ url_for('compose.compose_email') }}" class="btn btn-secondary btn-sm">
       <i class="bi bi-envelope-plus"></i> Compose
     </a>
-    <a href="/interception" class="btn btn-ghost btn-sm">
+    <a href="{{ url_for('interception.interception_dashboard') }}" class="btn btn-ghost btn-sm">
       <i class="bi bi-shield-lock"></i> Held Messages
     </a>
   </div>

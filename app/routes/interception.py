@@ -17,7 +17,7 @@ from pathlib import Path
 import json
 
 from typing import Dict, Any, Optional, Union, cast, Iterable
-from flask import Blueprint, jsonify, render_template, request, current_app, send_file, abort
+from flask import Blueprint, jsonify, render_template, request, current_app, send_file, send_from_directory, abort, flash, redirect, url_for
 from flask_login import login_required, current_user
 from email.parser import BytesParser
 from email.policy import default as default_policy
@@ -1083,6 +1083,47 @@ def api_attachment_download(attachment_id: int):
         return send_file(storage_path, mimetype=mimetype, as_attachment=True, download_name=download_name)
     finally:
         conn.close()
+
+
+@bp_interception.route('/email/<int:email_id>/attachments/<path:name>')
+@login_required
+def attachment_download(email_id: int, name: str):
+    """Defensive attachment download by email ID and filename."""
+    # Look up attachment by email + filename
+    with get_db() as conn:
+        row = conn.execute(
+            """
+            SELECT storage_path, mime_type, filename
+            FROM email_attachments
+            WHERE email_id = ? AND (filename = ? OR storage_path LIKE '%' || ?)
+            """,
+            (email_id, name, os.path.basename(name)),
+        ).fetchone()
+
+    if not row:
+        current_app.logger.warning("attachment row not found: email=%s name=%s", email_id, name)
+        abort(404)
+
+    # Enforce safe paths
+    storage_path = row["storage_path"]
+    directory = os.path.dirname(storage_path)
+    filename = os.path.basename(storage_path)
+
+    file_on_disk = os.path.join(directory, filename)
+    if not os.path.isfile(file_on_disk):
+        current_app.logger.warning("attachment file missing: %s", file_on_disk)
+        abort(404)
+
+    # Send with safe headers
+    return send_from_directory(
+        directory,
+        filename,
+        mimetype=row["mime_type"] or "application/octet-stream",
+        as_attachment=True,
+        download_name=row["filename"] or filename,
+        conditional=True,  # enable 304s
+        max_age=0,
+    )
 
 
 @bp_interception.route('/api/email/<int:email_id>/attachments/upload', methods=['POST'])

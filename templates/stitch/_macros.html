@@ -5,12 +5,15 @@
     'FETCHED':    'tw-bg-zinc-700 tw-text-zinc-400',
     'RELEASED':   'tw-bg-green-500/15 tw-text-green-400',
     'REJECTED':   'tw-bg-red-500/15 tw-text-red-400',
+    'DISCARDED':  'tw-bg-zinc-700 tw-text-zinc-400',
     'PENDING':    'tw-bg-zinc-700 tw-text-zinc-300',
+    'APPROVED':   'tw-bg-green-500/15 tw-text-green-400',
     'ERROR':      'tw-bg-red-500/15 tw-text-red-400'
   } -%}
   {%- set alias = {'HOLD': 'HELD'} -%}
-  {%- set key = alias.get(kind|upper, kind|upper) -%}
-  <span class="tw-inline-flex tw-items-center tw-text-[11px] tw-font-semibold tw-px-2 tw-py-[2px] {{ map.get(key, 'tw-bg-zinc-700 tw-text-zinc-300') }}"><{{ key }}</span> class="tw-inline-flex tw-items-center tw-text-[11px] tw-font-semibold tw-px-2 tw-py-[2px] {{ map.get(kind|upper, 'tw-bg-zinc-700 tw-text-zinc-300') }}">{{ kind|upper }}</span>
+  {%- set raw = (kind or '')|upper -%}
+  {%- set key = alias.get(raw, raw) -%}
+  <span class="tw-inline-flex tw-items-center tw-text-[11px] tw-font-semibold tw-px-2 tw-py-[2px] {{ map.get(key, 'tw-bg-zinc-700 tw-text-zinc-300') }}">{{ key }}</span>
 {%- endmacro %}
 
 {% macro icon_btn(label='', icon='more_horiz', variant='neutral', href=None) -%}

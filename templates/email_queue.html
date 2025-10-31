@@ -52,7 +52,7 @@ header.command-bar {
 <!-- Filter Tabs -->
 <ul class="nav nav-tabs mb-4">
     <li class="nav-item">
-        <a class="nav-link {% if current_filter == 'PENDING' %}active{% endif %}" href="/emails?status=PENDING">
+        <a class="nav-link {% if current_filter == 'PENDING' %}active{% endif %}" href="{{ url_for('emails.email_queue', status='PENDING') }}">
             Pending 
             {% if pending_count > 0 %}
             <span class="badge bg-warning">{{ pending_count }}</span>
@@ -60,7 +60,7 @@ header.command-bar {
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link {% if current_filter == 'APPROVED' %}active{% endif %}" href="/emails?status=APPROVED">
+        <a class="nav-link {% if current_filter == 'APPROVED' %}active{% endif %}" href="{{ url_for('emails.email_queue', status='APPROVED') }}">
             Approved
             {% if approved_count > 0 %}
             <span class="badge bg-success">{{ approved_count }}</span>
@@ -68,7 +68,7 @@ header.command-bar {
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link {% if current_filter == 'REJECTED' %}active{% endif %}" href="/emails?status=REJECTED">
+        <a class="nav-link {% if current_filter == 'REJECTED' %}active{% endif %}" href="{{ url_for('emails.email_queue', status='REJECTED') }}">
             Rejected
             {% if rejected_count > 0 %}
             <span class="badge bg-danger">{{ rejected_count }}</span>
@@ -76,7 +76,7 @@ header.command-bar {
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link {% if current_filter == 'ALL' or current_filter == 'all' %}active{% endif %}" href="/emails?status=ALL">
+        <a class="nav-link {% if current_filter == 'ALL' or current_filter == 'all' %}active{% endif %}" href="{{ url_for('emails.email_queue', status='ALL') }}">
             All Emails
             {% if total_count > 0 %}
             <span class="badge bg-info">{{ total_count }}</span>

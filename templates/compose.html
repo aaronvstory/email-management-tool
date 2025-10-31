@@ -26,7 +26,7 @@ header.command-bar {
         <p class="text-muted mb-0">Create and send new email messages through your configured accounts.</p>
     </div>
     <div class="header-actions">
-        <a href="/emails-unified" class="btn btn-ghost btn-sm">
+        <a href="{{ url_for('emails.emails_unified') }}" class="btn btn-ghost btn-sm">
             <i class="bi bi-arrow-left"></i> Back to Emails
         </a>
     </div>
@@ -105,7 +105,7 @@ header.command-bar {
         
         <!-- Action Buttons -->
         <div class="d-flex justify-content-between">
-            <a href="/emails-unified" class="btn btn-ghost">
+            <a href="{{ url_for('emails.emails_unified') }}" class="btn btn-ghost">
                 <i class="bi bi-x-circle"></i> Cancel
             </a>
             <button type="submit" class="btn btn-primary-modern">

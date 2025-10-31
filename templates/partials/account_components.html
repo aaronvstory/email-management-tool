@@ -99,7 +99,7 @@
   {% else %}
   <div class="alert alert-info">
     <i class="bi bi-info-circle"></i> No email accounts configured yet.
-    <a href="/accounts/add" class="alert-link">Add your first account</a> to get started.
+    <a href="{{ url_for('accounts.add_email_account') }}" class="alert-link">Add your first account</a> to get started.
   </div>
   {% endif %}
 {% endmacro %}
@@ -208,7 +208,7 @@
   {% else %}
   <div class="alert alert-info">
     <i class="bi bi-info-circle"></i> No email accounts configured yet.
-    <a href="/accounts/add" class="alert-link">Add your first account</a> to get started.
+    <a href="{{ url_for('accounts.add_email_account') }}" class="alert-link">Add your first account</a> to get started.
   </div>
   {% endif %}
 {% endmacro %}

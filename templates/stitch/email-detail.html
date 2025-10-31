@@ -18,8 +18,8 @@
         </div>
         <div class="tw-flex tw-gap-2">
             {% if email.interception_status == 'HELD' %}
-                {{ icon_btn('Release', 'done', 'primary', url_for('interception.release_stitch', email_id=email.id)) }}
-                {{ icon_btn('Discard', 'delete', 'danger', url_for('interception.discard_stitch', email_id=email.id)) }}
+                {{ icon_btn('Release', 'done', 'primary', url_for('interception_bp.release_stitch', email_id=email.id)) }}
+                {{ icon_btn('Discard', 'delete', 'danger', url_for('interception_bp.discard_stitch', email_id=email.id)) }}
                 {{ icon_btn('Edit', 'edit', 'neutral', url_for('emails.email_edit_stitch', id=email.id)) }}
             {% endif %}
         </div>
@@ -89,10 +89,10 @@
                 <li class="tw-flex tw-items-center tw-justify-between tw-py-2">
                     <div class="tw-flex tw-items-center tw-gap-2">
                         <span class="material-symbols-outlined tw-text-zinc-400">attach_file</span>
-                        <span class="tw-text-zinc-300">{{ att.original_filename }}</span>
-                        <span class="tw-text-zinc-500 tw-text-sm">({{ (att.file_size / 1024)|round(1) }} KB)</span>
+                        <span class="tw-text-zinc-300">{{ att.filename }}</span>
+                        <span class="tw-text-zinc-500 tw-text-sm">({{ (att.size / 1024)|round(1) }} KB)</span>
                     </div>
-                    <a href="{{ url_for('interception.api_attachment_download', attachment_id=att.id) }}" class="tw-text-primary hover:tw-text-lime-400 tw-text-sm">Download</a>
+                    <a href="{{ url_for('interception_bp.api_attachment_download', attachment_id=att.id) }}" class="tw-text-primary hover:tw-text-lime-400 tw-text-sm">Download</a>
                 </li>
                 {% endfor %}
             </ul>
