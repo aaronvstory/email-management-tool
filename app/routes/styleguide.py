@@ -18,4 +18,4 @@ def styleguide_standalone():
 @styleguide_bp.route('/styleguide/stitch')
 @login_required
 def stitch_styleguide():
-    return render_template('styleguide/stitch.html')
+    return render_template('stitch/styleguide.html')
