@@ -1,0 +1,20 @@
+  claude-stitch-dashboard          [m c9fc37f [[34morigin/claude-stitch-dashboard[m: ahead 2] chore: remove 'static - Copy' and Zone.Identifier files from tracking
+  css-clean-unified                [m a435c04 [[34morigin/css-clean-unified[m] refactor(interception,launcher,app,tooling): safer MIME detection, improved launcher, readiness probe, and tooling updates
+  dashboard-stitch-redesign        [m 451b87a fix(dashboard): correct container padding to 20px horizontal
+  feat/components-v1               [m 018133a [[34morigin/feat/components-v1[m] chore(ui): remove AGENTS.md and update base.html comment to show url_for for stitch.components.css
+  feat/compose-actions             [m 8e28679 [[34morigin/feat/compose-actions[m] chore(docs): slim down AGENTS.md — remove stale styling directives and prep notes
+  feat/compose-polish              [m 5dd2f3d [[34morigin/feat/compose-polish[m] feat(ui): add CTA contrast override for legibility
+  feat/dashboard-kpis-density      [m 0480083 [[34morigin/feat/dashboard-kpis-density[m] feat(ui): dashboard density + KPI hooks (.density-compact, .stat-card, .value) with IDs preserved
+  feat/emails-unified-polish       [m 8839171 [[34morigin/feat/emails-unified-polish[m] fix(screenshots): resolve TypeScript compilation errors in snap.ts
+  feat/stitch-theme-default        [m 84fa669 [[34morigin/feat/stitch-theme-default[m] feat: stitch theme — tidy CSS, add compat shim; add start.bat launcher
+  feat/styleguide-refresh          [m bded875 [[34morigin/feat/styleguide-refresh[m] fix(sonar): reduce duplication and improve code quality in schema migrations
+* [32mfeat/yoyo-ads-fix                [m cfd4961 [[34morigin/feat/yoyo-ads-fix[m] chore(git): ignore 'static - Copy' backup dir
+  feature/attachments-e2e-P1       [m 6461b5e [[34morigin/feature/attachments-e2e-P1[m] fix(release): prometheus label mismatch; add defensive folder normalization docs: clarify merge to master and startup schema
+  feature/css-consolidation-v2     [m 0086b54 [[34morigin/feature/css-consolidation-v2[m] fix: restore original CSS files (main.css + theme-dark.css)
+  feature/responsive-design-fix    [m d355bfe [[34morigin/feature/responsive-design-fix[m] docs: update unified.css header banner to include "push! push! push!!!"
+  feature/ui-dashboard-emails-fixes[m c3b7a7a [[34morigin/feature/ui-dashboard-emails-fixes[m] style(patch): fix header wrapping, search icon alignment, header overlap, paddings, and tab radius
+  kombai-ui-overhaul               [m e89c9b8 [[34morigin/kombai-ui-overhaul[m: ahead 1] chore(ui): remove redundant inline styling from emails unified template
++ [36mmaster                           [m c559e83 ([36mC:/claude/email-management-tool-css-clean[m) [[34morigin/master[m] ci: add guardrail to prevent Superdesign/node_modules recommit
+  stitch-attempt                   [m 5c448a1 Merge stitch-attempt: resolve launch.bat conflict, keep configurable PORT version
+  task-1-css-layers                [m c7344db [[34morigin/task-1-css-layers[m] refactor(css): Consolidate shell layout with CSS variables
+  task-1-css-refactoring           [m 740437f refactor(css): Phase 1 - Fix critical STYLEGUIDE.md violations and responsive design
