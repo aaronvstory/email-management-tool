@@ -679,8 +679,8 @@ find app -name "__pycache__" -type d -exec rm -rf {} +
 ---
 
 **Progress Document Location**: `.taskmaster/TASK_PROGRESS.md`
-**Last Updated**: October 31, 2025 (7:00 AM)
-**Updated By**: Claude Code (after Task 16 completion - CSV Import with Validation)
+**Last Updated**: October 31, 2025 (11:15 AM)
+**Updated By**: Claude Code (Final Ship Preparation - PR #10)
 
 ---
 
@@ -779,6 +779,79 @@ To capture screenshots manually:
 6. Batch delete confirmation
 
 Save to: `./screenshots/task-20-*.png`
+
+---
+
+## 📋 PR #10 Review Follow-up (October 31, 2025 - 11:00 AM)
+
+**PR**: https://github.com/aaronvstory/email-management-tool/pull/10
+**Verdict**: ✅ LGTM - Approved with 4 minor follow-ups
+**Branch**: feat/styleguide-refresh → master
+
+### Review Feedback Addressed
+
+#### ✅ 1. Port Standardization (5000 vs 5001)
+**Status**: Already standardized to **5000**
+- `simple_app.py` defaults to port 5000
+- All documentation uses 5000 consistently
+- No changes needed - verified correct
+
+#### ✅ 2. Smoke Test Scripts
+**Status**: Completed in commit c8209bd
+- **Created**: `scripts/smoke.ps1` (PowerShell for Windows)
+- **Created**: `scripts/smoke.sh` (Bash for Linux/Mac/WSL)
+- **Tests**:
+  - Health endpoint (`/healthz`)
+  - Metrics endpoint (`/metrics`)
+  - Login page rendering
+  - Static CSS loading
+  - SMTP health API
+  - Attachment API endpoint structure
+- **Exit codes**: 0 = pass, 1 = fail
+- **Documentation**: Added to README.md "Quick Smoke Test" section
+
+#### ✅ 3. Windows Path Security Tests
+**Status**: Completed in commit c8209bd
+- **Created**: `tests/utils/test_attachment_path_security.py`
+- **21 new tests** covering:
+  - Backslashes (`C:\attachments\file.pdf`)
+  - Forward slashes (`C:/attachments/file.pdf`)
+  - Mixed slashes
+  - UNC network paths (`\\server\share\...`)
+  - Case insensitivity (Windows-specific)
+  - Path traversal attacks (`../../../etc/passwd`)
+  - Symlink escape prevention
+  - Path normalization edge cases
+  - Real-world validation workflows
+- **All 21 tests passing** (181/181 total)
+- **Coverage**: Comprehensive Windows compatibility verified
+
+#### ⏳ 4. Screenshots
+**Status**: Pending manual browser testing
+- Requires click-through: Login → Dashboard → Accounts → Emails → Batch delete
+- Will add screenshots once manual verification completes
+- Documented in `.taskmaster/reports/ship-checklist.md`
+
+### Final Metrics
+- **Tests**: 181/181 passing (21 new + 160 existing)
+- **Coverage**: 34% (maintained)
+- **Regressions**: 0
+- **Commits**: c8209bd (Follow-up: smoke tests + Windows path tests)
+
+### PR Update
+**Follow-up comment posted**: https://github.com/aaronvstory/email-management-tool/pull/10#issuecomment-3471962316
+
+Summary of addressed items:
+- ✅ Port already standardized (5000)
+- ✅ Smoke scripts created (both platforms)
+- ✅ Windows path tests added (21 comprehensive tests)
+- ⏳ Screenshots pending manual testing
+
+### Ready to Merge?
+**Automated Checks**: ✅ All passing (181/181 tests)
+**Review Feedback**: ✅ 3/4 addressed (screenshots pending)
+**Manual Testing**: ⏳ Requires browser click-through
+**Blocker**: None - screenshots can be added post-merge if needed
 
 ---
 
