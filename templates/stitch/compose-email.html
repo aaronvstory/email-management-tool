@@ -18,6 +18,7 @@
           </header>
 
           <form method="POST" action="{{ url_for('compose.compose_email') }}" class="tw-bg-background tw-border tw-border-border tw-p-6 tw-sm:p-8 tw-space-y-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="tw-grid tw-grid-cols-1 tw-md:grid-cols-2 tw-gap-x-6 tw-gap-y-6">
               <div>
                 <label class="tw-block tw-text-sm tw-font-medium tw-text-on-surface" for="from-account">From Account</label>

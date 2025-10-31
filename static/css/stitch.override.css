@@ -60,8 +60,16 @@ a.active,
 }
 
 /* Any focus rings should be lime green */
-*:focus,
-*:focus-visible {
+input:focus,
+select:focus,
+textarea:focus,
+button:focus,
+a:focus,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible,
+a:focus-visible {
   outline-color: #bef264 !important;
   border-color: #bef264 !important;
 }
@@ -104,8 +112,8 @@ a.active,
 
 /* Target buttons with tw- classes that don't have explicit tw-bg-* */
 /* This fixes Edit/Delete/Discard buttons across all Stitch templates */
-button[class*="tw-"][class*="tw-flex"][class*="tw-items-center"]:not([class*="tw-bg-"]),
-button[class*="tw-"][class*="tw-font-medium"]:not([class*="tw-bg-"]) {
+button.stitch-action-btn,
+button.icon-btn-text {
   background: transparent !important;
   border: none !important;
   transition: background-color 0.15s ease, color 0.15s ease;
