@@ -8,7 +8,9 @@
     'PENDING':    'tw-bg-zinc-700 tw-text-zinc-300',
     'ERROR':      'tw-bg-red-500/15 tw-text-red-400'
   } -%}
-  <span class="tw-inline-flex tw-items-center tw-text-[11px] tw-font-semibold tw-px-2 tw-py-[2px] {{ map.get(kind|upper, 'tw-bg-zinc-700 tw-text-zinc-300') }}">{{ kind|upper }}</span>
+  {%- set alias = {'HOLD': 'HELD'} -%}
+  {%- set key = alias.get(kind|upper, kind|upper) -%}
+  <span class="tw-inline-flex tw-items-center tw-text-[11px] tw-font-semibold tw-px-2 tw-py-[2px] {{ map.get(key, 'tw-bg-zinc-700 tw-text-zinc-300') }}"><{{ key }}</span> class="tw-inline-flex tw-items-center tw-text-[11px] tw-font-semibold tw-px-2 tw-py-[2px] {{ map.get(kind|upper, 'tw-bg-zinc-700 tw-text-zinc-300') }}">{{ kind|upper }}</span>
 {%- endmacro %}
 
 {% macro icon_btn(label='', icon='more_horiz', variant='neutral', href=None) -%}
