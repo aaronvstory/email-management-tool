@@ -232,3 +232,135 @@ if you want, I can also draft the actual `templates/styleguide/stitch.html` skel
 > * `chore(styleguide): finalize /styleguide/stitch and verify sidebar active states`
 
 ---
+
+site is live on devtools mcp:
+"""
+
+🚀 Launching Chrome Debug (PowerShell)...
+
+
+╔════════════════════════════════════════════════════════╗
+║     Chrome Remote Debug Launcher (Universal)           ║
+║        Works with both Codex and Claude                ║
+╚════════════════════════════════════════════════════════╝
+
+ℹ️  No Chrome instance with debugging found.
+
+Select Browser:
+
+  [1] ✓ Chromium (Lightweight, No Extensions)
+  [2] ✓ Chrome Beta (Latest Features)
+
+Enter choice (1-2): 2
+
+Select Profile:
+
+  [1] Default (Clean Temp Profile)
+  [2] Profile 7 (Your Configured Profile)
+
+Enter choice (1-2): 2
+
+WSL/Linux Compatibility:
+   Enable this if connecting from WSL2, Linux, or Docker
+   (Binds DevTools to 0.0.0.0 instead of localhost only)
+Enable WSL compatibility? [Y/N, default: N]: n
+
+╔════════════════════════════════════════════════════════╗
+║                  Launching Browser                     ║
+╚════════════════════════════════════════════════════════╝
+
+   Browser: Chrome Beta (Latest Features)
+   Profile: Profile 7 (Your Configured Profile)
+   Debug Port: 9222
+   Launch Args: --remote-debugging-port=9222 --disable-features=RendererCodeIntegrity --disable-gpu-sandbox --no-first-run --no-default-browser-check --disable-popup-blocking --user-data-dir=C:\Users\d0nbx\AppData\Local\Temp\chrome-beta-debug --profile-directory=Profile 7
+
+💡 Pro Tips:
+   • Chrome flags enabled for better debugging:
+     → Renderer code integrity disabled
+     → GPU sandbox disabled
+     → Popup blocking disabled
+   • For advanced features, visit:
+     chrome://flags/#enable-devtools-experiments
+   • Profile 7 keeps your extensions/settings
+   • Temp profiles provide clean test environments
+
+⚡ Performance Tips:
+   • Close unnecessary tabs to reduce memory usage
+   • Disable unused extensions in temp profiles
+   • Keep browser window visible for better monitoring
+
+📋 Next Steps:
+   1. Browse to your page and position it
+   2. Enable 'chrome-devtools-existing' in config
+   3. Restart Codex or Claude
+   4. Tell AI to interact with the browser
+
+🧪 Troubleshooting (When 9222 Won't Open)
+
+1) Check for Port Conflicts
+   Let's make absolutely sure nothing else is already using the debug port.
+   • Close all Chrome windows.
+   • Open PowerShell or Command Prompt as Administrator.
+   • Run this command:
+     netstat -ano -p tcp | findstr ":9222"
+   Analyze the output:
+     - If there is no output, the port is free (expected).
+     - If there is output, another app is using the port. The last column is the PID.
+       Find the process by running:  tasklist | findstr <PID>
+
+2) Firewall / Antivirus Test (Common Culprit)
+   Some security software silently blocks apps from opening a listening port.
+   • Ensure all Chrome instances are closed.
+   • Temporarily disable Windows Firewall to test:
+     - Press Win + R, type wf.msc, press Enter
+     - Click 'Windows Defender Firewall Properties'
+     - For each tab (Domain, Private, Public), set 'Firewall state' to Off
+     - Click Apply and OK
+   • Run the test command immediately (new temporary profile):
+     & "C:\Program Files\Google\Chrome Beta\Application\chrome.exe" --remote-debugging-port=9222 --profile-directory="FirewallTestProfile"
+   • In a second terminal, verify the port is listening:
+     curl http://localhost:9222/json
+   • If this works, re-enable the firewall and add an allow rule for Chrome.
+
+🔄 Starting browser...
+
+✅ Browser launched successfully!
+
+🔍 Verifying Chrome debugging flags...
+
+  --remote-debugging-port=9222         ✅ Present
+  --remote-debugging-address=0.0.0.0   ❌ MISSING
+  --remote-allow-origins=*             ❌ MISSING
+
+
+═══════════════════════════════════════════════════════
+          Quick Config (Copy & Paste)
+═══════════════════════════════════════════════════════
+
+📋 For Codex - Edit this file:
+   C:\Users\d0nbx\.codex\config.toml
+
+   Find this section and set enabled = true:
+   [mcp_servers.chrome-devtools-existing]
+   enabled = true
+
+📋 For Claude - Edit this file:
+   C:\Users\d0nbx\.claude.json
+
+   Find chrome-devtools-existing and change:
+   "disabled": false
+
+🔗 Debug Endpoints:
+   http://localhost:9222/json
+   http://localhost:9222
+
+❓ Press 'C' to see full configuration examples, or any other key to continue...
+
+═══════════════════════════════════════════════════════
+        Browser Activity Monitor (Live)
+═══════════════════════════════════════════════════════
+Press Ctrl+C to stop monitoring
+
+📄 Page: Styleguide - Email Management Tool
+"""
+
