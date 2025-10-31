@@ -518,3 +518,128 @@ MIT License - See LICENSE file for details
 ---
 
 **Built with ❤️ for Windows** - No Docker, No Containers, Just Pure Python!
+
+---
+
+## 🏃 How to Run Locally
+
+### Prerequisites
+- Python 3.9+ installed
+- Email account with App Password (Gmail, Hostinger, etc.)
+
+### Quick Start (3 Steps)
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/aaronvstory/email-management-tool.git
+cd email-management-tool
+
+# 2. Start the application
+python simple_app.py
+
+# 3. Access the web interface
+# Navigate to: http://localhost:5000
+# Login: admin / admin123
+```
+
+### Full Setup (Recommended)
+
+```bash
+# 1. Create virtual environment
+python -m venv venv
+.\venv\Scripts\activate  # Windows
+source venv/bin/activate  # Linux/Mac
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Configure email accounts
+# Use the web interface: http://localhost:5000/accounts
+
+# 4. Start watchers
+# Dashboard → Watchers → Start All
+
+# 5. Test interception
+# Send a test email → View in Dashboard
+```
+
+---
+
+## ✅ Basic Test Checklist
+
+### Core Functionality
+- [ ] **Health Check**: `curl http://localhost:5000/healthz` returns JSON with `"ok": true`
+- [ ] **Login**: Navigate to `/login`, enter `admin/admin123`, redirects to dashboard
+- [ ] **Dashboard**: Stats load, no console errors
+- [ ] **Accounts Page**: Both test accounts visible (karlkoxwerks, mcintyre)
+
+### Email Interception Flow
+- [ ] **Send Email**: Use test account to send email to yourself
+- [ ] **Intercept**: Email appears in "Held" status on dashboard
+- [ ] **View Detail**: Click email → Detail page loads with full content
+- [ ] **Edit**: Make changes to subject/body → Save successfully
+- [ ] **Release**: Click "Release" → Email moves to inbox
+- [ ] **Discard**: Select held email → "Discard" → Status changes to DISCARDED
+
+### Attachments (Task 19-20)
+- [ ] **Attachment Indicators**: Emails with attachments show paperclip icon + count
+- [ ] **View Attachments**: Email detail page shows attachment list
+- [ ] **Download Single**: Click individual download button → File downloads
+- [ ] **Download All**: Click "Download All" (for 2+ attachments) → ZIP downloads
+- [ ] **Upload**: Edit email → Upload attachment → File appears in list
+- [ ] **File Cleanup**: Delete email with attachments → Check logs for `[batch-delete]` entries
+
+### Watchers
+- [ ] **Start Watcher**: Watchers page → Click "Start" → Status shows "Running"
+- [ ] **Stop Watcher**: Click "Stop" → Status shows "Stopped"
+- [ ] **Auto-Start**: Restart app → Watchers auto-start if `is_active=1`
+
+### Routes & Navigation
+- [ ] **Stitch Routes**: All 8 Stitch routes accessible without 404 errors
+  - `/dashboard`
+  - `/emails/unified`
+  - `/interception/<id>`
+  - `/accounts`
+  - `/watchers`
+  - `/compose`
+  - `/interception/test`
+  - `/diagnostics`
+- [ ] **API Endpoints**: Health, metrics, stats all respond with valid JSON
+- [ ] **Static Assets**: No 404s for CSS/JS files in browser console
+
+### Regression Checks
+- [ ] **Tests**: `pytest -q` → 160/160 passing
+- [ ] **No Console Errors**: Browser console clean on all pages
+- [ ] **No 500 Errors**: Check logs for unexpected server errors
+- [ ] **Database**: SQLite file exists and accessible (`email_manager.db`)
+
+---
+
+## 📊 Recent Changes (October 31, 2025)
+
+### Task 20: Attachment Storage Cleanup ✅
+- **File Deletion**: Automatic cleanup when emails deleted
+- **Metadata**: All attachment fields populated correctly
+- **Security**: Multi-layer path validation prevents traversal attacks
+- **Logging**: Comprehensive logging at all levels
+
+### Task 19: Attachment UI Integration ✅
+- **List Indicators**: Paperclip icon + count in email list
+- **Detail Display**: Full attachment panel with download buttons
+- **Download All**: ZIP download for multiple attachments
+- **File Type Icons**: Material Symbols icons for common formats
+
+### Task 18: Attachment API ✅
+- **7 Endpoints**: List, download (by name/ID), upload, mark, delete, ZIP
+- **Security**: File size limits, MIME validation, path checks
+- **ZIP Download**: Bulk download endpoint for multiple files
+
+### Task 17: Attachment Schema ✅
+- **File-based Storage**: Attachments stored on disk (not BLOB)
+- **Metadata**: mime_type, size, sha256, disposition
+- **Staging Support**: is_original, is_staged for edit workflow
+
+**Commits**: 30d71ab (Task 20), 4bb03ea (Task 19), a76a212 (Task 18), b6e243b (Task 17)
+
+---
+

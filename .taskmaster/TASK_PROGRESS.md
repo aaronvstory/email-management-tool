@@ -681,3 +681,104 @@ find app -name "__pycache__" -type d -exec rm -rf {} +
 **Progress Document Location**: `.taskmaster/TASK_PROGRESS.md`
 **Last Updated**: October 31, 2025 (7:00 AM)
 **Updated By**: Claude Code (after Task 16 completion - CSV Import with Validation)
+
+---
+
+## 📦 Task 20 Shipping Summary (October 31, 2025)
+
+### What Changed
+- **File Cleanup on Delete**: Added automatic attachment file deletion when emails are permanently removed
+  - Query attachments before database DELETE
+  - Delete DB records first (atomic transaction)
+  - Clean up files after successful commit
+  - Multi-layer security validations prevent path traversal
+- **Metadata Verification**: Confirmed all attachment metadata fields populate correctly on upload
+- **Atomic Operations**: Proper transaction order prevents data loss (DB → commit → files)
+- **Comprehensive Logging**: Debug, warning, info, and error logs at all critical points
+- **API Enhancement**: Batch delete endpoint returns file cleanup statistics
+
+### How to Test
+
+#### Prerequisites
+```bash
+# Start application
+python simple_app.py
+
+# Access at http://localhost:5000
+# Login: admin / admin123
+```
+
+#### Test 1: File Deletion on Email Removal
+1. Navigate to **Emails Unified** (`/emails/unified`)
+2. Select multiple emails with attachments (look for paperclip icon)
+3. Click "Delete Selected" → Confirm permanent deletion
+4. **Verify**: Check logs for `[batch-delete]` entries showing files deleted
+5. **Expected**: API response includes `files_deleted` and `files_failed` counts
+
+#### Test 2: Attachment Metadata Population
+1. Navigate to any email in HELD status
+2. Click "Edit" button
+3. Upload a file using attachment upload widget
+4. **Verify**: File appears in attachments list with:
+   - Correct filename
+   - File size (formatted KB/MB)
+   - MIME type detected
+   - Download button works
+
+#### Test 3: Download All (Multiple Attachments)
+1. Find email with 2+ attachments
+2. Click email to view detail page
+3. Click "Download All" button
+4. **Verify**: ZIP file downloads with all attachments included
+
+#### Test 4: Attachment Indicators in List
+1. Navigate to **Emails Unified** (`/emails/unified`)
+2. **Verify**: Emails with attachments show:
+   - Paperclip icon (📎)
+   - Attachment count badge
+   - Lime-green styling matching project theme
+
+### URLs for Testing
+- Dashboard: `http://localhost:5000/dashboard`
+- Emails Unified: `http://localhost:5000/emails/unified`
+- Email Detail: `http://localhost:5000/interception/<email_id>`
+- Accounts: `http://localhost:5000/accounts`
+- Health Check: `http://localhost:5000/healthz`
+
+### Commits
+- **30d71ab**: File cleanup implementation (Task 20.1)
+- **ed25d26**: Documentation updates
+
+### Known Gaps / Follow-ups
+1. **Orphaned Files** (Low Priority)
+   - If file deletion fails, files remain on disk
+   - Mitigation: Comprehensive logging, future cleanup script
+2. **Compose Upload Widget** (Deferred from Task 19.3)
+   - API endpoint exists and working
+   - UI widget not yet integrated into compose form
+   - Low priority - can upload via email edit page
+3. **Malware Scanning** (Out of Scope)
+   - Optional feature deferred to future enhancement
+   - Requires ClamAV or VirusTotal integration
+
+### Test Results
+- ✅ **160/160 tests passing** (pytest)
+- ✅ **Health endpoint responsive** (curl /healthz)
+- ✅ **No regressions** (full test suite green)
+- ✅ **Code coverage**: 34% (maintained)
+
+### Screenshots
+_(Manual testing required - browser automation unavailable)_
+
+To capture screenshots manually:
+1. Login page
+2. Dashboard with stats
+3. Emails list with attachment indicators
+4. Email detail with attachments panel
+5. Download All button
+6. Batch delete confirmation
+
+Save to: `./screenshots/task-20-*.png`
+
+---
+
