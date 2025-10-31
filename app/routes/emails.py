@@ -239,34 +239,37 @@ def api_emails_unified():
     cursor = conn.cursor()
 
     # Build query based on filters (exclude outbound by default)
+    # Include attachment count via LEFT JOIN
     query = """
-        SELECT id, account_id, sender, recipients, subject, body_text,
-               interception_status, status, created_at,
-               latency_ms, risk_score, keywords_matched
-        FROM email_messages
-        WHERE (direction IS NULL OR direction!='outbound')
+        SELECT e.id, e.account_id, e.sender, e.recipients, e.subject, e.body_text,
+               e.interception_status, e.status, e.created_at,
+               e.latency_ms, e.risk_score, e.keywords_matched,
+               COALESCE(COUNT(a.id), 0) as attachment_count
+        FROM email_messages e
+        LEFT JOIN email_attachments a ON e.id = a.email_id
+        WHERE (e.direction IS NULL OR e.direction!='outbound')
     """
     params = []
 
     if account_id:
-        query += " AND account_id = ?"
+        query += " AND e.account_id = ?"
         params.append(account_id)
 
     if status_filter and status_filter != 'ALL':
         if status_filter == 'RELEASED':
             # Treat released as interception_status=RELEASED or legacy delivered/approved (exclude SENT/outbound)
-            query += " AND (interception_status='RELEASED' OR status IN ('APPROVED','DELIVERED'))"
+            query += " AND (e.interception_status='RELEASED' OR e.status IN ('APPROVED','DELIVERED'))"
         elif status_filter == 'HELD':
             # HELD now includes both PENDING and HELD statuses
-            query += " AND (interception_status IN ('HELD', 'PENDING') OR status IN ('HELD', 'PENDING'))"
+            query += " AND (e.interception_status IN ('HELD', 'PENDING') OR e.status IN ('HELD', 'PENDING'))"
         else:
-            query += " AND (interception_status = ? OR status = ?)"
+            query += " AND (e.interception_status = ? OR e.status = ?)"
             params.extend([status_filter, status_filter])
     else:
         # Default ALL view hides DISCARDED items
-        query += " AND (interception_status IS NULL OR interception_status != 'DISCARDED')"
+        query += " AND (e.interception_status IS NULL OR e.interception_status != 'DISCARDED')"
 
-    query += " ORDER BY created_at DESC LIMIT 200"
+    query += " GROUP BY e.id ORDER BY e.created_at DESC LIMIT 200"
 
     emails = cursor.execute(query, params).fetchall()
 

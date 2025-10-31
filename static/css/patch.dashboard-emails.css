@@ -491,3 +491,24 @@
   color: #93c5fd;
 }
 
+/* Attachment indicator */
+.attachment-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  padding: 2px 6px;
+  background: rgba(190, 242, 100, 0.12);
+  border: 1px solid rgba(190, 242, 100, 0.25);
+  border-radius: 4px;
+  color: #bef264;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.attachment-indicator i {
+  font-size: 12px;
+  line-height: 1;
+}
+

@@ -637,6 +637,13 @@
       const subjectDisplay = escapeHtml(email.subject || '(No Subject)');
       const previewSnippet = email.preview_snippet ? escapeHtml(email.preview_snippet.substring(0, 100)) : '';
       const previewHtml = email.preview_snippet ? `<div class="email-preview">${previewSnippet}${email.preview_snippet.length > 100 ? '&hellip;' : ''}</div>` : '';
+      // Build attachment indicator if email has attachments
+      const attachmentIndicator = (email.attachment_count && email.attachment_count > 0) 
+        ? `<span class="attachment-indicator" title="${email.attachment_count} attachment${email.attachment_count > 1 ? 's' : ''}">
+             <i class="bi bi-paperclip"></i> ${email.attachment_count}
+           </span>` 
+        : '';
+      
       tr.innerHTML = `
       <td data-label="Select">
         <input type="checkbox" class="form-check-input email-checkbox" value="${email.id}">
@@ -655,7 +662,10 @@
         </div>
       </td>
       <td data-label="Subject" class="cell-link" onclick="viewEmail(${email.id})">
-        <div class="subject-cell ellipsis">${subjectDisplay}</div>
+        <div class="subject-cell ellipsis">
+          ${subjectDisplay}
+          ${attachmentIndicator}
+        </div>
         ${previewHtml}
       </td>
       <td data-label="Status">
