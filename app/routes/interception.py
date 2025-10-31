@@ -2861,3 +2861,11 @@ def discard_stitch(email_id):
         log.error(f"Discard error: {e}", exc_info=True)
         flash(f'Error discarding email: {str(e)}', 'error')
         return redirect(url_for('emails.emails_unified_stitch'))
+
+
+@bp_interception.route('/interception/test/stitch')
+@login_required
+def test_page_stitch():
+    """Stitch design system variant of interception test dashboard"""
+    from datetime import datetime
+    return render_template('stitch/interception-test.html', timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))

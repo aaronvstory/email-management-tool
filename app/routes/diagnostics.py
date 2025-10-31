@@ -117,6 +117,13 @@ def get_logs():
         return jsonify({'error': 'Failed to read logs', 'details': str(e)}), 500
 
 
+@diagnostics_bp.route('/diagnostics/stitch')
+@login_required
+def diagnostics_view_stitch():
+    """Stitch design system variant of diagnostics/live log viewer"""
+    return render_template('stitch/diagnostics.html')
+
+
 @diagnostics_bp.route('/diagnostics/test', methods=['POST'])
 @login_required
 def test_email_send():
