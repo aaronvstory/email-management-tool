@@ -45,6 +45,8 @@ from contextlib import contextmanager
 
 
 import mimetypes
+import zipfile
+from io import BytesIO
 
 # Avoid importing python-magic at module import time on Windows, as ctypes can
 # crash the interpreter if the bundled DLLs are missing or incompatible. We
@@ -1124,6 +1126,90 @@ def attachment_download(email_id: int, name: str):
         conditional=True,  # enable 304s
         max_age=0,
     )
+
+
+@bp_interception.route('/api/email/<int:email_id>/attachments/download-all', methods=['GET'])
+@login_required
+def api_email_attachments_download_all(email_id: int):
+    """Download all attachments for an email as a ZIP file."""
+    if not _attachments_feature_enabled('ATTACHMENTS_UI_ENABLED'):
+        return jsonify({'ok': False, 'error': 'disabled'}), 403
+    
+    conn = _db()
+    try:
+        # Verify email exists
+        email_row = conn.execute(
+            "SELECT id, subject FROM email_messages WHERE id=?",
+            (email_id,),
+        ).fetchone()
+        if not email_row:
+            return jsonify({'ok': False, 'error': 'email-not-found'}), 404
+        
+        # Get all attachments for this email
+        attachments = conn.execute(
+            """
+            SELECT id, filename, storage_path, mime_type
+            FROM email_attachments
+            WHERE email_id = ?
+            ORDER BY id
+            """,
+            (email_id,),
+        ).fetchall()
+        
+        if not attachments:
+            return jsonify({'ok': False, 'error': 'no-attachments'}), 404
+        
+        # Get storage roots for security validation
+        attachments_root, staged_root = _get_storage_roots()
+        
+        # Create ZIP file in memory
+        zip_buffer = BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for att in attachments:
+                storage_path = Path(att['storage_path']).resolve()
+                
+                # Security check: ensure path is within allowed roots
+                if not (_is_under(storage_path, attachments_root) or _is_under(storage_path, staged_root)):
+                    log.warning(
+                        "[attachments] Skipping file outside storage roots during ZIP",
+                        extra={'email_id': email_id, 'path': str(storage_path)}
+                    )
+                    continue
+                
+                # Check file exists
+                if not storage_path.exists() or not storage_path.is_file():
+                    log.warning(
+                        "[attachments] Skipping missing file during ZIP",
+                        extra={'email_id': email_id, 'path': str(storage_path)}
+                    )
+                    continue
+                
+                # Add file to ZIP with safe filename
+                safe_filename = att['filename'] or f"attachment-{att['id']}"
+                try:
+                    zip_file.write(storage_path, arcname=safe_filename)
+                except (OSError, IOError) as exc:
+                    log.warning(
+                        "[attachments] Failed to add file to ZIP",
+                        extra={'email_id': email_id, 'file': safe_filename, 'error': str(exc)}
+                    )
+                    continue
+        
+        # Prepare response
+        zip_buffer.seek(0)
+        email_subject = email_row['subject'] or 'email'
+        # Sanitize subject for filename
+        safe_subject = re.sub(r'[^\w\s-]', '', email_subject)[:50]
+        zip_filename = f"attachments-{email_id}-{safe_subject}.zip"
+        
+        return send_file(
+            zip_buffer,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name=zip_filename
+        )
+    finally:
+        conn.close()
 
 
 @bp_interception.route('/api/email/<int:email_id>/attachments/upload', methods=['POST'])
