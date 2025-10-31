@@ -140,7 +140,7 @@ def email_detail_stitch(id):
     # Get attachments
     attachments = cursor.execute(
         """
-        SELECT id, filename, size, content_type
+        SELECT id, filename, size, mime_type
         FROM email_attachments
         WHERE email_id = ?
         ORDER BY id
