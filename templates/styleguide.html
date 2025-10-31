@@ -1,522 +1,407 @@
-{% extends 'base.html' %}
-{% block title %}Style Guide{% endblock %}
-
-{% block extra_css %}
-<!-- Styleguide styles now in unified.css (extracted Oct 25, 2025) -->
-<style>
-  /* Hotfix for horizontal scrolling */
-  .dark-app-shell .main-modern .content-scroll {
-    overflow-x: auto;
-    margin-left: 0px;
-    margin-right: 0px;
-  }
-
-  header.command-bar {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-  }
-
-  .toolbar-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-</style>
-{% endblock %}
+{% extends "base.html" %}
+{% block title %}Stitch Styleguide{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <div>
-    <h1><i class="bi bi-palette"></i> Stitch UI Style Guide</h1>
-    <p class="text-muted mb-0">The application of the defined color palette, typography, borders, and spacing for the
-      modern "Stitch" theme.</p>
-  </div>
-  <div class="header-actions">
-    <button class="btn btn-secondary btn-sm" onclick="showSuccess('Toast: success')">
-      <i class="bi bi-check-circle"></i> Success Toast
-    </button>
-    <button class="btn btn-secondary btn-sm" onclick="showError('Toast: error')">
-      <i class="bi bi-x-circle"></i> Error Toast
-    </button>
-    <button class="btn btn-secondary btn-sm" onclick="confirmToast('Confirm action?', ()=>showSuccess('Confirmed'))">
-      <i class="bi bi-question-circle"></i> Confirm
-    </button>
-  </div>
-</div>
+<div id="stitch_styleguide">
+  <main class="tw-flex-1 tw-px-6 tw-py-4">
+    <header class="tw-flex tw-items-center tw-justify-between tw-mb-4">
+      <div>
+        <h1 class="tw-text-2xl tw-font-bold tw-text-white">Stitch Styleguide</h1>
+        <p class="tw-text-sm tw-text-zinc-400 tw-mt-1">Tokens, components, and patterns used across the app.</p>
+      </div>
+      <a href="{{ url_for('emails.emails_unified_stitch') }}"
+        class="tw-inline-flex tw-items-center tw-gap-2 tw-text-primary tw-text-sm tw-font-medium tw-px-2 tw-py-1 hover:tw-bg-primary/10">
+        <span class="material-symbols-outlined tw-!text-base">arrow_back</span>
+        Back to Emails
+      </a>
+    </header>
 
-<div id="styleguide">
-  <div class="panel">
-    <div class="panel-body space-y-12">
+    <!-- Local mini-nav -->
+    <nav class="tw-flex tw-flex-wrap tw-gap-3 tw-mb-4">
+      {% set sections = [
+      ('tokens','Tokens'),
+      ('typography','Typography'),
+      ('buttons','Buttons'),
+      ('links','Links & Hovers'),
+      ('tabs','Nav Tabs'),
+      ('badges','Status Badges'),
+      ('forms','Forms'),
+      ('tables','Tables'),
+      ('cards','Cards & Panels'),
+      ('sidebar','Sidebar Active Demo'),
+      ('patterns','App Patterns')
+      ] %}
+      {% for id,label in sections %}
+      <a href="#{{id}}"
+        class="tw-text-sm tw-font-semibold tw-text-zinc-300 tw-px-2 tw-py-1 hover:tw-bg-zinc-800/60">{{label}}</a>
+      {% endfor %}
+    </nav>
 
-      <!-- Typography Section -->
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Typography</h2>
-        <div class="row">
-          <div class="col-md-7">
-            <h1 class="text-4xl font-bold text-white">H1 Heading</h1>
-            <h2 class="text-3xl font-bold text-white mt-3">H2 Heading</h2>
-            <h3 class="text-2xl font-bold text-white mt-3">H3 Heading</h3>
-            <h4 class="text-xl font-semibold text-white mt-3">H4 Heading</h4>
-            <p class="text-base text-slate-400 mt-4">This is a standard body text. It is used for descriptive text,
-              paragraphs, and other general content. The line height is set for optimal readability.</p>
-            <a class="text-primary hover:underline mt-2 d-block" href="#">This is a hyperlink</a>
-          </div>
-          <div class="col-md-5">
-            <div class="bg-surface p-4 space-y-2 h-100">
-              <h5 class="font-semibold text-white">Notes</h5>
-              <ul class="list-disc list-inside space-y-1 text-slate-400 text-sm">
-                <li><strong>Font:</strong> Inter / system-ui, consistent with `base.html`.</li>
-                <li>Keep heading sizes compact per `base.html` overrides.</li>
-                <li>Do not use thin font weights on dark backgrounds.</li>
-                <li>Ensure sufficient contrast. Use `on-surface-strong` for key text.</li>
-              </ul>
-            </div>
+    <!-- TOKENS -->
+    <section id="tokens" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Tokens</h2>
+      <div class="tw-grid tw-grid-cols-2 md:tw-grid-cols-3 lg:tw-grid-cols-5 tw-gap-3">
+        <!-- Row: core surfaces -->
+        <div class="tw-bg-[#18181b] tw-border tw-border-border tw-p-3">
+          <div class="tw-text-[12px] tw-text-zinc-400 tw-mb-1">bg</div>
+          <div class="tw-text-zinc-200">#18181b</div>
+        </div>
+        <div class="tw-bg-[#27272a] tw-border tw-border-border tw-p-3">
+          <div class="tw-text-[12px] tw-text-zinc-400 tw-mb-1">surface</div>
+          <div class="tw-text-zinc-200">#27272a</div>
+        </div>
+        <div class="tw-bg-[#18181b] tw-border tw-border-[rgba(255,255,255,0.12)] tw-p-3">
+          <div class="tw-text-[12px] tw-text-zinc-400 tw-mb-1">border</div>
+          <div class="tw-text-zinc-200">rgba(255,255,255,.12)</div>
+        </div>
+        <div class="tw-bg-[#18181b] tw-border tw-border-border tw-p-3">
+          <div class="tw-text-[12px] tw-text-zinc-400 tw-mb-1">text</div>
+          <div class="tw-text-zinc-200">#e5e7eb</div>
+        </div>
+        <div class="tw-bg-[#18181b] tw-border tw-border-border tw-p-3">
+          <div class="tw-text-[12px] tw-text-zinc-400 tw-mb-1">muted</div>
+          <div class="tw-text-zinc-400">#9ca3af</div>
+        </div>
+        <!-- Row: accent + semantics -->
+        <div class="tw-bg-[#bef264] tw-p-3">
+          <div class="tw-text-[12px] tw-text-zinc-800 tw-mb-1">primary</div>
+          <div class="tw-text-zinc-900 tw-font-semibold">#bef264</div>
+        </div>
+        <div class="tw-bg-[#a3d154] tw-p-3">
+          <div class="tw-text-[12px] tw-text-zinc-800 tw-mb-1">primary-hover</div>
+          <div class="tw-text-zinc-900 tw-font-semibold">#a3d154</div>
+        </div>
+        <div class="tw-bg-emerald-500/15 tw-border tw-border-transparent tw-p-3">
+          <div class="tw-text-[12px] tw-text-emerald-400 tw-mb-1">success</div>
+          <div class="tw-text-emerald-400">#22c55e</div>
+        </div>
+        <div class="tw-bg-amber-500/15 tw-border tw-border-transparent tw-p-3">
+          <div class="tw-text-[12px] tw-text-amber-400 tw-mb-1">warning</div>
+          <div class="tw-text-amber-400">#f59e0b</div>
+        </div>
+        <div class="tw-bg-red-500/15 tw-border tw-border-transparent tw-p-3">
+          <div class="tw-text-[12px] tw-text-red-400 tw-mb-1">danger</div>
+          <div class="tw-text-red-400">#ef4444</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TYPOGRAPHY -->
+    <section id="typography" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Typography</h2>
+      <div class="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-4">
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+          <h1 class="tw-text-2xl tw-font-bold tw-text-white tw-mb-1">Page Title (2xl)</h1>
+          <p class="tw-text-sm tw-text-zinc-400">Secondary line / description</p>
+        </div>
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+          <h3 class="tw-text-base tw-font-semibold tw-text-zinc-200 tw-mb-1">Section Header (base/bold)</h3>
+          <p class="tw-text-sm tw-text-zinc-400">Body copy (sm)</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- BUTTONS -->
+    <section id="buttons" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Buttons</h2>
+      <div class="tw-flex tw-flex-wrap tw-gap-3 tw-bg-background tw-border tw-border-border tw-p-4">
+        <button
+          class="tw-inline-flex tw-items-center tw-gap-2 tw-font-bold tw-text-zinc-900 tw-bg-primary tw-border tw-border-[#bef264] tw-px-4 tw-py-2 hover:tw-bg-[#a3d154]">
+          <span class="material-symbols-outlined tw-!text-base">add</span> Primary
+        </button>
+        <button class="icon-btn-text icon-btn--primary">
+          <span class="material-symbols-outlined tw-!text-base">edit</span> Ghost / Primary
+        </button>
+        <button class="icon-btn-text">
+          <span class="material-symbols-outlined tw-!text-base">more_horiz</span> Ghost / Neutral
+        </button>
+        <button class="icon-btn-text icon-btn--danger">
+          <span class="material-symbols-outlined tw-!text-base">delete</span> Danger
+        </button>
+      </div>
+      <p class="tw-text-xs tw-text-zinc-500 tw-mt-2">Primary uses lime background; ghost uses transparent bg with subtle
+        border and hover tints.</p>
+    </section>
+
+    <!-- LINKS -->
+    <section id="links" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Links & Hovers</h2>
+      <div class="tw-bg-background tw-border tw-border-border tw-p-4 tw-flex tw-gap-3 tw-flex-wrap">
+        <a class="tw-text-sm tw-text-zinc-300 tw-px-2 tw-py-1 hover:tw-bg-zinc-800/60">Neutral link</a>
+        <a class="tw-text-sm tw-text-primary tw-px-2 tw-py-1 hover:tw-bg-primary/10">Primary link</a>
+        <a
+          class="tw-text-sm tw-text-zinc-300 tw-inline-flex tw-items-center tw-gap-2 tw-px-2 tw-py-1 hover:tw-bg-zinc-800/60">
+          <span class="material-symbols-outlined tw-!text-base">open_in_new</span> With icon
+        </a>
+      </div>
+    </section>
+
+    <!-- NAV TABS -->
+    <section id="tabs" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Nav Tabs (filter strip)</h2>
+      <nav class="tw-flex tw-items-center tw-gap-3 tw-bg-background tw-border tw-border-border tw-p-3">
+        <a class="tw-text-sm tw-font-semibold tw-text-zinc-300 tw-px-2 tw-py-1 hover:tw-bg-zinc-800/60">All <span
+            class="tw-text-zinc-500 tw-ml-1">412</span></a>
+        <a class="tw-text-sm tw-font-semibold tw-text-primary tw-px-2 tw-py-1 tw-border-b-[2px] tw-border-primary">Held
+          <span class="tw-text-zinc-500 tw-ml-1">337</span></a>
+        <a class="tw-text-sm tw-font-semibold tw-text-zinc-300 tw-px-2 tw-py-1 hover:tw-bg-zinc-800/60">Released <span
+            class="tw-text-zinc-500 tw-ml-1">75</span></a>
+        <a class="tw-text-sm tw-font-semibold tw-text-zinc-300 tw-px-2 tw-py-1 hover:tw-bg-zinc-800/60">Rejected <span
+            class="tw-text-zinc-500 tw-ml-1">0</span></a>
+      </nav>
+      <p class="tw-text-xs tw-text-zinc-500 tw-mt-2">Active tab uses lime text + bottom border; others get subtle hover
+        overlay.</p>
+    </section>
+
+    <!-- BADGES -->
+    <section id="badges" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Status Badges</h2>
+      <div class="tw-bg-background tw-border tw-border-border tw-p-4 tw-flex tw-gap-3 tw-flex-wrap">
+        <span
+          class="tw-inline-flex tw-items-center tw-text-[11px] tw-font-semibold tw-px-2 tw-py-[2px] tw-bg-amber-500/15 tw-text-amber-400">HELD</span>
+        <span
+          class="tw-inline-flex tw-items-center tw-text-[11px] tw-font-semibold tw-px-2 tw-py-[2px] tw-bg-zinc-700 tw-text-zinc-400">FETCHED</span>
+        <span
+          class="tw-inline-flex tw-items-center tw-text-[11px] tw-font-semibold tw-px-2 tw-py-[2px] tw-bg-green-500/15 tw-text-green-400">RELEASED</span>
+      </div>
+    </section>
+
+    <!-- FORMS -->
+    <section id="forms" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Forms</h2>
+      <div class="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-4">
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+          <label class="tw-text-sm tw-text-zinc-300 tw-font-medium">Input</label>
+          <input type="text" placeholder="recipient@example.com"
+            class="tw-mt-2 tw-w-full tw-bg-[#1f1f23] tw-text-zinc-200 tw-text-sm tw-border tw-border-border tw-px-3 tw-py-2 focus:tw-outline-none focus:tw-border-[#bef264]" />
+          <div class="tw-flex tw-gap-3 tw-mt-3">
+            <select
+              class="tw-bg-[#1f1f23] tw-text-zinc-200 tw-text-sm tw-border tw-border-border tw-px-3 tw-py-2 focus:tw-outline-none focus:tw-border-[#bef264]">
+              <option>Select account…</option>
+              <option>Gmail</option>
+              <option>Hostinger</option>
+            </select>
+            <button
+              class="tw-inline-flex tw-items-center tw-gap-2 tw-font-bold tw-text-zinc-900 tw-bg-primary tw-border tw-border-[#bef264] tw-px-4 tw-py-2 hover:tw-bg-[#a3d154]">
+              <span class="material-symbols-outlined tw-!text-base">send</span> Submit
+            </button>
           </div>
         </div>
-      </section>
-
-      <!-- Color Palette Section -->
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Color Palette</h2>
-        <div class="row g-4">
-          <div class="col-md-3 col-6">
-            <div class="flex flex-col">
-              <div class="h-24 w-full bg-primary"></div>
-              <div class="p-3 bg-surface">
-                <p class="font-semibold text-white">Primary</p>
-                <p class="text-sm text-slate-400">#bef264</p>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-3 col-6">
-            <div class="flex flex-col">
-              <div class="h-24 w-full bg-background border border-slate-700"></div>
-              <div class="p-3 bg-surface">
-                <p class="font-semibold text-white">Background</p>
-                <p class="text-sm text-slate-400">#18181b</p>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-3 col-6">
-            <div class="flex flex-col">
-              <div class="h-24 w-full bg-surface border border-slate-700"></div>
-              <div class="p-3 bg-surface">
-                <p class="font-semibold text-white">Surface</p>
-                <p class="text-sm text-slate-400">#27272a</p>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-3 col-6">
-            <div class="flex flex-col">
-              <div class="h-24 w-full bg-on-surface-strong"></div>
-              <div class="p-3 bg-surface">
-                <p class="font-semibold text-white">High-Contrast Text</p>
-                <p class="text-sm text-slate-400">#f4f4f5 (on-surface-strong)</p>
-              </div>
-            </div>
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+          <label class="tw-text-sm tw-text-zinc-300 tw-font-medium">Textarea</label>
+          <textarea rows="4"
+            class="tw-mt-2 tw-w-full tw-bg-[#1f1f23] tw-text-zinc-200 tw-text-sm tw-border tw-border-border tw-px-3 tw-py-2 focus:tw-outline-none focus:tw-border-[#bef264]"
+            placeholder="Type your message…"></textarea>
+          <div class="tw-flex tw-items-center tw-gap-2 tw-mt-3">
+            <input id="chk1" type="checkbox" class="tw-accent-[#bef264]" />
+            <label for="chk1" class="tw-text-sm tw-text-zinc-300">Enable auto-save</label>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <!-- Buttons Section -->
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Buttons</h2>
-        <p class="text-slate-400">Buttons use dark red accents with subtle hover effects. All hover effects use <code>translateY(-2px)</code> for consistent lift.</p>
+    <!-- TABLES -->
+    <section id="tables" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Table</h2>
+      <div class="tw-bg-background tw-border tw-border-border">
+        <div class="tw-overflow-x-auto">
+          <table class="tw-w-full tw-text-sm tw-text-left">
+            <thead class="tw-text-zinc-400 tw-border-b tw-border-border">
+              <tr>
+                <th class="tw-px-4 tw-py-2">Time</th>
+                <th class="tw-px-4 tw-py-2">Correspondents</th>
+                <th class="tw-px-4 tw-py-2">Subject</th>
+                <th class="tw-px-4 tw-py-2">Status</th>
+                <th class="tw-px-4 tw-py-2 tw-text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="tw-divide-y tw-divide-[rgba(255,255,255,.06)]">
+              <tr class="hover:tw-bg-zinc-800/40">
+                <td class="tw-px-4 tw-py-3 tw-text-zinc-400">Oct 24, 07:11 AM</td>
+                <td class="tw-px-4 tw-py-3">
+                  <div class="tw-text-zinc-200">from billing@service.com</div>
+                  <div class="tw-text-zinc-500">to you@example.com</div>
+                </td>
+                <td class="tw-px-4 tw-py-3 tw-text-zinc-200">
+                  Your recent invoice <span class="tw-text-zinc-500">…</span>
+                </td>
+                <td class="tw-px-4 tw-py-3">
+                  <span
+                    class="tw-inline-flex tw-items-center tw-text-[11px] tw-font-semibold tw-px-2 tw-py-[2px] tw-bg-amber-500/15 tw-text-amber-400">HELD</span>
+                </td>
+                <td class="tw-px-4 tw-py-3">
+                  <div class="tw-flex tw-justify-end tw-gap-2">
+                    <button class="icon-btn-text icon-btn--primary"><span
+                        class="material-symbols-outlined tw-!text-base">visibility</span> View</button>
+                    <button class="icon-btn-text"><span class="material-symbols-outlined tw-!text-base">download</span>
+                      Attachments</button>
+                    <button class="icon-btn-text icon-btn--danger"><span
+                        class="material-symbols-outlined tw-!text-base">delete</span> Discard</button>
+                  </div>
+                </td>
+              </tr>
+              <tr class="hover:tw-bg-zinc-800/40">
+                <td class="tw-px-4 tw-py-3 tw-text-zinc-400">Oct 24, 07:09 AM</td>
+                <td class="tw-px-4 tw-py-3">
+                  <div class="tw-text-zinc-200">from noreply@updates.com</div>
+                  <div class="tw-text-zinc-500">to you@example.com</div>
+                </td>
+                <td class="tw-px-4 tw-py-3 tw-text-zinc-200">Status update <span class="tw-text-zinc-500">…</span></td>
+                <td class="tw-px-4 tw-py-3">
+                  <span
+                    class="tw-inline-flex tw-items-center tw-text-[11px] tw-font-semibold tw-px-2 tw-py-[2px] tw-bg-green-500/15 tw-text-green-400">RELEASED</span>
+                </td>
+                <td class="tw-px-4 tw-py-3">
+                  <div class="tw-flex tw-justify-end tw-gap-2">
+                    <button class="icon-btn-text"><span class="material-symbols-outlined tw-!text-base">history</span>
+                      Details</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <p class="tw-text-xs tw-text-zinc-500 tw-mt-2">Tight rows, subtle dividers, square chips, consistent action
+        buttons.</p>
+    </section>
 
-        <div class="space-y-6 mt-4">
-          <h3 class="text-xl font-semibold text-white">Primary Modern Buttons</h3>
-          <div class="p-6 bg-surface d-flex flex-wrap gap-4 align-items-center">
-            <div class="text-center">
-              <button class="btn btn-primary-modern">Primary Action</button>
-              <p class="text-xs font-medium text-slate-400 uppercase mt-2">Default</p>
+    <!-- CARDS -->
+    <section id="cards" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Cards & Panels</h2>
+      <div class="tw-grid tw-grid-cols-1 lg:tw-grid-cols-2 tw-gap-4">
+        <div class="tw-bg-background tw-border tw-border-border tw-flex tw-flex-col">
+          <div class="tw-p-4 tw-border-b tw-border-border tw-flex tw-justify-between tw-items-center">
+            <div>
+              <h3 class="tw-text-zinc-200 tw-font-semibold">Gmail – Ndayisjecka</h3>
+              <p class="tw-text-xs tw-text-zinc-500">imap.gmail.com:993 • smtp.gmail.com:587</p>
             </div>
-            <div class="text-center">
-              <button class="btn btn-primary-modern hover-state">Hover State</button>
-              <p class="text-xs font-medium text-slate-400 uppercase mt-2">Hover</p>
-            </div>
-            <div class="text-center">
-              <button class="btn btn-primary-modern active-state">Active State</button>
-              <p class="text-xs font-medium text-slate-400 uppercase mt-2">Active</p>
-            </div>
-            <div class="text-center">
-              <button class="btn btn-primary-modern" disabled>Disabled</button>
-              <p class="text-xs font-medium text-slate-400 uppercase mt-2">Disabled</p>
+            <div class="tw-flex tw-gap-2">
+              <button class="icon-btn-text"><span class="material-symbols-outlined tw-!text-base">play_arrow</span>
+                Start</button>
+              <button class="icon-btn-text"><span class="material-symbols-outlined tw-!text-base">stop</span>
+                Stop</button>
+              <button class="icon-btn-text icon-btn--primary"><span
+                  class="material-symbols-outlined tw-!text-base">bug_report</span> Diagnostics</button>
             </div>
           </div>
-          <div class="p-4 bg-surface">
-            <h4 class="text-sm font-semibold text-white mb-2">Copy-Paste Snippet:</h4>
-            <pre class="text-xs text-slate-300" style="background: #0a0a0a; padding: 10px; border-radius: 6px; overflow-x: auto;"><code>&lt;button class="btn btn-primary-modern"&gt;
-  &lt;i class="bi bi-check-circle"&gt;&lt;/i&gt; Primary Action
-&lt;/button&gt;</code></pre>
+          <div class="tw-p-4 tw-flex tw-gap-3 tw-flex-wrap">
+            <button class="icon-btn-text"><span class="material-symbols-outlined tw-!text-base">mail</span>
+              Test</button>
+            <button class="icon-btn-text icon-btn--primary"><span
+                class="material-symbols-outlined tw-!text-base">edit</span> Edit</button>
+            <button class="icon-btn-text icon-btn--danger"><span
+                class="material-symbols-outlined tw-!text-base">delete</span> Delete</button>
           </div>
         </div>
 
-        <div class="space-y-6 mt-4">
-          <h3 class="text-xl font-semibold text-white">Secondary &amp; Ghost Buttons</h3>
-          <div class="p-6 bg-surface d-flex flex-wrap gap-4 align-items-center">
-            <div class="text-center">
-              <button class="btn btn-secondary">Secondary Action</button>
-              <p class="text-xs font-medium text-slate-400 uppercase mt-2">Secondary</p>
-            </div>
-            <div class="text-center">
-              <button class="btn btn-ghost">Ghost Action</button>
-              <p class="text-xs font-medium text-slate-400 uppercase mt-2">Ghost</p>
-            </div>
-            <div class="text-center">
-              <button class="btn btn-secondary" disabled>Disabled</button>
-              <p class="text-xs font-medium text-slate-400 uppercase mt-2">Disabled</p>
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+          <div class="tw-flex tw-items-center tw-justify-between tw-mb-2">
+            <h3 class="tw-text-zinc-200 tw-font-semibold">Toolbar Panel</h3>
+            <div class="tw-flex tw-gap-2">
+              <button class="icon-btn-text"><span class="material-symbols-outlined tw-!text-base">refresh</span>
+                Refresh</button>
+              <button class="icon-btn-text icon-btn--primary"><span
+                  class="material-symbols-outlined tw-!text-base">add</span> Add Item</button>
             </div>
           </div>
+          <p class="tw-text-sm tw-text-zinc-400">Use this pattern for list headers with a right-aligned toolbar.</p>
         </div>
+      </div>
+    </section>
 
-        <div class="space-y-6 mt-4">
-          <h3 class="text-xl font-semibold text-white">Button Sizes</h3>
-          <div class="p-6 bg-surface d-flex flex-wrap gap-4 align-items-center">
-            <div class="text-center">
-              <button class="btn btn-secondary btn-sm"><i class="bi bi-pencil"></i> Small</button>
-              <p class="text-xs font-medium text-slate-400 uppercase mt-2">btn-sm (34px)</p>
-            </div>
-            <div class="text-center">
-              <button class="btn btn-secondary"><i class="bi bi-save"></i> Default</button>
-              <p class="text-xs font-medium text-slate-400 uppercase mt-2">Default (42px)</p>
-            </div>
-            <div class="text-center">
-              <button class="btn btn-secondary btn-lg"><i class="bi bi-cloud-download"></i> Large</button>
-              <p class="text-xs font-medium text-slate-400 uppercase mt-2">btn-lg (50px)</p>
-            </div>
-          </div>
-          <div class="p-4 bg-surface">
-            <h4 class="text-sm font-semibold text-white mb-2">Copy-Paste Snippet:</h4>
-            <pre class="text-xs text-slate-300" style="background: #0a0a0a; padding: 10px; border-radius: 6px; overflow-x: auto;"><code>&lt;button class="btn btn-secondary btn-sm"&gt;Small Button&lt;/button&gt;
-&lt;button class="btn btn-secondary"&gt;Default Button&lt;/button&gt;
-&lt;button class="btn btn-secondary btn-lg"&gt;Large Button&lt;/button&gt;</code></pre>
-          </div>
-        </div>
-      </section>
-
-      <!-- Forms & Validation Section -->
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Forms &amp; Validation</h2>
-        <div class="p-6 bg-surface space-y-8">
-          <div class="row g-5">
-            <div class="col-md-4">
-              <label class="form-label" for="default-input">Default State</label>
-              <input class="input-modern w-100" id="default-input" placeholder="Placeholder text" type="text" />
-              <p class="text-xs text-slate-500 mt-2">Use class `.input-modern`.</p>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label text-primary" for="focus-input">Focus State</label>
-              <input class="input-modern w-100 is-focused" id="focus-input" placeholder="Placeholder text" type="text"
-                value="User is typing..." />
-              <p class="text-xs text-slate-500 mt-2">The border and ring highlight the active field.</p>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label text-danger" for="error-input">Error State</label>
-              <input class="input-modern is-invalid w-100" id="error-input" placeholder="Invalid input" type="text"
-                value="email@" />
-              <p class="text-xs text-danger mt-2">Shows invalid state via `.is-invalid`.</p>
-            </div>
-          </div>
-          <div class="mt-4">
-            <h3 class="text-lg font-semibold text-white">Textarea</h3>
-            <label class="form-label mt-2" for="textarea-example">Message</label>
-            <textarea class="input-modern w-100" id="textarea-example" placeholder="Enter your message here..."
-              rows="4"></textarea>
-          </div>
-
-          <div class="row g-5 mt-4">
-            <div class="col-md-4">
-              <h3 class="text-lg font-semibold text-white">Select Dropdown</h3>
-              <label class="form-label mt-2" for="select-example">Choose Option</label>
-              <select class="form-select input-modern w-100" id="select-example">
-                <option value="">Select an option...</option>
-                <option value="1">Option 1</option>
-                <option value="2">Option 2</option>
-                <option value="3">Option 3</option>
-              </select>
-            </div>
-
-            <div class="col-md-4">
-              <h3 class="text-lg font-semibold text-white">Checkboxes</h3>
-              <div class="mt-2">
-                <div class="form-check mb-2">
-                  <input class="form-check-input" type="checkbox" value="" id="check1" checked>
-                  <label class="form-check-label text-white" for="check1">
-                    Option 1 (checked)
-                  </label>
-                </div>
-                <div class="form-check mb-2">
-                  <input class="form-check-input" type="checkbox" value="" id="check2">
-                  <label class="form-check-label text-white" for="check2">
-                    Option 2
-                  </label>
-                </div>
-                <div class="form-check">
-                  <input class="form-check-input" type="checkbox" value="" id="check3" disabled>
-                  <label class="form-check-label text-slate-400" for="check3">
-                    Option 3 (disabled)
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-md-4">
-              <h3 class="text-lg font-semibold text-white">Radio Buttons</h3>
-              <div class="mt-2">
-                <div class="form-check mb-2">
-                  <input class="form-check-input" type="radio" name="radioGroup" id="radio1" value="option1" checked>
-                  <label class="form-check-label text-white" for="radio1">
-                    Option 1 (selected)
-                  </label>
-                </div>
-                <div class="form-check mb-2">
-                  <input class="form-check-input" type="radio" name="radioGroup" id="radio2" value="option2">
-                  <label class="form-check-label text-white" for="radio2">
-                    Option 2
-                  </label>
-                </div>
-                <div class="form-check">
-                  <input class="form-check-input" type="radio" name="radioGroup" id="radio3" value="option3" disabled>
-                  <label class="form-check-label text-slate-400" for="radio3">
-                    Option 3 (disabled)
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="p-4 bg-surface mt-4">
-            <h4 class="text-sm font-semibold text-white mb-2">Copy-Paste Snippet:</h4>
-            <pre class="text-xs text-slate-300" style="background: #0a0a0a; padding: 10px; border-radius: 6px; overflow-x: auto;"><code>&lt;!-- Input --&gt;
-&lt;input class="input-modern w-100" type="text" placeholder="Placeholder" /&gt;
-
-&lt;!-- Select --&gt;
-&lt;select class="form-select input-modern w-100"&gt;
-  &lt;option value=""&gt;Select...&lt;/option&gt;
-&lt;/select&gt;
-
-&lt;!-- Checkbox --&gt;
-&lt;div class="form-check"&gt;
-  &lt;input class="form-check-input" type="checkbox" id="myCheck"&gt;
-  &lt;label class="form-check-label" for="myCheck"&gt;Label&lt;/label&gt;
-&lt;/div&gt;
-
-&lt;!-- Radio --&gt;
-&lt;div class="form-check"&gt;
-  &lt;input class="form-check-input" type="radio" name="group" id="radio1"&gt;
-  &lt;label class="form-check-label" for="radio1"&gt;Option 1&lt;/label&gt;
-&lt;/div&gt;</code></pre>
-          </div>
-        </div>
-      </section>
-
-      <!-- Icons Section -->
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Icons</h2>
-        <div class="p-6 bg-surface">
-          <div class="mb-4">
-            <h3 class="font-semibold text-white">Material Symbols (Stitch Theme)</h3>
-            <div class="d-flex align-items-center gap-4 mt-2" style="font-size: 1.5rem; color: #a1a1aa;">
-              <span class="material-symbols-outlined">dashboard</span>
-              <span class="material-symbols-outlined">inbox</span>
-              <span class="material-symbols-outlined text-primary">edit</span>
-              <span class="material-symbols-outlined">visibility</span>
-              <span class="material-symbols-outlined">science</span>
-            </div>
-            <div class="code mt-2 small">&lt;span class="material-symbols-outlined"&gt;dashboard&lt;/span&gt;</div>
-          </div>
-          <div class="mb-4">
-            <h3 class="font-semibold text-white">Bootstrap Icons (Legacy)</h3>
-            <div class="d-flex align-items-center gap-4 mt-2" style="font-size: 1.5rem; color: #a1a1aa;">
-              <i class="bi bi-inbox"></i>
-              <i class="bi bi-shield-check"></i>
-              <i class="bi bi-sliders"></i>
-              <i class="bi bi-palette"></i>
-              <i class="bi bi-cloud-download"></i>
-            </div>
-            <div class="code mt-2 small">&lt;i class="bi bi-inbox"&gt;&lt;/i&gt;</div>
-          </div>
-          <div>
-            <h3 class="font-semibold text-white">Font Awesome (Legacy)</h3>
-            <div class="d-flex align-items-center gap-4 mt-2" style="font-size: 1.5rem; color: #a1a1aa;">
-              <i class="fa-solid fa-triangle-exclamation"></i>
-              <i class="fa-regular fa-circle-check"></i>
-            </div>
-            <div class="code mt-2 small">&lt;i class="fa-solid fa-triangle-exclamation"&gt;&lt;/i&gt;</div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Panels Section -->
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Panels</h2>
-        <p class="text-slate-400">Panels are the primary container component used throughout the application for grouping related content.</p>
-
-        <div class="space-y-6 mt-4">
-          <h3 class="text-xl font-semibold text-white">Panel with Header & Actions</h3>
-          <div class="panel">
-            <div class="panel-header">
-              <div class="panel-title">
-                <i class="bi bi-list-check"></i> Panel Title
-                <span class="badge badge-soft-info ms-2">5 items</span>
-              </div>
-              <div class="panel-actions">
-                <button class="btn btn-secondary btn-sm">
-                  <i class="bi bi-plus-circle"></i> Add Item
-                </button>
-              </div>
-            </div>
-            <div class="panel-body">
-              <p class="text-slate-300">This is the panel body content. It can contain any HTML elements, tables, forms, or other components.</p>
-            </div>
-          </div>
-          <div class="p-4 bg-surface">
-            <h4 class="text-sm font-semibold text-white mb-2">Copy-Paste Snippet:</h4>
-            <pre class="text-xs text-slate-300" style="background: #0a0a0a; padding: 10px; border-radius: 6px; overflow-x: auto;"><code>&lt;div class="panel"&gt;
-  &lt;div class="panel-header"&gt;
-    &lt;div class="panel-title"&gt;
-      &lt;i class="bi bi-list-check"&gt;&lt;/i&gt; Panel Title
-    &lt;/div&gt;
-    &lt;div class="panel-actions"&gt;
-      &lt;button class="btn btn-secondary btn-sm"&gt;Action&lt;/button&gt;
-    &lt;/div&gt;
-  &lt;/div&gt;
-  &lt;div class="panel-body"&gt;
-    &lt;!-- Content here --&gt;
-  &lt;/div&gt;
-&lt;/div&gt;</code></pre>
-          </div>
-        </div>
-      </section>
-
-      <!-- Tables Section -->
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Tables</h2>
-        <p class="text-slate-400">Tables use the <code>.table-modern</code> class with subtle hover effects. Row hover uses <code>rgba(255,255,255,0.03)</code> background with a dark red outline.</p>
-
-        <div class="space-y-6 mt-4">
-          <h3 class="text-xl font-semibold text-white">Modern Table Example</h3>
-          <div class="p-6 bg-surface">
-            <table class="table table-hover">
-              <thead>
-                <tr>
-                  <th style="width: 80px;">Priority</th>
-                  <th>Name</th>
-                  <th style="width: 120px;">Status</th>
-                  <th style="width: 120px;">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><span class="tag-chip info">80</span></td>
-                  <td><div class="fw-semibold">Rule Name 1</div></td>
-                  <td><span class="status-indicator success">Active</span></td>
-                  <td>
-                    <button class="btn btn-secondary btn-sm">
-                      <i class="bi bi-pencil"></i> Edit
-                    </button>
-                  </td>
-                </tr>
-                <tr>
-                  <td><span class="tag-chip warning">50</span></td>
-                  <td><div class="fw-semibold">Rule Name 2</div></td>
-                  <td><span class="status-indicator warning">Warning</span></td>
-                  <td>
-                    <button class="btn btn-secondary btn-sm">
-                      <i class="bi bi-pencil"></i> Edit
-                    </button>
-                  </td>
-                </tr>
-                <tr>
-                  <td><span class="tag-chip muted">10</span></td>
-                  <td><div class="fw-semibold">Rule Name 3</div></td>
-                  <td><span class="status-indicator danger">Inactive</span></td>
-                  <td>
-                    <button class="btn btn-secondary btn-sm">
-                      <i class="bi bi-pencil"></i> Edit
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="p-4 bg-surface">
-            <h4 class="text-sm font-semibold text-white mb-2">Copy-Paste Snippet:</h4>
-            <pre class="text-xs text-slate-300" style="background: #0a0a0a; padding: 10px; border-radius: 6px; overflow-x: auto;"><code>&lt;table class="table table-hover"&gt;
-  &lt;thead&gt;
-    &lt;tr&gt;&lt;th&gt;Column 1&lt;/th&gt;&lt;th&gt;Column 2&lt;/th&gt;&lt;/tr&gt;
-  &lt;/thead&gt;
-  &lt;tbody&gt;
-    &lt;tr&gt;&lt;td&gt;Data 1&lt;/td&gt;&lt;td&gt;Data 2&lt;/td&gt;&lt;/tr&gt;
-  &lt;/tbody&gt;
-&lt;/table&gt;</code></pre>
-          </div>
-        </div>
-      </section>
-
-      <!-- Badges & Tags Section -->
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Badges &amp; Tags</h2>
-        <p class="text-slate-400">Tag chips and status indicators use <code>var(--radius-md)</code> (12px) border radius, NOT 30px or 999px pill shapes.</p>
-
-        <div class="space-y-6 mt-4">
-          <h3 class="text-xl font-semibold text-white">Tag Chips</h3>
-          <div class="p-6 bg-surface d-flex flex-wrap gap-3 align-items-center">
-            <span class="tag-chip success"><i class="bi bi-check-circle"></i> Success</span>
-            <span class="tag-chip accent"><i class="bi bi-x-circle"></i> Accent</span>
-            <span class="tag-chip warning"><i class="bi bi-exclamation-triangle"></i> Warning</span>
-            <span class="tag-chip info"><i class="bi bi-info-circle"></i> Info</span>
-            <span class="tag-chip muted"><i class="bi bi-clock"></i> Muted</span>
-          </div>
-
-          <h3 class="text-xl font-semibold text-white">Status Indicators</h3>
-          <div class="p-6 bg-surface d-flex flex-wrap gap-3 align-items-center">
-            <span class="status-indicator success">Active</span>
-            <span class="status-indicator warning">Pending</span>
-            <span class="status-indicator danger">Error</span>
-            <span class="status-indicator info">Info</span>
-          </div>
-
-          <h3 class="text-xl font-semibold text-white">Soft Badges</h3>
-          <div class="p-6 bg-surface d-flex flex-wrap gap-3 align-items-center">
-            <span class="badge badge-soft-success">3 Active</span>
-            <span class="badge badge-soft-danger">2 Failed</span>
-            <span class="badge badge-soft-info">5 Pending</span>
-            <span class="badge badge-soft-muted">12 Total</span>
-          </div>
-
-          <div class="p-4 bg-surface">
-            <h4 class="text-sm font-semibold text-white mb-2">Copy-Paste Snippet:</h4>
-            <pre class="text-xs text-slate-300" style="background: #0a0a0a; padding: 10px; border-radius: 6px; overflow-x: auto;"><code>&lt;span class="tag-chip success"&gt;
-  &lt;i class="bi bi-check-circle"&gt;&lt;/i&gt; Success
-&lt;/span&gt;
-&lt;span class="status-indicator success"&gt;Active&lt;/span&gt;
-&lt;span class="badge badge-soft-success"&gt;3 Active&lt;/span&gt;</code></pre>
-          </div>
-        </div>
-      </section>
-
-      <!-- Do's and Don'ts Section -->
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold border-b border-slate-700 pb-2 text-white">Best Practices</h2>
-        <div class="p-6 bg-surface">
-          <ul class="list-disc list-inside space-y-2 text-slate-300">
-            <li><strong>Do</strong> use `.btn-primary-modern` for the primary action on a page.</li>
-            <li><strong>Do</strong> use `.input-modern` for all new form fields to maintain consistency.</li>
-            <li><strong>Do</strong> use `confirmToast()` for destructive actions like deleting or discarding.</li>
-            <li><strong>Do</strong> use <code>var(--radius-md)</code> for all chips and badges.</li>
-            <li><strong>Do</strong> use <code>translateY(-2px)</code> for button hover effects, NOT -1px.</li>
-            <li><strong>Don't</strong> mix arbitrary inline colors; use the Tailwind color utility classes
-              (`bg-primary`, `text-danger`, etc.).</li>
-            <li><strong>Don't</strong> use `.table-striped` on dark backgrounds; wrap tables with `.table-modern`
-              instead.</li>
-            <li><strong>Don't</strong> use bright red (#dc2626); always use dark red (#7f1d1d).</li>
-            <li><strong>Don't</strong> use border-radius: 30px or 999px for chips/badges.</li>
+    <!-- SIDEBAR ACTIVE DEMO -->
+    <section id="sidebar" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Sidebar Active Demo</h2>
+      <div class="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-4">
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+          <p class="tw-text-sm tw-text-zinc-400 tw-mb-2">Active state should apply on stitch routes:</p>
+          <ul class="tw-text-sm tw-text-zinc-300 tw-list-disc tw-pl-5">
+            <li><code>emails.emails_unified_stitch</code></li>
+            <li><code>compose.compose_stitch</code></li>
+            <li><code>watchers.watchers_page_stitch</code></li>
+            <li><code>moderation.rules_stitch</code></li>
+            <li><code>accounts.email_accounts_stitch</code></li>
           </ul>
         </div>
-      </section>
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+          <p class="tw-text-sm tw-text-zinc-400">Implementation lives in <code>templates/base.html</code> (endpoint
+            checks).</p>
+        </div>
+      </div>
+    </section>
 
-    </div>
-  </div>
+    <!-- PATTERNS -->
+    <section id="patterns" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">App Patterns</h2>
+      <div class="tw-grid tw-grid-cols-1 lg:tw-grid-cols-2 tw-gap-4">
+        <!-- Emails row pattern -->
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+          <h3 class="tw-text-zinc-200 tw-font-semibold tw-mb-3">Emails Row</h3>
+          <div class="tw-flex tw-items-start tw-justify-between tw-gap-4 hover:tw-bg-zinc-800/40 tw-p-3">
+            <div class="tw-flex-1">
+              <div class="tw-text-zinc-400 tw-text-xs tw-mb-1">Oct 24, 07:11 AM</div>
+              <div class="tw-text-zinc-200">Automated quarantine flow test <span class="tw-text-zinc-500">…</span></div>
+              <div class="tw-text-zinc-500 tw-text-xs">from billing@service.com • to you@example.com</div>
+            </div>
+            <div class="tw-flex tw-items-center tw-gap-3">
+              <span
+                class="tw-inline-flex tw-items-center tw-text-[11px] tw-font-semibold tw-px-2 tw-py-[2px] tw-bg-amber-500/15 tw-text-amber-400">HELD</span>
+              <button class="icon-btn-text"><span class="material-symbols-outlined tw-!text-base">download</span>
+                Attachments</button>
+              <button class="icon-btn-text icon-btn--primary"><span
+                  class="material-symbols-outlined tw-!text-base">check_circle</span> Release</button>
+              <button class="icon-btn-text icon-btn--danger"><span
+                  class="material-symbols-outlined tw-!text-base">delete</span> Discard</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Accounts card pattern -->
+        <div class="tw-bg-background tw-border tw-border-border tw-flex tw-flex-col">
+          <div class="tw-p-4 tw-border-b tw-border-border tw-flex tw-justify-between tw-items-center">
+            <h3 class="tw-text-zinc-200 tw-font-semibold">Email Accounts</h3>
+            <a href="{{ url_for('accounts.add_email_account') }}"
+              class="tw-inline-flex tw-items-center tw-gap-2 tw-font-bold tw-text-zinc-900 tw-bg-primary tw-border tw-border-[#bef264] tw-px-4 tw-py-2 hover:tw-bg-[#a3d154]">
+              <span class="material-symbols-outlined tw-!text-xl">add_circle</span> Add Account
+            </a>
+          </div>
+          <div class="tw-p-4 tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-3">
+            <div class="tw-border tw-border-border tw-p-3">
+              <div class="tw-flex tw-items-center tw-justify-between">
+                <div>
+                  <div class="tw-text-zinc-200 tw-font-semibold">Gmail</div>
+                  <div class="tw-text-xs tw-text-zinc-500">ndayisjecka@gmail.com</div>
+                </div>
+                <div class="tw-flex tw-gap-2">
+                  <button class="icon-btn-text icon-btn--primary"><span
+                      class="material-symbols-outlined tw-!text-base">edit</span> Edit</button>
+                  <button class="icon-btn-text icon-btn--danger"><span
+                      class="material-symbols-outlined tw-!text-base">delete</span> Delete</button>
+                </div>
+              </div>
+              <div class="tw-text-xs tw-text-zinc-500 tw-mt-2">imap.gmail.com:993 • smtp.gmail.com:587</div>
+            </div>
+            <div class="tw-border tw-border-border tw-p-3">
+              <div class="tw-flex tw-items-center tw-justify-between">
+                <div>
+                  <div class="tw-text-zinc-200 tw-font-semibold">Hostinger</div>
+                  <div class="tw-text-xs tw-text-zinc-500">mcintyre@corrinbox.com</div>
+                </div>
+                <div class="tw-flex tw-gap-2">
+                  <button class="icon-btn-text"><span class="material-symbols-outlined tw-!text-base">play_arrow</span>
+                    Start</button>
+                  <button class="icon-btn-text"><span class="material-symbols-outlined tw-!text-base">bug_report</span>
+                    Diagnostics</button>
+                </div>
+              </div>
+              <div class="tw-text-xs tw-text-zinc-500 tw-mt-2">imap.hostinger.com:993 • smtp.hostinger.com:465</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
 </div>
 {% endblock %}
