@@ -199,9 +199,9 @@ app.config['IMAP_ONLY'] = _bool_env('IMAP_ONLY', default=False)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 # Attachment feature flags (Phase 1-4 implementation)
-app.config['ATTACHMENTS_UI_ENABLED'] = _bool_env('ATTACHMENTS_UI_ENABLED', default=False)
-app.config['ATTACHMENTS_EDIT_ENABLED'] = _bool_env('ATTACHMENTS_EDIT_ENABLED', default=False)
-app.config['ATTACHMENTS_RELEASE_ENABLED'] = _bool_env('ATTACHMENTS_RELEASE_ENABLED', default=False)
+app.config['ATTACHMENTS_UI_ENABLED'] = _bool_env('ATTACHMENTS_UI_ENABLED', default=True)  # Enable attachment viewing
+app.config['ATTACHMENTS_EDIT_ENABLED'] = _bool_env('ATTACHMENTS_EDIT_ENABLED', default=True)  # Enable attachment editing
+app.config['ATTACHMENTS_RELEASE_ENABLED'] = _bool_env('ATTACHMENTS_RELEASE_ENABLED', default=True)  # Enable attachment release
 
 # CSRF + Rate Limiting (use shared extension instances)
 try:
