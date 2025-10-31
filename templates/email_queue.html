@@ -130,7 +130,7 @@ header.command-bar {
                 </td>
                 <td>
                     <div class="btn-group" role="group">
-                        <a href="/email/{{ email.id }}" class="btn btn-sm btn-outline-primary" title="View">
+                        <a href="{{ url_for('emails.view_email', email_id=email.id) }}" class="btn btn-sm btn-outline-primary" title="View">
                             <i class="bi bi-eye"></i>
                         </a>
                         {% if email.status == 'PENDING' %}
