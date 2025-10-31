@@ -10,7 +10,7 @@
         <h1 class="tw-text-2xl tw-font-bold tw-text-white">Stitch Styleguide</h1>
         <p class="tw-text-sm tw-text-zinc-400 tw-mt-1">Tokens, components, and patterns used across the app.</p>
       </div>
-      <a href="{{ url_for('emails.emails_unified_stitch') }}"
+      <a href="/emails-unified/stitch"
          class="tw-inline-flex tw-items-center tw-gap-2 tw-text-primary tw-text-sm tw-font-medium tw-px-2 tw-py-1 hover:tw-bg-primary/10">
         <span class="material-symbols-outlined tw-!text-base">arrow_back</span>
         Back to Emails
@@ -313,7 +313,7 @@
         <!-- Accounts card pattern -->
         <div class="tw-bg-background tw-border tw-border-border tw-flex tw-flex-col">
           {{ toolbar('Email Accounts', [
-            {'label': 'Add Account', 'icon': 'add_circle', 'variant': 'primary', 'href': url_for('accounts.add_email_account') if url_for else '#'}
+            {'label': 'Add Account', 'icon': 'add_circle', 'variant': 'primary', 'href': '/accounts/add'}
           ]) }}
           <div class="tw-p-4 tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-3">
             <div class="tw-border tw-border-border tw-p-3">
