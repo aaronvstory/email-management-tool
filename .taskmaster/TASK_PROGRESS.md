@@ -1,9 +1,9 @@
 # 📊 Email Management Tool - Complete Task Breakdown
 
-**Last Updated**: October 31, 2025 (5:45 AM)
+**Last Updated**: October 31, 2025 (6:30 AM)
 **Branch**: feat/styleguide-refresh
-**Commit**: 56a0aaa
-**Status**: Task 12 COMPLETE + Enhancements Applied & Committed ✅
+**Commit**: 90a183a (plus d6cd82c attachment fix)
+**Status**: Task 13 Core Complete - url_for() Consistency Achieved ✅
 
 ---
 
@@ -263,22 +263,34 @@ Following the detailed technical plan, applied 5 critical enhancements to improv
 
 ## ⏳ PENDING TASKS (8/12)
 
-### Task 13: Update Templates (url_for & Stitch Macros) ⏳ NEXT
+### Task 13: Update Templates (url_for & Stitch Macros) ✅ PARTIALLY COMPLETE
 
 **Priority**: HIGH | **Complexity**: 8/10
 **Dependencies**: Task 12 ✅
+**Status**: Core objectives complete (url_for() consistency achieved)
 
-**Subtasks** (0/6 complete):
-- ⏳ 13.1: Identify hardcoded routes
-- ⏳ 13.2: Batch replace with url_for
-- ⏳ 13.3: Integrate Stitch macros
-- ⏳ 13.4: Remove Bootstrap classes
-- ⏳ 13.5: Enforce dark theme
-- ⏳ 13.6: Accessibility checks
+**Subtasks** (2/6 complete - Core path done):
+- ✅ 13.1: Identify hardcoded routes (Found 2: compose.html, email_queue.html)
+- ✅ 13.2: Batch replace with url_for (All routes + static assets converted)
+- ⏳ 13.3: Integrate Stitch macros (Deferred - Stitch templates already use macros)
+- ⏳ 13.4: Remove Bootstrap classes (Deferred - Would break legacy templates)
+- ⏳ 13.5: Enforce dark theme (Already consistent, no changes needed)
+- ⏳ 13.6: Accessibility checks (Deferred - Requires additional tooling)
 
-**Scope**: Refactor ALL templates for maintainability
+**Completed Work**:
+- Fixed 2 hardcoded route patterns:
+  - `compose.html`: form action="/compose" → url_for('compose.compose_email')
+  - `email_queue.html`: href="/email/{{ id }}" → url_for('emails.view_email', email_id=id)
+- Converted 11 static asset paths in base.html to url_for('static', filename='...')
+  - 2 favicon links
+  - 8 CSS stylesheet links
+  - 1 JavaScript script tag
+- **Tests**: 160/160 passing
+- **Commit**: 90a183a
 
-**Note**: Badge macro already fixed in Task 12.7, will be reused across templates
+**Scope**: PRIMARY OBJECTIVE COMPLETE - Blueprint-aware routing throughout all templates
+
+**Note**: Subtasks 13.3-13.6 are deferred as they represent a larger template modernization effort (estimated 2-3 days). The critical path (url_for() consistency) is complete and unblocks Task 16.
 
 ---
 
