@@ -80,19 +80,67 @@
     <!-- Attachments -->
     {% if attachments %}
     <div class="tw-bg-background tw-border tw-border-border">
-        <div class="tw-px-4 tw-py-3 tw-border-b tw-border-border">
-            <h2 class="tw-text-zinc-200 tw-font-semibold">Attachments ({{ attachments|length }})</h2>
+        <div class="tw-px-4 tw-py-3 tw-border-b tw-border-border tw-flex tw-items-center tw-justify-between">
+            <h2 class="tw-text-zinc-200 tw-font-semibold">
+                <span class="material-symbols-outlined tw-text-base tw-align-middle">attach_file</span>
+                Attachments ({{ attachments|length }})
+            </h2>
+            {% if attachments|length > 1 %}
+            <a href="{{ url_for('interception_bp.api_email_attachments_download_all', email_id=email.id) }}"
+               class="tw-inline-flex tw-items-center tw-gap-1 tw-text-sm tw-font-semibold tw-text-zinc-900 tw-bg-primary tw-border tw-border-primary tw-px-3 tw-py-1.5 hover:tw-bg-lime-400 tw-transition">
+                <span class="material-symbols-outlined tw-text-base">download</span>
+                Download All
+            </a>
+            {% endif %}
         </div>
         <div class="tw-p-4">
             <ul class="tw-divide-y tw-divide-zinc-800">
                 {% for att in attachments %}
-                <li class="tw-flex tw-items-center tw-justify-between tw-py-2">
-                    <div class="tw-flex tw-items-center tw-gap-2">
-                        <span class="material-symbols-outlined tw-text-zinc-400">attach_file</span>
-                        <span class="tw-text-zinc-300">{{ att.filename }}</span>
-                        <span class="tw-text-zinc-500 tw-text-sm">({{ (att.size / 1024)|round(1) }} KB)</span>
+                <li class="tw-flex tw-items-center tw-justify-between tw-py-3 tw-group">
+                    <div class="tw-flex tw-items-center tw-gap-3">
+                        <span class="material-symbols-outlined tw-text-zinc-400 tw-text-2xl">
+                            {% if att.mime_type %}
+                                {% if 'image' in att.mime_type %}
+                                    image
+                                {% elif 'pdf' in att.mime_type %}
+                                    picture_as_pdf
+                                {% elif 'zip' in att.mime_type or 'compressed' in att.mime_type %}
+                                    folder_zip
+                                {% elif 'word' in att.mime_type or 'document' in att.mime_type %}
+                                    description
+                                {% elif 'excel' in att.mime_type or 'spreadsheet' in att.mime_type %}
+                                    table_chart
+                                {% else %}
+                                    attach_file
+                                {% endif %}
+                            {% else %}
+                                attach_file
+                            {% endif %}
+                        </span>
+                        <div>
+                            <div class="tw-text-zinc-200 tw-font-medium">{{ att.filename }}</div>
+                            <div class="tw-text-zinc-500 tw-text-xs tw-mt-0.5">
+                                {% if att.size %}
+                                    {% if att.size < 1024 %}
+                                        {{ att.size }} bytes
+                                    {% elif att.size < 1048576 %}
+                                        {{ (att.size / 1024)|round(1) }} KB
+                                    {% else %}
+                                        {{ (att.size / 1048576)|round(2) }} MB
+                                    {% endif %}
+                                {% endif %}
+                                {% if att.mime_type %}
+                                    <span class="tw-mx-1">•</span>
+                                    <span class="tw-text-zinc-600">{{ att.mime_type.split('/')[1]|upper if '/' in att.mime_type else att.mime_type|upper }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
-                    <a href="{{ url_for('interception_bp.api_attachment_download', attachment_id=att.id) }}" class="tw-text-primary hover:tw-text-lime-400 tw-text-sm">Download</a>
+                    <a href="{{ url_for('interception_bp.api_attachment_download', attachment_id=att.id) }}"
+                       class="tw-inline-flex tw-items-center tw-gap-1 tw-text-sm tw-text-zinc-400 hover:tw-text-primary tw-transition">
+                        <span class="material-symbols-outlined tw-text-base">download</span>
+                        Download
+                    </a>
                 </li>
                 {% endfor %}
             </ul>

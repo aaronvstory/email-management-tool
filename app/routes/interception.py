@@ -2699,13 +2699,51 @@ def api_batch_delete():
         placeholders = ','.join('?' * len(email_ids))
 
         try:
+            # STEP 1: Get storage roots for path validation
+            attachments_root, staged_root = _get_storage_roots()
+
+            # STEP 2: Query all attachments for these emails BEFORE deleting
+            cur.execute(
+                f"SELECT id, storage_path FROM email_attachments WHERE email_id IN ({placeholders})",
+                email_ids
+            )
+            attachments = cur.fetchall()
+
+            # STEP 3: Delete from database FIRST (within transaction)
+            # CASCADE will remove attachment records automatically
             cur.execute(
                 f"DELETE FROM email_messages WHERE id IN ({placeholders})",
                 email_ids
             )
             deleted = cur.rowcount
             conn.commit()
+
+            # STEP 4: Delete attachment files from disk AFTER successful DB commit
+            # If file deletion fails, log warning but don't fail the request
+            # Orphaned files can be cleaned up later via maintenance script
+            files_deleted = 0
+            files_failed = 0
+            for att in attachments:
+                try:
+                    storage_path = Path(att['storage_path']).resolve()
+                    if storage_path.exists() and storage_path.is_file() and (_is_under(storage_path, attachments_root) or _is_under(storage_path, staged_root)):
+                        storage_path.unlink()
+                        files_deleted += 1
+                        log.debug(f"[batch-delete] Deleted attachment file: {storage_path}")
+                    elif not storage_path.exists():
+                        log.debug(f"[batch-delete] Attachment file already missing: {storage_path}")
+                except Exception as exc:
+                    files_failed += 1
+                    log.warning(
+                        "[batch-delete] Failed to remove attachment file",
+                        extra={'attachment_id': att['id'], 'path': att.get('storage_path'), 'error': str(exc)}
+                    )
+
+            # Log file cleanup results
+            if files_deleted > 0:
+                log.info(f"[batch-delete] Cleaned up {files_deleted} attachment files ({files_failed} failures)")
         except Exception as e:
+            conn.rollback()  # Explicit rollback on error
             failed = len(email_ids)
             log.error(f"[batch-delete] Failed to delete emails: {e}")
             return jsonify({'success': False, 'error': str(e)}), 500
@@ -2724,7 +2762,9 @@ def api_batch_delete():
             'success': True,
             'deleted': deleted,
             'failed': failed,
-            'total': len(email_ids)
+            'total': len(email_ids),
+            'files_deleted': files_deleted,
+            'files_failed': files_failed
         })
 
     except Exception as e:
