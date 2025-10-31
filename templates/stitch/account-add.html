@@ -1,0 +1,499 @@
+{% extends "base.html" %}
+{% from 'stitch/_macros.html' import badge, icon_btn %}
+
+{% block title %}Add Email Account - Email Management Tool{% endblock %}
+
+{% block content %}
+<div id="account-add-page">
+<main class="tw-flex-1 tw-p-6 tw-space-y-6">
+    <div class="tw-flex tw-items-center tw-gap-4">
+        <a href="{{ url_for('accounts.email_accounts_stitch') }}" class="tw-text-zinc-400 hover:tw-text-zinc-200">
+            <span class="material-symbols-outlined">arrow_back</span>
+        </a>
+        <div>
+            <h1 class="tw-text-2xl tw-font-bold tw-text-white">Add Email Account</h1>
+            <p class="tw-text-zinc-400 tw-text-sm tw-mt-1">Configure IMAP settings for email monitoring. SMTP is optional for sending.</p>
+        </div>
+    </div>
+
+    <form method="POST" id="addAccountForm" class="tw-space-y-6">
+        <!-- Provider Quick Select -->
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+            <h3 class="tw-text-zinc-200 tw-font-semibold tw-mb-3">Quick Setup</h3>
+            <div class="tw-grid tw-grid-cols-2 tw-md:grid-cols-4 tw-gap-2">
+                <button type="button" class="provider-btn tw-bg-zinc-800 tw-border tw-border-zinc-700 tw-text-zinc-300 tw-px-4 tw-py-3 hover:tw-bg-zinc-700 tw-transition-colors tw-flex tw-flex-col tw-items-center tw-gap-2" data-provider="gmail" onclick="setProvider(event, 'gmail')">
+                    <span class="material-symbols-outlined">mail</span>
+                    <span class="tw-text-sm tw-font-medium">Gmail</span>
+                </button>
+                <button type="button" class="provider-btn tw-bg-zinc-800 tw-border tw-border-zinc-700 tw-text-zinc-300 tw-px-4 tw-py-3 hover:tw-bg-zinc-700 tw-transition-colors tw-flex tw-flex-col tw-items-center tw-gap-2" data-provider="outlook" onclick="setProvider(event, 'outlook')">
+                    <span class="material-symbols-outlined">mail</span>
+                    <span class="tw-text-sm tw-font-medium">Outlook</span>
+                </button>
+                <button type="button" class="provider-btn tw-bg-zinc-800 tw-border tw-border-zinc-700 tw-text-zinc-300 tw-px-4 tw-py-3 hover:tw-bg-zinc-700 tw-transition-colors tw-flex tw-flex-col tw-items-center tw-gap-2" data-provider="hostinger" onclick="setProvider(event, 'hostinger')">
+                    <span class="material-symbols-outlined">dns</span>
+                    <span class="tw-text-sm tw-font-medium">Hostinger</span>
+                </button>
+                <button type="button" class="provider-btn tw-bg-zinc-800 tw-border tw-border-zinc-700 tw-text-zinc-300 tw-px-4 tw-py-3 hover:tw-bg-zinc-700 tw-transition-colors tw-flex tw-flex-col tw-items-center tw-gap-2" data-provider="custom" onclick="setProvider(event, 'custom')">
+                    <span class="material-symbols-outlined">settings</span>
+                    <span class="tw-text-sm tw-font-medium">Custom</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Account Details -->
+        <div class="tw-bg-background tw-border tw-border-border">
+            <div class="tw-px-4 tw-py-3 tw-border-b tw-border-border">
+                <h3 class="tw-text-zinc-200 tw-font-semibold">Account Details</h3>
+            </div>
+            <div class="tw-p-4 tw-space-y-4">
+                <div class="tw-grid tw-grid-cols-1 tw-md:grid-cols-2 tw-gap-4">
+                    <div>
+                        <label for="account_name" class="tw-block tw-text-sm tw-font-medium tw-text-zinc-300 tw-mb-2">
+                            Account Name <span class="tw-text-red-400">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="account_name"
+                            name="account_name"
+                            required
+                            placeholder="e.g., Work Email, Personal Gmail"
+                            class="tw-w-full tw-bg-zinc-900 tw-border tw-border-zinc-700 tw-text-zinc-100 tw-px-3 tw-py-2 tw-text-sm focus:tw-ring-primary focus:tw-border-primary"
+                        />
+                    </div>
+                    <div>
+                        <label for="email_address" class="tw-block tw-text-sm tw-font-medium tw-text-zinc-300 tw-mb-2">
+                            Email Address <span class="tw-text-red-400">*</span>
+                        </label>
+                        <input
+                            type="email"
+                            id="email_address"
+                            name="email_address"
+                            required
+                            placeholder="your@email.com"
+                            class="tw-w-full tw-bg-zinc-900 tw-border tw-border-zinc-700 tw-text-zinc-100 tw-px-3 tw-py-2 tw-text-sm focus:tw-ring-primary focus:tw-border-primary"
+                        />
+                    </div>
+                </div>
+                <div class="tw-flex tw-items-center tw-gap-3">
+                    <button
+                        type="button"
+                        onclick="smartAutoDetect()"
+                        class="tw-bg-zinc-700 tw-text-zinc-200 tw-font-semibold tw-py-2 tw-px-4 hover:tw-bg-zinc-600 tw-transition-colors tw-flex tw-items-center tw-gap-2"
+                    >
+                        <span class="material-symbols-outlined tw-text-base">auto_awesome</span>
+                        Auto-Detect Settings
+                    </button>
+                    <span class="tw-text-zinc-400 tw-text-sm">Automatically configure IMAP/SMTP based on email domain</span>
+                </div>
+                <div id="autodetectStatus" class="tw-hidden"></div>
+            </div>
+        </div>
+
+        <!-- IMAP Settings (REQUIRED) -->
+        <div class="tw-bg-background tw-border tw-border-border">
+            <div class="tw-px-4 tw-py-3 tw-border-b tw-border-border tw-flex tw-justify-between tw-items-center">
+                <h3 class="tw-text-zinc-200 tw-font-semibold">IMAP Settings</h3>
+                <span class="tw-text-red-400 tw-text-xs tw-font-bold">* REQUIRED</span>
+            </div>
+            <div class="tw-p-4 tw-space-y-4">
+                <div class="tw-grid tw-grid-cols-1 tw-md:grid-cols-2 tw-gap-4">
+                    <div>
+                        <label for="imap_host" class="tw-block tw-text-sm tw-font-medium tw-text-zinc-300 tw-mb-2">
+                            IMAP Host <span class="tw-text-red-400">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="imap_host"
+                            name="imap_host"
+                            required
+                            placeholder="imap.example.com"
+                            class="tw-w-full tw-bg-zinc-900 tw-border tw-border-zinc-700 tw-text-zinc-100 tw-px-3 tw-py-2 tw-text-sm focus:tw-ring-primary focus:tw-border-primary"
+                        />
+                    </div>
+                    <div>
+                        <label for="imap_port" class="tw-block tw-text-sm tw-font-medium tw-text-zinc-300 tw-mb-2">
+                            Port <span class="tw-text-red-400">*</span>
+                        </label>
+                        <input
+                            type="number"
+                            id="imap_port"
+                            name="imap_port"
+                            required
+                            placeholder="993"
+                            value="993"
+                            class="tw-w-full tw-bg-zinc-900 tw-border tw-border-zinc-700 tw-text-zinc-100 tw-px-3 tw-py-2 tw-text-sm focus:tw-ring-primary focus:tw-border-primary"
+                        />
+                    </div>
+                </div>
+                <div class="tw-grid tw-grid-cols-1 tw-md:grid-cols-2 tw-gap-4">
+                    <div>
+                        <label for="imap_username" class="tw-block tw-text-sm tw-font-medium tw-text-zinc-300 tw-mb-2">
+                            Username <span class="tw-text-red-400">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="imap_username"
+                            name="imap_username"
+                            required
+                            placeholder="username"
+                            class="tw-w-full tw-bg-zinc-900 tw-border tw-border-zinc-700 tw-text-zinc-100 tw-px-3 tw-py-2 tw-text-sm focus:tw-ring-primary focus:tw-border-primary"
+                        />
+                    </div>
+                    <div>
+                        <label for="imap_password" class="tw-block tw-text-sm tw-font-medium tw-text-zinc-300 tw-mb-2">
+                            Password <span class="tw-text-red-400">*</span>
+                        </label>
+                        <input
+                            type="password"
+                            id="imap_password"
+                            name="imap_password"
+                            required
+                            placeholder="password or app password"
+                            class="tw-w-full tw-bg-zinc-900 tw-border tw-border-zinc-700 tw-text-zinc-100 tw-px-3 tw-py-2 tw-text-sm focus:tw-ring-primary focus:tw-border-primary"
+                        />
+                    </div>
+                </div>
+                <div class="tw-flex tw-items-center tw-gap-2">
+                    <input type="checkbox" id="imap_use_ssl" name="imap_use_ssl" checked class="tw-w-4 tw-h-4 tw-text-primary tw-bg-zinc-900 tw-border-zinc-700 focus:tw-ring-primary" />
+                    <label for="imap_use_ssl" class="tw-text-sm tw-text-zinc-300">
+                        Use SSL/TLS for IMAP (recommended for port 993)
+                    </label>
+                </div>
+                <div class="tw-flex tw-items-center tw-gap-3">
+                    <button
+                        type="button"
+                        onclick="testConnection('imap')"
+                        class="tw-bg-zinc-700 tw-text-zinc-200 tw-font-semibold tw-py-2 tw-px-4 hover:tw-bg-zinc-600 tw-transition-colors tw-flex tw-items-center tw-gap-2"
+                    >
+                        <span class="material-symbols-outlined tw-text-base">broadcast_on_personal</span>
+                        Test IMAP Connection
+                    </button>
+                </div>
+                <div id="imap_test_status" class="tw-hidden"></div>
+            </div>
+        </div>
+
+        <!-- SMTP Settings (OPTIONAL) -->
+        <div class="tw-bg-background tw-border tw-border-border" id="smtpSection">
+            <div class="tw-px-4 tw-py-3 tw-border-b tw-border-border tw-flex tw-justify-between tw-items-center tw-cursor-pointer" onclick="toggleSMTP()">
+                <div class="tw-flex tw-items-center tw-gap-2">
+                    <h3 class="tw-text-zinc-200 tw-font-semibold">SMTP Settings</h3>
+                    <span class="tw-bg-zinc-700 tw-text-zinc-300 tw-text-xs tw-font-medium tw-px-2 tw-py-0.5">Optional</span>
+                </div>
+                <span class="material-symbols-outlined tw-text-zinc-400 smtp-toggle-icon">expand_more</span>
+            </div>
+            <div class="tw-p-4 tw-space-y-4 smtp-body">
+                <p class="tw-text-zinc-400 tw-text-sm tw-mb-3">
+                    <span class="material-symbols-outlined tw-text-base tw-align-middle">info</span>
+                    SMTP is only needed if you want to <strong>send</strong> emails through this account. If you only need to <strong>monitor incoming mail</strong>, you can skip this section.
+                </p>
+                <div class="tw-grid tw-grid-cols-1 tw-md:grid-cols-2 tw-gap-4">
+                    <div>
+                        <label for="smtp_host" class="tw-block tw-text-sm tw-font-medium tw-text-zinc-300 tw-mb-2">
+                            SMTP Host <span class="tw-text-zinc-500">(Optional)</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="smtp_host"
+                            name="smtp_host"
+                            placeholder="smtp.example.com"
+                            class="tw-w-full tw-bg-zinc-900 tw-border tw-border-zinc-700 tw-text-zinc-100 tw-px-3 tw-py-2 tw-text-sm focus:tw-ring-primary focus:tw-border-primary"
+                        />
+                    </div>
+                    <div>
+                        <label for="smtp_port" class="tw-block tw-text-sm tw-font-medium tw-text-zinc-300 tw-mb-2">
+                            Port <span class="tw-text-zinc-500">(Optional)</span>
+                        </label>
+                        <input
+                            type="number"
+                            id="smtp_port"
+                            name="smtp_port"
+                            placeholder="465"
+                            value="465"
+                            class="tw-w-full tw-bg-zinc-900 tw-border tw-border-zinc-700 tw-text-zinc-100 tw-px-3 tw-py-2 tw-text-sm focus:tw-ring-primary focus:tw-border-primary"
+                        />
+                    </div>
+                </div>
+                <div class="tw-grid tw-grid-cols-1 tw-md:grid-cols-2 tw-gap-4">
+                    <div>
+                        <label for="smtp_username" class="tw-block tw-text-sm tw-font-medium tw-text-zinc-300 tw-mb-2">
+                            Username <span class="tw-text-zinc-500">(Optional)</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="smtp_username"
+                            name="smtp_username"
+                            placeholder="username"
+                            class="tw-w-full tw-bg-zinc-900 tw-border tw-border-zinc-700 tw-text-zinc-100 tw-px-3 tw-py-2 tw-text-sm focus:tw-ring-primary focus:tw-border-primary"
+                        />
+                    </div>
+                    <div>
+                        <label for="smtp_password" class="tw-block tw-text-sm tw-font-medium tw-text-zinc-300 tw-mb-2">
+                            Password <span class="tw-text-zinc-500">(Optional)</span>
+                        </label>
+                        <input
+                            type="password"
+                            id="smtp_password"
+                            name="smtp_password"
+                            placeholder="password or app password"
+                            class="tw-w-full tw-bg-zinc-900 tw-border tw-border-zinc-700 tw-text-zinc-100 tw-px-3 tw-py-2 tw-text-sm focus:tw-ring-primary focus:tw-border-primary"
+                        />
+                    </div>
+                </div>
+                <div class="tw-flex tw-items-center tw-gap-2">
+                    <input type="checkbox" id="smtp_use_ssl" name="smtp_use_ssl" checked class="tw-w-4 tw-h-4 tw-text-primary tw-bg-zinc-900 tw-border-zinc-700 focus:tw-ring-primary" />
+                    <label for="smtp_use_ssl" class="tw-text-sm tw-text-zinc-300">
+                        Use SSL/TLS for SMTP (recommended)
+                    </label>
+                </div>
+                <div class="tw-flex tw-items-center tw-gap-3">
+                    <button
+                        type="button"
+                        onclick="testConnection('smtp')"
+                        class="tw-bg-zinc-700 tw-text-zinc-200 tw-font-semibold tw-py-2 tw-px-4 hover:tw-bg-zinc-600 tw-transition-colors tw-flex tw-items-center tw-gap-2"
+                    >
+                        <span class="material-symbols-outlined tw-text-base">broadcast_on_personal</span>
+                        Test SMTP Connection
+                    </button>
+                </div>
+                <div id="smtp_test_status" class="tw-hidden"></div>
+            </div>
+        </div>
+
+        <!-- Monitoring Options -->
+        <div class="tw-bg-background tw-border tw-border-border">
+            <div class="tw-px-4 tw-py-3 tw-border-b tw-border-border">
+                <h3 class="tw-text-zinc-200 tw-font-semibold">Monitoring Options</h3>
+            </div>
+            <div class="tw-p-4">
+                <div class="tw-flex tw-items-center tw-gap-2">
+                    <input type="checkbox" id="start_watcher" name="start_watcher" checked class="tw-w-4 tw-h-4 tw-text-primary tw-bg-zinc-900 tw-border-zinc-700 focus:tw-ring-primary" />
+                    <label for="start_watcher" class="tw-text-sm tw-text-zinc-300">
+                        Start monitoring immediately after saving
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit Actions -->
+        <div class="tw-flex tw-justify-end tw-gap-3">
+            <button
+                type="button"
+                onclick="window.history.back()"
+                class="tw-bg-zinc-700 tw-text-zinc-200 tw-font-semibold tw-py-2 tw-px-6 hover:tw-bg-zinc-600 tw-transition-colors tw-flex tw-items-center tw-gap-2"
+            >
+                <span class="material-symbols-outlined tw-text-base">arrow_back</span>
+                Cancel
+            </button>
+            <button
+                type="submit"
+                class="tw-bg-primary tw-text-zinc-900 tw-font-semibold tw-py-2 tw-px-6 hover:tw-bg-lime-400 tw-transition-colors tw-flex tw-items-center tw-gap-2"
+            >
+                <span class="material-symbols-outlined tw-text-base">save</span>
+                Save Account
+            </button>
+        </div>
+    </form>
+</main>
+</div>
+
+<style>
+.provider-btn.active {
+    background-color: rgba(190, 242, 100, 0.1) !important;
+    border-color: #bef264 !important;
+    color: #bef264 !important;
+}
+
+#smtpSection .smtp-body {
+    display: block;
+}
+
+#smtpSection.collapsed .smtp-body {
+    display: none;
+}
+
+#smtpSection.collapsed .smtp-toggle-icon::before {
+    content: 'expand_more';
+}
+
+#smtpSection:not(.collapsed) .smtp-toggle-icon::before {
+    content: 'expand_less';
+}
+
+.test-status {
+    padding: 0.75rem;
+    margin-top: 0.75rem;
+    border-radius: 0;
+    font-size: 0.875rem;
+}
+
+.test-status.success {
+    background-color: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #4ade80;
+}
+
+.test-status.error {
+    background-color: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #f87171;
+}
+
+.test-status.loading {
+    background-color: rgba(161, 161, 170, 0.1);
+    border: 1px solid rgba(161, 161, 170, 0.3);
+    color: #a1a1aa;
+}
+</style>
+
+<script>
+// Provider settings (preset configurations)
+const providerSettings = {
+  gmail: { imap_host: 'imap.gmail.com', imap_port: 993, smtp_host: 'smtp.gmail.com', smtp_port: 587 },
+  outlook: { imap_host: 'outlook.office365.com', imap_port: 993, smtp_host: 'smtp.office365.com', smtp_port: 587 },
+  hostinger: { imap_host: 'imap.hostinger.com', imap_port: 993, smtp_host: 'smtp.hostinger.com', smtp_port: 465 }
+};
+
+// Set provider preset
+function setProvider(evt, provider) {
+    document.querySelectorAll('.provider-btn').forEach(btn => btn.classList.remove('active'));
+    evt.currentTarget.classList.add('active');
+
+    if (provider !== 'custom' && providerSettings[provider]) {
+        const settings = providerSettings[provider];
+        document.getElementById('imap_host').value = settings.imap_host;
+        document.getElementById('imap_port').value = settings.imap_port;
+        document.getElementById('smtp_host').value = settings.smtp_host;
+        document.getElementById('smtp_port').value = settings.smtp_port;
+
+        const email = document.getElementById('email_address').value;
+        if (email) {
+            document.getElementById('imap_username').value = email;
+            document.getElementById('smtp_username').value = email;
+        }
+    }
+}
+
+// Smart auto-detect
+function smartAutoDetect() {
+    const email = document.getElementById('email_address').value.trim();
+    if (!email || !email.includes('@')) {
+        showStatus('autodetectStatus', 'error', 'Enter a valid email address first');
+        return;
+    }
+
+    showStatus('autodetectStatus', 'loading', 'Detecting settings...');
+
+    fetch('/api/detect-email-settings', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({email})
+    })
+    .then(r => r.json())
+    .then(cfg => {
+        if (!cfg || !cfg.imap_host) throw new Error('Detection failed');
+
+        // Populate IMAP fields
+        document.getElementById('imap_host').value = cfg.imap_host;
+        document.getElementById('imap_port').value = cfg.imap_port;
+        document.getElementById('imap_use_ssl').checked = !!cfg.imap_use_ssl;
+
+        // Populate SMTP fields (optional)
+        if (cfg.smtp_host) {
+            document.getElementById('smtp_host').value = cfg.smtp_host;
+            document.getElementById('smtp_port').value = cfg.smtp_port;
+            document.getElementById('smtp_use_ssl').checked = !!cfg.smtp_use_ssl;
+        }
+
+        // Auto-fill usernames
+        const emailField = document.getElementById('email_address').value;
+        if (emailField) {
+            if (!document.getElementById('imap_username').value) document.getElementById('imap_username').value = emailField;
+            if (!document.getElementById('smtp_username').value) document.getElementById('smtp_username').value = emailField;
+        }
+
+        showStatus('autodetectStatus', 'success', 'Settings detected successfully! Enter your password and test the connection.');
+
+        // Expand SMTP section if SMTP was detected
+        if (cfg.smtp_host) {
+            const smtpSection = document.getElementById('smtpSection');
+            if (smtpSection.classList.contains('collapsed')) {
+                toggleSMTP();
+            }
+        }
+    })
+    .catch(err => showStatus('autodetectStatus', 'error', 'Auto-detect failed: ' + err.message));
+}
+
+// Toggle SMTP section
+function toggleSMTP() {
+    const section = document.getElementById('smtpSection');
+    section.classList.toggle('collapsed');
+}
+
+// Show status message
+function showStatus(id, type, message) {
+    const div = document.getElementById(id);
+    if (!div) return;
+
+    div.classList.remove('tw-hidden', 'success', 'error', 'loading');
+    div.classList.add('test-status', type);
+    div.textContent = message;
+}
+
+// Auto-fill username fields when email changes
+document.getElementById('email_address').addEventListener('change', function() {
+    if (!document.getElementById('imap_username').value) {
+        document.getElementById('imap_username').value = this.value;
+    }
+    if (!document.getElementById('smtp_username').value) {
+        document.getElementById('smtp_username').value = this.value;
+    }
+});
+
+// Auto-sync IMAP password to SMTP if SMTP password is empty
+document.getElementById('imap_password').addEventListener('change', function() {
+    if (!document.getElementById('smtp_password').value) {
+        document.getElementById('smtp_password').value = this.value;
+    }
+});
+
+// Test connection (IMAP or SMTP)
+function testConnection(type) {
+    const statusDiv = document.getElementById(type + '_test_status');
+    statusDiv.classList.remove('tw-hidden', 'success', 'error');
+    statusDiv.classList.add('test-status', 'loading');
+    statusDiv.textContent = 'Testing connection...';
+
+    const data = {
+        host: document.getElementById(type + '_host').value,
+        port: document.getElementById(type + '_port').value,
+        username: document.getElementById(type + '_username').value,
+        password: document.getElementById(type + '_password').value,
+        use_ssl: document.getElementById(type + '_use_ssl').checked
+    };
+
+    fetch('/api/test-connection/' + type, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        statusDiv.classList.remove('loading');
+        if (result.success) {
+            statusDiv.classList.add('success');
+            statusDiv.textContent = 'Connection successful!';
+        } else {
+            statusDiv.classList.add('error');
+            statusDiv.textContent = 'Connection failed: ' + (result.error || 'Unknown error');
+        }
+    })
+    .catch(error => {
+        statusDiv.classList.remove('loading');
+        statusDiv.classList.add('error');
+        statusDiv.textContent = 'Test failed: ' + error.message;
+    });
+}
+</script>
+{% endblock %}
