@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from 'stitch/_macros.html' import badge, icon_btn %}
 
 {% block title %}Rules - Email Management Tool{% endblock %}
 
@@ -57,7 +58,7 @@
 </div>
 </td>
 <td class="tw-px-6 tw-py-4">
-<span class="tw-bg-amber-400/20 tw-text-amber-300 tw-text-xs tw-font-bold tw-px-2.5 tw-py-1">HOLD</span>
+{{ badge('HOLD') }}
 </td>
 <td class="tw-px-6 tw-py-4">
 <span class="tw-flex tw-items-center tw-gap-1.5 tw-text-primary tw-font-medium tw-text-xs">
@@ -66,12 +67,8 @@
 </td>
 <td class="tw-px-6 tw-py-4 tw-text-right">
 <div class="tw-flex tw-items-center tw-justify-end tw-gap-4">
-<button class="tw-flex tw-items-center tw-gap-1 tw-font-medium tw-text-primary tw-hover:text-lime-400">
-<span class="material-symbols-outlined tw-!text-base">edit</span> Edit
-                    </button>
-<button class="tw-flex tw-items-center tw-gap-1 tw-font-medium tw-text-red-500 tw-hover:text-red-400">
-<span class="material-symbols-outlined tw-!text-base">delete</span> Delete
-                    </button>
+{{ icon_btn('Edit', 'edit', 'primary') }}
+{{ icon_btn('Delete', 'delete', 'danger') }}
 </div>
 </td>
 </tr>
@@ -90,7 +87,7 @@
 </div>
 </td>
 <td class="tw-px-6 tw-py-4">
-<span class="tw-bg-amber-400/20 tw-text-amber-300 tw-text-xs tw-font-bold tw-px-2.5 tw-py-1">HOLD</span>
+{{ badge('HOLD') }}
 </td>
 <td class="tw-px-6 tw-py-4">
 <span class="tw-flex tw-items-center tw-gap-1.5 tw-text-primary tw-font-medium tw-text-xs">
@@ -99,12 +96,8 @@
 </td>
 <td class="tw-px-6 tw-py-4 tw-text-right">
 <div class="tw-flex tw-items-center tw-justify-end tw-gap-4">
-<button class="tw-flex tw-items-center tw-gap-1 tw-font-medium tw-text-primary tw-hover:text-lime-400">
-<span class="material-symbols-outlined tw-!text-base">edit</span> Edit
-                    </button>
-<button class="tw-flex tw-items-center tw-gap-1 tw-font-medium tw-text-red-500 tw-hover:text-red-400">
-<span class="material-symbols-outlined tw-!text-base">delete</span> Delete
-                    </button>
+{{ icon_btn('Edit', 'edit', 'primary') }}
+{{ icon_btn('Delete', 'delete', 'danger') }}
 </div>
 </td>
 </tr>
@@ -121,7 +114,7 @@
 </div>
 </td>
 <td class="tw-px-6 tw-py-4">
-<span class="tw-bg-amber-400/20 tw-text-amber-300 tw-text-xs tw-font-bold tw-px-2.5 tw-py-1">HOLD</span>
+{{ badge('HOLD') }}
 </td>
 <td class="tw-px-6 tw-py-4">
 <span class="tw-flex tw-items-center tw-gap-1.5 tw-text-primary tw-font-medium tw-text-xs">
@@ -130,12 +123,8 @@
 </td>
 <td class="tw-px-6 tw-py-4 tw-text-right">
 <div class="tw-flex tw-items-center tw-justify-end tw-gap-4">
-<button class="tw-flex tw-items-center tw-gap-1 tw-font-medium tw-text-primary tw-hover:text-lime-400">
-<span class="material-symbols-outlined tw-!text-base">edit</span> Edit
-                    </button>
-<button class="tw-flex tw-items-center tw-gap-1 tw-font-medium tw-text-red-500 tw-hover:text-red-400">
-<span class="material-symbols-outlined tw-!text-base">delete</span> Delete
-                    </button>
+{{ icon_btn('Edit', 'edit', 'primary') }}
+{{ icon_btn('Delete', 'delete', 'danger') }}
 </div>
 </td>
 </tr>
@@ -152,7 +141,7 @@
 </div>
 </td>
 <td class="tw-px-6 tw-py-4">
-<span class="tw-bg-amber-400/20 tw-text-amber-300 tw-text-xs tw-font-bold tw-px-2.5 tw-py-1">HOLD</span>
+{{ badge('HOLD') }}
 </td>
 <td class="tw-px-6 tw-py-4">
 <span class="tw-flex tw-items-center tw-gap-1.5 tw-text-primary tw-font-medium tw-text-xs">
@@ -161,12 +150,8 @@
 </td>
 <td class="tw-px-6 tw-py-4 tw-text-right">
 <div class="tw-flex tw-items-center tw-justify-end tw-gap-4">
-<button class="tw-flex tw-items-center tw-gap-1 tw-font-medium tw-text-primary tw-hover:text-lime-400">
-<span class="material-symbols-outlined tw-!text-base">edit</span> Edit
-                    </button>
-<button class="tw-flex tw-items-center tw-gap-1 tw-font-medium tw-text-red-500 tw-hover:text-red-400">
-<span class="material-symbols-outlined tw-!text-base">delete</span> Delete
-                    </button>
+{{ icon_btn('Edit', 'edit', 'primary') }}
+{{ icon_btn('Delete', 'delete', 'danger') }}
 </div>
 </td>
 </tr>
@@ -183,7 +168,7 @@
 </div>
 </td>
 <td class="tw-px-6 tw-py-4">
-<span class="tw-bg-amber-400/20 tw-text-amber-300 tw-text-xs tw-font-bold tw-px-2.5 tw-py-1">HOLD</span>
+{{ badge('HOLD') }}
 </td>
 <td class="tw-px-6 tw-py-4">
 <span class="tw-flex tw-items-center tw-gap-1.5 tw-text-primary tw-font-medium tw-text-xs">
@@ -192,12 +177,8 @@
 </td>
 <td class="tw-px-6 tw-py-4 tw-text-right">
 <div class="tw-flex tw-items-center tw-justify-end tw-gap-4">
-<button class="tw-flex tw-items-center tw-gap-1 tw-font-medium tw-text-primary tw-hover:text-lime-400">
-<span class="material-symbols-outlined tw-!text-base">edit</span> Edit
-                    </button>
-<button class="tw-flex tw-items-center tw-gap-1 tw-font-medium tw-text-red-500 tw-hover:text-red-400">
-<span class="material-symbols-outlined tw-!text-base">delete</span> Delete
-                    </button>
+{{ icon_btn('Edit', 'edit', 'primary') }}
+{{ icon_btn('Delete', 'delete', 'danger') }}
 </div>
 </td>
 </tr>
