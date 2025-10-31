@@ -416,48 +416,36 @@ def init_database():
     )""")
 
     # Ensure new columns for attachments manifest/version
+    logger = logging.getLogger(__name__)
     try:
         existing_columns = {row["name"] for row in cur.execute("PRAGMA table_info(email_messages)")}
     except sqlite3.Error as e:
-        import logging
-        logging.getLogger(__name__).warning(f"[init_db] Failed to fetch email_messages columns: {e}")
+        logger.warning(f"[init_db] Failed to fetch email_messages columns: {e}")
         existing_columns = set()
-    # Safe schema migration: Add attachments_manifest column if missing
-    if "attachments_manifest" not in existing_columns:
-        try:
-            cur.execute("ALTER TABLE email_messages ADD COLUMN attachments_manifest TEXT")
-            conn.commit()
-            import logging
-            logging.getLogger(__name__).info("[schema] Added column: attachments_manifest")
-        except sqlite3.OperationalError as e:
-            # Column may have been added by another process
-            if "duplicate column" in str(e).lower():
-                import logging
-                logging.getLogger(__name__).debug("[schema] Column attachments_manifest already exists (concurrent add)")
-            else:
-                raise
 
-    # Safe schema migration: Add version column if missing
-    if "version" not in existing_columns:
-        try:
-            cur.execute("ALTER TABLE email_messages ADD COLUMN version INTEGER NOT NULL DEFAULT 0")
-            conn.commit()
-            import logging
-            logging.getLogger(__name__).info("[schema] Added column: version")
-        except sqlite3.OperationalError as e:
-            # Column may have been added by another process
-            if "duplicate column" in str(e).lower():
-                import logging
-                logging.getLogger(__name__).debug("[schema] Column version already exists (concurrent add)")
-            else:
-                raise
+    # Safe schema migration: Add missing columns with duplicate protection
+    schema_migrations = [
+        ("attachments_manifest", "ALTER TABLE email_messages ADD COLUMN attachments_manifest TEXT"),
+        ("version", "ALTER TABLE email_messages ADD COLUMN version INTEGER NOT NULL DEFAULT 0")
+    ]
+
+    for column_name, alter_sql in schema_migrations:
+        if column_name not in existing_columns:
+            try:
+                cur.execute(alter_sql)
+                conn.commit()
+                logger.info(f"[schema] Added column: {column_name}")
+            except sqlite3.OperationalError as e:
+                if "duplicate column" in str(e).lower():
+                    logger.debug(f"[schema] Column {column_name} already exists (concurrent add)")
+                else:
+                    raise
 
     # Idempotency: avoid duplicate rows by Message-ID when present
     try:
         cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_email_messages_msgid_unique ON email_messages(message_id) WHERE message_id IS NOT NULL")
     except sqlite3.Error as e:
-        import logging
-        logging.getLogger(__name__).debug(f"[init_db] Index creation skipped (already exists): {e}")
+        logger.debug(f"[init_db] Index creation skipped (already exists): {e}")
 
     # Performance indices (Phase 2: Quick Wins)
     try:
@@ -469,8 +457,7 @@ def init_database():
         cur.execute("CREATE INDEX IF NOT EXISTS idx_attachments_email_id ON email_attachments(email_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at DESC)")
     except sqlite3.Error as e:
-        import logging
-        logging.getLogger(__name__).debug(f"[init_db] Performance indices already exist: {e}")
+        logger.debug(f"[init_db] Performance indices already exist: {e}")
 
     # Attachment storage metadata
     cur.execute(
