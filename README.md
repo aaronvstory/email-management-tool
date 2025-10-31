@@ -643,3 +643,30 @@ pip install -r requirements.txt
 
 ---
 
+
+### Quick Smoke Test
+
+Run a quick smoke test to verify core functionality:
+
+```bash
+# PowerShell (Windows)
+.\scripts\smoke.ps1
+
+# Bash (Linux/Mac/WSL)
+./scripts/smoke.sh
+
+# With verbose output
+.\scripts\smoke.ps1 -Verbose
+VERBOSE=1 ./scripts/smoke.sh
+```
+
+The smoke test checks:
+- Health endpoint (`/healthz`)
+- Metrics endpoint (`/metrics`)
+- Login page rendering
+- Static asset loading
+- SMTP proxy status
+- Attachment API endpoint structure
+
+**Exit codes**: 0 = all tests pass, 1 = one or more tests failed
+
