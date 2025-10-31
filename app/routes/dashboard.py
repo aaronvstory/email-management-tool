@@ -61,12 +61,38 @@ def dashboard(tab='overview'):
     active_rules = cursor.execute("SELECT COUNT(*) FROM moderation_rules WHERE is_active = 1").fetchone()[0]
 
     # Get all moderation rules for Rules tab
-    rules = cursor.execute("""
-        SELECT id, rule_name, rule_type, condition_field, condition_operator,
-               condition_value, action, priority, is_active, created_at
-        FROM moderation_rules
-        ORDER BY priority DESC, rule_name
-    """).fetchall()
+    # Check which columns exist to support both legacy and extended schemas
+    cols = [r[1] for r in cursor.execute("PRAGMA table_info(moderation_rules)").fetchall()]
+    if 'rule_type' in cols and 'condition_value' in cols:
+        # Extended schema
+        rules = cursor.execute("""
+            SELECT id, rule_name, rule_type, condition_field, condition_operator,
+                   condition_value, action, priority, is_active, created_at
+            FROM moderation_rules
+            ORDER BY priority DESC, rule_name
+        """).fetchall()
+    else:
+        # Legacy schema - normalize to match extended format
+        rules_raw = cursor.execute("""
+            SELECT id, rule_name, keyword, action, priority, is_active, created_at
+            FROM moderation_rules
+            ORDER BY priority DESC, rule_name
+        """).fetchall()
+        # Convert to dict format for template compatibility
+        rules = []
+        for r in rules_raw:
+            rules.append({
+                'id': r[0],
+                'rule_name': r[1],
+                'rule_type': 'KEYWORD',
+                'condition_field': 'BODY',
+                'condition_operator': 'CONTAINS',
+                'condition_value': r[2] or '',
+                'action': r[3] or 'HOLD',
+                'priority': r[4] or 50,
+                'is_active': r[5],
+                'created_at': r[6] if len(r) > 6 else ''
+            })
 
     # Normalize data for template
     email_payload = []
@@ -149,13 +175,39 @@ def dashboard_stitch(tab='overview'):
         """).fetchall()
 
     active_rules = cursor.execute("SELECT COUNT(*) FROM moderation_rules WHERE is_active = 1").fetchone()[0]
-    
-    rules = cursor.execute("""
-        SELECT id, rule_name, rule_type, condition_field, condition_operator,
-               condition_value, action, priority, is_active, created_at
-        FROM moderation_rules
-        ORDER BY priority DESC, rule_name
-    """).fetchall()
+
+    # Check which columns exist to support both legacy and extended schemas
+    cols = [r[1] for r in cursor.execute("PRAGMA table_info(moderation_rules)").fetchall()]
+    if 'rule_type' in cols and 'condition_value' in cols:
+        # Extended schema
+        rules = cursor.execute("""
+            SELECT id, rule_name, rule_type, condition_field, condition_operator,
+                   condition_value, action, priority, is_active, created_at
+            FROM moderation_rules
+            ORDER BY priority DESC, rule_name
+        """).fetchall()
+    else:
+        # Legacy schema - normalize to match extended format
+        rules_raw = cursor.execute("""
+            SELECT id, rule_name, keyword, action, priority, is_active, created_at
+            FROM moderation_rules
+            ORDER BY priority DESC, rule_name
+        """).fetchall()
+        # Convert to dict format for template compatibility
+        rules = []
+        for r in rules_raw:
+            rules.append({
+                'id': r[0],
+                'rule_name': r[1],
+                'rule_type': 'KEYWORD',
+                'condition_field': 'BODY',
+                'condition_operator': 'CONTAINS',
+                'condition_value': r[2] or '',
+                'action': r[3] or 'HOLD',
+                'priority': r[4] or 50,
+                'is_active': r[5],
+                'created_at': r[6] if len(r) > 6 else ''
+            })
 
     # Normalize email data
     email_payload = []
@@ -173,7 +225,7 @@ def dashboard_stitch(tab='overview'):
                 record['recipients'] = [addr.strip() for addr in recipients.split(',') if addr.strip()]
         else:
             record['recipients'] = []
-        
+
         body = record.get('body_text') or ''
         record['preview_snippet'] = ' '.join(body.split())[:160]
         email_payload.append(record)

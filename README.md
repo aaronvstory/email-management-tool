@@ -102,7 +102,40 @@ Notes:
 - The launcher opens your default Windows browser to `http://localhost:5000` via WSL‑aware commands.
 - You can also run the Linux launcher manually in WSL: `chmod +x launch.sh && ./launch.sh`.
 
-## 💻 Management Options
+## � Database Migration
+
+### Upgrading Existing Installations
+
+If you're upgrading from an older version, you may need to migrate your database schema to add new columns to the `moderation_rules` table:
+
+**Windows (PowerShell):**
+```powershell
+.\scripts\migrate_moderation_rules.ps1
+```
+
+**Windows (Command Prompt):**
+```cmd
+scripts\migrate_moderation_rules.bat
+```
+
+**Linux/macOS:**
+```bash
+python3 scripts/fix_database_schema.py
+```
+
+This migration:
+- ✅ Adds extended rule engine columns (rule_type, condition_field, condition_operator, etc.)
+- ✅ Keeps all existing data and columns intact
+- ✅ Safe to run multiple times
+- ✅ No downtime required
+
+**Fresh installations don't need this** - the schema is created automatically with all columns.
+
+For detailed migration documentation, see:
+- **[Migration Quick Start](MIGRATION_QUICK_START.md)** - Quick reference
+- **[Migration Guide](scripts/MIGRATION_GUIDE.md)** - Complete documentation
+
+## �💻 Management Options
 
 ### Using Batch Scripts
 

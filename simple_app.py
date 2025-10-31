@@ -502,11 +502,15 @@ def init_database():
         """
     )
 
-    # Moderation rules table
+    # Moderation rules table (supports both legacy and extended schemas)
     cur.execute("""CREATE TABLE IF NOT EXISTS moderation_rules(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         rule_name TEXT,
         keyword TEXT,
+        rule_type TEXT DEFAULT 'keyword',
+        condition_field TEXT,
+        condition_operator TEXT,
+        condition_value TEXT,
         action TEXT DEFAULT 'REVIEW',
         priority INTEGER DEFAULT 5,
         is_active INTEGER DEFAULT 1,
