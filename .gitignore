@@ -229,4 +229,8 @@ dev-debug.log
 
 # Task files
 # tasks.json
-# tasks/ 
+# tasks/
+
+# .gitignore (add these lines)
+static - Copy/
+static- Copy/
