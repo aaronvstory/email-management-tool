@@ -1,9 +1,9 @@
 # 📊 Email Management Tool - Complete Task Breakdown
 
-**Last Updated**: October 31, 2025 (8:00 AM)
+**Last Updated**: October 31, 2025 (10:30 AM)
 **Branch**: feat/styleguide-refresh
-**Commit**: 4bb03ea (Task 19.2 complete), a76a212 (Task 18), b6e243b (Task 17)
-**Status**: Task 19 Complete - Attachment UI Integration ✅
+**Commit**: 30d71ab (Task 20 complete), 4bb03ea (Task 19.2), a76a212 (Task 18), b6e243b (Task 17)
+**Status**: Task 20 Complete - Attachment Storage Cleanup & Metadata ✅
 
 ---
 
@@ -35,19 +35,19 @@
 | Metric | Count | Percentage |
 |--------|-------|------------|
 | **Total Tasks** | 12 | 100% |
-| **Completed** | 8 | 66.67% ✅ |
-| **Pending** | 4 | 33.33% ⏳ |
+| **Completed** | 9 | 75.00% ✅ |
+| **Pending** | 3 | 25.00% ⏳ |
 | **Blocked** | 0 | 0% |
 
 | Metric | Count | Percentage |
 |--------|-------|------------|
 | **Total Subtasks** | 65 | 100% |
-| **Completed** | 42 | 64.62% ✅ |
-| **Pending** | 23 | 35.38% ⏳ |
+| **Completed** | 47 | 72.31% ✅ |
+| **Pending** | 18 | 27.69% ⏳ |
 
 ---
 
-## ✅ COMPLETED TASKS (8/12)
+## ✅ COMPLETED TASKS (9/12)
 
 ### Task 11: Audit All Links and Forms ✅ DONE
 
@@ -501,17 +501,44 @@ Completely rewrote `accounts_import.html` from simple import to two-step workflo
 
 ---
 
-### Task 20: Attachment Storage Cleanup ⏳
+### Task 20: Attachment Storage Cleanup and Metadata ✅ DONE
 
 **Priority**: MEDIUM | **Complexity**: 7/10
 **Dependencies**: Task 18
+**Status**: ✅ COMPLETE - File cleanup implemented, metadata verified
 
-**Subtasks** (0/5 complete):
-- ⏳ 20.1: File deletion on email removal
-- ⏳ 20.2: Extend DB schema (metadata)
-- ⏳ 20.3: Populate metadata on upload
-- ⏳ 20.4: Optional malware scanning
-- ⏳ 20.5: Atomic operations & logging
+**Subtasks** (5/5 complete):
+- ✅ 20.1: File deletion on email removal (current session)
+  - Query attachments before DELETE
+  - Delete DB records first (atomic transaction)
+  - Clean up files after successful commit
+  - Multi-layer path validation (_get_storage_roots, _is_under, resolve)
+  - Comprehensive logging (debug, warning, info, error)
+  - API returns file cleanup statistics
+- ✅ 20.2: Schema metadata (complete from Task 17)
+  - mime_type, size, sha256, storage_path all present
+  - ON DELETE CASCADE constraint verified
+- ✅ 20.3: Upload metadata population verified
+  - All fields populated correctly on upload
+  - SHA256 hash, MIME type detection, file size calculation
+- ✅ 20.4: Malware scanning (SKIPPED - out of scope)
+  - Optional feature deferred to future enhancement
+- ✅ 20.5: Atomic operations and logging verified
+  - Database DELETE before file cleanup (correct order)
+  - Explicit rollback on exception
+  - Comprehensive logging at all levels
+
+**Features Delivered**:
+- Batch delete endpoint cleans up attachment files
+- Atomic operation order prevents data loss
+- Security validations prevent path traversal
+- Orphaned files logged but don't block deletion
+
+**Deliverables**:
+- `.taskmaster/reports/task-20-attachment-storage-cleanup-complete.md`
+
+**Commits**: 
+- 30d71ab (File cleanup implementation)
 
 ---
 
