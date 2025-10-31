@@ -8,7 +8,7 @@ from flask import Flask
 from flask_login import LoginManager
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_cors import CORS
+# from flask_cors import CORS  # Not used - simple_app.py is the main entry point
 from config.config import config
 
 # Initialize extensions
@@ -61,9 +61,9 @@ def initialize_extensions(app):
     login_manager.login_message = 'Please log in to access this page.'
     
     limiter.init_app(app)
-    
+
     # Enable CORS for API endpoints
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    # CORS(app, resources={r"/api/*": {"origins": "*"}})  # Not used - simple_app.py is the main entry point
     
     @login_manager.user_loader
     def load_user(user_id):

@@ -422,10 +422,35 @@ def init_database():
         import logging
         logging.getLogger(__name__).warning(f"[init_db] Failed to fetch email_messages columns: {e}")
         existing_columns = set()
+    # Safe schema migration: Add attachments_manifest column if missing
     if "attachments_manifest" not in existing_columns:
-        cur.execute("ALTER TABLE email_messages ADD COLUMN attachments_manifest TEXT")
+        try:
+            cur.execute("ALTER TABLE email_messages ADD COLUMN attachments_manifest TEXT")
+            conn.commit()
+            import logging
+            logging.getLogger(__name__).info("[schema] Added column: attachments_manifest")
+        except sqlite3.OperationalError as e:
+            # Column may have been added by another process
+            if "duplicate column" in str(e).lower():
+                import logging
+                logging.getLogger(__name__).debug("[schema] Column attachments_manifest already exists (concurrent add)")
+            else:
+                raise
+
+    # Safe schema migration: Add version column if missing
     if "version" not in existing_columns:
-        cur.execute("ALTER TABLE email_messages ADD COLUMN version INTEGER NOT NULL DEFAULT 0")
+        try:
+            cur.execute("ALTER TABLE email_messages ADD COLUMN version INTEGER NOT NULL DEFAULT 0")
+            conn.commit()
+            import logging
+            logging.getLogger(__name__).info("[schema] Added column: version")
+        except sqlite3.OperationalError as e:
+            # Column may have been added by another process
+            if "duplicate column" in str(e).lower():
+                import logging
+                logging.getLogger(__name__).debug("[schema] Column version already exists (concurrent add)")
+            else:
+                raise
 
     # Idempotency: avoid duplicate rows by Message-ID when present
     try:
