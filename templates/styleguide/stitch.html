@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+{% from 'stitch/_macros.html' import badge, icon_btn, table, toolbar %}
+{% block title %}Stitch Styleguide{% endblock %}
+
+{% block content %}
+<div id="stitch_styleguide">
+  <main class="tw-flex-1 tw-px-6 tw-py-4">
+    <header class="tw-flex tw-items-center tw-justify-between tw-mb-4">
+      <div>
+        <h1 class="tw-text-2xl tw-font-bold tw-text-white">Stitch Styleguide</h1>
+        <p class="tw-text-sm tw-text-zinc-400 tw-mt-1">Tokens, components, and patterns used across the app.</p>
+      </div>
+      <a href="/emails-unified/stitch"
+         class="tw-inline-flex tw-items-center tw-gap-2 tw-text-primary tw-text-sm tw-font-medium tw-px-2 tw-py-1 hover:tw-bg-primary/10">
+        <span class="material-symbols-outlined tw-!text-base">arrow_back</span>
+        Back to Emails
+      </a>
+    </header>
+
+    <!-- Local mini-nav -->
+    <nav class="tw-flex tw-flex-wrap tw-gap-3 tw-mb-4">
+      {% set sections = [
+        ('tokens','Tokens'),
+        ('typography','Typography'),
+        ('buttons','Buttons'),
+        ('links','Links & Hovers'),
+        ('tabs','Nav Tabs'),
+        ('badges','Status Badges'),
+        ('forms','Forms'),
+        ('tables','Tables'),
+        ('cards','Cards & Panels'),
+        ('sidebar','Sidebar Active Demo'),
+        ('patterns','App Patterns')
+      ] %}
+      {% for id,label in sections %}
+      <a href="#{{id}}" class="tw-text-sm tw-font-semibold tw-text-zinc-300 tw-px-2 tw-py-1 hover:tw-bg-zinc-800/60">{{label}}</a>
+      {% endfor %}
+    </nav>
+
+    <!-- TOKENS -->
+    <section id="tokens" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Tokens</h2>
+      <div class="tw-grid tw-grid-cols-2 md:tw-grid-cols-3 lg:tw-grid-cols-5 tw-gap-3">
+        <!-- Row: core surfaces -->
+        <div class="tw-bg-[#18181b] tw-border tw-border-border tw-p-3">
+          <div class="tw-text-[12px] tw-text-zinc-400 tw-mb-1">bg</div>
+          <div class="tw-text-zinc-200">#18181b</div>
+        </div>
+        <div class="tw-bg-[#27272a] tw-border tw-border-border tw-p-3">
+          <div class="tw-text-[12px] tw-text-zinc-400 tw-mb-1">surface</div>
+          <div class="tw-text-zinc-200">#27272a</div>
+        </div>
+        <div class="tw-bg-[#18181b] tw-border tw-border-[rgba(255,255,255,0.12)] tw-p-3">
+          <div class="tw-text-[12px] tw-text-zinc-400 tw-mb-1">border</div>
+          <div class="tw-text-zinc-200">rgba(255,255,255,.12)</div>
+        </div>
+        <div class="tw-bg-[#18181b] tw-border tw-border-border tw-p-3">
+          <div class="tw-text-[12px] tw-text-zinc-400 tw-mb-1">text</div>
+          <div class="tw-text-zinc-200">#e5e7eb</div>
+        </div>
+        <div class="tw-bg-[#18181b] tw-border tw-border-border tw-p-3">
+          <div class="tw-text-[12px] tw-text-zinc-400 tw-mb-1">muted</div>
+          <div class="tw-text-zinc-400">#9ca3af</div>
+        </div>
+        <!-- Row: accent + semantics -->
+        <div class="tw-bg-[#bef264] tw-p-3">
+          <div class="tw-text-[12px] tw-text-zinc-800 tw-mb-1">primary</div>
+          <div class="tw-text-zinc-900 tw-font-semibold">#bef264</div>
+        </div>
+        <div class="tw-bg-[#a3d154] tw-p-3">
+          <div class="tw-text-[12px] tw-text-zinc-800 tw-mb-1">primary-hover</div>
+          <div class="tw-text-zinc-900 tw-font-semibold">#a3d154</div>
+        </div>
+        <div class="tw-bg-emerald-500/15 tw-border tw-border-transparent tw-p-3">
+          <div class="tw-text-[12px] tw-text-emerald-400 tw-mb-1">success</div>
+          <div class="tw-text-emerald-400">#22c55e</div>
+        </div>
+        <div class="tw-bg-amber-500/15 tw-border tw-border-transparent tw-p-3">
+          <div class="tw-text-[12px] tw-text-amber-400 tw-mb-1">warning</div>
+          <div class="tw-text-amber-400">#f59e0b</div>
+        </div>
+        <div class="tw-bg-red-500/15 tw-border tw-border-transparent tw-p-3">
+          <div class="tw-text-[12px] tw-text-red-400 tw-mb-1">danger</div>
+          <div class="tw-text-red-400">#ef4444</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TYPOGRAPHY -->
+    <section id="typography" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Typography</h2>
+      <div class="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-4">
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+          <h1 class="tw-text-2xl tw-font-bold tw-text-white tw-mb-1">Page Title (2xl)</h1>
+          <p class="tw-text-sm tw-text-zinc-400">Secondary line / description</p>
+        </div>
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+          <h3 class="tw-text-base tw-font-semibold tw-text-zinc-200 tw-mb-1">Section Header (base/bold)</h3>
+          <p class="tw-text-sm tw-text-zinc-400">Body copy (sm)</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- BUTTONS -->
+    <section id="buttons" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Buttons</h2>
+      <div class="tw-flex tw-flex-wrap tw-gap-3 tw-bg-background tw-border tw-border-border tw-p-4">
+        <button type="button" class="tw-inline-flex tw-items-center tw-gap-2 tw-font-bold tw-text-zinc-900 tw-bg-primary tw-border tw-border-[#bef264] tw-px-4 tw-py-2 hover:tw-bg-[#a3d154]">
+          <span class="material-symbols-outlined tw-!text-base">add</span> Primary
+        </button>
+        {{ icon_btn('Ghost / Primary', 'edit', 'primary') }}
+        {{ icon_btn('Ghost / Neutral', 'more_horiz', 'neutral') }}
+        {{ icon_btn('Danger', 'delete', 'danger') }}
+      </div>
+      <p class="tw-text-xs tw-text-zinc-500 tw-mt-2">Primary uses lime background; ghost uses transparent bg with subtle border and hover tints.</p>
+    </section>
+
+    <!-- LINKS -->
+    <section id="links" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Links & Hovers</h2>
+      <div class="tw-bg-background tw-border tw-border-border tw-p-4 tw-flex tw-gap-3 tw-flex-wrap">
+        <a class="tw-text-sm tw-text-zinc-300 tw-px-2 tw-py-1 hover:tw-bg-zinc-800/60">Neutral link</a>
+        <a class="tw-text-sm tw-text-primary tw-px-2 tw-py-1 hover:tw-bg-primary/10">Primary link</a>
+        <a class="tw-text-sm tw-text-zinc-300 tw-inline-flex tw-items-center tw-gap-2 tw-px-2 tw-py-1 hover:tw-bg-zinc-800/60">
+          <span class="material-symbols-outlined tw-!text-base">open_in_new</span> With icon
+        </a>
+      </div>
+    </section>
+
+    <!-- NAV TABS -->
+    <section id="tabs" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Nav Tabs (filter strip)</h2>
+      <nav class="tw-flex tw-items-center tw-gap-3 tw-bg-background tw-border tw-border-border tw-p-3">
+        <a class="tw-text-sm tw-font-semibold tw-text-zinc-300 tw-px-2 tw-py-1 hover:tw-bg-zinc-800/60">All <span class="tw-text-zinc-500 tw-ml-1">412</span></a>
+        <a class="tw-text-sm tw-font-semibold tw-text-primary tw-px-2 tw-py-1 tw-border-b-[2px] tw-border-primary">Held <span class="tw-text-zinc-500 tw-ml-1">337</span></a>
+        <a class="tw-text-sm tw-font-semibold tw-text-zinc-300 tw-px-2 tw-py-1 hover:tw-bg-zinc-800/60">Released <span class="tw-text-zinc-500 tw-ml-1">75</span></a>
+        <a class="tw-text-sm tw-font-semibold tw-text-zinc-300 tw-px-2 tw-py-1 hover:tw-bg-zinc-800/60">Rejected <span class="tw-text-zinc-500 tw-ml-1">0</span></a>
+      </nav>
+      <p class="tw-text-xs tw-text-zinc-500 tw-mt-2">Active tab uses lime text + bottom border; others get subtle hover overlay.</p>
+    </section>
+
+    <!-- BADGES -->
+    <section id="badges" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Status Badges</h2>
+      <div class="tw-bg-background tw-border tw-border-border tw-p-4 tw-flex tw-gap-3 tw-flex-wrap">
+        {{ badge('HELD') }}
+        {{ badge('FETCHED') }}
+        {{ badge('RELEASED') }}
+        {{ badge('REJECTED') }}
+      </div>
+      <p class="tw-text-xs tw-text-zinc-500 tw-mt-2">Use the badge() macro with status strings. Colors auto-assigned.</p>
+    </section>
+
+    <!-- FORMS -->
+    <section id="forms" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Forms</h2>
+      <div class="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-4">
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+          <label class="tw-text-sm tw-text-zinc-300 tw-font-medium">Input</label>
+          <input type="text" placeholder="recipient@example.com"
+                 class="tw-mt-2 tw-w-full tw-bg-[#1f1f23] tw-text-zinc-200 tw-text-sm tw-border tw-border-border tw-px-3 tw-py-2 focus:tw-outline-none focus:tw-border-[#bef264]" />
+          <div class="tw-flex tw-gap-3 tw-mt-3">
+            <select class="tw-bg-[#1f1f23] tw-text-zinc-200 tw-text-sm tw-border tw-border-border tw-px-3 tw-py-2 focus:tw-outline-none focus:tw-border-[#bef264]">
+              <option>Select account…</option><option>Gmail</option><option>Hostinger</option>
+            </select>
+            <button type="button" class="tw-inline-flex tw-items-center tw-gap-2 tw-font-bold tw-text-zinc-900 tw-bg-primary tw-border tw-border-[#bef264] tw-px-4 tw-py-2 hover:tw-bg-[#a3d154]">
+              <span class="material-symbols-outlined tw-!text-base">send</span> Submit
+            </button>
+          </div>
+        </div>
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+          <label class="tw-text-sm tw-text-zinc-300 tw-font-medium">Textarea</label>
+          <textarea rows="4" class="tw-mt-2 tw-w-full tw-bg-[#1f1f23] tw-text-zinc-200 tw-text-sm tw-border tw-border-border tw-px-3 tw-py-2 focus:tw-outline-none focus:tw-border-[#bef264]"
+                    placeholder="Type your message…"></textarea>
+          <div class="tw-flex tw-items-center tw-gap-2 tw-mt-3">
+            <input id="chk1" type="checkbox" class="tw-accent-[#bef264]" />
+            <label for="chk1" class="tw-text-sm tw-text-zinc-300">Enable auto-save</label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TABLES -->
+    <section id="tables" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Table</h2>
+      <div class="tw-bg-background tw-border tw-border-border">
+        <div class="tw-overflow-x-auto">
+          <table class="tw-w-full tw-text-sm tw-text-left">
+            <thead class="tw-text-zinc-400 tw-border-b tw-border-border">
+              <tr>
+                <th class="tw-px-4 tw-py-2">Time</th>
+                <th class="tw-px-4 tw-py-2">Correspondents</th>
+                <th class="tw-px-4 tw-py-2">Subject</th>
+                <th class="tw-px-4 tw-py-2">Status</th>
+                <th class="tw-px-4 tw-py-2 tw-text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="tw-divide-y tw-divide-[rgba(255,255,255,.06)]">
+              <tr class="hover:tw-bg-zinc-800/40">
+                <td class="tw-px-4 tw-py-3 tw-text-zinc-400">Oct 24, 07:11 AM</td>
+                <td class="tw-px-4 tw-py-3">
+                  <div class="tw-text-zinc-200">from billing@service.com</div>
+                  <div class="tw-text-zinc-500">to you@example.com</div>
+                </td>
+                <td class="tw-px-4 tw-py-3 tw-text-zinc-200">
+                  Your recent invoice <span class="tw-text-zinc-500">…</span>
+                </td>
+                <td class="tw-px-4 tw-py-3">
+                  {{ badge('HELD') }}
+                </td>
+                <td class="tw-px-4 tw-py-3">
+                  <div class="tw-flex tw-justify-end tw-gap-2">
+                    {{ icon_btn('View', 'visibility', 'primary') }}
+                    {{ icon_btn('Attachments', 'download', 'neutral') }}
+                    {{ icon_btn('Discard', 'delete', 'danger') }}
+                  </div>
+                </td>
+              </tr>
+              <tr class="hover:tw-bg-zinc-800/40">
+                <td class="tw-px-4 tw-py-3 tw-text-zinc-400">Oct 24, 07:09 AM</td>
+                <td class="tw-px-4 tw-py-3">
+                  <div class="tw-text-zinc-200">from noreply@updates.com</div>
+                  <div class="tw-text-zinc-500">to you@example.com</div>
+                </td>
+                <td class="tw-px-4 tw-py-3 tw-text-zinc-200">Status update <span class="tw-text-zinc-500">…</span></td>
+                <td class="tw-px-4 tw-py-3">
+                  {{ badge('RELEASED') }}
+                </td>
+                <td class="tw-px-4 tw-py-3">
+                  <div class="tw-flex tw-justify-end tw-gap-2">
+                    {{ icon_btn('Details', 'history', 'neutral') }}
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <p class="tw-text-xs tw-text-zinc-500 tw-mt-2">Tight rows, subtle dividers, square chips, consistent action buttons.</p>
+    </section>
+
+    <!-- CARDS -->
+    <section id="cards" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Cards & Panels</h2>
+      <div class="tw-grid tw-grid-cols-1 lg:tw-grid-cols-2 tw-gap-4">
+        <div class="tw-bg-background tw-border tw-border-border tw-flex tw-flex-col">
+          {{ toolbar('Gmail – Ndayisjecka', [
+            {'label': 'Start', 'icon': 'play_arrow', 'variant': 'neutral'},
+            {'label': 'Stop', 'icon': 'stop', 'variant': 'neutral'},
+            {'label': 'Diagnostics', 'icon': 'bug_report', 'variant': 'primary'}
+          ]) }}
+          <div class="tw-p-4 tw-flex tw-gap-3 tw-flex-wrap">
+            {{ icon_btn('Test', 'mail', 'neutral') }}
+            {{ icon_btn('Edit', 'edit', 'primary') }}
+            {{ icon_btn('Delete', 'delete', 'danger') }}
+          </div>
+        </div>
+
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+          {{ toolbar('Toolbar Panel', [
+            {'label': 'Refresh', 'icon': 'refresh', 'variant': 'neutral'},
+            {'label': 'Add Item', 'icon': 'add', 'variant': 'primary'}
+          ]) }}
+          <div class="tw-p-4">
+            <p class="tw-text-sm tw-text-zinc-400">Use this pattern for list headers with a right-aligned toolbar.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SIDEBAR ACTIVE DEMO -->
+    <section id="sidebar" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">Sidebar Active Demo</h2>
+      <div class="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-4">
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+          <p class="tw-text-sm tw-text-zinc-400 tw-mb-2">Active state should apply on stitch routes:</p>
+          <ul class="tw-text-sm tw-text-zinc-300 tw-list-disc tw-pl-5">
+            <li><code>emails.emails_unified_stitch</code></li>
+            <li><code>compose.compose_stitch</code></li>
+            <li><code>watchers.watchers_page_stitch</code></li>
+            <li><code>moderation.rules_stitch</code></li>
+            <li><code>accounts.email_accounts_stitch</code></li>
+          </ul>
+        </div>
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+          <p class="tw-text-sm tw-text-zinc-400">Implementation lives in <code>templates/base.html</code> (endpoint checks).</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PATTERNS -->
+    <section id="patterns" class="tw-mb-6">
+      <h2 class="tw-text-lg tw-font-bold tw-text-white tw-mb-3">App Patterns</h2>
+      <div class="tw-grid tw-grid-cols-1 lg:tw-grid-cols-2 tw-gap-4">
+        <!-- Emails row pattern -->
+        <div class="tw-bg-background tw-border tw-border-border tw-p-4">
+          <h3 class="tw-text-zinc-200 tw-font-semibold tw-mb-3">Emails Row</h3>
+          <div class="tw-flex tw-items-start tw-justify-between tw-gap-4 hover:tw-bg-zinc-800/40 tw-p-3">
+            <div class="tw-flex-1">
+              <div class="tw-text-zinc-400 tw-text-xs tw-mb-1">Oct 24, 07:11 AM</div>
+              <div class="tw-text-zinc-200">Automated quarantine flow test <span class="tw-text-zinc-500">…</span></div>
+              <div class="tw-text-zinc-500 tw-text-xs">from billing@service.com • to you@example.com</div>
+            </div>
+            <div class="tw-flex tw-items-center tw-gap-3">
+              {{ badge('HELD') }}
+              {{ icon_btn('Attachments', 'download', 'neutral') }}
+              {{ icon_btn('Release', 'check_circle', 'primary') }}
+              {{ icon_btn('Discard', 'delete', 'danger') }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Accounts card pattern -->
+        <div class="tw-bg-background tw-border tw-border-border tw-flex tw-flex-col">
+          {{ toolbar('Email Accounts', [
+            {'label': 'Add Account', 'icon': 'add_circle', 'variant': 'primary', 'href': '/accounts/add'}
+          ]) }}
+          <div class="tw-p-4 tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-3">
+            <div class="tw-border tw-border-border tw-p-3">
+              <div class="tw-flex tw-items-center tw-justify-between">
+                <div>
+                  <div class="tw-text-zinc-200 tw-font-semibold">Gmail</div>
+                  <div class="tw-text-xs tw-text-zinc-500">ndayisjecka@gmail.com</div>
+                </div>
+                <div class="tw-flex tw-gap-2">
+                  {{ icon_btn('Edit', 'edit', 'primary') }}
+                  {{ icon_btn('Delete', 'delete', 'danger') }}
+                </div>
+              </div>
+              <div class="tw-text-xs tw-text-zinc-500 tw-mt-2">imap.gmail.com:993 • smtp.gmail.com:587</div>
+            </div>
+            <div class="tw-border tw-border-border tw-p-3">
+              <div class="tw-flex tw-items-center tw-justify-between">
+                <div>
+                  <div class="tw-text-zinc-200 tw-font-semibold">Hostinger</div>
+                  <div class="tw-text-xs tw-text-zinc-500">mcintyre@corrinbox.com</div>
+                </div>
+                <div class="tw-flex tw-gap-2">
+                  {{ icon_btn('Start', 'play_arrow', 'neutral') }}
+                  {{ icon_btn('Diagnostics', 'bug_report', 'neutral') }}
+                </div>
+              </div>
+              <div class="tw-text-xs tw-text-zinc-500 tw-mt-2">imap.hostinger.com:993 • smtp.hostinger.com:465</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+{% endblock %}
