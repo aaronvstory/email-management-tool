@@ -762,45 +762,7 @@ Routes are organized in `app/routes/`:
 **Port Already in Use**
 → `python cleanup_and_start.py` or manually kill python.exe processes
 
-**Database Schema Mismatch**
-→ Check docs/DATABASE_SCHEMA.md for migration scripts
 
-**UI Styling Issues**
-→ Consult docs/STYLEGUIDE.md for proper patterns
-
-## Detailed Documentation
-
-For deeper technical information, see:
-
-**Getting Started**:
-- **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)** - Complete step-by-step workflows and walkthroughs
-- **[docs/API_REFERENCE.md](docs/API_REFERENCE.md)** - REST API documentation with cURL examples
-- **[docs/FAQ.md](docs/FAQ.md)** - Frequently asked questions
-- **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common issues, gotchas, and solutions
-
-**Architecture & Design**:
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture and design
-- **[docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)** - Database design and indices
-- **[docs/TECHNICAL_DEEP_DIVE.md](docs/TECHNICAL_DEEP_DIVE.md)** - Architecture deep dive
-
-**Development & Deployment**:
-- **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** - Development workflow
-- **[docs/TESTING.md](docs/TESTING.md)** - Testing strategy
-- **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Production deployment guide
-
-**Configuration & Security**:
-- **[docs/SECURITY.md](docs/SECURITY.md)** - Security configuration and validation
-- **[docs/STYLEGUIDE.md](docs/STYLEGUIDE.md)** - UI/UX standards (MANDATORY)
-- **[docs/HYBRID_IMAP_STRATEGY.md](docs/HYBRID_IMAP_STRATEGY.md)** - IMAP implementation
-
-**Implementation & History**:
-- **[docs/GMAIL_FIXES_CONSOLIDATED.md](docs/GMAIL_FIXES_CONSOLIDATED.md)** - Complete Gmail duplicate fix documentation (v1-v4 evolution, protocol fixes, hardening)
-- **[docs/IMPLEMENTATION_HISTORY.md](docs/IMPLEMENTATION_HISTORY.md)** - Chronological feature implementation history (Oct 18-19, 2025)
-- **[docs/SMOKE_TEST_GUIDE.md](docs/SMOKE_TEST_GUIDE.md)** - End-to-end Gmail release validation guide
-- **[docs/reports/CODEBASE_ANALYSIS.md](docs/reports/CODEBASE_ANALYSIS.md)** - Comprehensive architecture and implementation review (2390 lines)
-- **[archive/2025-10-20_root_cleanup/MANIFEST.md](archive/2025-10-20_root_cleanup/MANIFEST.md)** - Root directory cleanup documentation
-
----
 
 **Remember**: This application IS working. If it's not:
 1. Check `python simple_app.py` is running
@@ -808,3 +770,43 @@ For deeper technical information, see:
 3. Verify accounts configured with `python scripts/verify_accounts.py`
 4. Check `logs/app.log` for errors
 5. Test connections with `python scripts/test_permanent_accounts.py`
+# CLAUDE.md
+
+## Project
+Email Management Tool — Flask + Jinja + SQLite. Runs locally. Dark UI with lime accents (#bef264), square corners, Tailwind (prefix `tw-`, preflight disabled), plus a few custom CSS files.
+
+## Absolute UI rules
+- Primary accent = lime #bef264. No blues. No bootstrap theme colors.
+- Square corners (no rounding unless explicitly set in a component).
+- Dark surfaces: base #18181b, surface #27272a, borders rgba(255,255,255,.12).
+- Avoid introducing Bootstrap’s default colors/variables into new code.
+- Prefer utility classes with `tw-` prefix + small scoped component helpers in `static/css/stitch.*.css`.
+
+## Tools (MCP) to favor
+- ✅ **Serena** (semantic code nav): use it for finding symbols, related templates, shared helpers, and safe edits.
+- ➕ (optional later) **Taskmaster**: run bounded checklists with clear artifacts.
+- 🚫 Disable/avoid: github MCP, chrome-devtools MCP (re-enable only when needed) to keep context small.
+
+## Working style
+- Make small, reversible changes. Commit in logical slices with clear messages.
+- When adding CSS, prefer `static/css/stitch.override.css` or `static/css/stitch.components.css`.
+- When touching navigation active states, update `templates/base.html` endpoint checks.
+- Reuse existing patterns from `/stitch` templates. If missing, add a tiny utility and use it everywhere.
+
+## What “good” looks like
+- Links: subtle gray hover overlay; lime on “primary” links.
+- Buttons: no white backgrounds; themed hover tints; icon + label aligned.
+- Badges: compact, uppercase, square, dark chip background.
+- Tables: tight spacing, zebra optional, borders subtle.
+- Sidebar: lime active state with 3px left border, 10% lime tint background.
+
+## Serena usage templates
+- “Find where the EMAIL VIEW page renders attachments and the API it hits. Show file + function names, then open them.”
+- “List all templates under templates/stitch/* and the routes that render them.”
+- “Show me all CSS classes that set lime color; point out duplicates.”
+
+## Don’ts
+- Don’t add bootstrap “primary/secondary/etc.” utility classes.
+- Don’t re-center full pages; prefer left-aligned content and conservative spacing.
+- Don’t invent new colors or radii unless we add tokens first.
+
