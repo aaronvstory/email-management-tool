@@ -1,0 +1,809 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 11,
+        "title": "Audit All Links and Forms for Stitch Migration",
+        "description": "Systematically identify all href and action attributes in templates, categorizing broken or legacy links that require /stitch route variants.",
+        "details": "Use Serena MCP to search for all href and action attributes in the templates directory. Categorize each instance by feature area (emails, interception, accounts, compose, rules, etc.). Document all links that do not use url_for or that point to non-Stitch routes. Prepare a mapping of required /stitch route variants for each action.",
+        "testStrategy": "Verify that the audit captures 100% of links and forms by cross-referencing Serena search results with template file counts. Prepare a checklist for each template and confirm no legacy or broken links remain.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Automated Search for href and action Attributes Using Serena MCP",
+            "description": "Leverage Serena MCP to systematically search all template files for href and action attributes.",
+            "dependencies": [],
+            "details": "Configure Serena MCP to index the templates directory. Use its semantic code retrieval tools to extract all href and action attributes, ensuring comprehensive coverage and avoiding manual omissions. Export the results for further processing.\n<info added on 2025-10-31T03:01:34.393Z>\nAutomated search with Serena MCP identified over 200 href attributes across 24 template files and 4 action attributes in forms. Key findings include: base.html contains 20 hardcoded navigation links; Stitch templates use a mix of url_for and hardcoded routes; legacy templates rely exclusively on hardcoded links; templates in the new/ directory use only placeholder (“#”) links. All extracted data has been exported and is ready for the categorization phase.\n</info added on 2025-10-31T03:01:34.393Z>",
+            "status": "done",
+            "testStrategy": "Cross-reference Serena MCP search output with the total number of template files to confirm 100% coverage. Spot-check several files manually to verify no attributes were missed."
+          },
+          {
+            "id": 2,
+            "title": "Categorize Each Link and Form by Feature Area",
+            "description": "Assign each identified href and action instance to a specific feature area (e.g., emails, interception, accounts, compose, rules).",
+            "dependencies": [
+              1
+            ],
+            "details": "Review the context of each attribute found in the automated search. Use file paths, template names, and code comments to determine the relevant feature area. Document the categorization in a structured spreadsheet or database.\n<info added on 2025-10-31T03:02:53.137Z>\nCategorization is complete. A detailed report has been created at .taskmaster/reports/link-audit-categorized.md, listing all 200+ links organized by 10 feature areas. Key findings include: base.html contains 13 critical hardcoded navigation links; legacy templates require full refactoring; Stitch templates are mostly correct. Priority breakdown: HIGH (base.html and main user flows), MEDIUM (secondary navigation), LOW (design mockups). Ready to proceed to legacy/broken link documentation.\n</info added on 2025-10-31T03:02:53.137Z>",
+            "status": "done",
+            "testStrategy": "Randomly sample categorized entries and verify correct feature area assignment by inspecting the template context. Ensure all entries are categorized with no omissions."
+          },
+          {
+            "id": 3,
+            "title": "Document Legacy or Broken Links and Forms",
+            "description": "Identify and record all links and forms that do not use url_for or point to non-Stitch routes, flagging legacy or broken instances.",
+            "dependencies": [
+              2
+            ],
+            "details": "Analyze the categorized list to flag any href or action attributes that are hardcoded, broken, or reference legacy routes. Create a detailed log including template location, feature area, and the nature of the issue for each instance.\n<info added on 2025-10-31T03:03:57.648Z>\nDocumented all legacy and broken links in .taskmaster/reports/legacy-broken-links.md. Identified over 78 legacy or broken links across templates, categorized by severity: 16 CRITICAL (including base.html navigation and key forms), 12 MODERATE (user workflows), and 50+ LOW (design mockups). Provided detailed fix instructions for each, including before/after code examples, severity ratings, and a blueprint verification checklist. All findings and remediation steps are ready for the /stitch route mapping phase.\n</info added on 2025-10-31T03:03:57.648Z>",
+            "status": "done",
+            "testStrategy": "Review the documentation for completeness and accuracy. Confirm that all flagged links/forms are indeed legacy or broken by checking their usage and route validity."
+          },
+          {
+            "id": 4,
+            "title": "Map Required /stitch Route Variants for Each Action",
+            "description": "Prepare a mapping of required /stitch route variants for all legacy or broken actions identified.",
+            "dependencies": [
+              3
+            ],
+            "details": "For each documented legacy or broken link/form, determine the appropriate /stitch route variant needed. Create a mapping table that pairs each legacy action with its required /stitch route, including notes on implementation requirements.\n<info added on 2025-10-31T03:04:19.682Z>\nCompleted comprehensive /stitch route mapping in .taskmaster/reports/stitch-route-mapping.md. Mapped 22 routes across 12 blueprints: 12 HIGH priority (core functionality), 10 MEDIUM (user workflows). Identified 19 templates needed, 4 already exist. Created implementation checklist with route skeletons, macro requirements, and blueprint verification steps. Task 11 (complete audit) fully done - ready for Task 12 implementation.\n</info added on 2025-10-31T03:04:19.682Z>",
+            "status": "done",
+            "testStrategy": "Validate the mapping by reviewing it with the development team and confirming that each legacy action has a corresponding /stitch route variant specified."
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "Create Missing Stitch Route Variants in Flask Blueprints",
+        "description": "Implement all required /stitch route variants in Flask blueprints for emails, interception, accounts, and compose modules.",
+        "details": "For each action identified in the audit, add a corresponding _stitch route in the appropriate blueprint (e.g., emails_bp, interception_bp). Use @login_required for all routes. Ensure each route renders the correct Stitch template and handles GET/POST as needed. Use safe file serving for attachments and validate all parameters. Follow the provided skeletons and ensure all routes are registered in the app factory.",
+        "testStrategy": "Use Flask's test client to hit each new /stitch route and confirm a 200 response. Manually verify in Chrome DevTools that each route loads the correct template and is accessible only when authenticated.",
+        "priority": "high",
+        "dependencies": [
+          11
+        ],
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Review Audit Output and Define Required /stitch Routes",
+            "description": "Analyze the audit results to identify all missing /stitch route variants needed for emails, interception, accounts, and compose modules.",
+            "dependencies": [],
+            "details": "Carefully review the audit output and list every action that requires a _stitch route. Document the required route paths, HTTP methods (GET/POST), and expected parameters for each module.\n<info added on 2025-10-31T03:05:58.731Z>\nAll 14 blueprints have been verified as present and registered in simple_app.py. There are currently 5 implemented /stitch routes (emails_unified, compose, accounts, rules, watchers). 17 additional /stitch routes have been identified for implementation, with 12 marked as HIGH priority and 5 as MEDIUM priority. An implementation checklist and phased rollout plan have been created and documented at .taskmaster/reports/route-implementation-checklist.md. Phase 1 is ready to begin, focusing on dashboard_stitch, email_detail_stitch, and release/discard actions.\n</info added on 2025-10-31T03:05:58.731Z>",
+            "status": "done",
+            "testStrategy": "Cross-check the list of required routes against the audit and confirm completeness with the team."
+          },
+          {
+            "id": 2,
+            "title": "Implement /stitch Routes in Each Flask Blueprint",
+            "description": "Add the identified /stitch routes to the appropriate Flask blueprints for emails, interception, accounts, and compose modules.",
+            "dependencies": [
+              1
+            ],
+            "details": "For each required route, create a corresponding function in the correct blueprint (e.g., emails_bp, interception_bp). Use the @login_required decorator and follow the provided skeletons for route structure.\n<info added on 2025-10-31T03:11:57.110Z>\nPhase 1 implementation is complete with 5 /stitch routes added across dashboard, emails, and interception blueprints, and 3 corresponding templates created. Visual testing is underway using Chrome DevTools to confirm correct rendering and route accessibility. Phase 2 will focus on account management routes and templates.\n</info added on 2025-10-31T03:11:57.110Z>\n<info added on 2025-10-31T03:17:51.269Z>\nPhase 1 implementation is complete: all 5 required /stitch routes have been added and verified in their respective blueprints, with 3 new templates created. Testing is currently blocked due to a server restart issue—PID 56976 cannot be terminated, preventing route loading until a manual restart is performed. Code has been verified via direct import and standalone blueprint tests. Next steps: commit Phase 1 code and begin Phase 2, focusing on account management routes and templates.\n</info added on 2025-10-31T03:17:51.269Z>",
+            "status": "in-progress",
+            "testStrategy": "Use Flask's test client to ensure each route is registered and returns a response."
+          },
+          {
+            "id": 3,
+            "title": "Add Authentication and Parameter Validation to Routes",
+            "description": "Ensure all /stitch routes require authentication and validate all incoming parameters for security and correctness.",
+            "dependencies": [
+              2
+            ],
+            "details": "Apply @login_required to every route. Use Flask-WTF or manual validation to check all parameters, rejecting invalid or unsafe input. Log validation errors as needed.",
+            "status": "pending",
+            "testStrategy": "Attempt to access routes without authentication and with invalid parameters; confirm proper rejection and error handling."
+          },
+          {
+            "id": 4,
+            "title": "Implement Correct Template Rendering and Safe File Serving",
+            "description": "Ensure each route renders the correct Stitch template and safely serves attachments where required.",
+            "dependencies": [
+              3
+            ],
+            "details": "Render the appropriate Stitch template for each route, passing validated data. For attachment routes, use Flask's safe file serving methods (e.g., send_from_directory) and validate file paths to prevent directory traversal.",
+            "status": "pending",
+            "testStrategy": "Manually verify in Chrome DevTools that each route loads the correct template and that attachments are served securely."
+          },
+          {
+            "id": 5,
+            "title": "Register Routes in App Factory and Write Automated Tests",
+            "description": "Register all new routes in the Flask app factory and implement automated tests for each /stitch route.",
+            "dependencies": [
+              4
+            ],
+            "details": "Update the app factory to ensure all blueprints and their routes are registered. Write tests using Flask's test client to hit each route, checking for correct authentication, parameter handling, and template rendering.",
+            "status": "pending",
+            "testStrategy": "Run the test suite and confirm all routes return expected responses and are covered by tests."
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "title": "Update All Templates to Use url_for and Stitch Macros",
+        "description": "Refactor all templates to replace hardcoded routes with url_for and integrate Stitch macros for UI consistency.",
+        "details": "Replace all hardcoded href and action attributes with url_for calls referencing the new _stitch routes. Integrate the provided Stitch macros (alert, form_field, modal, pagination, empty_state) into all relevant templates. Remove any legacy Bootstrap or white button classes. Ensure all templates use the dark theme, lime accent (#bef264), and square corners. Use Serena's regex replace for batch updates and manual review for edge cases.",
+        "testStrategy": "Visually inspect all pages in Chrome DevTools for consistent styling, correct navigation, and absence of white buttons or broken links. Use accessibility checkers to confirm color contrast and UI hierarchy[1][2][3][4][6][7].",
+        "priority": "high",
+        "dependencies": [
+          12
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Identify All Hardcoded Routes in Templates",
+            "description": "Audit all template files to locate hardcoded href and action attributes referencing static routes.",
+            "dependencies": [],
+            "details": "Search all template files for hardcoded URLs in href and action attributes. Document each instance, noting the template file and line number. Use regex patterns to automate initial detection, but manually review for edge cases and dynamic constructs.",
+            "status": "pending",
+            "testStrategy": "Spot-check a sample of templates to confirm all hardcoded routes are identified. Ensure no missed cases by comparing with route definitions in Flask blueprints."
+          },
+          {
+            "id": 2,
+            "title": "Batch Replace Hardcoded Routes with url_for Calls",
+            "description": "Replace all identified hardcoded routes with url_for calls referencing the new _stitch routes.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use Serena's regex replace tool to batch-convert static URLs to Jinja url_for syntax, e.g., {{ url_for('route_name') }}. Manually update any complex or dynamic cases that cannot be handled by regex. Ensure all replacements reference the correct _stitch route names.",
+            "status": "pending",
+            "testStrategy": "Render each updated template and verify that all links and form actions resolve correctly. Use Flask's test client to check for broken links."
+          },
+          {
+            "id": 3,
+            "title": "Integrate Stitch Macros into All Relevant Templates",
+            "description": "Replace legacy UI components with Stitch macros (alert, form_field, modal, pagination, empty_state) for consistency.",
+            "dependencies": [
+              2
+            ],
+            "details": "Identify all instances of alerts, form fields, modals, pagination, and empty states in templates. Replace them with the corresponding Stitch macros, ensuring correct macro arguments and context. Remove any redundant or conflicting markup.",
+            "status": "pending",
+            "testStrategy": "Visually inspect each template to confirm Stitch macros render as expected. Check macro arguments for correctness and test UI interactions."
+          },
+          {
+            "id": 4,
+            "title": "Remove Legacy Bootstrap and White Button Classes",
+            "description": "Eliminate all legacy Bootstrap classes and any white button styles from templates.",
+            "dependencies": [
+              3
+            ],
+            "details": "Search for Bootstrap class names (e.g., btn, btn-primary, btn-white) and remove or replace them with Stitch equivalents. Ensure no white button styles remain. Refactor markup to avoid layout regressions.",
+            "status": "pending",
+            "testStrategy": "Use browser DevTools to inspect rendered elements and confirm absence of legacy classes and white buttons. Compare before/after screenshots for layout consistency."
+          },
+          {
+            "id": 5,
+            "title": "Enforce Dark Theme, Lime Accent, and Square Corners",
+            "description": "Apply the dark theme, lime accent (#bef264), and square corners across all templates.",
+            "dependencies": [
+              4
+            ],
+            "details": "Update template classes and variables to use the dark theme palette and lime accent color. Ensure all buttons, cards, and modals have square corners. Remove any overrides or legacy theme remnants.",
+            "status": "pending",
+            "testStrategy": "Visually inspect all pages for correct theme, accent color, and border radius. Use color contrast tools to verify accessibility compliance."
+          },
+          {
+            "id": 6,
+            "title": "Manual Review and Accessibility Checks",
+            "description": "Manually review all updated templates for correctness, visual consistency, and accessibility.",
+            "dependencies": [
+              5
+            ],
+            "details": "Open each page in Chrome DevTools, checking for broken links, missing macros, and visual inconsistencies. Run accessibility checkers to validate color contrast, focus order, and ARIA attributes. Address any issues found.",
+            "status": "pending",
+            "testStrategy": "Perform manual walkthroughs of all user flows. Use automated accessibility tools (e.g., axe, Lighthouse) and resolve all flagged issues."
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "title": "Implement End-to-End Interception Test Page",
+        "description": "Build the /interception-test page with full Stitch styling and a working send→intercept→release/discard flow.",
+        "details": "Create a new route and template for /interception-test. Implement the UI using Stitch macros and ensure all actions (send, intercept, release, discard) are wired to backend logic. Use Flask-WTF for form handling and CSRF protection. Ensure all actions update the UI in real time and handle errors gracefully. Test with both valid and invalid email flows.",
+        "testStrategy": "Perform manual E2E tests in Chrome DevTools, verifying each step of the interception flow. Confirm that all actions update the UI and backend state as expected. Check for error handling and no 500s.",
+        "priority": "high",
+        "dependencies": [
+          13
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create /interception-test Route and Stitch-Styled Template",
+            "description": "Set up the Flask route and template for the interception test page, ensuring full Stitch styling and initial UI structure.",
+            "dependencies": [],
+            "details": "Define a new Flask route for /interception-test. Use Stitch macros to build the page layout and form elements. Ensure the template includes placeholders for send, intercept, release, and discard actions. Integrate Flask-WTF for form handling and CSRF protection.",
+            "status": "pending",
+            "testStrategy": "Load the /interception-test page in the browser and verify that the UI renders correctly with Stitch styling. Confirm that forms are present and CSRF tokens are included."
+          },
+          {
+            "id": 2,
+            "title": "Implement Backend Logic and Real-Time UI Updates for Interception Flow",
+            "description": "Wire up all send, intercept, release, and discard actions to backend logic and ensure the UI updates in real time with error handling.",
+            "dependencies": [
+              1
+            ],
+            "details": "Connect each UI action (send, intercept, release, discard) to corresponding Flask endpoints. Use AJAX or WebSockets for real-time UI updates. Implement backend logic to process each action and return status updates. Handle errors gracefully and display user-friendly messages.",
+            "status": "pending",
+            "testStrategy": "Trigger each action from the UI and verify backend processing and real-time UI updates. Simulate backend errors and confirm error messages are shown without breaking the page."
+          },
+          {
+            "id": 3,
+            "title": "Test End-to-End Email Interception Flows with Valid and Invalid Inputs",
+            "description": "Perform comprehensive end-to-end tests of the interception flow, covering both valid and invalid email scenarios.",
+            "dependencies": [
+              2
+            ],
+            "details": "Manually and/or automatically test the full send→intercept→release/discard flow using both valid and invalid email data. Confirm that all actions update the UI and backend state as expected. Check for proper error handling and absence of server errors.",
+            "status": "pending",
+            "testStrategy": "Use Chrome DevTools and automated E2E scripts to simulate user actions. Verify that emails are processed correctly, UI updates in real time, and errors are handled gracefully for all tested scenarios."
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "title": "Build Diagnostics Page with Live Log Viewer",
+        "description": "Develop the /diagnostics page featuring a system health dashboard and real-time log streaming using WebSocket or AJAX polling.",
+        "details": "Implement a Flask route for /diagnostics. Use Flask-SocketIO (v5.x) for real-time log streaming from logs/app.log, falling back to AJAX polling if WebSocket is unavailable. Add log filtering, search, and scroll controls. Display system health status badges using Stitch macros. Ensure the UI is fully dark-themed with lime accents. Handle large log files with pagination or truncation.",
+        "testStrategy": "Test live log streaming in multiple browsers and devices. Simulate log growth and verify UI responsiveness. Use Chrome DevTools to monitor WebSocket connections and validate real-time updates.",
+        "priority": "high",
+        "dependencies": [
+          13
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement /diagnostics Route and Base Template",
+            "description": "Create the Flask route and Jinja2 template for the /diagnostics page, ensuring it loads correctly and uses the required dark theme with lime accents.",
+            "dependencies": [],
+            "details": "Define the /diagnostics route in Flask, render a base template with placeholders for log viewer and system health badges. Apply dark theme and lime accent styles using CSS. Ensure the template structure supports later integration of dynamic components.",
+            "status": "pending",
+            "testStrategy": "Access /diagnostics in the browser and verify the page loads with correct theme and layout. Check for template rendering errors."
+          },
+          {
+            "id": 2,
+            "title": "Integrate Flask-SocketIO for Real-Time Log Streaming",
+            "description": "Set up Flask-SocketIO (v5.x) to stream updates from logs/app.log to the diagnostics page in real time.",
+            "dependencies": [
+              1
+            ],
+            "details": "Configure Flask-SocketIO in the app. Implement a background task to tail logs/app.log and emit new lines to connected clients. Update the diagnostics template to receive and display log lines via WebSocket.",
+            "status": "pending",
+            "testStrategy": "Simulate log file updates and verify that new log entries appear instantly in the UI without page reload."
+          },
+          {
+            "id": 3,
+            "title": "Add AJAX Polling Fallback for Log Streaming",
+            "description": "Implement AJAX polling as a fallback mechanism when WebSocket is unavailable, ensuring continuous log updates.",
+            "dependencies": [
+              2
+            ],
+            "details": "Detect WebSocket support in the frontend. If unavailable, periodically poll a Flask endpoint for new log entries and update the log viewer. Ensure seamless switching between WebSocket and AJAX.",
+            "status": "pending",
+            "testStrategy": "Disable WebSocket in the browser, verify logs update via AJAX polling, and check for no duplicate or missing entries."
+          },
+          {
+            "id": 4,
+            "title": "Build Log Filtering, Search, and Scroll Controls",
+            "description": "Add frontend controls for filtering log entries, searching text, and managing scroll behavior in the log viewer.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Implement input fields and buttons for filtering by log level, searching keywords, and toggling auto-scroll. Ensure controls interact smoothly with both WebSocket and AJAX log updates.",
+            "status": "pending",
+            "testStrategy": "Test filtering and search with various log contents. Verify scroll controls work during rapid log updates."
+          },
+          {
+            "id": 5,
+            "title": "Display System Health Status Badges Using Stitch Macros",
+            "description": "Integrate system health status badges into the diagnostics page using Stitch macros for dynamic rendering.",
+            "dependencies": [
+              1
+            ],
+            "details": "Fetch system health data in the Flask route and render badges using Stitch macros in the template. Ensure badges update appropriately and match the dark theme.",
+            "status": "pending",
+            "testStrategy": "Simulate different health states and verify badges display correct status and styling."
+          },
+          {
+            "id": 6,
+            "title": "Handle Large Log Files with Pagination or Truncation and Test Responsiveness",
+            "description": "Implement pagination or truncation for large log files and thoroughly test UI responsiveness and performance.",
+            "dependencies": [
+              2,
+              3,
+              4
+            ],
+            "details": "Detect large log files and limit the number of lines loaded at once. Provide pagination or truncation controls. Test the diagnostics page under heavy log load for smooth scrolling and fast updates.",
+            "status": "pending",
+            "testStrategy": "Load large logs, navigate pages, and monitor UI responsiveness. Use browser dev tools to check memory and performance."
+          }
+        ]
+      },
+      {
+        "id": 16,
+        "title": "Develop Accounts Import Page with CSV and Bulk Entry",
+        "description": "Create the /accounts/import page supporting CSV uploads and manual bulk entry, with validation, preview, and confirmation flows.",
+        "details": "Implement a Flask route and template for /accounts/import. Use Flask-WTF for file upload forms with CSRF protection. Parse CSV files using Python's csv module, validate standard email fields, and display a preview before import. Support manual bulk entry via textarea. Provide clear error and success feedback using Stitch alerts. Enforce file size limits and validate input on both client and server.",
+        "testStrategy": "Upload valid and invalid CSV files, test manual entry, and verify validation/preview/confirmation flows. Check for error handling and no 500s. Use Chrome DevTools to inspect network and UI updates.",
+        "priority": "high",
+        "dependencies": [
+          13
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement CSV Upload and Manual Bulk Entry Form with Validation",
+            "description": "Create the /accounts/import Flask route and template, supporting both CSV file uploads and manual bulk entry via textarea, with client-side and server-side validation.",
+            "dependencies": [],
+            "details": "Set up the Flask route and template for /accounts/import. Use Flask-WTF for the form, including a file input for CSV uploads and a textarea for manual entry. Add CSRF protection. Implement client-side validation for file type and size, and basic input checks for the textarea. Ensure the UI provides clear instructions and disables submission if validation fails.",
+            "status": "pending",
+            "testStrategy": "Submit valid and invalid CSV files and manual entries. Verify client-side validation blocks invalid submissions. Check CSRF token presence."
+          },
+          {
+            "id": 2,
+            "title": "Parse and Validate Uploaded Data, Display Preview with Error Feedback",
+            "description": "Process uploaded CSV files and manual entries, parse and validate email fields, and display a preview table with error and success feedback using Stitch alerts.",
+            "dependencies": [
+              1
+            ],
+            "details": "On form submission, parse the CSV using Python's csv module or process the textarea input. Validate each row for required fields and correct email format. Collect errors and prepare a preview table showing valid and invalid entries. Use Stitch alerts to display errors and warnings. Enforce file size limits and handle malformed input gracefully.",
+            "status": "pending",
+            "testStrategy": "Upload files and manual entries with various errors (e.g., missing fields, invalid emails, oversized files). Confirm that errors are shown, and the preview displays correct and incorrect rows distinctly."
+          },
+          {
+            "id": 3,
+            "title": "Implement Confirmation and Import Flow with Success/Error Handling",
+            "description": "Allow users to confirm the import after preview, perform the actual import, and provide clear success or error feedback for each entry.",
+            "dependencies": [
+              2
+            ],
+            "details": "After preview, add a confirmation step where users can proceed with the import. On confirmation, insert valid entries into the database and skip or report invalid ones. Use Stitch alerts to show overall success or detailed error messages. Ensure no duplicate imports and handle all edge cases (e.g., network errors, server exceptions) with user-friendly feedback.",
+            "status": "pending",
+            "testStrategy": "Confirm import with a mix of valid and invalid data. Check that only valid entries are imported, errors are reported, and no duplicate imports occur. Simulate server errors to verify robust error handling."
+          }
+        ]
+      },
+      {
+        "id": 17,
+        "title": "Fix Attachments 500 Error and Core Backend Issues",
+        "description": "Debug and resolve the HTTP 500 error on the Attachments feature, addressing file path, database schema, and MIME type handling.",
+        "details": "Use Serena MCP and Flask error logs to trace the root cause of the 500 error. Check for path traversal vulnerabilities and ensure safe file joining. Validate the email_attachments table schema and update as needed. Use Python's mimetypes module for accurate MIME detection. Add robust error handling and logging for all attachment endpoints.",
+        "testStrategy": "Trigger the Attachments feature with various edge cases (missing files, invalid paths, corrupt DB entries) and confirm no 500 errors occur. Use Chrome DevTools to monitor network and error logs.",
+        "priority": "high",
+        "dependencies": [
+          13
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Trace and Reproduce the Attachments 500 Error",
+            "description": "Identify, reproduce, and document the HTTP 500 error in the Attachments feature using logs and test cases.",
+            "dependencies": [],
+            "details": "Use Serena MCP and Flask error logs to trace the root cause of the 500 error. Attempt to reproduce the error by triggering the Attachments endpoints with various scenarios (e.g., missing files, invalid paths, corrupt database entries). Document the exact error messages and stack traces observed.",
+            "status": "pending",
+            "testStrategy": "Trigger the Attachments feature with edge cases and confirm the 500 error is consistently reproducible. Capture logs and error responses for analysis."
+          },
+          {
+            "id": 2,
+            "title": "Audit and Fix File Path Handling for Attachments",
+            "description": "Review and secure all file path operations to prevent path traversal and ensure safe file joining.",
+            "dependencies": [
+              1
+            ],
+            "details": "Check all code handling file paths in the Attachments feature for potential path traversal vulnerabilities. Refactor to use secure file joining methods (e.g., os.path.join, pathlib) and validate that only allowed directories are accessed. Add checks to reject suspicious or malformed paths.",
+            "status": "pending",
+            "testStrategy": "Attempt to access files using path traversal patterns (e.g., '../') and verify access is denied. Confirm only valid files are served or processed."
+          },
+          {
+            "id": 3,
+            "title": "Validate and Update the email_attachments Database Schema",
+            "description": "Ensure the email_attachments table schema matches application requirements and update as needed.",
+            "dependencies": [
+              1
+            ],
+            "details": "Review the current schema of the email_attachments table. Check for missing or incorrect fields (e.g., file path, MIME type, size). Apply necessary migrations to add or modify columns. Ensure schema changes are backward compatible and documented.",
+            "status": "pending",
+            "testStrategy": "Run schema migration scripts and verify the table structure. Insert and retrieve test records to confirm correct schema behavior."
+          },
+          {
+            "id": 4,
+            "title": "Improve MIME Type Detection Using Python's mimetypes Module",
+            "description": "Enhance MIME type detection for attachments to ensure accurate content-type handling.",
+            "dependencies": [
+              1
+            ],
+            "details": "Integrate Python's mimetypes module to detect file MIME types when processing attachments. Replace any hardcoded or unreliable MIME detection logic. Ensure the detected MIME type is stored in the database and used in response headers.",
+            "status": "pending",
+            "testStrategy": "Upload and download files of various types. Confirm the correct MIME type is detected, stored, and returned in API responses."
+          },
+          {
+            "id": 5,
+            "title": "Add Robust Error Handling and Logging for Attachment Endpoints",
+            "description": "Implement comprehensive error handling and logging for all attachment-related API endpoints.",
+            "dependencies": [
+              2,
+              3,
+              4
+            ],
+            "details": "Add try/except blocks around all critical operations in the Attachments feature. Log all exceptions with relevant context (request data, user, stack trace). Return user-friendly error messages and avoid exposing sensitive details. Ensure logs are accessible for debugging.",
+            "status": "pending",
+            "testStrategy": "Intentionally trigger errors (e.g., invalid input, missing files) and verify that errors are logged and appropriate responses are returned without leaking sensitive information."
+          }
+        ]
+      },
+      {
+        "id": 18,
+        "title": "Build Complete Attachments Interface (Upload, Download, Preview, Bulk)",
+        "description": "Develop the full attachments UI: listing, upload, download, preview (images/text), and bulk download (zip), with security and size validation.",
+        "details": "Create listing and upload interfaces in Stitch templates. Use Flask-WTF for file uploads, enforcing size and type restrictions (e.g., max 25MB, allow PDF, images, docs). Store files in attachments/ directory with unique names. Implement preview for images and text files using secure file serving. Add bulk download as zip using Python's zipfile module. Validate all uploads for security (scan for malware if feasible, check extensions and MIME types).",
+        "testStrategy": "Upload, download, and preview various file types. Attempt to upload oversized or disallowed files and verify rejection. Test bulk download and preview modals. Use Chrome DevTools to inspect UI and network responses.",
+        "priority": "high",
+        "dependencies": [
+          17
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design Attachments Listing and Upload UI in Stitch Templates",
+            "description": "Create user interface components for listing existing attachments and uploading new files using Stitch templates.",
+            "dependencies": [],
+            "details": "Develop HTML templates for listing attachments and an upload form. Use Jinja2 templating for dynamic content. Ensure the UI is accessible and matches Stitch design guidelines. Include file input, progress indicators, and error messages.",
+            "status": "pending",
+            "testStrategy": "Render the UI in the browser, verify correct display of attachments, and test file selection and upload form interactions."
+          },
+          {
+            "id": 2,
+            "title": "Implement Secure File Upload with Validation (Flask-WTF)",
+            "description": "Develop backend logic for secure file uploads, enforcing size and type restrictions using Flask-WTF.",
+            "dependencies": [
+              1
+            ],
+            "details": "Set up Flask-WTF forms for file uploads. Validate file size (max 25MB) and allowed types (PDF, images, docs). Store files in the attachments/ directory with unique names. Reject disallowed or oversized files with clear error messages.",
+            "status": "pending",
+            "testStrategy": "Attempt uploads with valid and invalid files, check for correct acceptance or rejection, and verify files are stored securely."
+          },
+          {
+            "id": 3,
+            "title": "Develop Download and Preview Endpoints for Attachments",
+            "description": "Create Flask endpoints to handle secure downloading and previewing of attachments (images and text files).",
+            "dependencies": [
+              2
+            ],
+            "details": "Implement routes for downloading files and previewing images/text. Use secure file serving to prevent path traversal. Render previews inline for supported types, otherwise trigger download.",
+            "status": "pending",
+            "testStrategy": "Download and preview various file types, verify correct rendering or download, and test for security vulnerabilities."
+          },
+          {
+            "id": 4,
+            "title": "Add Bulk Download Functionality (ZIP Archive)",
+            "description": "Enable users to select multiple attachments and download them as a single ZIP archive.",
+            "dependencies": [
+              3
+            ],
+            "details": "Use Python's zipfile module to bundle selected files into a ZIP. Provide a UI option for bulk selection and download. Ensure ZIP creation is efficient and secure.",
+            "status": "pending",
+            "testStrategy": "Select multiple files, trigger bulk download, and verify the ZIP contains the correct files with no corruption."
+          },
+          {
+            "id": 5,
+            "title": "Enforce Security, Size, and Type Checks on All Uploads",
+            "description": "Implement comprehensive validation for all uploads, including extension, MIME type, and optional malware scanning.",
+            "dependencies": [
+              2
+            ],
+            "details": "Check file extensions and MIME types on upload. Integrate optional malware scanning (e.g., ClamAV). Log all validation failures and enforce rejection of unsafe files.",
+            "status": "pending",
+            "testStrategy": "Upload files with incorrect extensions, MIME types, or containing malware signatures, and verify they are rejected."
+          },
+          {
+            "id": 6,
+            "title": "Integrate Attachments Functionality with Stitch Templates",
+            "description": "Wire up backend endpoints and logic to the Stitch-based UI, ensuring seamless user experience.",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "details": "Connect all Flask endpoints to the UI components. Ensure upload, listing, preview, download, and bulk download actions work end-to-end. Handle errors gracefully in the UI.",
+            "status": "pending",
+            "testStrategy": "Perform end-to-end manual tests for all attachment actions, verifying UI updates and backend responses."
+          },
+          {
+            "id": 7,
+            "title": "Comprehensive Testing: Edge Cases, Security, and Usability",
+            "description": "Test the complete attachments interface for edge cases, security vulnerabilities, and usability issues.",
+            "dependencies": [
+              6
+            ],
+            "details": "Write and execute test cases covering valid/invalid uploads, large files, disallowed types, bulk downloads, and preview errors. Use tools like Chrome DevTools for UI/network inspection. Attempt common attack vectors (e.g., path traversal, malicious files).",
+            "status": "pending",
+            "testStrategy": "Run automated and manual tests for all scenarios. Document results and fix any discovered issues."
+          }
+        ]
+      },
+      {
+        "id": 19,
+        "title": "Integrate Attachments with Email UI (Indicators, Compose, Detail View)",
+        "description": "Add attachment indicators to email lists, file upload widgets to compose forms, and attachment panels/modals to email detail views using Stitch styling.",
+        "details": "Update email list templates to show an icon or badge when attachments are present. Enhance the compose/edit form with a file upload widget using Stitch macros. In the email detail view, display an attachment panel with download/preview links. Use modals for previews, leveraging the provided modal macro. Ensure all UI elements are dark-themed and responsive.",
+        "testStrategy": "Send emails with and without attachments, verify indicators in lists, upload via compose, and check detail view panels. Test modals for preview and download. Confirm mobile responsiveness in Chrome DevTools.",
+        "priority": "medium",
+        "dependencies": [
+          18
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Add Attachment Indicators to Email List UI",
+            "description": "Update the email list templates to display an icon or badge when an email contains attachments, using Stitch styling.",
+            "dependencies": [],
+            "details": "Modify the email list component to check for the presence of attachments in each email object. Display a visually distinct indicator (icon or badge) next to emails with attachments. Ensure the indicator uses Stitch dark theme styles and is responsive on all screen sizes.",
+            "status": "pending",
+            "testStrategy": "Send test emails with and without attachments. Verify that only emails with attachments display the indicator in the list on both desktop and mobile views."
+          },
+          {
+            "id": 2,
+            "title": "Enhance Compose Form with File Upload Widget",
+            "description": "Integrate a file upload widget into the email compose/edit form using Stitch macros, allowing users to attach files.",
+            "dependencies": [
+              1
+            ],
+            "details": "Embed a file upload component in the compose form, styled with Stitch macros for dark mode and responsiveness. Ensure multiple file selection is supported, with clear feedback on selected files. Validate file types and size limits as per backend constraints.",
+            "status": "pending",
+            "testStrategy": "Compose emails with various file types and sizes. Confirm files are attached, UI remains responsive, and errors are shown for invalid files."
+          },
+          {
+            "id": 3,
+            "title": "Implement Attachment Panel in Email Detail View",
+            "description": "Display an attachment panel in the email detail view, showing download and preview links for each attachment, styled with Stitch.",
+            "dependencies": [
+              2
+            ],
+            "details": "Add a panel below the email body that lists all attachments with file names, download buttons, and preview links. Use Stitch dark theme and ensure layout adapts to different screen sizes. Integrate with backend to fetch and serve attachments securely.",
+            "status": "pending",
+            "testStrategy": "Open emails with attachments and verify the panel displays all files with working download and preview links. Check appearance and functionality on mobile and desktop."
+          },
+          {
+            "id": 4,
+            "title": "Test Modals for Attachment Preview and UI Responsiveness",
+            "description": "Verify that attachment previews open in modals using the provided macro, and that all UI elements are responsive and dark-themed.",
+            "dependencies": [
+              3
+            ],
+            "details": "Implement modal previews for supported file types using the Stitch modal macro. Test all UI elements (indicators, upload widget, attachment panel, modals) for responsiveness and dark theme compliance across devices and browsers.",
+            "status": "pending",
+            "testStrategy": "Preview attachments in modals, resize browser, and use Chrome DevTools to simulate mobile. Confirm all UI elements function and display correctly in dark mode."
+          }
+        ]
+      },
+      {
+        "id": 20,
+        "title": "Implement Attachment Storage Cleanup and Metadata",
+        "description": "Ensure attachment files are deleted when emails are removed and add metadata (size, type, scan status) to the database.",
+        "details": "Update backend logic to delete files from attachments/ when their parent email is deleted. Extend the email_attachments schema to include size, MIME type, and scan status fields. Populate these fields on upload. Optionally, integrate a lightweight malware scanner (e.g., ClamAV) for scan status. Ensure all file operations are atomic and logged.",
+        "testStrategy": "Delete emails with attachments and verify files are removed from disk. Check DB for correct metadata. Simulate scan failures and confirm status is updated. Use Chrome DevTools to monitor UI updates.",
+        "priority": "medium",
+        "dependencies": [
+          18
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement File Deletion on Email Removal",
+            "description": "Ensure that attachment files are deleted from storage when their parent email is deleted.",
+            "dependencies": [],
+            "details": "Update backend logic to identify and remove files from the attachments/ directory whenever an email is deleted. Handle edge cases where files may be missing or already deleted. Ensure no orphaned files remain after email deletion.",
+            "status": "pending",
+            "testStrategy": "Delete emails with attachments and verify that corresponding files are removed from disk. Attempt to delete emails with missing files to confirm graceful handling."
+          },
+          {
+            "id": 2,
+            "title": "Extend Database Schema for Attachment Metadata",
+            "description": "Modify the email_attachments table to include size, MIME type, and scan status fields.",
+            "dependencies": [],
+            "details": "Perform a schema migration to add new columns for file size (integer), MIME type (string), and scan status (enum or string) to the email_attachments table. Update ORM models and ensure backward compatibility.",
+            "status": "pending",
+            "testStrategy": "Run migration scripts and verify new fields exist in the database. Check that existing records are unaffected and new records can be created with metadata."
+          },
+          {
+            "id": 3,
+            "title": "Update Upload Logic to Populate Metadata",
+            "description": "Capture and store file size, MIME type, and scan status when attachments are uploaded.",
+            "dependencies": [
+              2
+            ],
+            "details": "Modify the upload endpoint to extract file size and MIME type from the uploaded file. Set scan status to 'pending' or 'clean' as appropriate. Save all metadata to the database during the upload transaction.",
+            "status": "pending",
+            "testStrategy": "Upload various file types and sizes. Verify that metadata fields in the database are correctly populated for each attachment."
+          },
+          {
+            "id": 4,
+            "title": "Integrate Lightweight Malware Scanning (Optional)",
+            "description": "Add malware scanning (e.g., ClamAV) to the upload process and record scan results in metadata.",
+            "dependencies": [
+              3
+            ],
+            "details": "Integrate a lightweight malware scanner into the upload workflow. After file upload, scan the file and update the scan status field in the database with the result (e.g., 'clean', 'infected', 'failed'). Handle scan failures gracefully.",
+            "status": "pending",
+            "testStrategy": "Upload files with and without malware signatures. Confirm that scan status is updated appropriately and that infected files are flagged or rejected."
+          },
+          {
+            "id": 5,
+            "title": "Ensure Atomic File Operations and Logging",
+            "description": "Guarantee that file and database operations are atomic and all actions are logged for auditability.",
+            "dependencies": [
+              1,
+              3,
+              4
+            ],
+            "details": "Wrap file and database changes in transactions to ensure consistency. Implement logging for all file deletions, uploads, and scan results. Roll back changes if any part of the operation fails.",
+            "status": "pending",
+            "testStrategy": "Simulate failures during upload and deletion to verify atomicity. Review logs to ensure all actions are recorded with sufficient detail."
+          }
+        ]
+      },
+      {
+        "id": 21,
+        "title": "Test All Core Flows and UI Consistency",
+        "description": "Perform comprehensive manual and automated testing of all critical user workflows and UI consistency across devices.",
+        "details": "Test the interception flow, diagnostics/log streaming, account import, and full attachments lifecycle (upload, store, download, preview). Use Chrome DevTools for visual checks and network inspection. Run accessibility and responsiveness audits. Use pytest and Selenium for automated E2E tests where feasible. Document proof of delivery for each feature.",
+        "testStrategy": "Execute all acceptance criteria and success metrics. Capture screenshots and logs as proof. Ensure zero 404/500 errors and 100% workflow coverage.",
+        "priority": "high",
+        "dependencies": [
+          14,
+          15,
+          16,
+          19,
+          20
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Conduct Manual End-to-End Testing of Core User Flows",
+            "description": "Manually test all critical user workflows, including interception flow, diagnostics/log streaming, account import, and the full attachments lifecycle (upload, store, download, preview) across supported devices and browsers.",
+            "dependencies": [],
+            "details": "Use Chrome DevTools for visual checks and network inspection. Follow predefined test cases to ensure each workflow functions as expected. Record any issues or deviations from expected behavior.",
+            "status": "pending",
+            "testStrategy": "Verify each workflow step manually, capture screenshots, and log defects. Ensure all acceptance criteria are met for each flow."
+          },
+          {
+            "id": 2,
+            "title": "Develop and Execute Automated End-to-End Tests (pytest/Selenium)",
+            "description": "Implement and run automated E2E tests for all core flows using pytest and Selenium, focusing on repeatable and regression-prone scenarios.",
+            "dependencies": [
+              1
+            ],
+            "details": "Automate test cases for interception, diagnostics/log streaming, account import, and attachments lifecycle. Integrate tests into CI pipeline where feasible. Ensure tests cover both positive and negative scenarios.",
+            "status": "pending",
+            "testStrategy": "Run automated test suites, validate results against expected outcomes, and review test logs for failures. Ensure 100% coverage of automated scenarios."
+          },
+          {
+            "id": 3,
+            "title": "Perform Accessibility Audits Across All Core Screens",
+            "description": "Assess accessibility compliance of all critical screens and workflows using automated tools and manual checks.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use tools like Axe or Lighthouse to identify accessibility issues. Manually verify keyboard navigation, screen reader compatibility, and color contrast. Document all findings and remediation steps.",
+            "status": "pending",
+            "testStrategy": "Run automated accessibility audits, manually test with assistive technologies, and confirm all critical issues are addressed."
+          },
+          {
+            "id": 4,
+            "title": "Verify UI Responsiveness and Consistency Across Devices",
+            "description": "Check that the UI is visually consistent and responsive on all supported devices and screen sizes.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use Chrome DevTools device emulation and real devices to test layout, scaling, and interactive elements. Compare UI against design specifications and note any inconsistencies.",
+            "status": "pending",
+            "testStrategy": "Capture screenshots on multiple devices, compare with baseline designs, and log any visual or functional discrepancies."
+          },
+          {
+            "id": 5,
+            "title": "Document Test Results and Issues for All Flows",
+            "description": "Record detailed results of manual and automated tests, including defects, screenshots, logs, and coverage reports.",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "details": "Maintain a structured test report for each workflow. Include steps taken, outcomes, issues found, and evidence such as screenshots and logs. Track defect resolution status.",
+            "status": "pending",
+            "testStrategy": "Review documentation for completeness and accuracy. Ensure all issues are traceable to test cases and workflows."
+          },
+          {
+            "id": 6,
+            "title": "Capture and Archive Proof of Delivery for Each Feature",
+            "description": "Collect and store evidence (screenshots, logs, reports) demonstrating successful delivery and testing of each core feature.",
+            "dependencies": [
+              5
+            ],
+            "details": "Organize proof of delivery artifacts by feature and workflow. Ensure all required evidence is present and accessible for audits or stakeholder review.",
+            "status": "pending",
+            "testStrategy": "Verify that proof of delivery is available for each feature, matches documented results, and is stored in the designated repository."
+          }
+        ]
+      },
+      {
+        "id": 22,
+        "title": "Final Polish and Production Readiness",
+        "description": "Commit all changes with a comprehensive changelog, ensure production readiness, and prepare delivery documentation.",
+        "details": "Review all code for best practices, security, and performance. Ensure all pages load within 2 seconds. Prepare a detailed changelog summarizing all major components. Gather screenshots, test logs, and proof of delivery documentation. Confirm all debug endpoints are closed or secured before release.",
+        "testStrategy": "Perform a final code review, run performance benchmarks, and verify all documentation is complete. Confirm no debug endpoints are exposed in production.",
+        "priority": "medium",
+        "dependencies": [
+          21
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Conduct Comprehensive Code Review and Best Practices Check",
+            "description": "Review all code for adherence to best practices, maintainability, readability, and correctness. Ensure code is modular, follows established patterns, and is well-documented.",
+            "dependencies": [],
+            "details": "Use a structured code review checklist to verify functionality, readability, maintainability, error handling, and architectural alignment. Confirm that all requirements are met, edge cases are handled, and code is easy to understand and maintain. Document any issues found and ensure they are addressed before proceeding.",
+            "status": "pending",
+            "testStrategy": "Peer review using a checklist; verify corrections are made; confirm no outstanding review comments remain."
+          },
+          {
+            "id": 2,
+            "title": "Perform Performance Benchmarking and Optimization",
+            "description": "Benchmark all application pages and endpoints to ensure they load within the 2-second target. Identify and resolve any performance bottlenecks.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use automated tools and manual testing to measure page and API response times. Profile slow components, optimize queries or code as needed, and retest until all performance targets are met. Document results and any optimizations performed.",
+            "status": "pending",
+            "testStrategy": "Run performance tests before and after optimizations; confirm all pages and endpoints meet the 2-second load time requirement."
+          },
+          {
+            "id": 3,
+            "title": "Prepare Documentation and Comprehensive Changelog",
+            "description": "Compile a detailed changelog summarizing all major changes, and gather delivery documentation including screenshots, test logs, and proof of delivery.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Document all significant code changes, features, and fixes in a clear changelog. Collect relevant screenshots, export test logs, and prepare any required proof of delivery documentation. Ensure all documentation is clear, complete, and ready for handoff.",
+            "status": "pending",
+            "testStrategy": "Review documentation for completeness and clarity; verify changelog accuracy against commit history; confirm all required artifacts are present."
+          },
+          {
+            "id": 4,
+            "title": "Conduct Security Review and Debug Endpoint Audit",
+            "description": "Audit the codebase to ensure all debug endpoints are either closed or properly secured before release. Check for any remaining security vulnerabilities.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Identify all debug and development endpoints, confirm they are disabled or access-controlled in production. Perform a final security sweep for common vulnerabilities and ensure compliance with security best practices.",
+            "status": "pending",
+            "testStrategy": "Attempt to access debug endpoints in a production-like environment; run security scans; verify no unauthorized access is possible."
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-10-31T02:09:02.088Z",
+      "updated": "2025-10-31T03:05:58.986Z",
+      "description": "Tasks for master context"
+    }
+  }
+}

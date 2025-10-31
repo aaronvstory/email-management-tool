@@ -114,6 +114,119 @@ def emails_unified_stitch():
     )
 
 
+@emails_bp.route('/email/<int:id>/stitch')
+@login_required
+def email_detail_stitch(id):
+    """Stitch design system variant of email detail view"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    email_row = cursor.execute(
+        """
+        SELECT em.*, ea.account_name, ea.email_address
+        FROM email_messages em
+        LEFT JOIN email_accounts ea ON em.account_id = ea.id
+        WHERE em.id = ?
+        """,
+        (id,)
+    ).fetchone()
+
+    if not email_row:
+        conn.close()
+        flash('Email not found', 'error')
+        return redirect(url_for('emails.emails_unified_stitch'))
+
+    # Get attachments
+    attachments = cursor.execute(
+        """
+        SELECT id, original_filename, file_size, content_type
+        FROM email_attachments
+        WHERE email_id = ?
+        ORDER BY id
+        """,
+        (id,)
+    ).fetchall()
+
+    conn.close()
+
+    email_data = dict(email_row)
+    try:
+        email_data['recipients'] = json.loads(email_data['recipients']) if email_data['recipients'] else []
+    except (json.JSONDecodeError, TypeError):
+        if isinstance(email_data['recipients'], str):
+            email_data['recipients'] = [r.strip() for r in email_data['recipients'].split(',') if r.strip()]
+        else:
+            email_data['recipients'] = []
+
+    try:
+        email_data['keywords_matched'] = json.loads(email_data['keywords_matched']) if email_data['keywords_matched'] else []
+    except (json.JSONDecodeError, TypeError):
+        if isinstance(email_data['keywords_matched'], str):
+            email_data['keywords_matched'] = [k.strip() for k in email_data['keywords_matched'].split(',') if k.strip()]
+        else:
+            email_data['keywords_matched'] = []
+
+    return render_template('stitch/email-detail.html', 
+                         email=email_data, 
+                         attachments=attachments)
+
+
+@emails_bp.route('/email/<int:id>/edit/stitch', methods=['GET', 'POST'])
+@login_required
+def email_edit_stitch(id):
+    """Stitch design system variant of email edit"""
+    if request.method == 'POST':
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Update email fields
+        cursor.execute("""
+            UPDATE email_messages 
+            SET subject = ?, body_text = ?, body_html = ?
+            WHERE id = ?
+        """, (
+            request.form.get('subject'),
+            request.form.get('body_text'),
+            request.form.get('body_html', ''),
+            id
+        ))
+        
+        conn.commit()
+        conn.close()
+        
+        flash('Email updated successfully', 'success')
+        return redirect(url_for('emails.email_detail_stitch', id=id))
+    
+    # GET request - show edit form
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    email_row = cursor.execute(
+        "SELECT * FROM email_messages WHERE id = ?",
+        (id,)
+    ).fetchone()
+    
+    if not email_row:
+        conn.close()
+        flash('Email not found', 'error')
+        return redirect(url_for('emails.emails_unified_stitch'))
+    
+    conn.close()
+    
+    email_data = dict(email_row)
+    try:
+        email_data['recipients'] = json.loads(email_data['recipients']) if email_data['recipients'] else []
+    except (json.JSONDecodeError, TypeError):
+        if isinstance(email_data['recipients'], str):
+            email_data['recipients'] = [r.strip() for r in email_data['recipients'].split(',') if r.strip()]
+        else:
+            email_data['recipients'] = []
+    
+    return render_template('stitch/email-edit.html', email=email_data)
+
+
 @emails_bp.route('/api/emails/unified')
 @login_required
 def api_emails_unified():

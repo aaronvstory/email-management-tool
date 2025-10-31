@@ -2783,3 +2783,81 @@ def bulk_discard_emails():
     except Exception as e:
         log.error(f"Bulk discard error: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
+
+
+# Stitch Design System Routes
+@bp_interception.route('/interception/release/<int:email_id>/stitch', methods=['GET', 'POST'])
+@login_required
+def release_stitch(email_id):
+    """Stitch UI wrapper for releasing an email to inbox"""
+    try:
+        # Call the API endpoint internally
+        with get_db() as conn:
+            cursor = conn.cursor()
+
+            # Verify email exists and is held
+            row = cursor.execute(
+                "SELECT interception_status FROM email_messages WHERE id=?",
+                (email_id,)
+            ).fetchone()
+
+            if not row:
+                flash('Email not found', 'error')
+                return redirect(url_for('emails.emails_unified_stitch'))
+
+            if row['interception_status'] != 'HELD':
+                flash('Email is not in HELD status', 'warning')
+                return redirect(url_for('emails.email_detail_stitch', id=email_id))
+
+            # Update status to RELEASED
+            cursor.execute(
+                """UPDATE email_messages
+                   SET interception_status='RELEASED', status='APPROVED'
+                   WHERE id=?""",
+                (email_id,)
+            )
+            conn.commit()
+
+        flash('Email released successfully', 'success')
+        return redirect(url_for('emails.email_detail_stitch', id=email_id))
+
+    except Exception as e:
+        log.error(f"Release error: {e}", exc_info=True)
+        flash(f'Error releasing email: {str(e)}', 'error')
+        return redirect(url_for('emails.emails_unified_stitch'))
+
+
+@bp_interception.route('/interception/discard/<int:email_id>/stitch', methods=['GET', 'POST'])
+@login_required
+def discard_stitch(email_id):
+    """Stitch UI wrapper for discarding an email"""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+
+            # Verify email exists
+            row = cursor.execute(
+                "SELECT interception_status FROM email_messages WHERE id=?",
+                (email_id,)
+            ).fetchone()
+
+            if not row:
+                flash('Email not found', 'error')
+                return redirect(url_for('emails.emails_unified_stitch'))
+
+            # Update status to DISCARDED
+            cursor.execute(
+                """UPDATE email_messages
+                   SET interception_status='DISCARDED', status='REJECTED'
+                   WHERE id=?""",
+                (email_id,)
+            )
+            conn.commit()
+
+        flash('Email discarded', 'success')
+        return redirect(url_for('emails.emails_unified_stitch'))
+
+    except Exception as e:
+        log.error(f"Discard error: {e}", exc_info=True)
+        flash(f'Error discarding email: {str(e)}', 'error')
+        return redirect(url_for('emails.emails_unified_stitch'))

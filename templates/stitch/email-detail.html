@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% from 'stitch/_macros.html' import badge, icon_btn %}
+
+{% block title %}Email #{{ email.id }} - Email Management Tool{% endblock %}
+
+{% block content %}
+<div id="email-detail-page">
+<main class="tw-flex-1 tw-p-6 tw-space-y-6">
+    <div class="tw-flex tw-items-center tw-justify-between">
+        <div class="tw-flex tw-items-center tw-gap-4">
+            <a href="{{ url_for('emails.emails_unified_stitch') }}" class="tw-text-zinc-400 hover:tw-text-zinc-200">
+                <span class="material-symbols-outlined">arrow_back</span>
+            </a>
+            <div>
+                <h1 class="tw-text-2xl tw-font-bold tw-text-white">{{ email.subject or '(no subject)' }}</h1>
+                <p class="tw-text-zinc-400 tw-text-sm tw-mt-1">Email #{{ email.id }}</p>
+            </div>
+        </div>
+        <div class="tw-flex tw-gap-2">
+            {% if email.interception_status == 'HELD' %}
+                {{ icon_btn('Release', 'done', 'primary', url_for('interception.release_stitch', email_id=email.id)) }}
+                {{ icon_btn('Discard', 'delete', 'danger', url_for('interception.discard_stitch', email_id=email.id)) }}
+                {{ icon_btn('Edit', 'edit', 'neutral', url_for('emails.email_edit_stitch', id=email.id)) }}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Email Details Card -->
+    <div class="tw-bg-background tw-border tw-border-border">
+        <div class="tw-px-4 tw-py-3 tw-border-b tw-border-border">
+            <div class="tw-flex tw-justify-between tw-items-center">
+                <h2 class="tw-text-zinc-200 tw-font-semibold">Message Details</h2>
+                {{ badge(email.interception_status or 'PENDING') }}
+            </div>
+        </div>
+        <div class="tw-p-4 tw-space-y-3">
+            <div class="tw-grid tw-grid-cols-[100px_1fr] tw-gap-x-4 tw-gap-y-2">
+                <div class="tw-text-zinc-400 tw-text-sm">From:</div>
+                <div class="tw-text-zinc-200">{{ email.sender }}</div>
+
+                <div class="tw-text-zinc-400 tw-text-sm">To:</div>
+                <div class="tw-text-zinc-200">
+                    {% if email.recipients %}
+                        {{ email.recipients|join(', ') if email.recipients is iterable and email.recipients is not string else email.recipients }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </div>
+
+                <div class="tw-text-zinc-400 tw-text-sm">Account:</div>
+                <div class="tw-text-zinc-200">{{ email.account_name or 'Unknown' }} ({{ email.email_address or 'N/A' }})</div>
+
+                <div class="tw-text-zinc-400 tw-text-sm">Date:</div>
+                <div class="tw-text-zinc-200">{{ email.created_at or '-' }}</div>
+
+                {% if email.keywords_matched %}
+                <div class="tw-text-zinc-400 tw-text-sm">Keywords:</div>
+                <div class="tw-flex tw-flex-wrap tw-gap-1">
+                    {% for keyword in email.keywords_matched %}
+                    <span class="tw-bg-zinc-700 tw-text-zinc-300 tw-text-xs tw-px-2 tw-py-0.5">{{ keyword }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Email Body -->
+    <div class="tw-bg-background tw-border tw-border-border">
+        <div class="tw-px-4 tw-py-3 tw-border-b tw-border-border">
+            <h2 class="tw-text-zinc-200 tw-font-semibold">Message Content</h2>
+        </div>
+        <div class="tw-p-4">
+            <div class="tw-text-zinc-200 tw-whitespace-pre-wrap tw-font-mono tw-text-sm">
+                {{ email.body_text or email.body_html|safe or '(no content)' }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Attachments -->
+    {% if attachments %}
+    <div class="tw-bg-background tw-border tw-border-border">
+        <div class="tw-px-4 tw-py-3 tw-border-b tw-border-border">
+            <h2 class="tw-text-zinc-200 tw-font-semibold">Attachments ({{ attachments|length }})</h2>
+        </div>
+        <div class="tw-p-4">
+            <ul class="tw-divide-y tw-divide-zinc-800">
+                {% for att in attachments %}
+                <li class="tw-flex tw-items-center tw-justify-between tw-py-2">
+                    <div class="tw-flex tw-items-center tw-gap-2">
+                        <span class="material-symbols-outlined tw-text-zinc-400">attach_file</span>
+                        <span class="tw-text-zinc-300">{{ att.original_filename }}</span>
+                        <span class="tw-text-zinc-500 tw-text-sm">({{ (att.file_size / 1024)|round(1) }} KB)</span>
+                    </div>
+                    <a href="{{ url_for('interception.api_attachment_download', attachment_id=att.id) }}" class="tw-text-primary hover:tw-text-lime-400 tw-text-sm">Download</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+</main>
+</div>
+{% endblock %}

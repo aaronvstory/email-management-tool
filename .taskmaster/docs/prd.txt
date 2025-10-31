@@ -1,0 +1,701 @@
+# Stitch UI Migration & Critical Features PRD
+
+## Product Vision
+Complete the Stitch design system migration and implement critical missing features to make the Email Management Tool production-ready.
+
+## User Stories
+
+### Epic 1: UI Consistency
+- As a user, I want all pages to have consistent dark theme styling so the interface feels professional
+- As a user, I want all action buttons to work properly so I can complete tasks without errors
+- As a user, I want responsive design so I can use the tool on any device
+
+### Epic 2: Core Functionality
+- As a user, I want to test email interception end-to-end so I can verify the system works
+- As a user, I want to upload and download email attachments so I can handle complete email workflows
+- As a user, I want to import accounts in bulk so I can efficiently set up the system
+
+### Epic 3: System Monitoring
+- As an administrator, I want live log viewing so I can debug issues in real-time
+- As an administrator, I want system health diagnostics so I can monitor service status
+- As an administrator, I want all error conditions handled gracefully so users never see 500 errors
+
+## Technical Requirements
+
+### Performance
+- All pages must load within 2 seconds
+- No 404 or 500 errors anywhere in the application
+- Mobile responsive across all screen sizes
+
+### Security
+- File uploads must be validated and size-limited
+- All routes must use proper authentication
+- Error messages must not expose sensitive information
+
+### Usability
+- Consistent lime accent color (#bef264) throughout
+- Square corners, dark theme design
+- Intuitive navigation with proper active states
+
+## Acceptance Criteria
+
+### Must Have
+- [ ] All templates use Stitch design system consistently
+- [ ] Interception test page works end-to-end
+- [ ] Attachments system handles upload/download without errors
+- [ ] Diagnostics page shows live logs
+- [ ] Account import processes CSV files
+- [ ] No white buttons or broken styling anywhere
+
+### Nice to Have
+- [ ] Real-time log streaming via WebSocket
+- [ ] Attachment preview for images/documents
+- [ ] Bulk operations for email management
+
+## Success Metrics
+- Zero 404/500 errors across all pages
+- 100% of core user workflows functional
+- Consistent UI/UX across all templates
+- System monitoring capabilities operational
+
+
+🚀 COMPLETE STITCH + CRITICAL FEATURES (150-180 min uninterrupted)
+text
+# COMPLETE STITCH MIGRATION + ALL CRITICAL FEATURES (150-180 min)
+
+## PHASE 1: Audit ALL Links (15 min)
+Find every href= and action= in all templates, categorize broken links that need /stitch variants
+
+## PHASE 2: Create Missing Stitch Routes (25 min)  
+Add /stitch routes for ALL actions in app/routes/* (emails, interception, accounts, compose)
+
+## PHASE 3: Fix All Templates (30 min)
+Update every template with proper url_for() calls, replace all hardcoded routes
+
+## PHASE 4: BUILD INTERCEPTION TEST PAGE (25 min)
+**CRITICAL: http://localhost:5000/interception-test**
+- Complete end-to-end test interface with Stitch styling
+- Send→intercept→release/discard flow fully working
+
+## PHASE 5: BUILD DIAGNOSTICS + LIVE LOG VIEWER (30 min)
+**CRITICAL: http://localhost:5000/diagnostics** 
+- System health dashboard with status badges
+- **LIVE LOG VIEWER**: WebSocket/auto-refresh streaming from logs/app.log
+- Log filtering, search, scroll controls
+- Dark theme with lime accents
+
+## PHASE 6: BUILD ACCOUNTS IMPORT PAGE (20 min)
+**CRITICAL: http://localhost:5000/accounts/import**
+- Account import interface (CSV, manual bulk entry, etc.)
+- Validation, preview, confirmation flow
+- Error handling and success feedback  
+- Stitch styling with proper macros
+
+## PHASE 7: COMPLETE ATTACHMENTS FEATURE (35 min)
+**MOST IMPORTANT: Fix the 500 error + build out full attachments system**
+
+7.1 **Research & Fix Core Issues:**
+   - Debug the HTTP 500 error when clicking "Attachments" 
+   - Fix file path handling, database schema issues
+   - Ensure proper MIME type detection
+
+7.2 **Build Complete Attachments Interface:**
+   - Attachment listing page with download links
+   - File upload interface for compose/edit
+   - Attachment preview (images, text files)  
+   - Size limits and security validation
+   - Bulk download (zip) functionality
+
+7.3 **Database & Storage:**
+   - Verify email_attachments table schema
+   - Test file storage in attachments/ directory  
+   - Implement file cleanup for deleted emails
+   - Add attachment metadata (size, type, scan status)
+
+7.4 **UI Integration:**
+   - Attachment indicators in email lists
+   - Compose form file upload widget
+   - Email detail view attachment panel
+   - Download/preview modals with Stitch styling
+
+## PHASE 8: Test Everything (15 min)
+- Full interception test flow
+- Diagnostics live logs streaming  
+- Account import process
+- **Attachments: upload→store→download→preview**
+- All links and forms working
+
+## PHASE 9: Final Polish (5 min)
+Commit with comprehensive changelog
+
+## SUCCESS CRITERIA:
+- ✅ ALL links work (no 404s/500s anywhere)
+- ✅ Interception test: complete end-to-end flow
+- ✅ Diagnostics: live logs + system health  
+- ✅ Account import: functional bulk import
+- ✅ **Attachments: NO 500 errors, full upload/download/preview working**
+- ✅ All pages use Stitch styling consistently
+- ✅ Mobile responsive throughout
+
+## TECHNICAL PRIORITIES:
+
+**Attachments (Most Critical):**
+- Fix the 500 error first (likely path/db issues)
+- Implement secure file upload with validation
+- Add proper file serving with correct headers
+- Test with various file types (PDF, images, docs)
+- Ensure storage cleanup and size limits
+
+**Live Log Viewer:**
+- Use flask-socketio for real-time streaming OR AJAX polling
+- Handle large log files gracefully (pagination/truncation)
+- Log level filtering and search
+
+**Account Import:**
+- Support CSV format with standard email fields
+- Validation preview before actual import  
+- Batch processing for large imports
+
+## EXECUTION STRATEGY:
+1. Use Serena for semantic code navigation
+2. **Prioritize attachments** - it's the newest critical feature
+3. Commit after each major component
+4. Test continuously, don't break existing functionality  
+5. Focus on making everything production-ready🚀 COMPLETE STITCH + CRITICAL FEATURES (150-180 min uninterrupted)
+text
+# COMPLETE STITCH MIGRATION + ALL CRITICAL FEATURES (150-180 min)
+
+## PHASE 1: Audit ALL Links (15 min)
+Find every href= and action= in all templates, categorize broken links that need /stitch variants
+
+## PHASE 2: Create Missing Stitch Routes (25 min)  
+Add /stitch routes for ALL actions in app/routes/* (emails, interception, accounts, compose)
+
+## PHASE 3: Fix All Templates (30 min)
+Update every template with proper url_for() calls, replace all hardcoded routes
+
+## PHASE 4: BUILD INTERCEPTION TEST PAGE (25 min)
+**CRITICAL: http://localhost:5000/interception-test**
+- Complete end-to-end test interface with Stitch styling
+- Send→intercept→release/discard flow fully working
+
+## PHASE 5: BUILD DIAGNOSTICS + LIVE LOG VIEWER (30 min)
+**CRITICAL: http://localhost:5000/diagnostics** 
+- System health dashboard with status badges
+- **LIVE LOG VIEWER**: WebSocket/auto-refresh streaming from logs/app.log
+- Log filtering, search, scroll controls
+- Dark theme with lime accents
+
+## PHASE 6: BUILD ACCOUNTS IMPORT PAGE (20 min)
+**CRITICAL: http://localhost:5000/accounts/import**
+- Account import interface (CSV, manual bulk entry, etc.)
+- Validation, preview, confirmation flow
+- Error handling and success feedback  
+- Stitch styling with proper macros
+
+## PHASE 7: COMPLETE ATTACHMENTS FEATURE (35 min)
+**MOST IMPORTANT: Fix the 500 error + build out full attachments system**
+
+7.1 **Research & Fix Core Issues:**
+   - Debug the HTTP 500 error when clicking "Attachments" 
+   - Fix file path handling, database schema issues
+   - Ensure proper MIME type detection
+
+7.2 **Build Complete Attachments Interface:**
+   - Attachment listing page with download links
+   - File upload interface for compose/edit
+   - Attachment preview (images, text files)  
+   - Size limits and security validation
+   - Bulk download (zip) functionality
+
+7.3 **Database & Storage:**
+   - Verify email_attachments table schema
+   - Test file storage in attachments/ directory  
+   - Implement file cleanup for deleted emails
+   - Add attachment metadata (size, type, scan status)
+
+7.4 **UI Integration:**
+   - Attachment indicators in email lists
+   - Compose form file upload widget
+   - Email detail view attachment panel
+   - Download/preview modals with Stitch styling
+
+## PHASE 8: Test Everything (15 min)
+- Full interception test flow
+- Diagnostics live logs streaming  
+- Account import process
+- **Attachments: upload→store→download→preview**
+- All links and forms working
+
+## PHASE 9: Final Polish (5 min)
+Commit with comprehensive changelog
+
+## SUCCESS CRITERIA:
+- ✅ ALL links work (no 404s/500s anywhere)
+- ✅ Interception test: complete end-to-end flow
+- ✅ Diagnostics: live logs + system health  
+- ✅ Account import: functional bulk import
+- ✅ **Attachments: NO 500 errors, full upload/download/preview working**
+- ✅ All pages use Stitch styling consistently
+- ✅ Mobile responsive throughout
+
+## TECHNICAL PRIORITIES:
+
+**Attachments (Most Critical):**
+- Fix the 500 error first (likely path/db issues)
+- Implement secure file upload with validation
+- Add proper file serving with correct headers
+- Test with various file types (PDF, images, docs)
+- Ensure storage cleanup and size limits
+
+**Live Log Viewer:**
+- Use flask-socketio for real-time streaming OR AJAX polling
+- Handle large log files gracefully (pagination/truncation)
+- Log level filtering and search
+
+**Account Import:**
+- Support CSV format with standard email fields
+- Validation preview before actual import  
+- Batch processing for large imports
+
+## EXECUTION STRATEGY:
+1. Use Serena for semantic code navigation
+2. **Prioritize attachments** - it's the newest critical feature
+3. Commit after each major component
+4. Test continuously, don't break existing functionality  
+5. Focus on making everything production-ready
+
+1) Drop‑in macros for Stitch
+
+Paste these at the end of templates/stitch/_macros.html (keep square corners and dark theme).
+
+{# ==== Alerts =================================================== #}
+{% macro alert(kind='info', title=None, text=None) -%}
+  {%- set cls = {
+    'success': 'tw-bg-green-500/15 tw-text-green-300 tw-border tw-border-green-500/30',
+    'warning': 'tw-bg-amber-500/15 tw-text-amber-300 tw-border tw-border-amber-500/30',
+    'error':   'tw-bg-red-500/15 tw-text-red-300 tw-border tw-border-red-500/30',
+    'info':    'tw-bg-zinc-800 tw-text-zinc-200 tw-border tw-border-zinc-700'
+  } -%}
+  <div class="tw-px-3 tw-py-2 {{ cls.get(kind, cls['info']) }}">
+    {% if title %}<div class="tw-font-semibold tw-mb-0.5">{{ title }}</div>{% endif %}
+    {% if caller %}{{ caller() }}{% elif text %}<div>{{ text }}</div>{% endif %}
+  </div>
+{%- endmacro %}
+
+{# ==== Form Field =============================================== #}
+{% macro form_field(name, label, type='text', value='', placeholder='', required=False, error=None, help=None) -%}
+  <div class="tw-space-y-1">
+    <label for="{{ name }}" class="tw-text-sm tw-text-zinc-300">{{ label }}</label>
+    {% if type == 'textarea' %}
+      <textarea id="{{ name }}" name="{{ name }}" placeholder="{{ placeholder }}" {% if required %}required{% endif %}
+                class="tw-w-full tw-bg-zinc-900 tw-border tw-border-zinc-700 tw-text-zinc-100 tw-px-3 tw-py-2 tw-text-sm">{{ value }}</textarea>
+    {% elif type == 'select' %}
+      {# value is expected to be a list of {value,label,selected} #}
+      <select id="{{ name }}" name="{{ name }}"
+              class="tw-w-full tw-bg-zinc-900 tw-border tw-border-zinc-700 tw-text-zinc-100 tw-px-3 tw-py-2 tw-text-sm">
+        {% for opt in value %}
+          <option value="{{ opt.value }}" {% if opt.selected %}selected{% endif %}>{{ opt.label }}</option>
+        {% endfor %}
+      </select>
+    {% else %}
+      <input id="{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ value }}" placeholder="{{ placeholder }}"
+             class="tw-w-full tw-bg-zinc-900 tw-border tw-border-zinc-700 tw-text-zinc-100 tw-px-3 tw-py-2 tw-text-sm"
+             {% if required %}required{% endif %}/>
+    {% endif %}
+    {% if help %}<p class="tw-text-xs tw-text-zinc-400">{{ help }}</p>{% endif %}
+    {% if error %}<p class="tw-text-xs tw-text-red-400">{{ error }}</p>{% endif %}
+  </div>
+{%- endmacro %}
+
+{# ==== Modal (structural) ======================================= #}
+{% macro modal(id, title) -%}
+  <div id="{{ id }}" class="tw-fixed tw-inset-0 tw-hidden tw-z-50">
+    <div class="tw-absolute tw-inset-0 tw-bg-black/60" data-modal-dismiss="{{ id }}"></div>
+    <div class="tw-absolute tw-inset-0 tw-flex tw-items-center tw-justify-center tw-p-4">
+      <div class="tw-bg-zinc-900 tw-border tw-border-zinc-700 tw-w-full tw-max-w-lg">
+        <div class="tw-flex tw-items-center tw-justify-between tw-px-4 tw-py-3 tw-border-b tw-border-zinc-700">
+          <h3 class="tw-font-semibold tw-text-zinc-100">{{ title }}</h3>
+          <button class="tw-text-zinc-400 hover:tw-text-zinc-200" data-modal-dismiss="{{ id }}">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div class="tw-p-4">{% if caller %}{{ caller() }}{% endif %}</div>
+        <div class="tw-px-4 tw-py-3 tw-border-t tw-border-zinc-700 tw-flex tw-justify-end tw-gap-2">
+          {{ icon_btn('Close', 'close', 'secondary', None, {'data-modal-dismiss': id}) }}
+        </div>
+      </div>
+    </div>
+  </div>
+{%- endmacro %}
+
+{# Minimal modal script: include once in base.html near </body> #}
+{% macro modal_script() -%}
+<script>
+document.addEventListener('click', function(e){
+  const open = e.target.closest('[data-modal-open]');
+  const close = e.target.closest('[data-modal-dismiss]');
+  if (open){ const id=open.getAttribute('data-modal-open'); const el=document.getElementById(id); if(el) el.classList.remove('tw-hidden'); }
+  if (close){ const id=close.getAttribute('data-modal-dismiss'); const el=document.getElementById(id); if(el) el.classList.add('tw-hidden'); }
+});
+</script>
+{%- endmacro %}
+
+{# ==== Pagination =============================================== #}
+{% macro pagination(endpoint, page, total_pages, **kwargs) -%}
+  {% set p = page|int %}
+  <nav class="tw-flex tw-items-center tw-justify-between tw-text-sm tw-text-zinc-300">
+    <a class="tw-px-3 tw-py-1 tw-border tw-border-zinc-700 tw-bg-zinc-900 tw-disabled:tw-opacity-50"
+       href="{{ url_for(endpoint, page=p-1, **kwargs) if p>1 else '#' }}" {% if p<=1 %}aria-disabled="true"{% endif %}>Previous</a>
+    <span>Page {{ p }} of {{ total_pages }}</span>
+    <a class="tw-px-3 tw-py-1 tw-border tw-border-zinc-700 tw-bg-zinc-900 tw-disabled:tw-opacity-50"
+       href="{{ url_for(endpoint, page=p+1, **kwargs) if p<total_pages else '#' }}" {% if p>=total_pages %}aria-disabled="true"{% endif %}>Next</a>
+  </nav>
+{%- endmacro %}
+
+{# ==== Empty state ============================================== #}
+{% macro empty_state(title, text=None, icon='inbox') -%}
+  <div class="tw-border tw-border-zinc-700 tw-bg-zinc-900 tw-p-6 tw-text-center tw-space-y-2">
+    <div class="material-symbols-outlined tw-text-3xl tw-text-zinc-500">{{ icon }}</div>
+    <div class="tw-text-zinc-300 tw-font-medium">{{ title }}</div>
+    {% if text %}<p class="tw-text-zinc-400 tw-text-sm">{{ text }}</p>{% endif %}
+  </div>
+{%- endmacro %}
+
+
+Small macro tweak for HOLD vs HELD
+Drop this near your existing badge:
+
+{%- set __alias = {'HOLD': 'HELD'} -%}
+{%- set key = __alias.get(kind|upper, kind|upper) -%}
+
+
+Then use key in the badge map lookup and label.
+
+2) Link and form audit you can run right now
+
+Use Serena the same way you already did:
+
+Find every href and action
+
+serena.search_for_pattern substring_pattern="href=\"" relative_path="templates" context_lines_before=0 context_lines_after=0
+serena.search_for_pattern substring_pattern="action=\"" relative_path="templates" context_lines_before=0 context_lines_after=0
+
+
+Quick categorization searches
+
+serena.search_for_pattern substring_pattern="/email/"        relative_path="templates" context_lines_before=0 context_lines_after=1
+serena.search_for_pattern substring_pattern="/interception/" relative_path="templates" context_lines_before=0 context_lines_after=1
+serena.search_for_pattern substring_pattern="/accounts"      relative_path="templates" context_lines_before=0 context_lines_after=1
+serena.search_for_pattern substring_pattern="/rules"         relative_path="templates" context_lines_before=0 context_lines_after=1
+serena.search_for_pattern substring_pattern="?page="         relative_path="templates" context_lines_before=0 context_lines_after=1
+
+
+Examples to replace
+Adjust endpoint names to your blueprints.
+
+href="{{ url_for('emails.email_detail_stitch', id=email.id) }}"
+href="{{ url_for('emails.email_edit_stitch', id=email.id) }}"
+href="{{ url_for('interception.release_stitch', email_id=email.id) }}"
+href="{{ url_for('interception.discard_stitch', email_id=email.id) }}"
+
+<form method="post" action="{{ url_for('accounts.add_account_stitch') }}">
+<form method="post" action="{{ url_for('rules.create_rule_stitch') }}">
+<form method="post" action="{{ url_for('emails.email_edit_stitch', id=id) }}">
+<form method="post" action="{{ url_for('compose.compose_send_stitch') }}">
+
+
+If you used icon_btn without href, pass one when it should navigate:
+
+{{ icon_btn('Edit', 'edit', 'primary', url_for('rules.edit_rule', rule_id=rule.id)) }}
+{{ icon_btn('Delete', 'delete', 'danger', url_for('rules.delete_rule', rule_id=rule.id)) }}
+
+3) Stitch route skeletons
+
+Add these where it fits your blueprints. Keep the original routes and add _stitch variants.
+
+# app/routes/emails.py
+from flask import Blueprint, render_template, request, redirect, url_for, abort, current_app, send_file
+from flask_login import login_required
+import os, mimetypes
+
+emails_bp = Blueprint('emails', __name__)
+
+@emails_bp.route('/emails-unified/stitch')
+@login_required
+def emails_unified_stitch():
+    page = int(request.args.get('page', 1))
+    # fetch emails page in your service
+    emails, total_pages = [], 1
+    return render_template('stitch/emails-unified.html', emails=emails, page=page, total_pages=total_pages)
+
+@emails_bp.route('/email/<int:id>/stitch')
+@login_required
+def email_detail_stitch(id):
+    email = get_email_or_404(id)  # your helper
+    attachments = get_attachments_for_email(id)  # your helper
+    return render_template('stitch/email-detail.html', email=email, attachments=attachments)
+
+@emails_bp.route('/email/<int:id>/edit/stitch', methods=['GET','POST'])
+@login_required
+def email_edit_stitch(id):
+    if request.method == 'POST':
+        # update and redirect
+        return redirect(url_for('emails.email_detail_stitch', id=id))
+    email = get_email_or_404(id)
+    return render_template('stitch/email-edit.html', email=email)
+
+# Safe attachment serving
+def _safe_join(base, *parts):
+    base_abs = os.path.abspath(base)
+    path = os.path.abspath(os.path.join(base, *parts))
+    if os.path.commonpath([base_abs, path]) != base_abs:
+        raise ValueError('path traversal')
+    return path
+
+@emails_bp.route('/email/<int:id>/attachment/<int:att_id>/download')
+@login_required
+def email_attachment_download(id, att_id):
+    att = get_attachment_or_404(id, att_id)  # lookup by email + att id
+    storage_dir = current_app.config.get('ATTACHMENTS_DIR', 'attachments')
+    try:
+        safe_path = _safe_join(storage_dir, att.storage_name)
+        if not os.path.isfile(safe_path):
+            current_app.logger.warning('attachment missing file', extra={'email_id': id, 'att_id': att_id})
+            abort(404)
+        mime = mimetypes.guess_type(att.original_name)[0] or 'application/octet-stream'
+        return send_file(safe_path, as_attachment=True, download_name=att.original_name, mimetype=mime, conditional=True)
+    except ValueError:
+        current_app.logger.warning('blocked path traversal', extra={'email_id': id, 'att_id': att_id})
+        abort(404)
+    except Exception:
+        current_app.logger.exception('attachment download failed')
+        abort(500)
+
+# app/routes/interception.py
+from flask import Blueprint, redirect, url_for
+from flask_login import login_required
+
+interception_bp = Blueprint('interception', __name__)
+
+@interception_bp.route('/interception/release/<int:email_id>/stitch', methods=['POST','GET'])
+@login_required
+def release_stitch(email_id):
+    release_email(email_id)  # your service
+    return redirect(url_for('emails.email_detail_stitch', id=email_id))
+
+@interception_bp.route('/interception/discard/<int:email_id>/stitch', methods=['POST','GET'])
+@login_required
+def discard_stitch(email_id):
+    discard_email(email_id)
+    return redirect(url_for('emails.emails_unified_stitch'))
+
+
+Register blueprints in your app factory if not already.
+
+4) Email detail Stitch panel for attachments
+
+Create templates/stitch/email-detail.html if missing.
+
+{% extends "base.html" %}
+{% from 'stitch/_macros.html' import badge, icon_btn, alert, empty_state %}
+
+{% block title %}Email #{{ email.id }} - Stitch{% endblock %}
+
+{% block content %}
+<div class="tw-px-6 tw-py-4 tw-space-y-6">
+  <header class="tw-flex tw-items-center tw-justify-between">
+    <h1 class="tw-text-lg tw-text-zinc-100">Email #{{ email.id }}</h1>
+    <div class="tw-flex tw-gap-2">
+      {{ icon_btn('Release', 'done', 'primary', url_for('interception.release_stitch', email_id=email.id)) }}
+      {{ icon_btn('Discard', 'delete', 'danger', url_for('interception.discard_stitch', email_id=email.id)) }}
+      <a class="tw-text-primary hover:tw-text-lime-400" href="{{ url_for('emails.emails_unified_stitch') }}">Back to Emails</a>
+    </div>
+  </header>
+
+  <section class="tw-border tw-border-zinc-700 tw-bg-zinc-900 tw-p-4 tw-space-y-2">
+    <div class="tw-flex tw-items-center tw-justify-between">
+      <div class="tw-text-zinc-300">
+        <div class="tw-font-medium">{{ email.subject or '(no subject)' }}</div>
+        <div class="tw-text-sm tw-text-zinc-400">From {{ email.from }} to {{ email.to }}</div>
+      </div>
+      {{ badge(email.status) }}
+    </div>
+    <article class="tw-text-zinc-200 tw-text-sm tw-leading-6 tw-mt-2">{{ email.body|safe }}</article>
+  </section>
+
+  <section class="tw-space-y-2">
+    <h2 class="tw-text-zinc-200 tw-font-medium">Attachments</h2>
+    {% if attachments and attachments|length %}
+      <ul class="tw-divide-y tw-divide-zinc-800 tw-border tw-border-zinc-700 tw-bg-zinc-900">
+        {% for a in attachments %}
+          <li class="tw-flex tw-items-center tw-justify-between tw-px-4 tw-py-3">
+            <div class="tw-text-sm tw-text-zinc-300">{{ a.original_name }} <span class="tw-text-zinc-500">({{ a.size|default('?') }}B)</span></div>
+            <a class="tw-text-primary hover:tw-text-lime-400"
+               href="{{ url_for('emails.email_attachment_download', id=email.id, att_id=a.id) }}">Download</a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      {{ empty_state('No attachments', 'Nothing to download for this message.', 'attach_file') }}
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
+
+
+This avoids a 500 when there are no attachments and gives a clear empty state.
+
+5) Minimal styleguide section for the new macros
+
+Append to templates/styleguide/stitch.html so you can eyeball them fast.
+
+<section class="tw-space-y-3">
+  <h2 class="tw-text-zinc-200 tw-font-semibold">Alerts</h2>
+  {{ alert('success', 'Saved', 'Your changes are live.') }}
+  {{ alert('warning', 'Heads up', 'Review before proceeding.') }}
+  {{ alert('error', 'Failed', 'We could not save your changes.') }}
+  {{ alert('info', 'Info', 'Neutral message for the user.') }}
+</section>
+
+<section class="tw-space-y-3">
+  <h2 class="tw-text-zinc-200 tw-font-semibold">Form Field</h2>
+  <form>
+    {{ form_field('name', 'Name', 'text', '', 'Jane Doe', True, None, 'Required') }}
+    <div class="tw-mt-3">{{ icon_btn('Submit', 'send', 'primary') }}</div>
+  </form>
+</section>
+
+<section class="tw-space-y-3">
+  <h2 class="tw-text-zinc-200 tw-font-semibold">Empty State</h2>
+  {{ empty_state('Nothing here yet', 'Add your first rule to get started.', 'rule') }}
+</section>
+
+<section class="tw-space-y-3">
+  <h2 class="tw-text-zinc-200 tw-font-semibold">Pagination</h2>
+  {{ pagination('emails.emails_unified_stitch', 1, 5) }}
+</section>
+
+
+If you haven’t already, include the modal script once near </body>:
+
+{% from 'stitch/_macros.html' import modal_script %}
+{{ modal_script() }}
+
+6) Serena commands you can paste
+
+Normalize status chips and action buttons
+
+serena.replace_regex relative_path="templates/stitch" \
+  regex="<span[^>]*>HELD</span>" repl="{{ badge('HELD') }}" allow_multiple_occurrences=true
+
+serena.replace_regex relative_path="templates/stitch" \
+  regex="href=\"/email/\\{\\{\\s*email\\.id\\s*\\}\\}\"" \
+  repl="href=\"{{ url_for('emails.email_detail_stitch', id=email.id) }}\"" allow_multiple_occurrences=true
+
+serena.replace_regex relative_path="templates/stitch" \
+  regex="action=\"/accounts/add\"" \
+  repl="action=\"{{ url_for('accounts.add_account_stitch') }}\"" allow_multiple_occurrences=true
+
+
+Find HOLD vs HELD
+
+serena.search_for_pattern substring_pattern="HOLD" relative_path="templates/stitch" context_lines_before=1 context_lines_after=1
+
+
+Check for stray white buttons or bootstrap
+
+serena.search_for_pattern substring_pattern="bg-white" relative_path="templates" context_lines_before=0 context_lines_after=0
+serena.search_for_pattern substring_pattern="btn-primary" relative_path="templates" context_lines_before=0 context_lines_after=0
+
+7) Commit plan
+
+feat(stitch): add alert, form_field, modal, pagination, empty_state macros
+
+fix(stitch): convert links and forms to url_for + add stitch route variants
+
+fix(email): attachments download safe path + empty state in detail view
+
+chore(styleguide): add examples for new macros
+
+8) Quick checks
+# routes exist
+grep -Rni "email_detail_stitch" app/routes || true
+grep -Rni "release_stitch" app/routes || true
+
+# templates wired
+grep -Rni "url_for('emails.email_detail_stitch'" templates || true
+grep -Rni "email_attachment_download" templates || true
+
+# styleguide renders
+curl -s -o /dev/null -w "%{http_code} /styleguide/stitch\n" http://localhost:5000/styleguide/stitch
+
+One more tiny fix to keep things consistent
+
+If your icon_btn macro can render both <a> and <button>, pass attributes through a dict so you can add data-modal-open or data-modal-dismiss without new helpers:
+
+{{ icon_btn('Open Modal', 'open_in_new', 'primary', None, {'data-modal-open': 'demoModal'}) }}
+
+
+please note a chrome-devtools mcp debugging session is open and u should use it to visually confirm all major phase implementatioins + be able to check live logs ...  and gather proof of delivery docuemntation for each taskk to present at the end
+"
+Loading personal and system profiles took 1395ms.
+┌   pwsh  ⚡  CPU: 50%  | RAM: 32/63GB                                                                                  0ms · Thu 19:34:59 30/10/25
+└[ ~ ]
+ ❯ curl http://localhost:9222/json
+[ {
+   "description": "",
+   "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@e9105f0cc158ff3aa1de8225250cb37aa015249c/inspector.html?ws=localhost:9222/devtools/page/FE8F226852F9C6EEE62BF4A6953CEFA4",
+   "faviconUrl": "http://localhost:5000/static/favicon.svg",
+   "id": "FE8F226852F9C6EEE62BF4A6953CEFA4",
+   "title": "Dashboard - Email Management Tool",
+   "type": "page",
+   "url": "http://localhost:5000/dashboard",
+   "webSocketDebuggerUrl": "ws://localhost:9222/devtools/page/FE8F226852F9C6EEE62BF4A6953CEFA4"
+}, {
+   "description": "",
+   "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@e9105f0cc158ff3aa1de8225250cb37aa015249c/inspector.html?ws=localhost:9222/devtools/page/C8565D1135591B83422DA45B8A1DC6D0",
+   "faviconUrl": "http://localhost:5000/static/favicon.svg",
+   "id": "C8565D1135591B83422DA45B8A1DC6D0",
+   "title": "Dashboard - Email Management Tool",
+   "type": "page",
+   "url": "http://localhost:5000/dashboard",
+   "webSocketDebuggerUrl": "ws://localhost:9222/devtools/page/C8565D1135591B83422DA45B8A1DC6D0"
+}, {
+   "description": "",
+   "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@e9105f0cc158ff3aa1de8225250cb37aa015249c/worker_app.html?ws=localhost:9222/devtools/page/B496AAFCE921D7535724623CD0105DC5",
+   "id": "B496AAFCE921D7535724623CD0105DC5",
+   "title": "Service Worker chrome-extension://bbidpgoneibefablhfcnaennjkfbflmk/background.iife.js",
+   "type": "service_worker",
+   "url": "chrome-extension://bbidpgoneibefablhfcnaennjkfbflmk/background.iife.js",
+   "webSocketDebuggerUrl": "ws://localhost:9222/devtools/page/B496AAFCE921D7535724623CD0105DC5"
+}, {
+   "description": "",
+   "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@e9105f0cc158ff3aa1de8225250cb37aa015249c/worker_app.html?ws=localhost:9222/devtools/page/5BEE247271B5EB54B2D9F87B2ED443B5",
+   "id": "5BEE247271B5EB54B2D9F87B2ED443B5",
+   "title": "Service Worker chrome-extension://fmkadmapgofadopljbjfkapdkoienihi/build/background.js",
+   "type": "service_worker",
+   "url": "chrome-extension://fmkadmapgofadopljbjfkapdkoienihi/build/background.js",
+   "webSocketDebuggerUrl": "ws://localhost:9222/devtools/page/5BEE247271B5EB54B2D9F87B2ED443B5"
+}, {
+   "description": "",
+   "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@e9105f0cc158ff3aa1de8225250cb37aa015249c/worker_app.html?ws=localhost:9222/devtools/page/8EC841870D372F94A7CAE86B05153128",
+   "id": "8EC841870D372F94A7CAE86B05153128",
+   "title": "Service Worker chrome-extension://igiofjnckcagmjgdoaakafngegecjnkj/background.js",
+   "type": "service_worker",
+   "url": "chrome-extension://igiofjnckcagmjgdoaakafngegecjnkj/background.js",
+   "webSocketDebuggerUrl": "ws://localhost:9222/devtools/page/8EC841870D372F94A7CAE86B05153128"
+} ]
+
+┌   pwsh  ⚡  CPU: 50%  | RAM: 32/63GB       
+"
+🔗 Debug Endpoints:
+   http://localhost:9222/json
+   http://localhost:9222
+   
+📄 Page: Dashboard - Email Management Tool
+   URL: http://localhost:5000/dashboard 
+   
+   (will remaihn open - connect and reconnect any time using devtools ,mcp)
+   
+   use SERENA MCP PROACTIVELY THROUGHOUT for efficient semantic codebase use

@@ -439,7 +439,7 @@ This project uses Model Context Protocol (MCP) servers for enhanced development 
   - Use for: File I/O, bulk operations, system diagnostics
 - **Sequential Thinking** - Complex multi-step analysis and planning
 
-- chrome-devtools (browser automation - enable manually when needed)
+- chrome-devtools (browser automation)
 
 ### `/sp` Command (SuperPower Orchestration)
 Primary command for intelligent task orchestration across all MCP servers.
@@ -493,7 +493,6 @@ Email Management Tool — Flask + Jinja + SQLite. Runs locally. Dark UI with lim
 ## Tools (MCP) to favor
 - ✅ **Serena** (semantic code nav): use it for finding symbols, related templates, shared helpers, and safe edits.
 - ➕ (optional later) **Taskmaster**: run bounded checklists with clear artifacts.
-- 🚫 Disable/avoid: github MCP, chrome-devtools MCP (re-enable only when needed) to keep context small.
 
 ## Working style
 - Make small, reversible changes. Commit in logical slices with clear messages.
@@ -618,8 +617,6 @@ Use this as the single source of truth. It names tokens, utilities, and componen
 - Use Serena for: symbol lookups, finding template usages, safe refactors, and locating routes/endpoints.
 - Prefer Serena over generic regex search.
 
-**Disable by default to save context:** github, chrome-devtools
-- Re-enable only when you need them for a very specific action.
 
 **Design guardrails (MANDATORY):**
 - Dark theme only, square corners.
@@ -784,8 +781,7 @@ Email Management Tool — Flask + Jinja + SQLite. Runs locally. Dark UI with lim
 
 ## Tools (MCP) to favor
 - ✅ **Serena** (semantic code nav): use it for finding symbols, related templates, shared helpers, and safe edits.
-- ➕ (optional later) **Taskmaster**: run bounded checklists with clear artifacts.
-- 🚫 Disable/avoid: github MCP, chrome-devtools MCP (re-enable only when needed) to keep context small.
+- ➕**Taskmaster**: run bounded checklists with clear artifacts.
 
 ## Working style
 - Make small, reversible changes. Commit in logical slices with clear messages.
@@ -810,3 +806,6 @@ Email Management Tool — Flask + Jinja + SQLite. Runs locally. Dark UI with lim
 - Don’t re-center full pages; prefer left-aligned content and conservative spacing.
 - Don’t invent new colors or radii unless we add tokens first.
 
+## Task Master AI Instructions
+**Import Task Master's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**
+@./.taskmaster/CLAUDE.md
